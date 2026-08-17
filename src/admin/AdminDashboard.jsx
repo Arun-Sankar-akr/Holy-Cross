@@ -377,7 +377,7 @@ export default function AdminDashboard() {
                 />
             )}
 
-            <div className={`admin-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <div className={`admin-containers ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
                     <div>
                         <div className="sidebar-brand">

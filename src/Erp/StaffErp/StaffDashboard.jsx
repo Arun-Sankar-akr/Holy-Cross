@@ -189,7 +189,7 @@ export default function StaffDashboard() {
     );
 
     return (
-        <div className="dashboard-container">
+        <div className="dashboard-containers">
             {/* Mobile & Tablet Topbar Header */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">

@@ -61,7 +61,7 @@ html {
     scrollbar-width: none;
 }
 
-.admin-container {
+.admin-containers {
     display: grid;
     grid-template-columns: 280px 1fr;
     height: 100vh;
@@ -72,11 +72,11 @@ html {
 }
 
 /* Desktop Sidebar Collapse Variant */
-.admin-container.sidebar-collapsed {
+.admin-containers.sidebar-collapsed {
     grid-template-columns: 0px 1fr;
 }
 
-.admin-container.sidebar-collapsed .admin-sidebar {
+.admin-containers.sidebar-collapsed .admin-sidebar {
     transform: translateX(-100%);
     visibility: hidden;
 }
@@ -743,14 +743,14 @@ html {
         color: var(--text-primary);
     }
 
-    .admin-container {
+    .admin-containers {
         grid-template-columns: 1fr;
         padding-top: 60px;
         height: calc(100vh - 60px);
         max-height: calc(100vh - 60px);
     }
 
-    .admin-container.sidebar-collapsed {
+    .admin-containers.sidebar-collapsed {
         grid-template-columns: 1fr;
     }
 

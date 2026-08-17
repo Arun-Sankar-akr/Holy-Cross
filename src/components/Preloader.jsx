@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from "../assets/logo.png"
+import logo1 from "../assets/logo1.jpg"
 import './Preloader.css';
 
 export default function Preloader({ fadeOut }) {

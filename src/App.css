@@ -1,16 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-    --font-family: 'Outfit', sans-serif;
+  --font-family: 'Outfit', sans-serif;
 }
 
 /* Apply globally */
 * {
-    font-family: var(--font-family);
+  font-family: var(--font-family);
 }
 
-body, button, input, select, textarea {
-    font-family: var(--font-family);
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-family);
 }
 
 :root {
