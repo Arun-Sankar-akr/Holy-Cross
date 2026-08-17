@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../service/firebase'
-import { collection, onSnapshot, addDoc } from 'firebase/firestore';
-import { BookOpen, Folder, ArrowLeft, PlusCircle } from 'lucide-react';
+import { db } from '../service/firebase';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { BookOpen, Folder, ArrowLeft, PlusCircle, Pencil, Trash2, X } from 'lucide-react';
+import './Timetable.css';
+
+const TIME_SLOTS = [
+    { value: '09.00-09.45', label: '09.00 - 09.45' },
+    { value: '09.45-10.20', label: '09.45 - 10.20' },
+    { value: '10.20-11.00', label: '10.20 - 11.00' },
+    { value: '11.15-11.50', label: '11.15 - 11.50' },
+    { value: '11.50-12.30', label: '11.50 - 12.30' },
+    { value: '01.00-01.45', label: '01.00 - 01.45' },
+    { value: '01.45-02.20', label: '01.45 - 02.20' },
+    { value: '02.20-02.40', label: '02.20 - 02.40' },
+    { value: '02.50-03.30', label: '02.50 - 03.30' },
+    { value: '03.30-04.10', label: '03.30 - 04.10' }
+];
 
 export default function StudentTimetableManager() {
     const [selectedClass, setSelectedClass] = useState(null);
@@ -21,21 +35,23 @@ export default function StudentTimetableManager() {
         roomNo: ''
     });
 
-    // 1. Fetch Class Sections from Firestore ('class_sections')
+    // State for editing an existing slot
+    const [editingSlot, setEditingSlot] = useState(null);
+
+    const normalize = (str) => (str ? str.replace(/\s+/g, '').trim() : '');
+
+    // 1. Fetch Class Sections
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'class_sections'), (snapshot) => {
             const sectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // Derive unique class names (e.g., Class 10, Class 11)
             const uniqueClasses = [...new Set(sectionsData.map(s => s.className).filter(Boolean))];
-
             setSectionsList(sectionsData);
             setClassList(uniqueClasses);
         });
         return () => unsubscribe();
     }, []);
 
-    // 2. Fetch Timetable Entries from Firestore ('timetables')
+    // 2. Fetch Timetable Entries
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'timetables'), (snapshot) => {
             const timetableData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -44,7 +60,7 @@ export default function StudentTimetableManager() {
         return () => unsubscribe();
     }, []);
 
-    // 3. Handle Form Submit — Save to Firestore 'timetables' collection
+    // 3. Add Slot
     const handleAddStudentTimetable = async (e) => {
         e.preventDefault();
         try {
@@ -59,7 +75,6 @@ export default function StudentTimetableManager() {
                 createdAt: new Date()
             });
 
-            // Reset form fields
             setStudentTimetableForm({
                 day: 'Monday',
                 timeSlot: '',
@@ -69,8 +84,43 @@ export default function StudentTimetableManager() {
             });
             alert('Timetable slot added successfully!');
         } catch (error) {
-            console.error('Error saving slot to Firestore:', error);
-            alert('Failed to save slot. Check console for details.');
+            console.error('Error saving slot:', error);
+            alert('Failed to save slot.');
+        }
+    };
+
+    // 4. Update Slot
+    const handleUpdateSlot = async (e) => {
+        e.preventDefault();
+        if (!editingSlot) return;
+
+        try {
+            const slotRef = doc(db, 'timetables', editingSlot.id);
+            await updateDoc(slotRef, {
+                day: editingSlot.day,
+                timeSlot: editingSlot.timeSlot,
+                subject: editingSlot.subject,
+                teacherName: editingSlot.teacherName || '',
+                roomNo: editingSlot.roomNo || ''
+            });
+            setEditingSlot(null);
+            alert('Slot updated successfully!');
+        } catch (error) {
+            console.error('Error updating slot:', error);
+            alert('Failed to update slot.');
+        }
+    };
+
+    // 5. Delete Slot
+    const handleDeleteSlot = async (slotId) => {
+        if (!window.confirm('Are you sure you want to delete this slot?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'timetables', slotId));
+            alert('Slot deleted successfully!');
+        } catch (error) {
+            console.error('Error deleting slot:', error);
+            alert('Failed to delete slot.');
         }
     };
 
@@ -119,7 +169,7 @@ export default function StudentTimetableManager() {
 
                     {sectionsList.filter(s => s.className === selectedClass).length === 0 ? (
                         <div className="empty-state">
-                            No sections found for {selectedClass}. Please create documents in the <strong>class_sections</strong> collection in Firebase first.
+                            No sections found for {selectedClass}. Please create documents in <strong>class_sections</strong> first.
                         </div>
                     ) : (
                         <div className="sections-grid">
@@ -149,7 +199,7 @@ export default function StudentTimetableManager() {
                 </>
             )}
 
-            {/* STEP 3: ADD AND VIEW TIMETABLE */}
+            {/* STEP 3: ADD, EDIT AND VIEW TIMETABLE */}
             {selectedClass && selectedSection && (
                 <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -161,7 +211,7 @@ export default function StudentTimetableManager() {
                         </h3>
                     </div>
 
-                    {/* Form to save new slot to Firebase */}
+                    {/* Add Slot Form */}
                     <form onSubmit={handleAddStudentTimetable} className="student-admission-form" style={{ marginBottom: '24px' }}>
                         <div className="student-form-grid">
                             <div>
@@ -184,16 +234,11 @@ export default function StudentTimetableManager() {
                                     required
                                 >
                                     <option value="">Select Time Slot</option>
-                                    <option value="09.00-09.45">09.00 - 09.45</option>
-                                    <option value="09.45-10.20">09.45 - 10.20</option>
-                                    <option value="10.20-11.00">10.20 - 11.00</option>
-                                    <option value="11.15-11.50">11.15 - 11.50</option>
-                                    <option value="11.50-12.30">11.50 - 12.30</option>
-                                    <option value="01.00-01.45">01.00 - 01.45</option>
-                                    <option value="01.45-02.20">01.45 - 02.20</option>
-                                    <option value="02.20-02.40">02.20 - 02.40</option>
-                                    <option value="02.50-03.30">02.50 - 03.30</option>
-                                    <option value="03.30-04.10">03.30 - 04.10</option>
+                                    {TIME_SLOTS.map((slot) => (
+                                        <option key={slot.value} value={slot.value}>
+                                            {slot.label}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
@@ -231,52 +276,149 @@ export default function StudentTimetableManager() {
                     </form>
 
                     {/* Schedule Grid */}
-                    <div className="table-responsive">
-                        <table className="timetable-grid">
-                            <thead>
-                                <tr>
-                                    <th>Day</th>
-                                    <th>09.00-09.45</th>
-                                    <th>09.45-10.20</th>
-                                    <th>10.20-11.00</th>
-                                    <th>11.15-11.50</th>
-                                    <th>11.50-12.30</th>
-                                    <th>01.00-01.45</th>
-                                    <th>01.45-02.20</th>
-                                    <th>02.20-02.40</th>
-                                    <th>02.50-03.30</th>
-                                    <th>03.30-04.10</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
-                                    const daySlots = studentTimetables.filter(
-                                        t => t.className === selectedClass &&
-                                            t.sectionName === selectedSection.name &&
-                                            t.day === day
-                                    );
+                    <div className="timetable-wrapper">
+                        <div className="timetable-grid-layout">
+                            <div className="grid-header day-corner">DAY</div>
 
-                                    const getSlot = (slotTime) => daySlots.find(s => s.timeSlot === slotTime);
+                            {TIME_SLOTS.map((slot) => (
+                                <div key={slot.value} className="grid-header time-slot">
+                                    {slot.label}
+                                </div>
+                            ))}
 
-                                    return (
-                                        <tr key={day}>
-                                            <td className="day-header"><strong>{day}</strong></td>
-                                            <td>{getSlot('09.00-09.45')?.subject || '-'}</td>
-                                            <td>{getSlot('09.45-10.20')?.subject || '-'}</td>
-                                            <td>{getSlot('10.20-11.00')?.subject || '-'}</td>
-                                            <td>{getSlot('11.15-11.50')?.subject || '-'}</td>
-                                            <td>{getSlot('11.50-12.30')?.subject || '-'}</td>
-                                            <td>{getSlot('01.00-01.45')?.subject || '-'}</td>
-                                            <td>{getSlot('01.45-02.20')?.subject || '-'}</td>
-                                            <td>{getSlot('02.20-02.40')?.subject || '-'}</td>
-                                            <td>{getSlot('02.50-03.30')?.subject || '-'}</td>
-                                            <td>{getSlot('03.30-04.10')?.subject || '-'}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
+                                const daySlots = studentTimetables.filter(
+                                    t => t.className === selectedClass &&
+                                        t.sectionName === selectedSection.name &&
+                                        t.day === day
+                                );
+
+                                const getSlot = (slotTime) =>
+                                    daySlots.find(s => normalize(s.timeSlot) === normalize(slotTime));
+
+                                return (
+                                    <React.Fragment key={day}>
+                                        <div className="grid-day-label">{day}</div>
+
+                                        {TIME_SLOTS.map((slot) => {
+                                            const matchedSlot = getSlot(slot.value);
+                                            return (
+                                                <div key={slot.value} className="grid-cell">
+                                                    {matchedSlot ? (
+                                                        <div className="slot-info">
+                                                            {/* Action buttons on hover */}
+                                                            <div className="slot-actions">
+                                                                <button
+                                                                    className="slot-action-btn edit"
+                                                                    onClick={() => setEditingSlot(matchedSlot)}
+                                                                    title="Edit Slot"
+                                                                >
+                                                                    <Pencil size={11} />
+                                                                </button>
+                                                                <button
+                                                                    className="slot-action-btn delete"
+                                                                    onClick={() => handleDeleteSlot(matchedSlot.id)}
+                                                                    title="Delete Slot"
+                                                                >
+                                                                    <Trash2 size={11} />
+                                                                </button>
+                                                            </div>
+                                                            <span className="subject-name">{matchedSlot.subject}</span>
+                                                            {matchedSlot.teacherName && (
+                                                                <span className="teacher-name">{matchedSlot.teacherName}</span>
+                                                            )}
+                                                            {matchedSlot.roomNo && (
+                                                                <span className="room-no">Rm: {matchedSlot.roomNo}</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="empty-dash">—</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
                     </div>
+
+                    {/* Edit Modal */}
+                    {editingSlot && (
+                        <div className="modal-overlay">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h4>Edit Timetable Slot</h4>
+                                    <button className="close-btn" onClick={() => setEditingSlot(null)}>
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleUpdateSlot} className="student-admission-form">
+                                    <div className="student-form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                                        <div>
+                                            <label>Day</label>
+                                            <select
+                                                value={editingSlot.day}
+                                                onChange={e => setEditingSlot({ ...editingSlot, day: e.target.value })}
+                                                required
+                                            >
+                                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => (
+                                                    <option key={d} value={d}>{d}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label>Time Slot</label>
+                                            <select
+                                                value={editingSlot.timeSlot}
+                                                onChange={e => setEditingSlot({ ...editingSlot, timeSlot: e.target.value })}
+                                                required
+                                            >
+                                                {TIME_SLOTS.map((slot) => (
+                                                    <option key={slot.value} value={slot.value}>
+                                                        {slot.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label>Subject</label>
+                                            <input
+                                                type="text"
+                                                value={editingSlot.subject}
+                                                onChange={e => setEditingSlot({ ...editingSlot, subject: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Teacher Name</label>
+                                            <input
+                                                type="text"
+                                                value={editingSlot.teacherName}
+                                                onChange={e => setEditingSlot({ ...editingSlot, teacherName: e.target.value })}
+                                            />
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <label>Room No</label>
+                                            <input
+                                                type="text"
+                                                value={editingSlot.roomNo}
+                                                onChange={e => setEditingSlot({ ...editingSlot, roomNo: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                                        <button type="button" className="back-btn" onClick={() => setEditingSlot(null)}>
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="add-notice-btn">
+                                            Update Slot
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>

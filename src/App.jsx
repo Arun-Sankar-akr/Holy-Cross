@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Added useState and useEffect imports
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Auth Protection Wrapper
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
+
+import Preloader from './components/Preloader';
 
 // Header & Footer
 import Navbar from './components/Navbar';
@@ -52,8 +54,32 @@ import ProgressReport from "./Erp/ProgressReport";
 import './App.css';
 
 export default function App() {
+  // 1. Moved Hooks inside the App component function
+  const [loading, setLoading] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    // Trigger fade-out animation after 2 seconds
+    const fadeTimer = setTimeout(() => {
+      setFadeOut(true);
+    }, 2000);
+
+    // Remove preloader completely from DOM after animation completes
+    const removeTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2800);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
   return (
     <BrowserRouter>
+      {/* 2. Display Preloader while loading */}
+      {loading && <Preloader fadeOut={fadeOut} />}
+
       <div className="app-container">
         <Navbar />
         <main className="main-content">
