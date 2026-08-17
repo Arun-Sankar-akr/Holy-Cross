@@ -1,0 +1,51 @@
+/* RulesRegulations.css */
+.rules-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.rules-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rules-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+    overflow: hidden;
+}
+
+.rules-card-header {
+    background: #f8eefc;
+    color: #8004c7;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e2bbf5;
+}
+
+.rules-card-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.rules-bullet-list {
+    padding: 20px 24px 20px 44px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rules-bullet-list li {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.5;
+}

@@ -1,0 +1,79 @@
+.meets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.meet-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+    padding: 24px 28px;
+}
+
+.meet-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.meet-card-header h3 {
+    margin: 0;
+    color: #8004c7;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.status-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.status-upcoming {
+    background: #f8eefc;
+    color: #8004c7;
+}
+
+.status-completed {
+    background: #f5f5f5;
+    color: #777;
+}
+
+.meet-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    font-size: 0.9rem;
+    color: #444;
+    margin-bottom: 14px;
+    background: #fafafa;
+    padding: 12px 16px;
+    border-radius: 8px;
+}
+
+.meet-details-grid div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meet-details-grid svg {
+    color: #8004c7;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.meet-desc {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+}

@@ -1,0 +1,71 @@
+/* NonTeachingStaff.css */
+.support-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.06);
+    overflow: hidden;
+}
+
+.support-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.support-table th,
+.support-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.support-table th {
+    background-color: #f8eefc;
+    color: #8004c7;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.staff-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    color: #333;
+}
+
+.staff-icon-box {
+    background: #f8eefc;
+    color: #8004c7;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.staff-role-cell {
+    font-weight: 600;
+    color: #444;
+}
+
+.dept-tag {
+    background: #f3e5fa;
+    color: #8004c7;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.staff-contact {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.staff-contact svg {
+    color: #8004c7;
+    vertical-align: middle;
+    margin-right: 4px;
+}

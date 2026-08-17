@@ -1,0 +1,57 @@
+/* StaffCommittees.css */
+.committee-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.committee-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    padding: 28px;
+    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+}
+
+.committee-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.committee-icon {
+    background: #f8eefc;
+    color: #8004c7;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.committee-header h3 {
+    margin: 0;
+    color: #8004c7;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.committee-convener {
+    background: #fafafa;
+    border-left: 3px solid #8004c7;
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.88rem;
+    color: #333;
+    margin-bottom: 14px;
+}
+
+.committee-desc {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+}

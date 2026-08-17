@@ -1,0 +1,61 @@
+.notable-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.notable-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    padding: 28px;
+    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+    position: relative;
+}
+
+.notable-badge {
+    background: #f8eefc;
+    color: #8004c7;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.notable-name {
+    margin: 0 0 4px 0;
+    color: #8004c7;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.notable-batch {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #777;
+    text-transform: uppercase;
+}
+
+.notable-role {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0 12px 0;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.notable-role svg {
+    color: #8004c7;
+    flex-shrink: 0;
+}
+
+.notable-desc {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #666;
+    line-height: 1.5;
+}

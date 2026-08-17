@@ -1,0 +1,279 @@
+.progress-report-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Outfit', sans-serif;
+    color: #333333;
+}
+
+.report-header {
+    font-family: "Outfit", sans-serif;
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.report-header h2 {
+    font-size: 2.2rem;
+    font-family: "Outfit", sans-serif;
+    font-weight: 800;
+    color: #8004c7;
+    margin: 0 0 8px 0;
+}
+
+.report-header p {
+    font-family: "Outfit", sans-serif;
+    font-size: 1rem;
+    color: #666666;
+    margin: 0;
+}
+
+/* Search Card */
+.search-card {
+    background: #ffffff;
+    border-radius: 12px;
+    font-family: "Outfit", sans-serif;
+    padding: 28px;
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.08);
+    border: 1px solid rgba(128, 4, 199, 0.12);
+    margin-bottom: 32px;
+}
+
+.search-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    font-family: "Outfit", sans-serif;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    font-family: "Outfit", sans-serif;
+    gap: 6px;
+}
+
+.input-group label {
+    font-size: 0.88rem;
+    font-family: "Outfit", sans-serif;
+    font-weight: 600;
+    color: #444444;
+}
+
+.input-group input {
+    padding: 10px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    font-family: "Outfit", sans-serif;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.input-group input:focus {
+    font-family: "Outfit", sans-serif;
+    border-color: #8004c7;
+}
+
+.search-btn {
+    background-color: #8004c7;
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    transition: background-color 0.2s ease;
+}
+
+.search-btn:hover {
+    font-family: "Outfit", sans-serif;
+    background-color: #6603a0;
+}
+
+.error-message {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background-color: #fff1f0;
+    border: 1px solid #ffccc7;
+    border-radius: 6px;
+    color: #d4380d;
+    display: flex;
+    align-items: center;
+    font-family: "Outfit", sans-serif;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+/* Report Display Card */
+.report-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+    font-family: "Outfit", sans-serif;
+    overflow: hidden;
+}
+
+.report-card-header {
+    background: #fcf8ff;
+    padding: 24px 32px;
+    border-bottom: 1px solid rgba(128, 4, 199, 0.1);
+    display: flex;
+    justify-content: space-between;
+    font-family: "Outfit", sans-serif;
+    align-items: flex-start;
+}
+
+.student-info h3 {
+    font-family: "Outfit", sans-serif;
+    margin: 0 0 8px 0;
+    font-size: 1.4rem;
+    color: #8004c7;
+}
+
+.student-info p {
+    margin: 4px 0;
+    font-family: "Outfit", sans-serif;
+    font-size: 0.92rem;
+    color: #555555;
+}
+
+.status-badge {
+    background: #e6f7ff;
+    color: #0958d9;
+    border: 1px solid #91caff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: "Outfit", sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+/* Table Styling */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.marks-table {
+    font-family: "Outfit", sans-serif;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.marks-table th,
+.marks-table td {
+    padding: 14px 32px;
+    font-family: "Outfit", sans-serif;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.marks-table th {
+    background-color: #fafafa;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    color: #444444;
+    font-size: 0.9rem;
+}
+
+.marks-table td {
+    font-family: "Outfit", sans-serif;
+    font-size: 0.92rem;
+}
+
+.grade-pill {
+    background: #f0f0f0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    color: #8004c7;
+}
+
+/* Footer & Actions */
+.report-footer {
+    padding: 20px 32px;
+    background: #fafafa;
+    display: flex;
+    justify-content: space-between;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    border-top: 1px solid #f0f0f0;
+}
+
+.summary-stats {
+    display: flex;
+    font-family: "Outfit", sans-serif;
+    gap: 24px;
+    font-size: 0.95rem;
+}
+
+.download-btn {
+    background-color: #ffffff;
+    color: #8004c7;
+    border: 1.5px solid #8004c7;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.download-btn:hover {
+    background-color: #8004c7;
+    font-family: "Outfit", sans-serif;
+    color: #ffffff;
+}
+
+/* Print Styles */
+@media print {
+
+    .report-header,
+    .search-card,
+    .download-btn {
+        font-family: "Outfit", sans-serif;
+        display: none !important;
+    }
+
+    .report-card {
+        border: none;
+        font-family: "Outfit", sans-serif;
+        box-shadow: none;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .search-form {
+        font-family: "Outfit", sans-serif;
+        grid-template-columns: 1fr;
+    }
+
+    .report-card-header,
+    .report-footer {
+        flex-direction: column;
+        font-family: "Outfit", sans-serif;
+        gap: 16px;
+    }
+
+    .marks-table th,
+    .marks-table td {
+        font-family: "Outfit", sans-serif;
+        padding: 12px 16px;
+    }
+}

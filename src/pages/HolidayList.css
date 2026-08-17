@@ -1,0 +1,60 @@
+/* HolidaysList.css */
+.holidays-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.holidays-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.06);
+    overflow: hidden;
+}
+
+.holidays-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.holidays-table th,
+.holidays-table td {
+    padding: 16px 24px;
+    text-align: left;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.holidays-table th {
+    background-color: #8004c7;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.holiday-date {
+    font-weight: 700;
+    color: #8004c7;
+}
+
+.holiday-occasion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #222;
+}
+
+.holiday-icon {
+    color: #8004c7;
+}
+
+.holiday-type {
+    background: #f3e5fa;
+    color: #8004c7;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}

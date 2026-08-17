@@ -1,0 +1,218 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --purple-primary: #8004c7;
+    --purple-dark: #58028b;
+    --purple-light: #f3e8ff;
+    --purple-accent: #a855f7;
+    --text-dark: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+}
+
+.footer-bottom-bar {
+    background-color: var(--purple-dark);
+}
+
+.site-footer {
+    /* background-color: #f5f5f5; */
+    font-family: "Outfit", sans-serif;
+    color: var(--text-dark);
+    position: relative;
+    margin-top: auto;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Accent Line at Top */
+.footer-top-accent {
+    font-family: "Outfit", sans-serif;
+    height: 4px;
+    width: 100%;
+    background: linear-gradient(90deg, #8004c7 0%, #a855f7 50%, #c084fc 100%);
+}
+
+.footer-container {
+    max-width: 1280px;
+    font-family: "Outfit", sans-serif;
+    margin: 0 auto;
+    padding: 56px 24px 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 40px;
+}
+
+/* Minimal Column Layout (No Card Backgrounds) */
+.footer-col {
+    font-family: "Outfit", sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.col-header {
+    display: flex;
+    align-items: center;
+    font-family: "Outfit", sans-serif;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--purple-light);
+}
+
+.icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--purple-light);
+    display: flex;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    justify-content: center;
+}
+
+.col-icon {
+    color: var(--purple-primary);
+}
+
+.footer-col h4 {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    font-family: "Outfit", sans-serif;
+    color: var(--purple-primary);
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.col-content {
+    line-height: 1.7;
+}
+
+.footer-col p {
+    font-family: "Outfit", sans-serif;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0 0 6px 0;
+}
+
+.footer-link {
+    color: var(--text-dark);
+    font-weight: 600;
+    font-family: "Outfit", sans-serif;
+    text-decoration: none;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: inline-block;
+}
+
+.footer-link:hover {
+    color: var(--purple-primary);
+    font-family: "Outfit", sans-serif;
+    transform: translateX(3px);
+}
+
+.sub-label {
+    color: #94a3b8;
+    font-family: "Outfit", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 400;
+}
+
+.link-item {
+    margin-top: 8px;
+}
+
+/* Bottom Bar */
+.footer-bottom-bar {
+    /* background-color: #f5f5f5; */
+    font-family: "Outfit", sans-serif;
+    padding: 20px 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+.footer-bottom-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.views-counter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-family: "Outfit", sans-serif;
+    color: var(--text-muted);
+    background-color: #ffffff;
+    padding: 8px 18px;
+    border-radius: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.views-icon {
+    color: var(--purple-primary);
+}
+
+.counter-badge {
+    color: var(--text-dark);
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.copyright-info {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Outfit", sans-serif;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--border-color);
+}
+
+.copyright-info p {
+    font-family: "Outfit", sans-serif;
+    margin: 0;
+}
+
+.copyright-info strong {
+    color: #e2e8f0;
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+}
+
+.developer-tag {
+    font-size: 0.82rem;
+    font-family: "Outfit", sans-serif;
+    color: #fff;
+    margin-top: 2px;
+}
+
+.dev-brand {
+    color: #077bd4;
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .footer-bottom-container {
+        flex-direction: column;
+        font-family: "Outfit", sans-serif;
+        text-align: center;
+    }
+
+    .copyright-info {
+        font-family: "Outfit", sans-serif;
+        text-align: center;
+        display: block;
+    }
+}
+
+.dev {
+    text-decoration: none;
+    font-family: "Outfit", sans-serif;
+    color: #077bd4;
+    font-weight: 700;
+}

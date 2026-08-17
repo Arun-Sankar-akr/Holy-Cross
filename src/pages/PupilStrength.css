@@ -1,0 +1,68 @@
+/* PupilStrength.css */
+.strength-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.total-highlight-card {
+    background: #8004c7;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.2);
+}
+
+.total-highlight-card h3 {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 800;
+}
+
+.total-highlight-card p {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.strength-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.06);
+    overflow: hidden;
+}
+
+.strength-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.strength-table th,
+.strength-table td {
+    padding: 16px 24px;
+    text-align: left;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.strength-table th {
+    background-color: #f8eefc;
+    color: #8004c7;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.level-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.row-total {
+    font-weight: 700;
+    color: #8004c7;
+}

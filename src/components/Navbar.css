@@ -1,0 +1,351 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ==========================================
+   Header Root & Sticky Container
+   ========================================== */
+.header-root {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: #8004c7;
+    color: #ffffff;
+    /* background: linear-gradient(100deg, #8004c7 0%,#620697 25% ,#0766af 75% , #077bd4 100%); */
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    font-family: 'Outfit', sans-serif;
+    transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+}
+
+.header-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 12px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "Outfit", sans-serif;
+    gap: 24px;
+    transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================
+   Brand Logo & Title Alignment
+   ========================================== */
+.header-brand {
+    display: flex;
+    font-family: "Outfit", sans-serif;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.brand-crest {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    font-family: "Outfit", sans-serif;
+    transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 420px;
+    font-family: "Outfit", sans-serif;
+    opacity: 1;
+    transform: translateX(0);
+    overflow: hidden;
+    transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.25s ease,
+                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.brand-subline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+}
+
+.subline-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.6);
+    flex-grow: 1;
+}
+
+.subline-text {
+    font-size: 0.50rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #ffffff;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0.95;
+}
+
+/* ==========================================
+   Desktop Navigation Links
+   ========================================== */
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: nowrap;
+}
+
+.nav-link {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.88);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 8px 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link.is-active {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Active Indicator Underline */
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2.5px;
+    background-color: #ffffff;
+    border-radius: 2px;
+    transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover::after,
+.nav-link.is-active::after {
+    width: 100%;
+}
+
+.arrow-indicator {
+    transition: transform 0.25s ease;
+    opacity: 0.85;
+}
+
+.arrow-indicator.is-rotated {
+    transform: rotate(180deg);
+}
+
+/* ==========================================
+   Dropdown Panels Alignment
+   ========================================== */
+.nav-dropdown-group {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #8004c7;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 3px solid #ffffff;
+    border-radius: 0 0 8px 8px;
+    min-width: 210px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+    padding: 6px 0;
+    z-index: 1005;
+    animation: menuFadeIn 0.2s ease-out forwards;
+}
+
+.dropdown-link {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.88);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.84rem;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition: background-color 0.2s ease, padding-left 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-link:hover,
+.dropdown-link.is-active {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    padding-left: 22px;
+}
+
+.mobile-toggle-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 4px;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================
+   Scrolled Header State
+   ========================================== */
+.header-root.is-scrolled {
+    background-color: rgba(128, 4, 199, 0.96);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.header-root.is-scrolled .header-container {
+    padding: 8px 32px;
+}
+
+.header-root.is-scrolled .brand-crest {
+    height: 40px;
+}
+
+.header-root.is-scrolled .brand-details {
+    max-width: 0;
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   Responsive & Mobile Drawer Alignment
+   ========================================== */
+@media (max-width: 1280px) {
+    .header-container {
+        padding: 12px 20px;
+        gap: 16px;
+    }
+
+    .brand-title {
+        font-size: 0.75rem;
+    }
+
+    .header-nav {
+        gap: 12px;
+    }
+
+    .nav-link {
+        font-size: 0.82rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .mobile-toggle-btn {
+        display: inline-flex;
+        z-index: 1001;
+    }
+
+    .header-nav {
+        display: flex;
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(100vh - 64px);
+        background: rgba(128, 4, 199, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 24px 28px;
+        gap: 12px;
+        overflow-y: auto;
+        z-index: 999;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-12px);
+        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0.35s step-end;
+    }
+
+    .header-nav.is-mobile-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0s ease;
+    }
+
+    .header-nav .nav-link {
+        font-size: 1.05rem;
+        width: 100%;
+        justify-content: space-between;
+        padding: 10px 0;
+    }
+
+    .nav-dropdown-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dropdown-panel {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+        border: none;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        margin-top: 6px;
+        padding: 6px 0;
+        animation: menuFadeIn 0.25s ease-out forwards;
+    }
+
+    .dropdown-link {
+        font-size: 0.95rem;
+        padding: 10px 16px;
+    }
+}

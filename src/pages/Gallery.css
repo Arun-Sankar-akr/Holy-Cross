@@ -1,0 +1,284 @@
+/* ==========================================================================
+   Campus Gallery Component Styling
+   ========================================================================== */
+
+:root {
+    --gal-purple: #4c1d95;
+    --gal-purple-hover: #5b21b6;
+    --gal-accent: #f59e0b;
+    --gal-border: #e2e8f0;
+    --gal-text-dark: #0f172a;
+    --gal-text-muted: #64748b;
+}
+
+.gal-root {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* --- Header Section --- */
+.gal-header {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 40px;
+}
+
+.gal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(76, 29, 149, 0.08);
+    color: var(--gal-purple);
+    border: 1px solid rgba(76, 29, 149, 0.2);
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.gal-header h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--gal-text-dark);
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+}
+
+.gal-header p {
+    color: var(--gal-text-muted);
+    font-size: 1rem;
+    margin: 0 0 28px;
+}
+
+/* --- Category Filter Tabs --- */
+.gal-filter-tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gal-tab-btn {
+    background: #f1f5f9;
+    color: var(--gal-text-muted);
+    border: 1px solid var(--gal-border);
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gal-tab-btn:hover {
+    background: #e2e8f0;
+    color: var(--gal-text-dark);
+}
+
+.gal-tab-btn.active {
+    background: var(--gal-purple);
+    color: #ffffff;
+    border-color: var(--gal-purple);
+    box-shadow: 0 4px 12px rgba(76, 29, 149, 0.25);
+}
+
+/* --- Gallery Grid Layout --- */
+.gal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 28px;
+}
+
+.gal-card {
+    background: #ffffff;
+    border: 1px solid var(--gal-border);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.gal-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.gal-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background-color: #f1f5f9;
+}
+
+.gal-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.gal-card:hover .gal-image-wrapper img {
+    transform: scale(1.08);
+}
+
+/* Image Overlay */
+.gal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: opacity 0.3s ease;
+}
+
+.gal-card:hover .gal-overlay {
+    opacity: 1;
+}
+
+.gal-zoom-icon {
+    color: #ffffff;
+}
+
+.gal-card-category {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(8px);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Card Content Body */
+.gal-card-info {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.gal-card-info h3 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--gal-text-dark);
+}
+
+.gal-card-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--gal-text-muted);
+    line-height: 1.5;
+}
+
+/* --- Lightbox Modal --- */
+.gal-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 20px;
+}
+
+.gal-lightbox-content {
+    background: #ffffff;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 720px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+}
+
+.gal-lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(15, 23, 42, 0.6);
+    color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.gal-lightbox-close:hover {
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.gal-lightbox-image-container {
+    width: 100%;
+    max-height: 440px;
+    overflow: hidden;
+    background: #000000;
+}
+
+.gal-lightbox-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gal-lightbox-details {
+    padding: 24px;
+}
+
+.gal-lightbox-details .gal-card-category {
+    background: var(--gal-purple);
+    color: #ffffff;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.gal-lightbox-details h3 {
+    margin: 4px 0 8px;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--gal-text-dark);
+}
+
+.gal-lightbox-details p {
+    margin: 0;
+    color: var(--gal-text-muted);
+    font-size: 0.95rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 640px) {
+    .gal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gal-header h2 {
+        font-size: 1.8rem;
+    }
+}

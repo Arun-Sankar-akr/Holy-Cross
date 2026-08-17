@@ -1,0 +1,59 @@
+.fee-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    box-shadow: 0 8px 24px rgba(128, 4, 199, 0.06);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.fee-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fee-table th,
+.fee-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.fee-table th {
+    background-color: #8004c7;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.grade-cell {
+    font-weight: 700;
+    color: #333;
+}
+
+.annual-cell {
+    font-weight: 800;
+    color: #8004c7;
+}
+
+.fee-note {
+    background: #f8eefc;
+    border: 1px solid #e2bbf5;
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    color: #6703a1;
+}
+
+.fee-note svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.fee-note p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}

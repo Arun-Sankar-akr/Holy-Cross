@@ -1,0 +1,129 @@
+/* TeachingStaff.css */
+.staff-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.page-header h2 {
+    color: #8004c7;
+    font-size: 2rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 8px 0;
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+.filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.filter-btn {
+    background: #ffffff;
+    border: 1px solid rgba(128, 4, 199, 0.2);
+    color: #8004c7;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+    background: #8004c7;
+    color: #ffffff;
+    border-color: #8004c7;
+}
+
+.teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.teacher-card {
+    background: #ffffff;
+    border: 1px solid rgba(128, 4, 199, 0.15);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.teacher-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f8eefc;
+    color: #8004c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    border: 2px solid #e2bbf5;
+}
+
+.teacher-name {
+    margin: 0 0 4px 0;
+    color: #8004c7;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.teacher-role {
+    font-weight: 700;
+    color: #333;
+    font-size: 0.88rem;
+}
+
+.teacher-qual {
+    margin: 4px 0 16px 0;
+    font-size: 0.82rem;
+    color: #777;
+    font-weight: 600;
+}
+
+.teacher-meta {
+    width: 100%;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.84rem;
+    color: #555;
+    margin-top: auto;
+}
+
+.teacher-meta div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.teacher-meta svg {
+    color: #8004c7;
+}
