@@ -4,15 +4,20 @@
   --staff-bg-app: #f8fafc;
   --staff-bg-surface: #ffffff;
   --staff-border: #e2e8f0;
-  
+
   --staff-text-main: #0f172a;
   --staff-text-muted: #64748b;
-  
+
   --staff-primary: #4f46e5;
   --staff-primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   --staff-primary-light: #eef2ff;
   --staff-primary-border: #c7d2fe;
-  
+
+  --accent-emerald: #059669;
+  --accent-rose: #e11d48;
+  --accent-amber: #d97706;
+  --accent-cyan: #0284c7;
+
   --staff-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   --staff-radius: 12px;
 }
@@ -38,8 +43,14 @@
   position: relative;
 }
 
-.font-bold { font-weight: 700; }
-.green-accent { color: var(--staff-primary); font-weight: 800; }
+.font-bold {
+  font-weight: 700;
+}
+
+.green-accent {
+  color: var(--staff-primary);
+  font-weight: 800;
+}
 
 /* -------------------------------------------------------------
    1. Student Sidebar
@@ -66,8 +77,8 @@
 }
 
 .staff-avatar-ring {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--staff-primary-gradient);
   color: #ffffff;
@@ -75,6 +86,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.student-profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .staff-user-info h4 {
@@ -82,12 +100,23 @@
   font-size: 0.84rem;
   font-weight: 800;
   color: var(--staff-text-main);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 130px;
 }
 
 .staff-user-info p {
   margin: 1px 0 0 0;
   font-size: 0.7rem;
   color: var(--staff-text-muted);
+}
+
+.roll-no-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--staff-primary);
+  display: block;
 }
 
 .staff-nav-list {
@@ -199,6 +228,26 @@
   color: var(--staff-text-muted);
 }
 
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+}
+
 /* -------------------------------------------------------------
    3. Content Container, Cards & Timetables
 ------------------------------------------------------------- */
@@ -217,6 +266,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
 }
 
 .staff-welcome-card h2 {
@@ -229,6 +280,22 @@
 .staff-welcome-card p {
   margin: 0;
   font-size: 0.78rem;
+  color: var(--staff-text-muted);
+}
+
+.attendance-pill-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--staff-primary-border);
+}
+
+.pill-label {
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--staff-text-muted);
 }
 
@@ -245,8 +312,57 @@
   padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.6rem;
   box-shadow: var(--staff-shadow);
+}
+
+.stat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-icon-bg {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-emerald {
+  background: #d1fae5;
+  color: var(--accent-emerald);
+}
+
+.bg-rose {
+  background: #ffe4e6;
+  color: var(--accent-rose);
+}
+
+.bg-indigo {
+  background: var(--staff-primary-light);
+  color: var(--staff-primary);
+}
+
+.bg-amber {
+  background: #fef3c7;
+  color: var(--accent-amber);
+}
+
+.bg-cyan {
+  background: #e0f2fe;
+  color: var(--accent-cyan);
+}
+
+.stat-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--staff-text-muted);
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .stat-title {
@@ -254,13 +370,20 @@
   font-weight: 700;
   color: var(--staff-text-muted);
   text-transform: uppercase;
+  display: block;
 }
 
 .stat-val {
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--staff-text-main);
-  margin: 0;
+  margin: 2px 0 0;
+}
+
+.student-two-col-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 1rem;
 }
 
 .staff-card {
@@ -289,44 +412,270 @@
   font-weight: 800;
 }
 
-.staff-schedule-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 0.75rem;
+.muted-icon {
+  color: var(--staff-text-muted);
+}
+
+/* Marks List Mini-Card */
+.marks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.staff-schedule-box {
-  background-color: #f8fafc;
+.marks-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  background: #f8fafc;
   border: 1px solid var(--staff-border);
   border-radius: 8px;
-  padding: 0.75rem;
+}
+
+.marks-item-row strong {
+  font-size: 0.82rem;
+  display: block;
+}
+
+.marks-item-row span {
+  font-size: 0.7rem;
+  color: var(--staff-text-muted);
+}
+
+.score-pill {
+  background: var(--staff-primary-light);
+  color: var(--staff-primary);
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+}
+
+/* Bulletins in Student Portal */
+.student-notice-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.student-notice-item {
+  background: #f8fafc;
   border-left: 3px solid var(--staff-primary);
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
 }
 
-.staff-time-pill {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background-color: var(--staff-primary-light);
-  color: var(--staff-primary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  align-self: flex-start;
-}
-
-.staff-schedule-box h4 {
+.student-notice-item p {
   margin: 0;
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--staff-text-main);
+  line-height: 1.4;
 }
 
-.schedule-details p {
-  margin: 0.1rem 0;
-  font-size: 0.72rem;
+.student-notice-item .notice-time {
+  font-size: 0.65rem;
   color: var(--staff-text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.status-present {
+  background: #d1fae5;
+  color: var(--accent-emerald);
+}
+
+.status-absent {
+  background: #fee2e2;
+  color: var(--accent-rose);
+}
+
+/* Matrix Timetable Table */
+.student-timetable-wrapper {
+  overflow-x: auto;
+  border-radius: var(--staff-radius);
+  border: 1px solid var(--staff-border);
+  background: #ffffff;
+  margin-top: 0.85rem;
+}
+
+.student-timetable-table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.student-timetable-table th,
+.student-timetable-table td {
+  border: 1px solid var(--staff-border);
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+  vertical-align: middle;
+  min-width: 80px;
+}
+
+.student-timetable-table th {
+  background: #f8fafc;
+  color: var(--staff-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.day-col-header,
+.day-name-cell {
+  width: 90px;
+  min-width: 90px;
+  background: #f8fafc;
+  font-weight: 800;
+  color: var(--staff-text-main);
+}
+
+.slot-td {
+  height: 65px;
+  background-color: #ffffff;
+}
+
+.student-slot-card {
+  background: #f5f3ff;
+  border-top: 3px solid #7c3aed;
+  border-radius: 6px;
+  padding: 0.35rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.slot-subject {
+  font-weight: 800;
+  color: #7c3aed;
+  font-size: 0.76rem;
+  line-height: 1.15;
+}
+
+.slot-teacher {
+  font-size: 0.65rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.slot-room {
+  font-size: 0.62rem;
+  color: #64748b;
+}
+
+/* Full Marks Evaluation Table */
+.marks-table-wrapper {
+  overflow-x: auto;
+  margin-top: 0.85rem;
+}
+
+.custom-marks-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.custom-marks-table th {
+  background: #f8fafc;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--staff-text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--staff-border);
+}
+
+.custom-marks-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--staff-border);
+  font-size: 0.8rem;
+}
+
+.table-score-badge {
+  font-weight: 800;
+  color: var(--staff-primary);
+}
+
+.grade-badge {
+  background: #d1fae5;
+  color: var(--accent-emerald);
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+}
+
+/* Full Bulletins Page */
+.full-notices-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.bulletin-card {
+  background: #f8fafc;
+  border: 1px solid var(--staff-border);
+  border-left: 3.5px solid var(--staff-primary);
+  padding: 0.85rem;
+  border-radius: 8px;
+}
+
+.bulletin-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.bulletin-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--staff-primary);
+  text-transform: uppercase;
+}
+
+.bulletin-date {
+  font-size: 0.68rem;
+  color: var(--staff-text-muted);
+}
+
+.bulletin-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--staff-text-main);
+  line-height: 1.45;
+}
+
+/* Empty Sub-Card State */
+.empty-sub-card {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--staff-text-muted);
+}
+
+.empty-sub-card h4 {
+  margin: 0.5rem 0 0.2rem;
+  color: var(--staff-text-main);
+  font-size: 0.95rem;
+}
+
+.empty-sub-card p {
+  margin: 0;
+  font-size: 0.76rem;
 }
 
 /* -------------------------------------------------------------
@@ -337,6 +686,30 @@
   background-color: #ffffff;
   border-bottom: 1px solid var(--staff-border);
   padding: 0.5rem 1rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.portal-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-dot.present {
+  background: var(--accent-emerald);
+}
+
+.status-dot.absent {
+  background: var(--accent-rose);
 }
 
 .mobile-menu-btn {
@@ -350,6 +723,12 @@
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .student-two-col-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -367,7 +746,7 @@
     bottom: 0;
     left: 0;
     height: 100vh;
-    z-index: 50;
+    z-index: 150;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     box-shadow: 6px 0 20px rgba(0, 0, 0, 0.15);
@@ -376,83 +755,370 @@
   .staff-sidebar.mobile-open {
     transform: translateX(0);
   }
+
+  .staff-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    z-index: 140;
+  }
 }
 
-/* Student Matrix Timetable Grid Table */
-.student-timetable-wrapper {
-  overflow-x: auto;
-  border-radius: var(--staff-radius);
+/* Student Assigned Tasks & Projects */
+.student-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.student-task-item {
+  background: #f8fafc;
   border: 1px solid var(--staff-border);
-  background: #ffffff;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+.task-top-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.due-date-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+}
+
+.student-task-item h5 {
+  margin: 0 0 2px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.task-sub {
+  font-size: 0.72rem;
+  color: var(--staff-text-muted);
+}
+
+.student-assignments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
   margin-top: 0.85rem;
 }
 
-.student-timetable-table {
-  width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.student-timetable-table th,
-.student-timetable-table td {
+.assignment-display-card {
+  background: #ffffff;
   border: 1px solid var(--staff-border);
-  padding: 0.55rem 0.4rem;
-  text-align: center;
-  vertical-align: middle;
-  min-width: 85px;
+  border-radius: var(--staff-radius);
+  padding: 1.1rem;
+  box-shadow: var(--staff-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-top: 3.5px solid var(--staff-primary);
 }
 
-.student-timetable-table th {
-  background: #f8fafc;
-  color: var(--staff-text-muted);
-  font-weight: 700;
-  font-size: 0.74rem;
-  letter-spacing: 0.02em;
+.assignment-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.day-col-header,
-.day-name-cell {
-  width: 95px;
-  min-width: 95px;
-  background: #f8fafc;
+.assignment-display-card h4 {
+  margin: 0;
+  font-size: 0.92rem;
   font-weight: 800;
-  color: var(--staff-text-main);
 }
 
-.slot-td {
-  height: 75px;
-  background-color: #ffffff;
-}
-
-/* Individual Slot Card */
-.student-slot-card {
-  background: #f5f3ff;
-  border-top: 3px solid #7c3aed;
-  border-radius: 6px;
-  padding: 0.45rem 0.35rem;
+.assignment-meta-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08);
+  font-size: 0.76rem;
+  color: var(--staff-text-muted);
 }
 
-.slot-subject {
-  font-weight: 800;
-  color: #7c3aed;
-  font-size: 0.8rem;
-  line-height: 1.2;
+.assignment-body-desc {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--staff-text-main);
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
 }
 
-.slot-teacher {
+/* PDF Upload and Submission Box Styles */
+.pdf-upload-wrapper {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--staff-border);
+}
+
+.pdf-file-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border: 1px dashed var(--staff-primary);
+  border-radius: 6px;
+  color: var(--staff-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-file-label:hover {
+  background: var(--staff-primary-light);
+}
+
+.pdf-ready-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  gap: 6px;
+}
+
+.pdf-ready-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: #ecfdf5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.submit-pdf-btn {
+  background: var(--accent-emerald);
+  color: #ffffff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.submit-pdf-btn:hover {
+  filter: brightness(1.08);
+}
+
+.submission-completed-box {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.submission-file-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.view-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--staff-primary);
+  text-decoration: none;
+}
+
+.view-pdf-link:hover {
+  text-decoration: underline;
+}
+
+.submitted-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 0.68rem;
-  color: #475569;
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: 800;
+  background: #d1fae5;
+  color: var(--accent-emerald);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.slot-room {
-  font-size: 0.64rem;
-  color: #64748b;
-  font-weight: 500;
+.compressing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--staff-primary);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Attendance Warning Banner */
+.attendance-warning-banner {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: var(--staff-radius);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--staff-shadow);
+}
+
+.warning-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.warning-content strong {
+  font-size: 0.84rem;
+  color: var(--accent-rose);
+  display: block;
+}
+
+.warning-content p {
+  margin: 1px 0 0;
+  font-size: 0.74rem;
+  color: var(--staff-text-muted);
+}
+
+.attendance-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #fee2e2;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.attendance-progress-fill.alert {
+  height: 100%;
+  background: linear-gradient(90deg, #f43f5e, #e11d48);
+  border-radius: 4px;
+}
+
+/* Print Schedule Button */
+.print-schedule-btn {
+  background: #ffffff;
+  border: 1px solid var(--staff-border);
+  color: var(--staff-text-main);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+}
+
+.print-schedule-btn:hover {
+  background: var(--staff-primary-light);
+  color: var(--staff-primary);
+  border-color: var(--staff-primary-border);
+}
+
+/* Grade Class Colors */
+.grade-a-plus {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.grade-a {
+  background: #e0e7ff;
+  color: var(--staff-primary);
+}
+
+.grade-b {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.grade-fail {
+  background: #fee2e2;
+  color: var(--accent-rose);
+}
+
+/* Topic Tag */
+.topic-badge {
+  background: #f1f5f9;
+  color: var(--staff-text-main);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid var(--staff-border);
+}
+
+.pdf-preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--staff-primary);
+  font-weight: 700;
+  font-size: 0.76rem;
+  text-decoration: none;
+  background: #eef2ff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #c7d2fe;
+}
+
+.pdf-preview-link:hover {
+  background: var(--staff-primary);
+  color: #ffffff;
+}
+
+@media print {
+
+  .staff-sidebar,
+  .staff-top-header,
+  .staff-mobile-toggle-bar,
+  .print-schedule-btn {
+    display: none !important;
+  }
+
+  .staff-main-workspace,
+  .staff-style-dashboard,
+  .staff-layout-grid {
+    background: #ffffff !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }

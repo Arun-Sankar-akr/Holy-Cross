@@ -2,12 +2,14 @@ import { db, auth } from '../service/firebase';
 import React, { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
-    collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp
+    collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp, setDoc, writeBatch
 } from 'firebase/firestore';
 import {
     Calendar, Shield, Award, Image as ImageIcon, Sun, Bell,
     PlusCircle, Trash2, LogOut, Radio, ChevronDown, Users, GraduationCap,
-    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu, PanelLeftClose, PanelLeftOpen, User
+    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu,
+    PanelLeftClose, PanelLeftOpen, User, RefreshCw, BarChart3, Settings,
+    Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -15,12 +17,13 @@ import './AdminDashboard.css';
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('calendar');
+    const [activeTab, setActiveTab] = useState('analytics'); // Default to Analytics & Overview
 
     // Collapsible states for sidebar dropdowns
     const [updatesOpen, setUpdatesOpen] = useState(true);
     const [erpOpen, setErpOpen] = useState(true);
     const [timetableOpen, setTimetableOpen] = useState(true);
+    const [systemOpen, setSystemOpen] = useState(true);
 
     // Mobile Navigation Drawer State & Desktop Sidebar Toggle State
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -51,6 +54,12 @@ export default function AdminDashboard() {
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
 
+    // Results & Publish Drill-down States
+    const [selectedClassResults, setSelectedClassResults] = useState(null);
+    const [selectedSectionResults, setSelectedSectionResults] = useState(null);
+    const [examType, setExamType] = useState('1st Mid-Term exam');
+    const [selectedSubject, setSelectedSubject] = useState('Mathematics');
+
     // Form inputs state
     const [calendarForm, setCalendarForm] = useState({ month: '', date: '', day: '', title: '', category: 'General' });
     const [adminForm, setAdminForm] = useState({ name: '', role: '', qualification: '', message: '', email: '', phone: '' });
@@ -58,6 +67,17 @@ export default function AdminDashboard() {
     const [galleryForm, setGalleryForm] = useState({ title: '', category: 'Campus', image: '', description: '' });
     const [holidayForm, setHolidayForm] = useState({ date: '', day: '', occasion: '', type: 'National Holiday' });
     const [noticeText, setNoticeText] = useState('');
+
+    // Global Search and System Settings State
+    const [globalSearch, setGlobalSearch] = useState('');
+    const [settingsForm, setSettingsForm] = useState({
+        schoolName: 'EduPulse Matric Higher Secondary School',
+        academicYear: '2026 - 2027',
+        contactEmail: 'admin@edupulse.edu',
+        helpline: '+91 98765 43210'
+    });
+    const [emergencyNotice, setEmergencyNotice] = useState('');
+    const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
     // Staff Form & Update States
     const [staffForm, setStaffForm] = useState({ name: '', staffId: '', password: '', department: '', email: '' });
@@ -70,6 +90,7 @@ export default function AdminDashboard() {
     const [editSectionForm, setEditSectionForm] = useState({ name: '', roomNo: '' });
 
     const sidebarRef = useRef(null);
+    const studentFormRef = useRef(null);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -87,18 +108,21 @@ export default function AdminDashboard() {
     };
     const [studentForm, setStudentForm] = useState(initialStudentForm);
     const [editingStudentId, setEditingStudentId] = useState(null);
-    const [editStudentForm, setEditStudentForm] = useState(initialStudentForm);
 
-    // Timetable Form States
+    // Timetable Form & Edit States
     const initialStudentTimetableForm = {
         className: '', sectionName: '', day: 'Monday', timeSlot: '', subject: '', teacherName: '', roomNo: ''
     };
     const [studentTimetableForm, setStudentTimetableForm] = useState(initialStudentTimetableForm);
+    const [editingStudentTTId, setEditingStudentTTId] = useState(null);
+    const [editStudentTTForm, setEditStudentTTForm] = useState(initialStudentTimetableForm);
 
     const initialStaffTimetableForm = {
         staffId: '', staffName: '', day: 'Monday', timeSlot: '', subject: '', className: '', roomNo: ''
     };
     const [staffTimetableForm, setStaffTimetableForm] = useState(initialStaffTimetableForm);
+    const [editingStaffTTId, setEditingStaffTTId] = useState(null);
+    const [editStaffTTForm, setEditStaffTTForm] = useState(initialStaffTimetableForm);
 
     const classList = [
         'LKG', 'UKG',
@@ -121,6 +145,51 @@ export default function AdminDashboard() {
         '02:50 - 03:30 PM',
         '03:30 - 04:10 PM'
     ];
+
+    const handleImageUpload = (file, onSuccess) => {
+        if (!file) return;
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedFormats.includes(file.type.toLowerCase())) {
+            alert('Unsupported image format! Please upload only JPG, JPEG, PNG, or WEBP images.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 1200;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                let quality = 0.85;
+                let outputFormat = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                let dataUrl = canvas.toDataURL(outputFormat, quality);
+
+                while (dataUrl.length > 680000 && quality > 0.3) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+                onSuccess(dataUrl);
+            };
+        };
+    };
 
     const handleTabClick = (tabKey, extraCallback) => {
         setActiveTab(tabKey);
@@ -273,41 +342,46 @@ export default function AdminDashboard() {
         }, () => setStudentForm(initialStudentForm));
     };
 
-    const handleUpdateStudent = async (id) => {
+    const handleUpdateStudent = async (e) => {
+        e.preventDefault();
+        if (!editingStudentId || !studentForm.name.trim() || !studentForm.admissionNo.trim()) return;
+
         try {
-            await updateDoc(doc(db, 'students_records', id), {
-                admissionNo: editStudentForm.admissionNo,
-                admissionDate: editStudentForm.admissionDate,
-                name: editStudentForm.name,
-                dob: editStudentForm.dob,
-                photo: editStudentForm.photo,
-                bloodGroup: editStudentForm.bloodGroup,
-                guardianName: editStudentForm.guardianName,
-                phone: editStudentForm.phone,
-                address: editStudentForm.address
+            await updateDoc(doc(db, 'students_records', editingStudentId), {
+                admissionNo: studentForm.admissionNo.trim(),
+                admissionDate: studentForm.admissionDate,
+                name: studentForm.name.trim(),
+                dob: studentForm.dob,
+                photo: studentForm.photo.trim(),
+                bloodGroup: studentForm.bloodGroup.trim(),
+                guardianName: studentForm.guardianName.trim(),
+                phone: studentForm.phone.trim(),
+                address: studentForm.address.trim()
             });
             setEditingStudentId(null);
+            setStudentForm(initialStudentForm);
         } catch (error) {
             console.error("Error updating student record: ", error);
         }
     };
 
-    const handleAddStaffTimetable = async (e) => {
-        e.preventDefault();
-        if (!staffTimetableForm.staffId || !staffTimetableForm.subject || !staffTimetableForm.timeSlot) return;
+    const startEditingStudent = (student) => {
+        setEditingStudentId(student.id);
+        setStudentForm({
+            admissionNo: student.admissionNo || '',
+            admissionDate: student.admissionDate || '',
+            name: student.name || '',
+            dob: student.dob || '',
+            photo: student.photo || '',
+            bloodGroup: student.bloodGroup || '',
+            guardianName: student.guardianName || '',
+            phone: student.phone || '',
+            address: student.address || ''
+        });
 
-        const selectedStaff = staffList.find(s => s.staffId === staffTimetableForm.staffId);
-        const resolvedStaffName = selectedStaff ? selectedStaff.name : staffTimetableForm.staffName;
-
-        await handlePublish('staff_timetables', {
-            staffId: staffTimetableForm.staffId,
-            staffName: resolvedStaffName,
-            day: staffTimetableForm.day,
-            timeSlot: staffTimetableForm.timeSlot.trim(),
-            subject: staffTimetableForm.subject.trim(),
-            className: staffTimetableForm.className.trim(),
-            roomNo: staffTimetableForm.roomNo.trim()
-        }, () => setStaffTimetableForm(initialStaffTimetableForm));
+        if (studentFormRef.current) {
+            studentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const handleAddStudentTimetable = async (e) => {
@@ -329,6 +403,110 @@ export default function AdminDashboard() {
             roomNo: studentTimetableForm.roomNo.trim()
         }, () => setStudentTimetableForm(initialStudentTimetableForm));
     };
+
+    const handleUpdateStudentTimetable = async (e) => {
+        e.preventDefault();
+        if (!editingStudentTTId) return;
+
+        const rawSection = editStudentTTForm.sectionName.trim();
+        const formattedSection = rawSection.toLowerCase().startsWith('section')
+            ? rawSection
+            : `Section ${rawSection}`;
+
+        try {
+            await updateDoc(doc(db, 'student_timetables', editingStudentTTId), {
+                className: editStudentTTForm.className.trim(),
+                sectionName: formattedSection,
+                day: editStudentTTForm.day,
+                timeSlot: editStudentTTForm.timeSlot.trim(),
+                subject: editStudentTTForm.subject.trim(),
+                teacherName: editStudentTTForm.teacherName.trim(),
+                roomNo: editStudentTTForm.roomNo.trim()
+            });
+            setEditingStudentTTId(null);
+            setEditStudentTTForm(initialStudentTimetableForm);
+        } catch (error) {
+            console.error("Error updating student timetable slot:", error);
+        }
+    };
+
+    const handleAddStaffTimetable = async (e) => {
+        e.preventDefault();
+        if (!staffTimetableForm.staffId || !staffTimetableForm.subject || !staffTimetableForm.timeSlot) return;
+
+        const selectedStaff = staffList.find(s => s.staffId === staffTimetableForm.staffId);
+        const resolvedStaffName = selectedStaff ? selectedStaff.name : staffTimetableForm.staffName;
+
+        await handlePublish('staff_timetables', {
+            staffId: staffTimetableForm.staffId,
+            staffName: resolvedStaffName,
+            day: staffTimetableForm.day,
+            timeSlot: staffTimetableForm.timeSlot.trim(),
+            subject: staffTimetableForm.subject.trim(),
+            className: staffTimetableForm.className.trim(),
+            roomNo: staffTimetableForm.roomNo.trim()
+        }, () => setStaffTimetableForm(initialStaffTimetableForm));
+    };
+
+    const handleUpdateStaffTimetable = async (e) => {
+        e.preventDefault();
+        if (!editingStaffTTId) return;
+
+        const selectedStaff = staffList.find(s => s.staffId === editStaffTTForm.staffId);
+        const resolvedStaffName = selectedStaff ? selectedStaff.name : editStaffTTForm.staffName;
+
+        try {
+            await updateDoc(doc(db, 'staff_timetables', editingStaffTTId), {
+                staffId: editStaffTTForm.staffId,
+                staffName: resolvedStaffName,
+                day: editStaffTTForm.day,
+                timeSlot: editStaffTTForm.timeSlot.trim(),
+                subject: editStaffTTForm.subject.trim(),
+                className: editStaffTTForm.className.trim(),
+                roomNo: editStaffTTForm.roomNo.trim()
+            });
+            setEditingStaffTTId(null);
+            setEditStaffTTForm(initialStaffTimetableForm);
+        } catch (error) {
+            console.error("Error updating staff timetable slot:", error);
+        }
+    };
+
+    // Emergency Broadcast Dispatcher
+    const handleBroadcastEmergency = async (e) => {
+        e.preventDefault();
+        if (!emergencyNotice.trim()) return;
+        await handlePublish('announcements', {
+            content: `🚨 [EMERGENCY/URGENT] ${emergencyNotice.trim()}`
+        }, () => {
+            setEmergencyNotice('');
+            alert('Emergency broadcast published live to staff and student dashboards.');
+        });
+    };
+
+    // Save System Settings
+    const handleSaveSettings = (e) => {
+        e.preventDefault();
+        setSettingsSavedMsg(true);
+        setTimeout(() => setSettingsSavedMsg(false), 3500);
+    };
+
+    // Filtered lists for Global Directory Search
+    const searchMatchStudents = studentsList.filter(s =>
+        globalSearch.trim() !== '' && (
+            s.name?.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            s.admissionNo?.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            s.className?.toLowerCase().includes(globalSearch.toLowerCase())
+        )
+    );
+
+    const searchMatchStaff = staffList.filter(s =>
+        globalSearch.trim() !== '' && (
+            s.name?.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            s.staffId?.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            s.department?.toLowerCase().includes(globalSearch.toLowerCase())
+        )
+    );
 
     if (authLoading) {
         return <div style={{ textAlign: 'center', padding: '60px' }}>Checking Authorization...</div>;
@@ -365,6 +543,15 @@ export default function AdminDashboard() {
                         </div>
 
                         <nav className="admin-tabs">
+                            {/* OVERVIEW & KPI METRICS */}
+                            <button
+                                type="button"
+                                className={`admin-tab parent-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+                                onClick={() => handleTabClick('analytics')}
+                            >
+                                <div className="tab-label"><BarChart3 size={16} /><span>Institution KPI</span></div>
+                            </button>
+
                             {/* UPDATES TAB */}
                             <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
                                 <div className="tab-label"><Radio size={16} /><span>Updates</span></div>
@@ -403,8 +590,11 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => handleTabClick('staff')}>
                                         <Users size={15} /> Staff Directory
                                     </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass(null); setSelectedSection(null); })}>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass('10th Std'); setSelectedSection(null); })}>
                                         <GraduationCap size={15} /> Students ERP
+                                    </button>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
+                                        <Award size={15} /> Results & Publish
                                     </button>
                                 </div>
                             )}
@@ -421,6 +611,19 @@ export default function AdminDashboard() {
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('staff_timetable', () => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); })}>
                                         <Clock size={15} /> Staff Schedule
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* SYSTEM SETTINGS TAB */}
+                            <button type="button" className={`admin-tab parent-tab ${systemOpen ? 'expanded' : ''}`} onClick={() => setSystemOpen(!systemOpen)}>
+                                <div className="tab-label"><Sliders size={16} /><span>System & Broadcast</span></div>
+                                <ChevronDown size={14} className={`chevron-icon ${systemOpen ? 'rotated' : ''}`} />
+                            </button>
+                            {systemOpen && (
+                                <div className="submenu-container">
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleTabClick('settings')}>
+                                        <Settings size={15} /> System Controls
                                     </button>
                                 </div>
                             )}
@@ -443,6 +646,202 @@ export default function AdminDashboard() {
                         {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
                         <span>{isSidebarCollapsed ? 'Show' : 'Hide'}</span>
                     </button>
+
+                    {/* INSTITUTION ANALYTICS & GLOBAL SEARCH */}
+                    {activeTab === 'analytics' && (
+                        <div className="applications-management-card">
+                            <h3><Activity size={18} color="var(--primary)" /> Institution Overview & Live Analytics</h3>
+
+                            {/* KPI Metrics Cards Grid */}
+                            <div className="admin-kpi-grid">
+                                <div className="admin-kpi-card indigo">
+                                    <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
+                                    <div className="kpi-info">
+                                        <span>Total Enrolled</span>
+                                        <h4>{studentsList.length} Students</h4>
+                                        <small>{sectionsList.length} Class Sections</small>
+                                    </div>
+                                </div>
+
+                                <div className="admin-kpi-card emerald">
+                                    <div className="kpi-icon-wrapper"><Users size={22} /></div>
+                                    <div className="kpi-info">
+                                        <span>Faculty Staff</span>
+                                        <h4>{staffList.length} Members</h4>
+                                        <small>{staffTimetables.length} Work Slots</small>
+                                    </div>
+                                </div>
+
+                                <div className="admin-kpi-card amber">
+                                    <div className="kpi-icon-wrapper"><Clock size={22} /></div>
+                                    <div className="kpi-info">
+                                        <span>Schedule Matrix</span>
+                                        <h4>{studentTimetables.length} Periods</h4>
+                                        <small>Across 14 Standards</small>
+                                    </div>
+                                </div>
+
+                                <div className="admin-kpi-card rose">
+                                    <div className="kpi-icon-wrapper"><Bell size={22} /></div>
+                                    <div className="kpi-info">
+                                        <span>Campus Circulars</span>
+                                        <h4>{announcements.length} Published</h4>
+                                        <small>{calendarEvents.length} Events on Record</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Fast Global Directory Search */}
+                            <h4 style={{ marginTop: '24px' }}>Quick Directory Search</h4>
+                            <div className="admin-search-wrapper">
+                                <Search size={16} color="var(--text-muted)" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by student name, admission no, staff name, or ID..."
+                                    value={globalSearch}
+                                    onChange={(e) => setGlobalSearch(e.target.value)}
+                                    className="admin-search-input"
+                                />
+                                {globalSearch && (
+                                    <button className="clear-search-btn" onClick={() => setGlobalSearch('')}><X size={14} /></button>
+                                )}
+                            </div>
+
+                            {globalSearch.trim() !== '' && (
+                                <div className="search-results-box">
+                                    <h5>Search Results for "{globalSearch}"</h5>
+
+                                    <div className="search-column-grid">
+                                        <div>
+                                            <strong className="sub-title">Matched Students ({searchMatchStudents.length})</strong>
+                                            {searchMatchStudents.length === 0 ? <p className="no-res">No students found.</p> : (
+                                                <ul className="search-res-list">
+                                                    {searchMatchStudents.map(st => (
+                                                        <li key={st.id}>
+                                                            <div>
+                                                                <strong>{st.name}</strong> ({st.className} - {st.sectionName})
+                                                                <small>Adm: #{st.admissionNo} • DOB: {st.dob}</small>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <strong className="sub-title">Matched Staff ({searchMatchStaff.length})</strong>
+                                            {searchMatchStaff.length === 0 ? <p className="no-res">No staff found.</p> : (
+                                                <ul className="search-res-list">
+                                                    {searchMatchStaff.map(stf => (
+                                                        <li key={stf.id}>
+                                                            <div>
+                                                                <strong>{stf.name}</strong> ({stf.department})
+                                                                <small>ID: {stf.staffId} • Email: {stf.email}</small>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Database & Environment Status */}
+                            <h4 style={{ marginTop: '24px' }}>Database Health & Synchronization</h4>
+                            <div className="system-health-grid">
+                                <div className="health-card">
+                                    <div className="health-header"><Database size={16} color="var(--primary)" /> <span>Firestore Database</span></div>
+                                    <p className="status-live"><span className="live-dot" /> Connected & Streaming</p>
+                                </div>
+                                <div className="health-card">
+                                    <div className="health-header"><ShieldCheck size={16} color="var(--accent-success)" /> <span>Security Rules</span></div>
+                                    <p className="status-live"><span className="live-dot" /> Authenticated Access</p>
+                                </div>
+                                <div className="health-card">
+                                    <div className="health-header"><Activity size={16} color="var(--secondary)" /> <span>Image Compression</span></div>
+                                    <p className="status-live"><span className="live-dot" /> Active (&le; 500 KB Canvas)</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SYSTEM CONTROLS & EMERGENCY BROADCAST */}
+                    {activeTab === 'settings' && (
+                        <div className="applications-management-card">
+                            <h3><Sliders size={18} color="var(--primary)" /> System Configuration & Emergency Dispatch</h3>
+
+                            {/* Emergency Broadcast Form */}
+                            <form onSubmit={handleBroadcastEmergency} className="emergency-form">
+                                <div className="emergency-header">
+                                    <AlertTriangle size={18} color="var(--accent-danger)" />
+                                    <div>
+                                        <h4 style={{ margin: 0, color: 'var(--accent-danger)' }}>Dispatch Urgent Campus Broadcast</h4>
+                                        <small style={{ color: 'var(--text-muted)' }}>Immediately streams this notice with an emergency badge to all student and faculty panels.</small>
+                                    </div>
+                                </div>
+                                <textarea
+                                    rows="2"
+                                    placeholder="Enter urgent broadcast message (e.g., Unplanned Holiday due to Heavy Rain / Campus Closure)..."
+                                    value={emergencyNotice}
+                                    onChange={(e) => setEmergencyNotice(e.target.value)}
+                                    required
+                                />
+                                <button type="submit" className="add-notice-btn" style={{ background: 'linear-gradient(135deg, #e11d48, #be123c)' }}>
+                                    <Radio size={15} /> Dispatch Emergency Alert
+                                </button>
+                            </form>
+
+                            {/* Institutional Metadata Settings */}
+                            <h4 style={{ marginTop: '24px' }}>Institution Identity & Configuration</h4>
+                            {settingsSavedMsg && (
+                                <div className="settings-saved-pill">
+                                    <Check size={14} /> Institution details updated successfully.
+                                </div>
+                            )}
+                            <form onSubmit={handleSaveSettings}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>School / Institution Name</label>
+                                    <input
+                                        type="text"
+                                        value={settingsForm.schoolName}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Active Academic Year</label>
+                                    <input
+                                        type="text"
+                                        value={settingsForm.academicYear}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, academicYear: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Official Admin Contact Email</label>
+                                    <input
+                                        type="email"
+                                        value={settingsForm.contactEmail}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, contactEmail: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Campus Helpline / Phone</label>
+                                    <input
+                                        type="text"
+                                        value={settingsForm.helpline}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, helpline: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <button type="submit" className="add-notice-btn">
+                                    <Save size={15} /> Save Institution Settings
+                                </button>
+                            </form>
+                        </div>
+                    )}
 
                     {/* ACADEMIC CALENDAR */}
                     {activeTab === 'calendar' && (
@@ -599,7 +998,20 @@ export default function AdminDashboard() {
                                     </select>
                                 </div>
                                 <div>
-                                    <input type="url" placeholder="Image URL (Hosted Link or Unsplash)" value={galleryForm.image} onChange={e => setGalleryForm({ ...galleryForm, image: e.target.value })} required />
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                        Upload Image (Auto-compressed to &lt; 500 KB • JPG, PNG, WEBP)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp"
+                                        onChange={e => handleImageUpload(e.target.files[0], (base64) => setGalleryForm({ ...galleryForm, image: base64 }))}
+                                        required={!galleryForm.image}
+                                    />
+                                    {galleryForm.image && (
+                                        <div style={{ marginTop: '6px' }}>
+                                            <img src={galleryForm.image} alt="Preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
+                                        </div>
+                                    )}
                                 </div>
                                 <textarea placeholder="Description" value={galleryForm.description} onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })} required />
                                 <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Gallery Photo</button>
@@ -610,7 +1022,10 @@ export default function AdminDashboard() {
                                 <ul>
                                     {galleryItems.map(item => (
                                         <li key={item.id}>
-                                            <span><strong>{item.title}</strong> ({item.category})</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {item.image && <img src={item.image} alt={item.title} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }} />}
+                                                <span><strong>{item.title}</strong> ({item.category})</span>
+                                            </div>
                                             <button onClick={() => handleDelete('gallery', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
@@ -874,7 +1289,11 @@ export default function AdminDashboard() {
                             {selectedClass && selectedSection && (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                                        <button className="back-btn" onClick={() => setSelectedSection(null)}>
+                                        <button className="back-btn" onClick={() => {
+                                            setSelectedSection(null);
+                                            setEditingStudentId(null);
+                                            setStudentForm(initialStudentForm);
+                                        }}>
                                             <ArrowLeft size={15} /> Back to Sections
                                         </button>
                                         <h3 style={{ margin: 0 }}>
@@ -882,8 +1301,11 @@ export default function AdminDashboard() {
                                         </h3>
                                     </div>
 
-                                    <form onSubmit={handleAddStudent} className="student-admission-form">
-                                        <div className="form-section-title">Admission & Credentials</div>
+                                    {/* Full Form for Adding and Updating Student Records */}
+                                    <form ref={studentFormRef} onSubmit={editingStudentId ? handleUpdateStudent : handleAddStudent} className="student-admission-form">
+                                        <div className="form-section-title">
+                                            {editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}
+                                        </div>
                                         <div className="student-form-grid">
                                             <div>
                                                 <label>Admission No (User ID)</label>
@@ -945,13 +1367,17 @@ export default function AdminDashboard() {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>Photo URL</label>
+                                                <label>Student Photo (Auto-compressed to &lt; 500 KB • JPG, PNG, WEBP)</label>
                                                 <input
-                                                    type="url"
-                                                    placeholder="https://..."
-                                                    value={studentForm.photo}
-                                                    onChange={e => setStudentForm({ ...studentForm, photo: e.target.value })}
+                                                    type="file"
+                                                    accept=".jpg,.jpeg,.png,.webp"
+                                                    onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))}
                                                 />
+                                                {studentForm.photo && (
+                                                    <div style={{ marginTop: '4px' }}>
+                                                        <img src={studentForm.photo} alt="Student Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -989,9 +1415,27 @@ export default function AdminDashboard() {
                                             />
                                         </div>
 
-                                        <button type="submit" className="add-notice-btn" style={{ marginTop: '8px' }}>
-                                            <UserCheck size={15} /> Enroll & Generate Credentials
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                            <button type="submit" className="add-notice-btn">
+                                                {editingStudentId ? (
+                                                    <><RefreshCw size={15} /> Update Student Record</>
+                                                ) : (
+                                                    <><UserCheck size={15} /> Enroll & Generate Credentials</>
+                                                )}
+                                            </button>
+                                            {editingStudentId && (
+                                                <button
+                                                    type="button"
+                                                    className="cancel-btn"
+                                                    onClick={() => {
+                                                        setEditingStudentId(null);
+                                                        setStudentForm(initialStudentForm);
+                                                    }}
+                                                >
+                                                    <X size={14} /> Cancel Edit
+                                                </button>
+                                            )}
+                                        </div>
                                     </form>
 
                                     <h4>Enrolled Students Directory <span className="count-badge">{studentsList.filter(st => st.sectionId === selectedSection.id).length}</span></h4>
@@ -1002,56 +1446,46 @@ export default function AdminDashboard() {
                                         <div className="student-cards-list">
                                             {studentsList.filter(st => st.sectionId === selectedSection.id).map(st => (
                                                 <div key={st.id} className="student-detail-card">
-                                                    {editingStudentId === st.id ? (
-                                                        <div className="student-edit-mode">
-                                                            <div className="student-form-grid">
-                                                                <input type="text" value={editStudentForm.name} onChange={e => setEditStudentForm({ ...editStudentForm, name: e.target.value })} placeholder="Student Name" />
-                                                                <input type="text" value={editStudentForm.admissionNo} onChange={e => setEditStudentForm({ ...editStudentForm, admissionNo: e.target.value })} placeholder="Admission No" />
-                                                                <input type="date" value={editStudentForm.dob} onChange={e => setEditStudentForm({ ...editStudentForm, dob: e.target.value })} placeholder="DOB" />
-                                                                <input type="text" value={editStudentForm.guardianName} onChange={e => setEditStudentForm({ ...editStudentForm, guardianName: e.target.value })} placeholder="Guardian" />
-                                                                <input type="text" value={editStudentForm.phone} onChange={e => setEditStudentForm({ ...editStudentForm, phone: e.target.value })} placeholder="Phone" />
-                                                                <input type="text" value={editStudentForm.bloodGroup} onChange={e => setEditStudentForm({ ...editStudentForm, bloodGroup: e.target.value })} placeholder="Blood Group" />
+                                                    <div className="student-card-content">
+                                                        <img
+                                                            src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                            alt={st.name}
+                                                            className="student-avatar"
+                                                        />
+                                                        <div className="student-info">
+                                                            <div className="student-header-row">
+                                                                <h5>{st.name}</h5>
+                                                                {st.bloodGroup && <span className="blood-badge">{st.bloodGroup}</span>}
                                                             </div>
-                                                            <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
-                                                                <button onClick={() => handleUpdateStudent(st.id)} className="save-btn"><Check size={14} /> Save</button>
-                                                                <button onClick={() => setEditingStudentId(null)} className="cancel-btn"><X size={14} /> Cancel</button>
+                                                            <p className="student-meta">
+                                                                <strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Adm Date:</strong> {st.admissionDate || 'N/A'}
+                                                            </p>
+                                                            <p className="student-meta">
+                                                                <strong>DOB:</strong> {st.dob || 'N/A'} | <strong>Parent:</strong> {st.guardianName} ({st.phone})
+                                                            </p>
+                                                            {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
+
+                                                            <div className="student-credentials-box">
+                                                                <KeyRound size={12} />
+                                                                <span>ERP Login: User: <strong>{st.admissionNo}</strong> | Pass: <strong>{st.dob}</strong></span>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        <div className="student-card-content">
-                                                            <img
-                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
-                                                                alt={st.name}
-                                                                className="student-avatar"
-                                                            />
-                                                            <div className="student-info">
-                                                                <div className="student-header-row">
-                                                                    <h5>{st.name}</h5>
-                                                                    {st.bloodGroup && <span className="blood-badge">{st.bloodGroup}</span>}
-                                                                </div>
-                                                                <p className="student-meta">
-                                                                    <strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Adm Date:</strong> {st.admissionDate || 'N/A'}
-                                                                </p>
-                                                                <p className="student-meta">
-                                                                    <strong>DOB:</strong> {st.dob || 'N/A'} | <strong>Parent:</strong> {st.guardianName} ({st.phone})
-                                                                </p>
-                                                                {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
 
-                                                                <div className="student-credentials-box">
-                                                                    <KeyRound size={12} />
-                                                                    <span>ERP Login: User: <strong>{st.admissionNo}</strong> | Pass: <strong>{st.dob}</strong></span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="student-card-actions">
-                                                                <button onClick={() => {
-                                                                    setEditingStudentId(st.id);
-                                                                    setEditStudentForm({ ...st });
-                                                                }} title="Edit Record"><Edit2 size={14} /></button>
-                                                                <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={14} /></button>
-                                                            </div>
+                                                        <div className="student-card-actions">
+                                                            <button
+                                                                onClick={() => startEditingStudent(st)}
+                                                                title="Edit Student Record"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete('students_records', st.id)}
+                                                                title="Delete Record"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1061,10 +1495,299 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* RESULTS & MASTER PUBLISHING TAB (Drill-down: Classes -> Sections -> Student Marks & Drafts + Publish for All on Overview) */}
+                    {activeTab === 'results' && (
+                        <div className="applications-management-card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <h3><Award size={18} color="var(--primary)" /> Examination Results & Master Publishing</h3>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
+                                        Review staff-entered draft scores by Class and Section, choose the Exam Type & Subject, and publish marks live for students.
+                                    </p>
+                                </div>
+                                
+                                {/* "Publish for All Classes At Once" button placed right on the main overview/selection page */}
+                                {!selectedClassResults && (
+                                    <button
+                                        type="button"
+                                        className="add-notice-btn"
+                                        style={{ background: 'linear-gradient(135deg, #059669, #047857)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                        onClick={async () => {
+                                            const compositeKey = `${examType} - ${selectedSubject}`;
+                                            if (!window.confirm(`Publish ALL draft marks across ALL classes and sections for ${compositeKey}?`)) return;
+
+                                            const targetStudents = studentsList.filter(st => st.marksDraft?.[compositeKey] !== undefined);
+
+                                            if (targetStudents.length === 0) {
+                                                alert(`No draft marks found anywhere in the school for ${compositeKey}.`);
+                                                return;
+                                            }
+
+                                            const batch = writeBatch(db);
+                                            targetStudents.forEach(st => {
+                                                const score = st.marksDraft[compositeKey];
+                                                const studentRef = doc(db, 'students_records', st.id);
+                                                batch.update(studentRef, {
+                                                    [`marks.${compositeKey}`]: score,
+                                                    [`publishedMarks.${compositeKey}`]: {
+                                                        score: score,
+                                                        subject: selectedSubject,
+                                                        examType: examType,
+                                                        publishedAt: new Date().toISOString(),
+                                                        publishedBy: 'Administrator'
+                                                    },
+                                                    marksPublished: true,
+                                                    lastMarksUpdated: new Date().toISOString()
+                                                });
+                                            });
+
+                                            await batch.commit();
+                                            alert(`Successfully published ${targetStudents.length} student scores live across ALL classes for ${compositeKey}!`);
+                                        }}
+                                    >
+                                        <Award size={15} /> Publish for All Classes At Once
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Breadcrumb Navigation */}
+                            {(selectedClassResults || selectedSectionResults) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
+                                    <button
+                                        onClick={() => { setSelectedClassResults(null); setSelectedSectionResults(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                    >
+                                        All Classes
+                                    </button>
+                                    {selectedClassResults && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <button
+                                                onClick={() => setSelectedSectionResults(null)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: selectedSectionResults ? '#4f46e5' : '#0f172a',
+                                                    cursor: selectedSectionResults ? 'pointer' : 'default',
+                                                    padding: 0,
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                {selectedClassResults}
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedSectionResults && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>Section {selectedSectionResults.name}</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Level 1: Select Class */}
+                            {!selectedClassResults && (
+                                <div>
+                                    <h4 style={{ marginBottom: '12px' }}>Select Class</h4>
+                                    <div className="class-cards-grid">
+                                        {classList.map((cls) => {
+                                            const classSections = sectionsList.filter(s => s.className === cls);
+                                            const countStudents = studentsList.filter(s => s.className === cls).length;
+
+                                            return (
+                                                <div key={cls} className="class-card" onClick={() => setSelectedClassResults(cls)}>
+                                                    <div className="class-card-icon"><GraduationCap size={20} /></div>
+                                                    <div className="class-card-content">
+                                                        <h4>{cls}</h4>
+                                                        <span>{classSections.length} Sections • {countStudents} Students</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Level 2: Select Section */}
+                            {selectedClassResults && !selectedSectionResults && (
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                        <button className="back-btn" onClick={() => setSelectedClassResults(null)}>
+                                            <ArrowLeft size={15} /> Back to Classes
+                                        </button>
+                                        <h4 style={{ margin: 0 }}>{selectedClassResults} — Select Section</h4>
+                                    </div>
+
+                                    {sectionsList.filter(s => s.className === selectedClassResults).length === 0 ? (
+                                        <div className="empty-state">No sections registered for {selectedClassResults}.</div>
+                                    ) : (
+                                        <div className="sections-grid">
+                                            {sectionsList.filter(s => s.className === selectedClassResults).map(sec => {
+                                                const studentCount = studentsList.filter(st => st.sectionId === sec.id).length;
+                                                return (
+                                                    <div key={sec.id} className="section-card" onClick={() => setSelectedSectionResults(sec)}>
+                                                        <div className="section-card-body">
+                                                            <Folder size={18} className="section-folder-icon" />
+                                                            <div>
+                                                                <h5>Section {sec.name}</h5>
+                                                                <p>{studentCount} Students Enrolled</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Level 3: Student Marks Review & Publish */}
+                            {selectedClassResults && selectedSectionResults && (
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                        <button className="back-btn" onClick={() => setSelectedSectionResults(null)}>
+                                            <ArrowLeft size={15} /> Back to Sections
+                                        </button>
+                                        <h4 style={{ margin: 0 }}>{selectedClassResults} — Section {selectedSectionResults.name} Marks & Drafts</h4>
+                                    </div>
+
+                                    {/* Exam Type & Subject Controls */}
+                                    <div className="form-grid marks-four-col-grid" style={{ marginBottom: '1rem' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Exam Term</label>
+                                            <select
+                                                className="custom-select full-width"
+                                                value={examType}
+                                                onChange={(e) => setExamType(e.target.value)}
+                                            >
+                                                <option value="1st Mid-Term exam">1st Mid-Term exam</option>
+                                                <option value="Quarterly Exam">Quarterly Exam</option>
+                                                <option value="2nd Mid-Term exam">2nd Mid-Term exam</option>
+                                                <option value="Halferly Exam">Halferly Exam</option>
+                                                <option value="3rd Mid-Term exam">3rd Mid-Term exam</option>
+                                                <option value="Annual Exam">Annual Exam</option>
+                                                <option value="Class Unit Test">Class Unit Test</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Subject</label>
+                                            <select
+                                                className="custom-select full-width"
+                                                value={selectedSubject}
+                                                onChange={(e) => setSelectedSubject(e.target.value)}
+                                            >
+                                                <option value="Mathematics">Mathematics</option>
+                                                <option value="Science">Science</option>
+                                                <option value="Physics">Physics</option>
+                                                <option value="Chemistry">Chemistry</option>
+                                                <option value="Biology">Biology</option>
+                                                <option value="English">English</option>
+                                                <option value="Tamil">Tamil</option>
+                                                <option value="Social Science">Social Science</option>
+                                                <option value="Computer Science">Computer Science</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="table-responsive">
+                                        <table className="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Admission No</th>
+                                                    <th>Student Name</th>
+                                                    <th>Staff Entered Draft Score</th>
+                                                    <th>Live Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {studentsList.filter(st => st.sectionId === selectedSectionResults.id).length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                                                            No students enrolled in this section.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    studentsList.filter(st => st.sectionId === selectedSectionResults.id).map(st => {
+                                                        const compositeKey = `${examType} - ${selectedSubject}`;
+                                                        const draftScore = st.marksDraft?.[compositeKey];
+                                                        const liveScore = st.marks?.[compositeKey];
+
+                                                        return (
+                                                            <tr key={st.id}>
+                                                                <td><code>#{st.admissionNo || 'N/A'}</code></td>
+                                                                <td><strong>{st.name}</strong></td>
+                                                                <td>
+                                                                    {draftScore !== undefined ? (
+                                                                        <span style={{ fontWeight: 800, color: 'var(--accent-warning)' }}>{draftScore} / 100 (Draft)</span>
+                                                                    ) : (
+                                                                        <span style={{ color: 'var(--text-muted)' }}>No draft entry</span>
+                                                                    )}
+                                                                </td>
+                                                                <td>
+                                                                    {liveScore !== undefined ? (
+                                                                        <span className="status-badge status-present">PUBLISHED ({liveScore})</span>
+                                                                    ) : (
+                                                                        <span className="status-badge status-absent">PENDING PUBLISH</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="card-footer" style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
+                                        <button
+                                            type="button"
+                                            className="add-notice-btn"
+                                            onClick={async () => {
+                                                const compositeKey = `${examType} - ${selectedSubject}`;
+                                                if (!window.confirm(`Publish all draft marks for ${selectedClassResults} - Section ${selectedSectionResults.name} (${compositeKey})?`)) return;
+
+                                                const targetStudents = studentsList.filter(st => st.sectionId === selectedSectionResults.id && st.marksDraft?.[compositeKey] !== undefined);
+
+                                                if (targetStudents.length === 0) {
+                                                    alert("No draft marks found to publish for this section.");
+                                                    return;
+                                                }
+
+                                                const batch = writeBatch(db);
+                                                targetStudents.forEach(st => {
+                                                    const score = st.marksDraft[compositeKey];
+                                                    const studentRef = doc(db, 'students_records', st.id);
+                                                    batch.update(studentRef, {
+                                                        [`marks.${compositeKey}`]: score,
+                                                        [`publishedMarks.${compositeKey}`]: {
+                                                            score: score,
+                                                            subject: selectedSubject,
+                                                            examType: examType,
+                                                            publishedAt: new Date().toISOString(),
+                                                            publishedBy: 'Administrator'
+                                                        },
+                                                        marksPublished: true,
+                                                        lastMarksUpdated: new Date().toISOString()
+                                                    });
+                                                });
+
+                                                await batch.commit();
+                                                alert(`Successfully published ${targetStudents.length} student scores live for this section!`);
+                                            }}
+                                        >
+                                            <Send size={15} /> Publish Section Drafts Live
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* STUDENT TIMETABLE TAB */}
                     {activeTab === 'student_timetable' && (
                         <div className="applications-management-card">
-                            {/* Student Directory — Class Timetables Section (Top) */}
                             <h3 style={{ marginBottom: '14px' }}>Student Directory — Class Timetables</h3>
 
                             {(selectedClassTT || selectedSectionTT) && (
@@ -1199,22 +1922,38 @@ export default function AdminDashboard() {
                                                                             <span className="timetable-slot-subject">{match.subject}</span>
                                                                             <span className="timetable-slot-meta">{match.teacherName || 'Unassigned'}</span>
                                                                             {match.roomNo && <span className="timetable-slot-meta">({match.roomNo})</span>}
-                                                                            <button
-                                                                                onClick={() => handleDelete('student_timetables', match.id)}
-                                                                                title="Delete Slot"
-                                                                                style={{
-                                                                                    background: 'none',
-                                                                                    border: 'none',
-                                                                                    color: '#e11d48',
-                                                                                    cursor: 'pointer',
-                                                                                    position: 'absolute',
-                                                                                    top: '2px',
-                                                                                    right: '2px',
-                                                                                    padding: 0
-                                                                                }}
-                                                                            >
-                                                                                <Trash2 size={11} />
-                                                                            </button>
+
+                                                                            <div style={{ position: 'absolute', top: '2px', right: '2px', display: 'flex', gap: '3px' }}>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setEditingStudentTTId(match.id);
+                                                                                        setEditStudentTTForm({ ...match });
+                                                                                    }}
+                                                                                    title="Edit Slot"
+                                                                                    style={{
+                                                                                        background: 'none',
+                                                                                        border: 'none',
+                                                                                        color: '#4f46e5',
+                                                                                        cursor: 'pointer',
+                                                                                        padding: 0
+                                                                                    }}
+                                                                                >
+                                                                                    <Edit2 size={11} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDelete('student_timetables', match.id)}
+                                                                                    title="Delete Slot"
+                                                                                    style={{
+                                                                                        background: 'none',
+                                                                                        border: 'none',
+                                                                                        color: '#e11d48',
+                                                                                        cursor: 'pointer',
+                                                                                        padding: 0
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 size={11} />
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     ) : null}
                                                                 </td>
@@ -1228,18 +1967,22 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Add Student Class Schedule Slot Section (Bottom) */}
-                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>Add Student Class Schedule Slot</h3>
-                            <form onSubmit={handleAddStudentTimetable} className="student-admission-form">
+                            {/* Add / Update Student Class Schedule Slot Form (Bottom) */}
+                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>
+                                {editingStudentTTId ? 'Update Student Schedule Slot' : 'Add Student Class Schedule Slot'}
+                            </h3>
+                            <form onSubmit={editingStudentTTId ? handleUpdateStudentTimetable : handleAddStudentTimetable} className="student-admission-form">
                                 <div>
                                     <label>Class</label>
                                     <select
-                                        value={studentTimetableForm.className}
-                                        onChange={e => setStudentTimetableForm({
-                                            ...studentTimetableForm,
-                                            className: e.target.value,
-                                            sectionName: ''
-                                        })}
+                                        value={editingStudentTTId ? editStudentTTForm.className : studentTimetableForm.className}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, className: e.target.value, sectionName: '' });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, className: e.target.value, sectionName: '' });
+                                            }
+                                        }}
                                         required
                                     >
                                         <option value="">Select Class</option>
@@ -1252,13 +1995,19 @@ export default function AdminDashboard() {
                                 <div>
                                     <label>Section Name</label>
                                     <select
-                                        value={studentTimetableForm.sectionName}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, sectionName: e.target.value })}
-                                        disabled={!studentTimetableForm.className}
+                                        value={editingStudentTTId ? editStudentTTForm.sectionName : studentTimetableForm.sectionName}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, sectionName: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, sectionName: e.target.value });
+                                            }
+                                        }}
+                                        disabled={editingStudentTTId ? !editStudentTTForm.className : !studentTimetableForm.className}
                                     >
                                         <option value="">Select Section</option>
                                         {sectionsList
-                                            .filter(sec => sec.className === studentTimetableForm.className)
+                                            .filter(sec => sec.className === (editingStudentTTId ? editStudentTTForm.className : studentTimetableForm.className))
                                             .map(sec => (
                                                 <option key={sec.id} value={sec.name}>{sec.name}</option>
                                             ))}
@@ -1268,8 +2017,14 @@ export default function AdminDashboard() {
                                 <div>
                                     <label>Day of Week</label>
                                     <select
-                                        value={studentTimetableForm.day}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, day: e.target.value })}
+                                        value={editingStudentTTId ? editStudentTTForm.day : studentTimetableForm.day}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, day: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, day: e.target.value });
+                                            }
+                                        }}
                                         required
                                     >
                                         {weekDays.map(day => (
@@ -1281,8 +2036,14 @@ export default function AdminDashboard() {
                                 <div>
                                     <label>Time Slot</label>
                                     <select
-                                        value={studentTimetableForm.timeSlot}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, timeSlot: e.target.value })}
+                                        value={editingStudentTTId ? editStudentTTForm.timeSlot : studentTimetableForm.timeSlot}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, timeSlot: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, timeSlot: e.target.value });
+                                            }
+                                        }}
                                         required
                                     >
                                         <option value="">Select Time Slot</option>
@@ -1297,8 +2058,14 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. Mathematics"
-                                        value={studentTimetableForm.subject}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, subject: e.target.value })}
+                                        value={editingStudentTTId ? editStudentTTForm.subject : studentTimetableForm.subject}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, subject: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, subject: e.target.value });
+                                            }
+                                        }}
                                         required
                                     />
                                 </div>
@@ -1306,8 +2073,14 @@ export default function AdminDashboard() {
                                 <div>
                                     <label>Teacher Name</label>
                                     <select
-                                        value={studentTimetableForm.teacherName}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, teacherName: e.target.value })}
+                                        value={editingStudentTTId ? editStudentTTForm.teacherName : studentTimetableForm.teacherName}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, teacherName: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, teacherName: e.target.value });
+                                            }
+                                        }}
                                     >
                                         <option value="">Select Teacher</option>
                                         {staffList.map(stf => (
@@ -1321,14 +2094,38 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. Room 102"
-                                        value={studentTimetableForm.roomNo}
-                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, roomNo: e.target.value })}
+                                        value={editingStudentTTId ? editStudentTTForm.roomNo : studentTimetableForm.roomNo}
+                                        onChange={e => {
+                                            if (editingStudentTTId) {
+                                                setEditStudentTTForm({ ...editStudentTTForm, roomNo: e.target.value });
+                                            } else {
+                                                setStudentTimetableForm({ ...studentTimetableForm, roomNo: e.target.value });
+                                            }
+                                        }}
                                     />
                                 </div>
 
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={15} /> Add Student Schedule Slot
-                                </button>
+                                <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="add-notice-btn">
+                                        {editingStudentTTId ? (
+                                            <><RefreshCw size={15} /> Update Schedule Slot</>
+                                        ) : (
+                                            <><PlusCircle size={15} /> Add Student Schedule Slot</>
+                                        )}
+                                    </button>
+                                    {editingStudentTTId && (
+                                        <button
+                                            type="button"
+                                            className="cancel-btn"
+                                            onClick={() => {
+                                                setEditingStudentTTId(null);
+                                                setEditStudentTTForm(initialStudentTimetableForm);
+                                            }}
+                                        >
+                                            <X size={14} /> Cancel Edit
+                                        </button>
+                                    )}
+                                </div>
                             </form>
                         </div>
                     )}
@@ -1336,7 +2133,6 @@ export default function AdminDashboard() {
                     {/* STAFF TIMETABLE TAB */}
                     {activeTab === 'staff_timetable' && (
                         <div className="applications-management-card">
-                            {/* Staff Directory — Work Timetables Section (Top) */}
                             <h3 style={{ marginBottom: '14px' }}>Staff Directory — Work Timetables</h3>
 
                             {(selectedStaffTT || selectedStaffDayTT) && (
@@ -1468,13 +2264,25 @@ export default function AdminDashboard() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleDelete('staff_timetables', item.id)}
-                                                            title="Delete Slot"
-                                                            style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingStaffTTId(item.id);
+                                                                    setEditStaffTTForm({ ...item });
+                                                                }}
+                                                                title="Edit Slot"
+                                                                style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer' }}
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete('staff_timetables', item.id)}
+                                                                title="Delete Slot"
+                                                                style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                         </div>
@@ -1482,20 +2290,30 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Add Staff Work Schedule Slot Section (Bottom) */}
-                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>Add Staff Work Schedule Slot</h3>
-                            <form onSubmit={handleAddStaffTimetable} className="student-admission-form">
+                            {/* Add / Update Staff Work Schedule Slot Form (Bottom) */}
+                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>
+                                {editingStaffTTId ? 'Update Staff Work Schedule Slot' : 'Add Staff Work Schedule Slot'}
+                            </h3>
+                            <form onSubmit={editingStaffTTId ? handleUpdateStaffTimetable : handleAddStaffTimetable} className="student-admission-form">
                                 <div>
                                     <label>Staff Member</label>
                                     <select
-                                        value={staffTimetableForm.staffId}
+                                        value={editingStaffTTId ? editStaffTTForm.staffId : staffTimetableForm.staffId}
                                         onChange={e => {
                                             const selected = staffList.find(s => s.staffId === e.target.value);
-                                            setStaffTimetableForm({
-                                                ...staffTimetableForm,
-                                                staffId: e.target.value,
-                                                staffName: selected ? selected.name : ''
-                                            });
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({
+                                                    ...editStaffTTForm,
+                                                    staffId: e.target.value,
+                                                    staffName: selected ? selected.name : ''
+                                                });
+                                            } else {
+                                                setStaffTimetableForm({
+                                                    ...staffTimetableForm,
+                                                    staffId: e.target.value,
+                                                    staffName: selected ? selected.name : ''
+                                                });
+                                            }
                                         }}
                                         required
                                     >
@@ -1510,8 +2328,14 @@ export default function AdminDashboard() {
                                 <div>
                                     <label>Day of Week</label>
                                     <select
-                                        value={staffTimetableForm.day}
-                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, day: e.target.value })}
+                                        value={editingStaffTTId ? editStaffTTForm.day : staffTimetableForm.day}
+                                        onChange={e => {
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({ ...editStaffTTForm, day: e.target.value });
+                                            } else {
+                                                setStaffTimetableForm({ ...staffTimetableForm, day: e.target.value });
+                                            }
+                                        }}
                                         required
                                     >
                                         {weekDays.map(day => (
@@ -1524,8 +2348,14 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. 10:00 - 10:45 AM"
-                                        value={staffTimetableForm.timeSlot}
-                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, timeSlot: e.target.value })}
+                                        value={editingStaffTTId ? editStaffTTForm.timeSlot : staffTimetableForm.timeSlot}
+                                        onChange={e => {
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({ ...editStaffTTForm, timeSlot: e.target.value });
+                                            } else {
+                                                setStaffTimetableForm({ ...staffTimetableForm, timeSlot: e.target.value });
+                                            }
+                                        }}
                                         required
                                     />
                                 </div>
@@ -1534,8 +2364,14 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. Physics Lab"
-                                        value={staffTimetableForm.subject}
-                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, subject: e.target.value })}
+                                        value={editingStaffTTId ? editStaffTTForm.subject : staffTimetableForm.subject}
+                                        onChange={e => {
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({ ...editStaffTTForm, subject: e.target.value });
+                                            } else {
+                                                setStaffTimetableForm({ ...staffTimetableForm, subject: e.target.value });
+                                            }
+                                        }}
                                         required
                                     />
                                 </div>
@@ -1544,8 +2380,14 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. 10th Std - Sec A"
-                                        value={staffTimetableForm.className}
-                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, className: e.target.value })}
+                                        value={editingStaffTTId ? editStaffTTForm.className : staffTimetableForm.className}
+                                        onChange={e => {
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({ ...editStaffTTForm, className: e.target.value });
+                                            } else {
+                                                setStaffTimetableForm({ ...staffTimetableForm, className: e.target.value });
+                                            }
+                                        }}
                                     />
                                 </div>
                                 <div>
@@ -1553,13 +2395,38 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         placeholder="e.g. Lab 2"
-                                        value={staffTimetableForm.roomNo}
-                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, roomNo: e.target.value })}
+                                        value={editingStaffTTId ? editStaffTTForm.roomNo : staffTimetableForm.roomNo}
+                                        onChange={e => {
+                                            if (editingStaffTTId) {
+                                                setEditStaffTTForm({ ...editStaffTTForm, roomNo: e.target.value });
+                                            } else {
+                                                setStaffTimetableForm({ ...staffTimetableForm, roomNo: e.target.value });
+                                            }
+                                        }}
                                     />
                                 </div>
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={15} /> Add Staff Schedule Slot
-                                </button>
+
+                                <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="add-notice-btn">
+                                        {editingStaffTTId ? (
+                                            <><RefreshCw size={15} /> Update Staff Schedule Slot</>
+                                        ) : (
+                                            <><PlusCircle size={15} /> Add Staff Schedule Slot</>
+                                        )}
+                                    </button>
+                                    {editingStaffTTId && (
+                                        <button
+                                            type="button"
+                                            className="cancel-btn"
+                                            onClick={() => {
+                                                setEditingStaffTTId(null);
+                                                setEditStaffTTForm(initialStaffTimetableForm);
+                                            }}
+                                        >
+                                            <X size={14} /> Cancel Edit
+                                        </button>
+                                    )}
+                                </div>
                             </form>
                         </div>
                     )}

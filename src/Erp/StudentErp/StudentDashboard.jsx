@@ -1,19 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
-    Menu, X, Clock, FileText, User
+    Menu, X, Clock, FileText, User, AlertCircle, Layers, Check, XCircle,
+    Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
+    ChevronRight, BarChart2
 } from 'lucide-react';
 import './StudentDashboard.css';
 
 export default function StudentDashboard() {
-    const [activeTab, setActiveTab] = useState('schedule');
+    const [activeTab, setActiveTab] = useState('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [studentData, setStudentData] = useState({ name: 'Student', grade: '', section: '', rollNo: '' });
+    const [studentData, setStudentData] = useState({ name: 'Student', grade: '', section: '', rollNo: '', id: '' });
+
+    // Live Synced States
     const [timetableList, setTimetableList] = useState([]);
+    const [liveStudentRecord, setLiveStudentRecord] = useState(null);
+    const [announcements, setAnnouncements] = useState([]);
+    const [assignmentsList, setAssignmentsList] = useState([]);
+    const [submissionsList, setSubmissionsList] = useState([]);
+
+    // PDF Upload States
+    const [uploadingTaskId, setUploadingTaskId] = useState(null);
+    const [pdfBase64Map, setPdfBase64Map] = useState({});
+    const [isCompressing, setIsCompressing] = useState(false);
+
+    // Subject/Exam filter on Marks tab
+    const [selectedExamView, setSelectedExamView] = useState('All');
 
     const navigate = useNavigate();
 
@@ -32,13 +48,23 @@ export default function StudentDashboard() {
         '03:30 - 04:10 PM'
     ];
 
-    // 1. Load Session Data from LocalStorage
+    const examList = [
+        '1st Mid-Term exam',
+        'Quarterly Exam',
+        '2nd Mid-Term exam',
+        'Halferly Exam',
+        '3rd Mid-Term exam',
+        'Annual Exam',
+        'Class Unit Test'
+    ];
+
     useEffect(() => {
         const storedUser = localStorage.getItem('studentUser');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
                 setStudentData({
+                    id: user.id || user.uid || '',
                     name: user.name || 'Student Name',
                     grade: user.grade || user.className || '',
                     section: user.section || user.sectionName || '',
@@ -50,7 +76,6 @@ export default function StudentDashboard() {
         }
     }, []);
 
-    // Normalize strings for fail-safe comparison
     const cleanString = (str) => {
         if (!str) return '';
         return str
@@ -63,13 +88,99 @@ export default function StudentDashboard() {
             .trim();
     };
 
-    // Normalize time formats (e.g., "09.00-09.45" -> "09000945")
     const cleanTime = (str) => {
         if (!str) return '';
         return str.toString().toLowerCase().replace(/\s*(am|pm)\s*/g, '').replace(/[^0-9]/g, '');
     };
 
-    // 2. Real-time Listeners
+    // Client-Side PDF Compressor (Max 500 KB Limit)
+    const handlePdfUpload = (taskId, file) => {
+        if (!file) return;
+
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Invalid file format! Please upload only standard PDF documents.');
+            return;
+        }
+
+        setIsCompressing(true);
+        setUploadingTaskId(taskId);
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                let base64String = e.target.result;
+                const maxCharLimit = 680000;
+
+                if (file.size > 500 * 1024) {
+                    const binary = atob(base64String.split(',')[1]);
+                    let cleanedBinary = binary.replace(/\/Metadata\s+\d+\s+\d+\s+R/g, '');
+                    cleanedBinary = cleanedBinary.replace(/\/PieceInfo\s+<<.*?>>/gs, '');
+
+                    base64String = `data:application/pdf;base64,${btoa(cleanedBinary)}`;
+
+                    if (base64String.length > maxCharLimit) {
+                        alert('PDF file is too large to compress under 500 KB. Please reduce pages or compress image layers.');
+                        setIsCompressing(false);
+                        setUploadingTaskId(null);
+                        return;
+                    }
+                }
+
+                setPdfBase64Map(prev => ({
+                    ...prev,
+                    [taskId]: {
+                        fileName: file.name,
+                        fileSize: (file.size / 1024).toFixed(1) + ' KB',
+                        data: base64String
+                    }
+                }));
+            } catch (err) {
+                console.error("PDF processing error:", err);
+                alert("Could not process PDF file. Please try another document.");
+            } finally {
+                setIsCompressing(false);
+                setUploadingTaskId(null);
+            }
+        };
+
+        reader.readAsDataURL(file);
+    };
+
+    const handleSubmitAssignmentPdf = async (taskId, taskTitle) => {
+        const fileObj = pdfBase64Map[taskId];
+        if (!fileObj || !fileObj.data) {
+            alert('Please select a PDF to upload first.');
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'assignment_submissions'), {
+                taskId: taskId,
+                taskTitle: taskTitle,
+                studentId: studentData.id,
+                studentName: studentData.name,
+                admissionNo: studentData.rollNo,
+                className: studentData.grade,
+                sectionName: studentData.section,
+                pdfData: fileObj.data,
+                fileName: fileObj.fileName,
+                fileSize: fileObj.fileSize,
+                submittedAt: serverTimestamp()
+            });
+
+            alert('Assignment PDF turned in successfully!');
+            setPdfBase64Map(prev => {
+                const copy = { ...prev };
+                delete copy[taskId];
+                return copy;
+            });
+        } catch (error) {
+            console.error("Error submitting assignment PDF:", error);
+            alert("Submission failed. Check network connection.");
+        }
+    };
+
+    // 1. Timetable listener
     useEffect(() => {
         const parseFirestoreDoc = (doc) => {
             const data = doc.data();
@@ -77,7 +188,6 @@ export default function StudentDashboard() {
 
             const docClass = data.className || data.class || data.grade || '';
             const docSection = data.sectionName || data.section || '';
-
             const gridData = data.grid || data.schedule || data.matrix || data.timetable || data.days;
 
             if (gridData && typeof gridData === 'object' && !Array.isArray(gridData)) {
@@ -148,11 +258,59 @@ export default function StudentDashboard() {
         };
     }, []);
 
-    // 3. Filter Schedule for Logged-In Student
+    // 2. Real-time Live Synchronized Records
+    useEffect(() => {
+        const unsubStudents = onSnapshot(collection(db, 'students_records'), (snap) => {
+            const current = snap.docs.find(doc => {
+                const data = doc.data();
+                const rollMatch = cleanString(data.admissionNo) === cleanString(studentData.rollNo);
+                const nameMatch = cleanString(data.name) === cleanString(studentData.name);
+                return rollMatch || nameMatch || doc.id === studentData.id;
+            });
+
+            if (current) {
+                setLiveStudentRecord({ id: current.id, ...current.data() });
+            }
+        });
+
+        const unsubAnnounce = onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snap) => {
+            setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubAssignments = onSnapshot(collection(db, 'class_assignments'), (snap) => {
+            setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubSubmissions = onSnapshot(collection(db, 'assignment_submissions'), (snap) => {
+            const mySubmissions = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(sub => cleanString(sub.admissionNo) === cleanString(studentData.rollNo) || sub.studentId === studentData.id);
+            setSubmissionsList(mySubmissions);
+        });
+
+        return () => {
+            unsubStudents();
+            unsubAnnounce();
+            unsubAssignments();
+            unsubSubmissions();
+        };
+    }, [studentData]);
+
     const studentSchedule = timetableList.filter(item => {
         const itemClass = cleanString(item.className);
         const studentClass = cleanString(studentData.grade);
+        const itemSec = cleanString(item.sectionName);
+        const studentSec = cleanString(studentData.section);
 
+        const isClassMatch = !itemClass || !studentClass || itemClass === studentClass || itemClass.includes(studentClass) || studentClass.includes(itemClass);
+        const isSecMatch = !itemSec || !studentSec || itemSec === studentSec || itemSec.includes(studentSec) || studentSec.includes(itemSec);
+
+        return isClassMatch && isSecMatch;
+    });
+
+    const studentAssignments = assignmentsList.filter(item => {
+        const itemClass = cleanString(item.className);
+        const studentClass = cleanString(studentData.grade);
         const itemSec = cleanString(item.sectionName);
         const studentSec = cleanString(studentData.section);
 
@@ -167,44 +325,143 @@ export default function StudentDashboard() {
         navigate('/erp/student');
     };
 
+    // Marks Calculations
+    const publishedMarksObj = liveStudentRecord?.publishedMarks || liveStudentRecord?.marks || {};
+    const marksEntries = Object.entries(publishedMarksObj).map(([key, val]) => {
+        const score = typeof val === 'object' && val !== null ? val.score : Number(val);
+        const subject = typeof val === 'object' && val?.subject ? val.subject : (key.includes('-') ? key.split('-')[1].trim() : 'General');
+        const examName = typeof val === 'object' && val?.examType ? val.examType : (key.includes('-') ? key.split('-')[0].trim() : key);
+        return {
+            key,
+            examName,
+            subject,
+            score: isNaN(score) ? 0 : score
+        };
+    });
+
+    const filteredMarksEntries = selectedExamView === 'All' 
+        ? marksEntries 
+        : marksEntries.filter(m => cleanString(m.examName) === cleanString(selectedExamView));
+
+    const totalScore = marksEntries.reduce((acc, curr) => acc + curr.score, 0);
+    const averageScore = marksEntries.length > 0 ? (totalScore / marksEntries.length).toFixed(1) : 'N/A';
+
+    // Attendance Calculations
+    const currentAttendanceStatus = liveStudentRecord?.status || 'present';
+    const rawAttendanceRate = liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68);
+    const isDefaulter = rawAttendanceRate < 75;
+
     const stats = [
-        { title: 'Attendance Rate', value: '94%', icon: CheckCircle },
-        { title: 'Current GPA', value: '3.8 / 4.0', icon: Award },
-        { title: 'Scheduled Sessions', value: `${studentSchedule.length} Classes`, icon: BookOpen },
-        { title: 'Pending Tasks', value: '2 Due', icon: FileText },
+        { 
+            title: 'Attendance Rate', 
+            value: `${rawAttendanceRate}%`, 
+            icon: isDefaulter ? AlertTriangle : CheckCircle,
+            color: isDefaulter ? 'rose' : 'emerald',
+            badge: isDefaulter ? 'Below 75% Minimum' : 'Compliant'
+        },
+        { 
+            title: 'Coursework & PDFs', 
+            value: `${studentAssignments.length} Tasks`, 
+            icon: Layers, 
+            color: 'amber',
+            badge: `${submissionsList.length} Turned In` 
+        },
+        { 
+            title: 'Published Exam Scores', 
+            value: averageScore !== 'N/A' ? `${averageScore}%` : 'Pending', 
+            icon: Award, 
+            color: 'indigo',
+            badge: `${marksEntries.length} Subjects` 
+        },
+        { 
+            title: 'Class Routine', 
+            value: `${studentSchedule.length} Sessions`, 
+            icon: BookOpen, 
+            color: 'cyan',
+            badge: 'Live Matrix' 
+        },
     ];
+
+    const printTimetable = () => {
+        window.print();
+    };
 
     return (
         <div className="staff-style-dashboard">
             <div className="staff-mobile-toggle-bar">
                 <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                    <span>Student Portal Menu</span>
+                    {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                    <span>Student Portal</span>
                 </button>
+                <div className="portal-status-pill">
+                    <span className={`status-dot ${currentAttendanceStatus}`} />
+                    {currentAttendanceStatus.toUpperCase()} ({rawAttendanceRate}%)
+                </div>
             </div>
+
+            {isMobileMenuOpen && (
+                <div className="staff-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+            )}
 
             <div className="staff-layout-grid">
                 <aside className={`staff-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                     <div className="staff-user-profile font-bold">
-                        <div className="staff-avatar-ring"><User size={20} /></div>
+                        <div className="staff-avatar-ring">
+                            {liveStudentRecord?.photo ? (
+                                <img src={liveStudentRecord.photo} alt="Avatar" className="student-profile-img" />
+                            ) : (
+                                <User size={18} />
+                            )}
+                        </div>
                         <div className="staff-user-info">
                             <h4>{studentData.name}</h4>
-                            <p>{studentData.grade} {studentData.section ? `— Section ${studentData.section}` : ''} • #{studentData.rollNo}</p>
+                            <p>{studentData.grade} {studentData.section ? `• Sec ${studentData.section}` : ''}</p>
+                            <span className="roll-no-tag">ID: #{studentData.rollNo || 'N/A'}</span>
                         </div>
                     </div>
 
                     <nav className="staff-nav-list">
-                        <button className={`staff-nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
-                            <BookOpen size={18} /><span>Overview</span>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'overview' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+                        >
+                            <BookOpen size={16} /><span>Dashboard Overview</span>
                         </button>
-                        <button className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>
-                            <Calendar size={18} /><span>Timetable</span>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'assignments' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Layers size={16} /><span>PDF Tasks & Uploads</span>
+                        </button>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Calendar size={16} /><span>Class Routine Table</span>
+                        </button>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'marks' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('marks'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Award size={16} /><span>Examination Marks</span>
+                        </button>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'submissions' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('submissions'); setIsMobileMenuOpen(false); }}
+                        >
+                            <FileCheck size={16} /><span>Submission History</span>
+                        </button>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'notices' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('notices'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Bell size={16} /><span>School Bulletins</span>
                         </button>
                     </nav>
 
                     <div className="staff-sidebar-footer">
                         <button className="staff-signout-btn" onClick={handleLogout}>
-                            <LogOut size={16} /><span>Sign Out</span>
+                            <LogOut size={15} /><span>Sign Out</span>
                         </button>
                     </div>
                 </aside>
@@ -212,36 +469,269 @@ export default function StudentDashboard() {
                 <div className="staff-main-workspace">
                     <header className="staff-top-header">
                         <div className="staff-search-input-group">
-                            <Search size={16} className="search-icon" />
-                            <input type="text" placeholder="Search records..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                            <Search size={15} className="search-icon" />
+                            <input 
+                                type="text" 
+                                placeholder="Search courses or assignments..." 
+                                value={searchQuery} 
+                                onChange={(e) => setSearchQuery(e.target.value)} 
+                            />
+                        </div>
+
+                        <div className="topbar-actions">
+                            <div className="sync-badge">
+                                <span className="sync-dot" /> Live Portal Sync
+                            </div>
                         </div>
                     </header>
 
                     <div className="staff-content-container">
+                        {/* =========================================================
+                            1. OVERVIEW WITH ATTENDANCE COMPLIANCE BAR
+                            ========================================================= */}
                         {activeTab === 'overview' && (
                             <>
                                 <div className="staff-welcome-card">
                                     <div>
-                                        <h2>Welcome back, <span className="green-accent">{studentData.name}</span></h2>
-                                        <p>Viewing profile for {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''}</p>
+                                        <h2>Welcome back, <span className="green-accent">{studentData.name}</span>! 👋</h2>
+                                        <p>Enrolled in {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''} • Somarasampettai Campus</p>
+                                    </div>
+                                    <div className="attendance-pill-box">
+                                        <span className="pill-label">Roll Call:</span>
+                                        <span className={`status-badge status-${currentAttendanceStatus}`}>
+                                            {currentAttendanceStatus === 'present' ? <Check size={12} /> : <XCircle size={12} />}
+                                            {currentAttendanceStatus.toUpperCase()}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className="staff-stats-grid">
-                                    {stats.map((s, idx) => (
-                                        <div key={idx} className="staff-stat-box">
-                                            <span className="stat-title">{s.title}</span>
-                                            <h3 className="stat-val">{s.value}</h3>
+                                {/* Attendance Threshold Bar */}
+                                {isDefaulter && (
+                                    <div className="attendance-warning-banner">
+                                        <div className="warning-content">
+                                            <AlertTriangle size={20} color="var(--accent-rose)" />
+                                            <div>
+                                                <strong>Attendance Below 75% Threshold ({rawAttendanceRate}%)</strong>
+                                                <p>Your current attendance is below minimum institutional requirements. Please connect with your class advisor.</p>
+                                            </div>
                                         </div>
-                                    ))}
+                                        <div className="attendance-progress-track">
+                                            <div 
+                                                className="attendance-progress-fill alert" 
+                                                style={{ width: `${rawAttendanceRate}%` }} 
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="staff-stats-grid">
+                                    {stats.map((s, idx) => {
+                                        const IconComp = s.icon;
+                                        return (
+                                            <div key={idx} className="staff-stat-box">
+                                                <div className="stat-head">
+                                                    <div className={`stat-icon-bg bg-${s.color}`}>
+                                                        <IconComp size={18} />
+                                                    </div>
+                                                    <span className="stat-tag">{s.badge}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="stat-title">{s.title}</span>
+                                                    <h3 className="stat-val">{s.value}</h3>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="student-two-col-grid">
+                                    {/* Active Coursework */}
+                                    <div className="staff-card">
+                                        <div className="card-header">
+                                            <h3>Active Coursework</h3>
+                                            <Layers size={16} className="muted-icon" />
+                                        </div>
+                                        {studentAssignments.length === 0 ? (
+                                            <div className="empty-sub-card">
+                                                <CheckCircle size={24} color="var(--accent-emerald)" />
+                                                <p>All caught up! No active tasks assigned for your class.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="student-tasks-list">
+                                                {studentAssignments.slice(0, 3).map(task => {
+                                                    const isSubmitted = submissionsList.some(sub => sub.taskId === task.id);
+                                                    return (
+                                                        <div key={task.id} className="student-task-item">
+                                                            <div className="task-top-flex">
+                                                                <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
+                                                                    {task.type}
+                                                                </span>
+                                                                {isSubmitted ? (
+                                                                    <span className="submitted-pill"><FileCheck size={12} /> Submitted</span>
+                                                                ) : (
+                                                                    <span className="due-date-pill">Due: {task.dueDate}</span>
+                                                                )}
+                                                            </div>
+                                                            <h5>{task.title}</h5>
+                                                            <span className="task-sub">{task.subject} • Faculty: {task.staffName}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Notice Bulletins */}
+                                    <div className="staff-card">
+                                        <div className="card-header">
+                                            <h3>Notice Board Circulars</h3>
+                                            <Bell size={16} className="muted-icon" />
+                                        </div>
+                                        <div className="student-notice-list">
+                                            {announcements.slice(0, 3).map((item) => (
+                                                <div key={item.id} className="student-notice-item">
+                                                    <p>{item.content}</p>
+                                                    <span className="notice-time">
+                                                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Recent'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {announcements.length === 0 && (
+                                                <p style={{ color: 'var(--staff-text-muted)', fontSize: '0.78rem' }}>No announcements available.</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
 
+                        {/* =========================================================
+                            2. PDF TASKS & UPLOADS
+                            ========================================================= */}
+                        {activeTab === 'assignments' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Coursework & PDF Document Submissions</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Assigned specifically to {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''} • Auto-compressed to &le; 500 KB
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {studentAssignments.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Layers size={32} color="var(--staff-primary)" />
+                                        <h4>No Tasks Assigned</h4>
+                                        <p>Your teachers have not assigned any coursework or tests for your section yet.</p>
+                                    </div>
+                                ) : (
+                                    <div className="student-assignments-grid">
+                                        {studentAssignments.map(task => {
+                                            const submission = submissionsList.find(sub => sub.taskId === task.id);
+                                            const selectedFile = pdfBase64Map[task.id];
+
+                                            return (
+                                                <div key={task.id} className="assignment-display-card">
+                                                    <div className="assignment-badge-row">
+                                                        <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
+                                                            {task.type}
+                                                        </span>
+                                                        <span className="due-date-pill">Due: {task.dueDate}</span>
+                                                    </div>
+
+                                                    <h4>{task.title}</h4>
+
+                                                    <div className="assignment-meta-details">
+                                                        <span><strong>Subject:</strong> {task.subject}</span>
+                                                        <span><strong>Faculty:</strong> {task.staffName || 'Teacher'}</span>
+                                                    </div>
+
+                                                    {task.description && (
+                                                        <p className="assignment-body-desc">{task.description}</p>
+                                                    )}
+
+                                                    <div className="pdf-upload-wrapper">
+                                                        {submission ? (
+                                                            <div className="submission-completed-box">
+                                                                <div className="submission-file-meta">
+                                                                    <FileCheck size={16} color="var(--accent-emerald)" />
+                                                                    <div>
+                                                                        <strong>{submission.fileName || 'Assignment.pdf'}</strong>
+                                                                        <span style={{ fontSize: '0.68rem', display: 'block', color: 'var(--staff-text-muted)' }}>
+                                                                            {submission.obtainedMarks !== undefined ? `Graded: ${submission.obtainedMarks}/100` : 'Submitted (Pending Review)'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <a
+                                                                    href={submission.pdfData}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="view-pdf-link"
+                                                                >
+                                                                    <ExternalLink size={13} /> Preview PDF
+                                                                </a>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="upload-action-box">
+                                                                <label className="pdf-file-label">
+                                                                    <Upload size={14} />
+                                                                    <span>{selectedFile ? selectedFile.fileName : 'Upload Assignment PDF (Auto-compressed to 500KB)'}</span>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="application/pdf"
+                                                                        onChange={(e) => handlePdfUpload(task.id, e.target.files[0])}
+                                                                        disabled={isCompressing}
+                                                                        style={{ display: 'none' }}
+                                                                    />
+                                                                </label>
+
+                                                                {isCompressing && uploadingTaskId === task.id && (
+                                                                    <div className="compressing-pill">
+                                                                        <Loader2 size={12} className="spin-icon" /> Compressing PDF &lt; 500KB...
+                                                                    </div>
+                                                                )}
+
+                                                                {selectedFile && (
+                                                                    <div className="pdf-ready-row">
+                                                                        <span className="pdf-ready-tag">
+                                                                            Ready: {selectedFile.fileSize}
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="submit-pdf-btn"
+                                                                            onClick={() => handleSubmitAssignmentPdf(task.id, task.title)}
+                                                                        >
+                                                                            <Check size={14} /> Turn In PDF
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            3. CLASS ROUTINE / TIMETABLE
+                            ========================================================= */}
                         {activeTab === 'schedule' && (
                             <div className="staff-card full">
                                 <div className="card-header">
-                                    <h3>Weekly Timetable — {studentData.grade} {studentData.section ? `Section ${studentData.section}` : ''}</h3>
+                                    <div>
+                                        <h3>Class Timetable — {studentData.grade} {studentData.section ? `Section ${studentData.section}` : ''}</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Synchronized live with administrator and faculty allocations
+                                        </p>
+                                    </div>
+                                    <button className="print-schedule-btn" onClick={printTimetable}>
+                                        <Printer size={14} /> Print / Export Timetable
+                                    </button>
                                 </div>
 
                                 <div className="student-timetable-wrapper">
@@ -272,9 +762,9 @@ export default function StudentDashboard() {
                                                                 {match && (
                                                                     <div className="student-slot-card">
                                                                         <span className="slot-subject">{match.subject}</span>
-                                                                        <span className="slot-teacher">{match.teacherName || 'Unassigned'}</span>
+                                                                        <span className="slot-teacher">{match.teacherName || 'Faculty'}</span>
                                                                         {match.roomNo && match.roomNo !== 'N/A' && (
-                                                                            <span className="slot-room">({match.roomNo})</span>
+                                                                            <span className="slot-room">Rm: {match.roomNo}</span>
                                                                         )}
                                                                     </div>
                                                                 )}
@@ -285,6 +775,180 @@ export default function StudentDashboard() {
                                             ))}
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            4. EXAMINATION MARKS (Subject-Wise & Term Filter)
+                            ========================================================= */}
+                        {activeTab === 'marks' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Academic Progress & Assessment Marks</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Published Report Card for {studentData.name} (#{studentData.rollNo})
+                                        </p>
+                                    </div>
+                                    <div className="exam-filter-group">
+                                        <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filter Exam:</label>
+                                        <select 
+                                            className="custom-select"
+                                            value={selectedExamView}
+                                            onChange={(e) => setSelectedExamView(e.target.value)}
+                                        >
+                                            <option value="All">All Examinations</option>
+                                            {examList.map(exam => (
+                                                <option key={exam} value={exam}>{exam}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredMarksEntries.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Award size={32} color="var(--staff-primary)" />
+                                        <h4>No Marks Published For This Filter</h4>
+                                        <p>Scores will appear here once your faculty publishes evaluation marks.</p>
+                                    </div>
+                                ) : (
+                                    <div className="marks-table-wrapper">
+                                        <table className="custom-marks-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Exam Term</th>
+                                                    <th>Subject</th>
+                                                    <th>Max Marks</th>
+                                                    <th>Score Obtained</th>
+                                                    <th>Performance Grade</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredMarksEntries.map((item, idx) => {
+                                                    const numScore = Number(item.score);
+                                                    let grade = 'A+';
+                                                    let gradeClass = 'grade-a-plus';
+                                                    if (numScore < 40) { grade = 'Needs Improvement'; gradeClass = 'grade-fail'; }
+                                                    else if (numScore < 60) { grade = 'B'; gradeClass = 'grade-b'; }
+                                                    else if (numScore < 80) { grade = 'A'; gradeClass = 'grade-a'; }
+
+                                                    return (
+                                                        <tr key={idx}>
+                                                            <td><strong style={{ color: 'var(--staff-primary)' }}>{item.examName}</strong></td>
+                                                            <td><span className="topic-badge">{item.subject}</span></td>
+                                                            <td>100</td>
+                                                            <td><span className="table-score-badge">{numScore} / 100</span></td>
+                                                            <td><span className={`grade-badge ${gradeClass}`}>{grade}</span></td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            5. SUBMISSION HISTORY TAB
+                            ========================================================= */}
+                        {activeTab === 'submissions' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Turned-In PDF Submissions History</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Record of your uploaded files and faculty grading status
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {submissionsList.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <FileCheck size={32} color="var(--staff-text-muted)" />
+                                        <h4>No Turned-In Assignments</h4>
+                                        <p>You haven't uploaded any PDF coursework yet. Visit the Tasks tab to submit assignments.</p>
+                                    </div>
+                                ) : (
+                                    <div className="table-responsive">
+                                        <table className="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Assignment Title</th>
+                                                    <th>Submitted Document</th>
+                                                    <th>Submission Date</th>
+                                                    <th>Review Status</th>
+                                                    <th>Score / Marks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {submissionsList.map((sub) => (
+                                                    <tr key={sub.id}>
+                                                        <td><strong>{sub.taskTitle || 'Coursework'}</strong></td>
+                                                        <td>
+                                                            <a href={sub.pdfData} target="_blank" rel="noreferrer" className="pdf-preview-link">
+                                                                <ExternalLink size={12} /> {sub.fileName || 'Assignment.pdf'} ({sub.fileSize || '< 500 KB'})
+                                                            </a>
+                                                        </td>
+                                                        <td style={{ fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                                            {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Recent'}
+                                                        </td>
+                                                        <td>
+                                                            {sub.obtainedMarks !== undefined ? (
+                                                                <span className="status-badge status-present">
+                                                                    <Check size={11} /> GRADED
+                                                                </span>
+                                                            ) : (
+                                                                <span className="status-badge status-absent">
+                                                                    <Clock size={11} /> IN REVIEW
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            {sub.obtainedMarks !== undefined ? (
+                                                                <strong style={{ color: 'var(--staff-primary)', fontSize: '0.9rem' }}>
+                                                                    {sub.obtainedMarks} / 100
+                                                                </strong>
+                                                            ) : (
+                                                                <span style={{ color: 'var(--staff-text-muted)', fontSize: '0.75rem' }}>Pending</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            6. NOTICES & CIRCULARS
+                            ========================================================= */}
+                        {activeTab === 'notices' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <h3>Campus Circulars & Bulletins</h3>
+                                </div>
+                                <div className="full-notices-container">
+                                    {announcements.map((item) => (
+                                        <div key={item.id} className="bulletin-card">
+                                            <div className="bulletin-header">
+                                                <span className="bulletin-tag">Official Notice</span>
+                                                <span className="bulletin-date">
+                                                    {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Live'}
+                                                </span>
+                                            </div>
+                                            <p>{item.content}</p>
+                                        </div>
+                                    ))}
+                                    {announcements.length === 0 && (
+                                        <div className="empty-sub-card">
+                                            <Bell size={28} />
+                                            <p>No circulars posted at this time.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

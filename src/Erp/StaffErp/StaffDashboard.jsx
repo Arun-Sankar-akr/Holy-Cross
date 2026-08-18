@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import {
-    collection, onSnapshot, doc, updateDoc, writeBatch
+    collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField
 } from 'firebase/firestore';
 import {
     Users, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
     LogOut, Search, Menu, X, Check, GraduationCap, ArrowLeft,
-    Folder, KeyRound, Sparkles, ChevronDown
+    Folder, KeyRound, Sparkles, ChevronDown, PlusCircle, Trash2, Layers,
+    FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
+    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -19,24 +21,91 @@ export default function StaffDashboard() {
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
+    const clearOldMarks = async (studentDocId) => {
+        const studentRef = doc(db, 'students_records', studentDocId);
+
+        await updateDoc(studentRef, {
+            'marks.Mid-Term Assessment': deleteField(),
+            'marksDraft.Mid-Term Assessment': deleteField(),
+            'publishedMarks.Mid-Term Assessment': deleteField()
+        });
+    };
+
+    const clearAllMarksMaps = async (studentDocId) => {
+        const studentRef = doc(db, 'students_records', studentDocId);
+
+        await updateDoc(studentRef, {
+            marks: deleteField(),
+            marksDraft: deleteField(),
+            publishedMarks: deleteField()
+        });
+    };
+    // Shared active class & section states across tabs
     const [selectedClass, setSelectedClass] = useState('10th Std');
     const [selectedSection, setSelectedSection] = useState(null);
+
+    // Submissions Review State
+    const [subClassFilter, setSubClassFilter] = useState(null);
+    const [subSectionFilter, setSubSectionFilter] = useState(null);
+    const [submissionFilterStatus, setSubmissionFilterStatus] = useState('all');
 
     const [allStudents, setAllStudents] = useState([]);
     const [sectionsList, setSectionsList] = useState([]);
     const [staffTimetableList, setStaffTimetableList] = useState([]);
+    const [assignmentsList, setAssignmentsList] = useState([]);
+    const [submissionsList, setSubmissionsList] = useState([]);
 
     const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
     const [studentMarks, setStudentMarks] = useState({});
-    const [examType, setExamType] = useState('Mid-Term Assessment');
-    const [marksSubmitted, setMarksSubmitted] = useState(false);
+    const [examType, setExamType] = useState('1st Mid-Term exam');
+    const [selectedSubject, setSelectedSubject] = useState('Mathematics');
+    const [marksActionStatus, setMarksActionStatus] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Assignment CRUD State
+    const initialAssignmentForm = {
+        title: '',
+        type: 'Assignment',
+        className: '10th Std',
+        sectionName: '',
+        subject: '',
+        dueDate: '',
+        description: ''
+    };
+    const [assignmentForm, setAssignmentForm] = useState(initialAssignmentForm);
+    const [editingAssignment, setEditingAssignment] = useState(null);
+
+    const [submissionGrades, setSubmissionGrades] = useState({});
+    const [gradingLoadingId, setGradingLoadingId] = useState(null);
 
     const classList = [
         'LKG', 'UKG',
         '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std',
         '6th Std', '7th Std', '8th Std', '9th Std', '10th Std',
         '11th Std', '12th Std'
+    ];
+
+    const examList = [
+        '1st Mid-Term exam',
+        'Quarterly Exam',
+        '2nd Mid-Term exam',
+        'Halferly Exam',
+        '3rd Mid-Term exam',
+        'Annual Exam',
+        'Class Unit Test'
+    ];
+
+    const subjectList = [
+        'Mathematics',
+        'Science',
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'English',
+        'Tamil',
+        'Social Science',
+        'Computer Science',
+        'General Knowledge'
     ];
 
     const navigate = useNavigate();
@@ -65,49 +134,86 @@ export default function StaffDashboard() {
                 status: d.data().status || 'present'
             }));
             setAllStudents(fetchedStudents);
-        }, (error) => {
-            console.error("Firestore error loading students:", error);
         });
 
         const unsubSections = onSnapshot(collection(db, 'class_sections'), (snap) => {
             setSectionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (error) => {
-            console.error("Firestore error loading sections:", error);
         });
 
         const unsubStaffTT = onSnapshot(collection(db, 'staff_timetables'), (snap) => {
             setStaffTimetableList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (error) => {
-            console.error("Firestore error loading staff schedule:", error);
+        });
+
+        const unsubAssignments = onSnapshot(collection(db, 'class_assignments'), (snap) => {
+            setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubSubmissions = onSnapshot(collection(db, 'assignment_submissions'), (snap) => {
+            setSubmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
         return () => {
             unsubStudents();
             unsubSections();
             unsubStaffTT();
+            unsubAssignments();
+            unsubSubmissions();
         };
     }, []);
 
-    // Filter staff schedule matching the logged-in staff ID or name
-    const mySchedule = staffTimetableList.filter(item => 
+    const cleanString = (str) => {
+        if (!str) return '';
+        return str
+            .toString()
+            .toLowerCase()
+            .replace(/\bsection\b/g, '')
+            .replace(/\bstd\b/g, '')
+            .replace(/\bclass\b/g, '')
+            .replace(/[^a-z0-9]/g, '')
+            .trim();
+    };
+
+    const formatSectionTitle = (secName) => {
+        if (!secName) return '';
+        const trimmed = secName.trim();
+        return trimmed.toLowerCase().startsWith('section') ? trimmed : `Section ${trimmed}`;
+    };
+
+    const mySchedule = staffTimetableList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
+    // Active Students based on Selected Class & Section
     const getActiveStudents = () => {
         return allStudents.filter(student => {
             if (!selectedClass) return false;
             const matchesClass = student.className &&
-                student.className.toLowerCase() === selectedClass.toLowerCase();
+                cleanString(student.className) === cleanString(selectedClass);
 
-            if (selectedSection && selectedSection.id) {
-                return matchesClass && (student.sectionId === selectedSection.id || student.sectionName === selectedSection.name);
+            if (selectedSection && (selectedSection.id || selectedSection.name)) {
+                return matchesClass && (
+                    student.sectionId === selectedSection.id ||
+                    cleanString(student.sectionName) === cleanString(selectedSection.name)
+                );
             }
             return matchesClass;
         });
     };
 
     const activeStudents = getActiveStudents();
+
+    // Attendance Analytics Computations
+    const presentStudentsCount = activeStudents.filter(s => s.status === 'present').length;
+    const absentStudentsCount = activeStudents.filter(s => s.status === 'absent').length;
+    const classAttendanceRate = activeStudents.length > 0
+        ? Math.round((presentStudentsCount / activeStudents.length) * 100)
+        : 100;
+
+    const attendanceDefaulters = activeStudents.filter(s => {
+        const rate = s.attendanceRate ? Number(s.attendanceRate) : (s.status === 'absent' ? 65 : 92);
+        return rate < 75;
+    });
 
     const handleLogout = () => {
         localStorage.removeItem('staffUser');
@@ -116,7 +222,6 @@ export default function StaffDashboard() {
 
     const toggleAttendance = async (studentDocId, currentStatus) => {
         const newStatus = currentStatus === 'present' ? 'absent' : 'present';
-
         setAllStudents(prev => prev.map(student =>
             student.id === studentDocId ? { ...student, status: newStatus } : student
         ));
@@ -151,6 +256,9 @@ export default function StaffDashboard() {
         }
     };
 
+    // Marks CRUD
+    const getExamSubjectKey = () => `${examType} - ${selectedSubject}`;
+
     const handleMarkChange = (studentId, value) => {
         setStudentMarks(prev => ({
             ...prev,
@@ -158,31 +266,188 @@ export default function StaffDashboard() {
         }));
     };
 
-    const handleSubmitMarks = async () => {
+    const handleSaveSingleMark = async (studentId) => {
+        const score = studentMarks[studentId];
+        if (score === undefined || score === '') {
+            alert('Please enter a valid mark first.');
+            return;
+        }
+
+        const compositeKey = getExamSubjectKey();
+        try {
+            const studentRef = doc(db, 'students_records', studentId);
+            await updateDoc(studentRef, {
+                [`marksDraft.${compositeKey}`]: Number(score),
+                lastMarksDraftSaved: new Date().toISOString()
+            });
+            setMarksActionStatus(`Saved draft score for student #${studentId.slice(0, 5)}`);
+            setTimeout(() => setMarksActionStatus(''), 3000);
+        } catch (err) {
+            console.error("Error updating individual mark draft:", err);
+            alert("Failed to update record.");
+        }
+    };
+
+    const handleResetSingleMark = async (studentId) => {
+        const compositeKey = getExamSubjectKey();
+        if (!window.confirm("Are you sure you want to clear this student's mark?")) return;
+
+        try {
+            const studentRef = doc(db, 'students_records', studentId);
+            await updateDoc(studentRef, {
+                [`marksDraft.${compositeKey}`]: deleteField(),
+                lastMarksUpdated: new Date().toISOString()
+            });
+
+            setStudentMarks(prev => {
+                const next = { ...prev };
+                delete next[studentId];
+                return next;
+            });
+            setMarksActionStatus(`Cleared mark for student #${studentId.slice(0, 5)}`);
+            setTimeout(() => setMarksActionStatus(''), 3000);
+        } catch (err) {
+            console.error("Error clearing mark:", err);
+            alert("Failed to clear score.");
+        }
+    };
+
+    const handleSaveMarksDraft = async () => {
         setIsSubmitting(true);
+        const compositeKey = getExamSubjectKey();
         try {
             const batch = writeBatch(db);
-            Object.entries(studentMarks).forEach(([studentId, score]) => {
-                const studentRef = doc(db, 'students_records', studentId);
-                batch.update(studentRef, {
-                    [`marks.${examType}`]: Number(score),
-                    lastMarksUpdated: new Date().toISOString()
-                });
+            activeStudents.forEach(student => {
+                const score = studentMarks[student.id] ?? student.marksDraft?.[compositeKey] ?? student.marks?.[compositeKey];
+                if (score !== undefined && score !== '') {
+                    const studentRef = doc(db, 'students_records', student.id);
+                    batch.update(studentRef, {
+                        [`marksDraft.${compositeKey}`]: Number(score),
+                        lastMarksDraftSaved: new Date().toISOString()
+                    });
+                }
             });
             await batch.commit();
-            setMarksSubmitted(true);
+            setMarksActionStatus('saved');
         } catch (error) {
-            console.error("Error saving marks: ", error);
+            console.error("Error saving draft marks: ", error);
+            alert("Failed to save draft marks.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const handleResetAllExamMarks = async () => {
+        const compositeKey = getExamSubjectKey();
+        if (!window.confirm(`Reset ALL draft marks for ${compositeKey}? This cannot be undone.`)) return;
+
+        setIsSubmitting(true);
+        try {
+            const batch = writeBatch(db);
+            activeStudents.forEach(student => {
+                const studentRef = doc(db, 'students_records', student.id);
+                batch.update(studentRef, {
+                    [`marksDraft.${compositeKey}`]: deleteField()
+                });
+            });
+            await batch.commit();
+            setStudentMarks({});
+            setMarksActionStatus('reset');
+        } catch (err) {
+            console.error("Error resetting class marks:", err);
+            alert("Failed to reset marks.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Assignments Handlers
+    const handleCreateAssignment = async (e) => {
+        e.preventDefault();
+        if (!assignmentForm.title || !assignmentForm.className || !assignmentForm.sectionName) return;
+
+        try {
+            await addDoc(collection(db, 'class_assignments'), {
+                ...assignmentForm,
+                staffId: staffData.staffId,
+                staffName: staffData.name,
+                createdAt: serverTimestamp()
+            });
+            setAssignmentForm(initialAssignmentForm);
+        } catch (error) {
+            console.error("Error assigning task:", error);
+        }
+    };
+
+    const handleUpdateAssignment = async (e) => {
+        e.preventDefault();
+        if (!editingAssignment || !editingAssignment.id) return;
+
+        try {
+            const taskRef = doc(db, 'class_assignments', editingAssignment.id);
+            await updateDoc(taskRef, {
+                title: editingAssignment.title,
+                type: editingAssignment.type,
+                className: editingAssignment.className,
+                sectionName: editingAssignment.sectionName,
+                subject: editingAssignment.subject,
+                dueDate: editingAssignment.dueDate,
+                description: editingAssignment.description || '',
+                updatedAt: new Date().toISOString()
+            });
+            setEditingAssignment(null);
+        } catch (err) {
+            console.error("Update task error:", err);
+            alert("Failed to update assignment.");
+        }
+    };
+
+    const handleDeleteAssignment = async (id) => {
+        if (window.confirm("Are you sure you want to delete this assignment permanently?")) {
+            try {
+                await deleteDoc(doc(db, 'class_assignments', id));
+            } catch (err) {
+                console.error("Delete task error:", err);
+            }
+        }
+    };
+
+    const handleSaveSubmissionGrade = async (submissionId, studentId, taskTitle) => {
+        const score = submissionGrades[submissionId];
+        if (score === undefined || score === '') {
+            alert('Please enter a mark score first.');
+            return;
+        }
+
+        setGradingLoadingId(submissionId);
+        try {
+            await updateDoc(doc(db, 'assignment_submissions', submissionId), {
+                obtainedMarks: Number(score),
+                gradedAt: new Date().toISOString(),
+                gradedBy: staffData.name
+            });
+
+            if (studentId) {
+                await updateDoc(doc(db, 'students_records', studentId), {
+                    [`marks.${taskTitle || 'Assignment'}`]: Number(score),
+                    lastMarksUpdated: new Date().toISOString()
+                });
+            }
+
+            alert('Marks saved and published successfully!');
+        } catch (error) {
+            console.error("Grading save error:", error);
+            alert("Failed to save grade.");
+        } finally {
+            setGradingLoadingId(null);
+        }
+    };
+
     const stats = [
         { title: 'Scheduled Slots', value: `${mySchedule.length} Sessions`, icon: BookOpen, color: 'indigo' },
+        { title: 'Turned In PDFs', value: `${submissionsList.length} Files`, icon: FileCheck, color: 'emerald' },
+        { title: 'Class Attendance', value: `${classAttendanceRate}%`, icon: BarChart2, color: classAttendanceRate < 75 ? 'rose' : 'emerald' },
         { title: 'Assigned Roster', value: allStudents.length.toString(), icon: Users, color: 'rose' },
-        { title: 'Pending Marks', value: '2 Exams', icon: FileText, color: 'amber' },
-        { title: 'Attendance Rate', value: '98%', icon: CheckCircle, color: 'emerald' },
     ];
 
     const announcements = [
@@ -196,9 +461,62 @@ export default function StaffDashboard() {
         s.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const sectionSubmissions = submissionsList.filter(item => {
+        if (!subClassFilter) return false;
+        const matchesClass = cleanString(item.className) === cleanString(subClassFilter);
+        if (subSectionFilter) {
+            return matchesClass && cleanString(item.sectionName) === cleanString(subSectionFilter);
+        }
+        return matchesClass;
+    });
+
+    const sectionEnrolledStudents = allStudents.filter(student => {
+        if (!subClassFilter) return false;
+        const matchesClass = cleanString(student.className) === cleanString(subClassFilter);
+        if (subSectionFilter) {
+            return matchesClass && cleanString(student.sectionName) === cleanString(subSectionFilter);
+        }
+        return matchesClass;
+    });
+
+    const sectionAssignments = assignmentsList.filter(task => {
+        if (!subClassFilter) return false;
+        const matchesClass = cleanString(task.className) === cleanString(subClassFilter);
+        if (subSectionFilter) {
+            return matchesClass && cleanString(task.sectionName) === cleanString(subSectionFilter);
+        }
+        return matchesClass;
+    });
+
+    const unsubmittedStudentList = [];
+    sectionAssignments.forEach(task => {
+        sectionEnrolledStudents.forEach(st => {
+            const hasSubmitted = sectionSubmissions.some(sub =>
+                sub.taskId === task.id &&
+                (cleanString(sub.admissionNo) === cleanString(st.admissionNo) || sub.studentId === st.id)
+            );
+            if (!hasSubmitted) {
+                unsubmittedStudentList.push({
+                    student: st,
+                    task: task
+                });
+            }
+        });
+    });
+
+    const pendingReviewCount = sectionSubmissions.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
+    const completedCount = sectionSubmissions.filter(s => s.obtainedMarks !== undefined && s.obtainedMarks !== null && s.obtainedMarks !== '').length;
+
+    const displayedSubmissions = sectionSubmissions.filter(item => {
+        const isGraded = item.obtainedMarks !== undefined && item.obtainedMarks !== null && item.obtainedMarks !== '';
+        if (submissionFilterStatus === 'pending') return !isGraded;
+        if (submissionFilterStatus === 'completed') return isGraded;
+        return true;
+    });
+
     return (
         <div className="dashboard-containers">
-            {/* Mobile & Tablet Topbar Header */}
+            {/* Mobile Topbar */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">
                     <Sparkles size={20} />
@@ -214,18 +532,13 @@ export default function StaffDashboard() {
             </header>
 
             {isMobileMenuOpen && (
-                <div
-                    className="mobile-overlay"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                />
+                <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
             )}
 
-            {/* Sidebar Navigation */}
+            {/* Sidebar */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon">
-                        <Sparkles size={20} />
-                    </div>
+                    <div className="brand-icon"><Sparkles size={20} /></div>
                     <span className="brand-titles">EduPulse</span>
                 </div>
 
@@ -264,21 +577,65 @@ export default function StaffDashboard() {
                             <div className="sub-menu">
                                 <button
                                     className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
-                                    onClick={() => { setActiveTab('students'); setIsMobileMenuOpen(false); }}
+                                    onClick={() => {
+                                        setActiveTab('students');
+                                        setSelectedClass(null);
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
                                 >
                                     Student Roster
                                 </button>
                                 <button
                                     className={`sub-link ${activeTab === 'attendance' ? 'active' : ''}`}
-                                    onClick={() => { setActiveTab('attendance'); setIsMobileMenuOpen(false); }}
+                                    onClick={() => {
+                                        setActiveTab('attendance');
+                                        setSelectedClass('10th Std');
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
                                 >
                                     Attendance
                                 </button>
                                 <button
-                                    className={`sub-link ${activeTab === 'marks' ? 'active' : ''}`}
-                                    onClick={() => { setActiveTab('marks'); setIsMobileMenuOpen(false); }}
+                                    className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('analytics');
+                                        setSelectedClass('10th Std');
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
                                 >
-                                    Marks Entry
+                                    Attendance Analytics
+                                </button>
+                                <button
+                                    className={`sub-link ${activeTab === 'marks' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('marks');
+                                        setSelectedClass('10th Std');
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
+                                    Marks Entry & CRUD
+                                </button>
+                                <button
+                                    className={`sub-link ${activeTab === 'assignments' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
+                                >
+                                    Assign Tasks & Tests
+                                </button>
+                                <button
+                                    className={`sub-link ${activeTab === 'submissions' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('submissions');
+                                        setSubClassFilter(null);
+                                        setSubSectionFilter(null);
+                                        setSubmissionFilterStatus('all');
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
+                                    PDF Submissions & Grading
                                 </button>
                             </div>
                         )}
@@ -303,14 +660,14 @@ export default function StaffDashboard() {
                 </div>
             </aside>
 
-            {/* Main Section */}
+            {/* Main Workspace */}
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
                     <div className="search-bar">
                         <Search size={18} className="search-icon" />
                         <input
                             type="text"
-                            placeholder="Search student records..."
+                            placeholder="Search records or students..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -342,11 +699,12 @@ export default function StaffDashboard() {
                 </header>
 
                 <div className="dashboard-content">
+                    {/* OVERVIEW TAB */}
                     {activeTab === 'overview' && (
                         <>
                             <div className="welcome-banner">
                                 <h2>Welcome back, {staffData.name}! 👋</h2>
-                                <p>You have {mySchedule.length} classes scheduled in the live system matrix.</p>
+                                <p>You have {submissionsList.length} student PDF submissions pending review across all classes.</p>
                             </div>
 
                             <div className="stats-grid">
@@ -413,6 +771,7 @@ export default function StaffDashboard() {
                         </>
                     )}
 
+                    {/* STUDENT ROSTER TAB */}
                     {activeTab === 'students' && (
                         <div className="dash-card full-width">
                             {!selectedClass && (
@@ -420,7 +779,7 @@ export default function StaffDashboard() {
                                     <div className="card-header">
                                         <div>
                                             <h3>Students Directory — Select Class</h3>
-                                            <p className="subtitle">Select a class to browse corresponding sections and student rosters.</p>
+                                            <p className="subtitle">Choose a class to browse its sections and enrolled students.</p>
                                         </div>
                                     </div>
                                     <div className="class-cards-grid">
@@ -469,17 +828,24 @@ export default function StaffDashboard() {
                                     </div>
 
                                     {sectionsList.filter(s => s.className === selectedClass).length === 0 ? (
-                                        <div>No sections registered for {selectedClass}.</div>
+                                        <div className="empty-sub-card">No sections registered for {selectedClass}.</div>
                                     ) : (
                                         <div className="sections-grid">
                                             {sectionsList.filter(s => s.className === selectedClass).map(sec => {
-                                                const studentCount = allStudents.filter(st => st.sectionId === sec.id || (st.className === selectedClass && st.sectionName === sec.name)).length;
+                                                const studentCount = allStudents.filter(st =>
+                                                    st.className === selectedClass && (st.sectionId === sec.id || st.sectionName === sec.name)
+                                                ).length;
+
                                                 return (
-                                                    <div key={sec.id} className="section-card" onClick={() => setSelectedSection(sec)}>
+                                                    <div
+                                                        key={sec.id}
+                                                        className="section-card"
+                                                        onClick={() => setSelectedSection(sec)}
+                                                    >
                                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                                             <Folder size={22} color="var(--primary)" />
                                                             <div>
-                                                                <h5 style={{ margin: 0 }}>{sec.name}</h5>
+                                                                <h5 style={{ margin: 0 }}>{formatSectionTitle(sec.name)}</h5>
                                                                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                                     {sec.roomNo ? `Room: ${sec.roomNo} • ` : ''}{studentCount} Students
                                                                 </p>
@@ -500,14 +866,14 @@ export default function StaffDashboard() {
                                             <ArrowLeft size={16} /> Back to Sections
                                         </button>
                                         <h3 style={{ margin: 0 }}>
-                                            {selectedClass} — {selectedSection?.name} Student Directory
+                                            {selectedClass} — {formatSectionTitle(selectedSection?.name)} Student Directory ({filteredStudents.length} Students)
                                         </h3>
                                     </div>
 
                                     {filteredStudents.length === 0 ? (
-                                        <div>No student records in this section.</div>
+                                        <div className="empty-sub-card">No student records enrolled in this section.</div>
                                     ) : (
-                                        <div>
+                                        <div className="student-cards-grid-layout">
                                             {filteredStudents.map(st => (
                                                 <div key={st.id} className="student-detail-card">
                                                     <div className="student-card-content">
@@ -542,26 +908,47 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
+                    {/* ATTENDANCE TAB */}
                     {activeTab === 'attendance' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
                                     <h3>Mark Attendance</h3>
-                                    <p className="subtitle">Synchronized live status for {selectedClass} {selectedSection ? `(${selectedSection.name})` : ''}</p>
+                                    <p className="subtitle">
+                                        Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
+                                    </p>
                                 </div>
-                                <select
-                                    className="custom-select"
-                                    value={selectedClass || ''}
-                                    onChange={(e) => {
-                                        setSelectedClass(e.target.value);
-                                        setSelectedSection(null);
-                                        setAttendanceSubmitted(false);
-                                    }}
-                                >
-                                    {classList.map(cls => (
-                                        <option key={cls} value={cls}>{cls}</option>
-                                    ))}
-                                </select>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <select
+                                        className="custom-select"
+                                        value={selectedClass || ''}
+                                        onChange={(e) => {
+                                            setSelectedClass(e.target.value);
+                                            setSelectedSection(null);
+                                            setAttendanceSubmitted(false);
+                                        }}
+                                    >
+                                        {classList.map(cls => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        className="custom-select"
+                                        value={selectedSection ? selectedSection.name : ''}
+                                        onChange={(e) => {
+                                            const sec = sectionsList.find(s => s.className === selectedClass && s.name === e.target.value);
+                                            setSelectedSection(sec || (e.target.value ? { name: e.target.value } : null));
+                                            setAttendanceSubmitted(false);
+                                        }}
+                                        disabled={!selectedClass}
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sectionsList.filter(s => s.className === selectedClass).map(s => (
+                                            <option key={s.id} value={s.name}>{formatSectionTitle(s.name)}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             {attendanceSubmitted && (
@@ -576,6 +963,7 @@ export default function StaffDashboard() {
                                         <tr>
                                             <th>Admission No</th>
                                             <th>Student Name</th>
+                                            <th>Section</th>
                                             <th>Status</th>
                                             <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
@@ -583,8 +971,8 @@ export default function StaffDashboard() {
                                     <tbody>
                                         {filteredStudents.length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No student records found.
+                                                <td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                    No student records found in this section.
                                                 </td>
                                             </tr>
                                         ) : (
@@ -592,6 +980,7 @@ export default function StaffDashboard() {
                                                 <tr key={student.id}>
                                                     <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
                                                     <td>{student.name}</td>
+                                                    <td><span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span></td>
                                                     <td>
                                                         <span className={`status-badge status-${student.status || 'present'}`}>
                                                             {(student.status || 'present').toUpperCase()}
@@ -612,33 +1001,26 @@ export default function StaffDashboard() {
                                 </table>
                             </div>
                             <div className="card-footer">
-                                <button className="btn-primary" onClick={handleSubmitAttendance} disabled={isSubmitting}>
+                                <button className="btn-primary" onClick={handleSubmitAttendance} disabled={isSubmitting || filteredStudents.length === 0}>
                                     {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'marks' && (
+                    {/* ATTENDANCE ANALYTICS TAB */}
+                    {activeTab === 'analytics' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
-                                    <h3>Enter Examination Marks</h3>
-                                    <p className="subtitle">Syncing scores for {selectedClass}</p>
+                                    <h3>Class Attendance Analytics & Defaulters Tracker</h3>
+                                    <p className="subtitle">
+                                        Analytics for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
+                                    </p>
                                 </div>
-                            </div>
-
-                            {marksSubmitted && (
-                                <div style={{ color: 'var(--primary)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Check size={18} /> Marks saved successfully!
-                                </div>
-                            )}
-
-                            <div className="form-grid">
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                     <select
-                                        className="custom-select full-width"
+                                        className="custom-select"
                                         value={selectedClass || ''}
                                         onChange={(e) => {
                                             setSelectedClass(e.target.value);
@@ -649,13 +1031,209 @@ export default function StaffDashboard() {
                                             <option key={cls} value={cls}>{cls}</option>
                                         ))}
                                     </select>
+                                    <select
+                                        className="custom-select"
+                                        value={selectedSection ? selectedSection.name : ''}
+                                        onChange={(e) => {
+                                            const sec = sectionsList.find(s => s.className === selectedClass && s.name === e.target.value);
+                                            setSelectedSection(sec || (e.target.value ? { name: e.target.value } : null));
+                                        }}
+                                        disabled={!selectedClass}
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sectionsList.filter(s => s.className === selectedClass).map(s => (
+                                            <option key={s.id} value={s.name}>{formatSectionTitle(s.name)}</option>
+                                        ))}
+                                    </select>
                                 </div>
+                            </div>
+
+                            <div className="analytics-summary-grid">
+                                <div className="analytics-card">
+                                    <span className="analytics-label">Active Roster</span>
+                                    <h3>{activeStudents.length} Students</h3>
+                                    <span className="analytics-sub">Enrolled in Selected Roster</span>
+                                </div>
+                                <div className="analytics-card present">
+                                    <span className="analytics-label">Present Today</span>
+                                    <h3>{presentStudentsCount}</h3>
+                                    <span className="analytics-sub">{classAttendanceRate}% Attendance Rate</span>
+                                </div>
+                                <div className="analytics-card absent">
+                                    <span className="analytics-label">Absent Today</span>
+                                    <h3>{absentStudentsCount}</h3>
+                                    <span className="analytics-sub">Requires Follow-up</span>
+                                </div>
+                                <div className="analytics-card alert">
+                                    <span className="analytics-label">Below 75% Threshold</span>
+                                    <h3>{attendanceDefaulters.length} Students</h3>
+                                    <span className="analytics-sub">Defaulter Alert Status</span>
+                                </div>
+                            </div>
+
+                            <h4 style={{ marginTop: '20px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <AlertTriangle size={16} color="var(--accent-rose)" /> Low-Attendance Defaulters List (&lt; 75%)
+                            </h4>
+
+                            {attendanceDefaulters.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <CheckCircle size={32} color="var(--accent-emerald)" />
+                                    <h4>No Attendance Defaulters</h4>
+                                    <p>All students maintain attendance records above 75%.</p>
+                                </div>
+                            ) : (
+                                <div className="table-responsive">
+                                    <table className="custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Student Name</th>
+                                                <th>Admission No</th>
+                                                <th>Class & Section</th>
+                                                <th>Attendance Rate</th>
+                                                <th>Parent / Guardian</th>
+                                                <th>Contact Phone</th>
+                                                <th style={{ textAlign: 'right' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {attendanceDefaulters.map(st => (
+                                                <tr key={st.id}>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <img
+                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                                alt={st.name}
+                                                                className="student-avatar"
+                                                                style={{ width: 30, height: 30 }}
+                                                            />
+                                                            <strong>{st.name}</strong>
+                                                        </div>
+                                                    </td>
+                                                    <td><code>#{st.admissionNo || 'N/A'}</code></td>
+                                                    <td>{st.className} - {formatSectionTitle(st.sectionName)}</td>
+                                                    <td>
+                                                        <span className="defaulter-rate-badge">
+                                                            {st.attendanceRate || (st.status === 'absent' ? '65%' : '72%')}
+                                                        </span>
+                                                    </td>
+                                                    <td>{st.guardianName || 'Parent'}</td>
+                                                    <td>{st.phone || 'N/A'}</td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <a href={`tel:${st.phone}`} className="call-parent-btn">
+                                                            <PhoneCall size={12} /> Contact Parent
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* MARKS ENTRY & CRUD TAB (Staff restricted to Drafts) */}
+                    {activeTab === 'marks' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Enter Examination Marks (Draft Mode)</h3>
+                                    <p className="subtitle">
+                                        Managing scores for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'} — {selectedSubject} ({examType}). Saved entries are sent to Admin for final review and publishing.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {marksActionStatus && (
+                                <div style={{
+                                    color: marksActionStatus === 'reset' ? 'var(--accent-rose)' : 'var(--accent-emerald)',
+                                    padding: '8px 0',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <Check size={18} /> {
+                                        marksActionStatus === 'saved' ? 'Marks saved as Draft in Firestore.' :
+                                            marksActionStatus === 'reset' ? 'Class draft scores reset successfully.' :
+                                                marksActionStatus
+                                    }
+                                </div>
+                            )}
+
+                            <div className="form-grid marks-four-col-grid">
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={selectedClass || ''}
+                                        onChange={(e) => {
+                                            setSelectedClass(e.target.value);
+                                            setSelectedSection(null);
+                                            setMarksActionStatus('');
+                                        }}
+                                    >
+                                        {classList.map(cls => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Section</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={selectedSection ? selectedSection.name : ''}
+                                        onChange={(e) => {
+                                            const secName = e.target.value;
+                                            if (!secName) {
+                                                setSelectedSection(null);
+                                            } else {
+                                                const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
+                                                setSelectedSection(match || { name: secName });
+                                            }
+                                            setMarksActionStatus('');
+                                        }}
+                                        disabled={!selectedClass}
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sectionsList
+                                            .filter(s => s.className === selectedClass)
+                                            .map(sec => (
+                                                <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                            ))}
+                                    </select>
+                                </div>
+
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Exam Type</label>
-                                    <select className="custom-select full-width" value={examType} onChange={(e) => setExamType(e.target.value)}>
-                                        <option value="Mid-Term Assessment">Mid-Term Assessment</option>
-                                        <option value="Final Examination">Final Examination</option>
-                                        <option value="Class Unit Test">Class Unit Test</option>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={examType}
+                                        onChange={(e) => {
+                                            setExamType(e.target.value);
+                                            setMarksActionStatus('');
+                                        }}
+                                    >
+                                        {examList.map(exam => (
+                                            <option key={exam} value={exam}>{exam}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Subject</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={selectedSubject}
+                                        onChange={(e) => {
+                                            setSelectedSubject(e.target.value);
+                                            setMarksActionStatus('');
+                                        }}
+                                    >
+                                        {subjectList.map(subj => (
+                                            <option key={subj} value={subj}>{subj}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -666,72 +1244,656 @@ export default function StaffDashboard() {
                                         <tr>
                                             <th>Admission No</th>
                                             <th>Student Name</th>
-                                            <th>Max Marks</th>
-                                            <th>Marks Obtained</th>
+                                            <th>Section</th>
+                                            <th>Subject</th>
+                                            <th>Score (0-100)</th>
+                                            <th style={{ textAlign: 'right' }}>Row Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {filteredStudents.length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No students available.
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                    No students available for this class / section.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredStudents.map((student) => (
-                                                <tr key={student.id}>
-                                                    <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
-                                                    <td>{student.name}</td>
-                                                    <td>100</td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            className="table-input"
-                                                            placeholder="0-100"
-                                                            value={studentMarks[student.id] ?? (student.marks?.[examType] ?? '')}
-                                                            onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))
+                                            filteredStudents.map((student) => {
+                                                const compositeKey = getExamSubjectKey();
+                                                const currentVal = studentMarks[student.id] ?? (student.marksDraft?.[compositeKey] ?? '');
+                                                return (
+                                                    <tr key={student.id}>
+                                                        <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
+                                                        <td>{student.name}</td>
+                                                        <td>
+                                                            <span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span className="topic-badge">{selectedSubject}</span>
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                className="table-input"
+                                                                placeholder="0-100"
+                                                                value={currentVal}
+                                                                onChange={(e) => handleMarkChange(student.id, e.target.value)}
+                                                            />
+                                                        </td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            <div style={{ display: 'inline-flex', gap: '5px' }}>
+                                                                <button
+                                                                    className="btn-save-grade"
+                                                                    title="Save Draft"
+                                                                    onClick={() => handleSaveSingleMark(student.id)}
+                                                                >
+                                                                    <Save size={12} /> Save Draft
+                                                                </button>
+                                                                <button
+                                                                    className="delete-task-btn"
+                                                                    title="Clear / Reset Mark"
+                                                                    onClick={() => handleResetSingleMark(student.id)}
+                                                                >
+                                                                    <RotateCcw size={12} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="card-footer">
-                                <button className="btn-primary" onClick={handleSubmitMarks} disabled={isSubmitting}>
-                                    {isSubmitting ? 'Saving...' : 'Save & Publish Marks'}
+
+                            <div className="marks-action-footer" style={{ justifyContent: 'space-between' }}>
+                                <button
+                                    type="button"
+                                    className="delete-task-btn"
+                                    style={{ padding: '0.5rem 0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
+                                    onClick={handleResetAllExamMarks}
+                                    disabled={isSubmitting || filteredStudents.length === 0}
+                                >
+                                    <RotateCcw size={14} /> Clear All Drafts
                                 </button>
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn-save-draft"
+                                        onClick={handleSaveMarksDraft}
+                                        disabled={isSubmitting || filteredStudents.length === 0}
+                                    >
+                                        <Save size={15} /> Save All as Draft
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
 
+                    {/* ASSIGNMENTS / TASKS */}
+                    {activeTab === 'assignments' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Assign Task / Project / Test</h3>
+                                    <p className="subtitle">Publish coursework specifically targeted to a Class & Section</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleCreateAssignment} className="assignment-form-grid">
+                                <div>
+                                    <label>Task Category</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={assignmentForm.type}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })}
+                                        required
+                                    >
+                                        <option value="Assignment">Assignment / Homework</option>
+                                        <option value="Project">Term Project / Lab Task</option>
+                                        <option value="Class Test">Class Unit Test</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Target Class</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={assignmentForm.className}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, className: e.target.value, sectionName: '' })}
+                                        required
+                                    >
+                                        <option value="">Select Class</option>
+                                        {classList.map(cls => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Target Section</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={assignmentForm.sectionName}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, sectionName: e.target.value })}
+                                        disabled={!assignmentForm.className}
+                                        required
+                                    >
+                                        <option value="">Select Section</option>
+                                        {sectionsList
+                                            .filter(s => s.className === assignmentForm.className)
+                                            .map(sec => (
+                                                <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                            ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Subject</label>
+                                    <input
+                                        type="text"
+                                        className="table-input full-width-input"
+                                        placeholder="e.g. Mathematics"
+                                        value={assignmentForm.subject}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>Task / Test Title</label>
+                                    <input
+                                        type="text"
+                                        className="table-input full-width-input"
+                                        placeholder="e.g. Chapter 4 Trigonometry Worksheet"
+                                        value={assignmentForm.title}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>Submission / Exam Date</label>
+                                    <input
+                                        type="date"
+                                        className="table-input full-width-input"
+                                        value={assignmentForm.dueDate}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label>Description & Instructions</label>
+                                    <textarea
+                                        rows="3"
+                                        className="custom-textarea"
+                                        placeholder="Add instructions, page numbers, or exam syllabus..."
+                                        value={assignmentForm.description}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary">
+                                        <PlusCircle size={15} /> Assign to Class
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
+                                Active Assigned Coursework ({assignmentsList.length})
+                            </h4>
+
+                            {assignmentsList.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <Layers size={28} />
+                                    <p>No active tasks assigned yet.</p>
+                                </div>
+                            ) : (
+                                <div className="assignments-admin-grid">
+                                    {assignmentsList.map(task => (
+                                        <div key={task.id} className="task-admin-card">
+                                            <div className="task-header-row">
+                                                <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
+                                                    {task.type}
+                                                </span>
+                                                <span className="task-target-tag">
+                                                    {task.className} - {formatSectionTitle(task.sectionName)}
+                                                </span>
+                                            </div>
+                                            <h5>{task.title}</h5>
+                                            <p className="task-meta-line">
+                                                <strong>Subject:</strong> {task.subject} | <strong>Due Date:</strong> {task.dueDate}
+                                            </p>
+                                            {task.description && <p className="task-desc-line">{task.description}</p>}
+                                            <div className="task-footer-row">
+                                                <span>Assigned by {task.staffName || 'Faculty'}</span>
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    <button
+                                                        onClick={() => setEditingAssignment({ ...task })}
+                                                        className="edit-task-btn"
+                                                        title="Edit Assignment"
+                                                    >
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteAssignment(task.id)}
+                                                        className="delete-task-btn"
+                                                        title="Delete Task"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* In-Place Edit Modal */}
+                            {editingAssignment && (
+                                <div className="modal-overlay">
+                                    <div className="modal-container">
+                                        <div className="modal-header">
+                                            <h4>Edit Task / Assignment</h4>
+                                            <button className="icon-btn" onClick={() => setEditingAssignment(null)}><X size={18} /></button>
+                                        </div>
+                                        <form onSubmit={handleUpdateAssignment} className="modal-body-form">
+                                            <div>
+                                                <label>Task Title</label>
+                                                <input
+                                                    type="text"
+                                                    className="table-input full-width-input"
+                                                    value={editingAssignment.title || ''}
+                                                    onChange={(e) => setEditingAssignment({ ...editingAssignment, title: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="form-grid">
+                                                <div>
+                                                    <label>Category</label>
+                                                    <select
+                                                        className="custom-select full-width"
+                                                        value={editingAssignment.type || 'Assignment'}
+                                                        onChange={(e) => setEditingAssignment({ ...editingAssignment, type: e.target.value })}
+                                                    >
+                                                        <option value="Assignment">Assignment</option>
+                                                        <option value="Project">Project</option>
+                                                        <option value="Class Test">Class Test</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>Due Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className="table-input full-width-input"
+                                                        value={editingAssignment.dueDate || ''}
+                                                        onChange={(e) => setEditingAssignment({ ...editingAssignment, dueDate: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label>Subject</label>
+                                                <input
+                                                    type="text"
+                                                    className="table-input full-width-input"
+                                                    value={editingAssignment.subject || ''}
+                                                    onChange={(e) => setEditingAssignment({ ...editingAssignment, subject: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label>Description</label>
+                                                <textarea
+                                                    rows="3"
+                                                    className="custom-textarea"
+                                                    value={editingAssignment.description || ''}
+                                                    onChange={(e) => setEditingAssignment({ ...editingAssignment, description: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="modal-actions">
+                                                <button type="button" className="btn-save-draft" onClick={() => setEditingAssignment(null)}>Cancel</button>
+                                                <button type="submit" className="btn-primary">Update Assignment</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* PDF SUBMISSIONS & GRADING */}
+                    {activeTab === 'submissions' && (
+                        <div className="dash-card full-width">
+                            {!subClassFilter && (
+                                <>
+                                    <div className="card-header">
+                                        <div>
+                                            <h3>PDF Submissions Directory — Select Class</h3>
+                                            <p className="subtitle">Evaluate uploaded student PDF assignments</p>
+                                        </div>
+                                    </div>
+                                    <div className="class-cards-grid">
+                                        {classList.map((cls) => {
+                                            const subCount = submissionsList.filter(s => cleanString(s.className) === cleanString(cls)).length;
+                                            const classSections = sectionsList.filter(s => s.className === cls);
+                                            return (
+                                                <div
+                                                    key={cls}
+                                                    className="class-card"
+                                                    onClick={() => {
+                                                        setSubClassFilter(cls);
+                                                        setSubSectionFilter(null);
+                                                        setSubmissionFilterStatus('all');
+                                                    }}
+                                                >
+                                                    <div className="class-card-icon" style={{ background: '#ecfdf5', color: 'var(--accent-emerald)' }}>
+                                                        <FileCheck size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ margin: 0 }}>{cls}</h4>
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                            {classSections.length} Sections • {subCount} Submissions
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
+
+                            {subClassFilter && !subSectionFilter && (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                                        <button
+                                            className="back-btn"
+                                            onClick={() => {
+                                                setSubClassFilter(null);
+                                                setSubSectionFilter(null);
+                                                setSubmissionFilterStatus('all');
+                                            }}
+                                        >
+                                            <ArrowLeft size={16} /> Back to All Classes
+                                        </button>
+                                        <h3 style={{ margin: 0 }}>{subClassFilter} Sections — Submissions</h3>
+                                    </div>
+
+                                    {sectionsList.filter(s => s.className === subClassFilter).length === 0 ? (
+                                        <div className="empty-sub-card">No sections created for {subClassFilter}.</div>
+                                    ) : (
+                                        <div className="sections-grid">
+                                            {sectionsList.filter(s => s.className === subClassFilter).map(sec => {
+                                                const subCount = submissionsList.filter(
+                                                    s => cleanString(s.className) === cleanString(subClassFilter) &&
+                                                        cleanString(s.sectionName) === cleanString(sec.name)
+                                                ).length;
+
+                                                return (
+                                                    <div
+                                                        key={sec.id}
+                                                        className="section-card"
+                                                        onClick={() => {
+                                                            setSubSectionFilter(sec.name);
+                                                            setSubmissionFilterStatus('all');
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                            <Folder size={22} color="var(--primary)" />
+                                                            <div>
+                                                                <h5 style={{ margin: 0 }}>{formatSectionTitle(sec.name)}</h5>
+                                                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    {subCount} Submitted PDF Documents
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {subClassFilter && subSectionFilter && (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                        <button
+                                            className="back-btn"
+                                            onClick={() => {
+                                                setSubSectionFilter(null);
+                                                setSubmissionFilterStatus('all');
+                                            }}
+                                        >
+                                            <ArrowLeft size={16} /> Back to Sections
+                                        </button>
+                                        <h3 style={{ margin: 0 }}>
+                                            {subClassFilter} — {formatSectionTitle(subSectionFilter)} Submissions & Roster
+                                        </h3>
+                                    </div>
+
+                                    <div className="sub-status-cards-grid">
+                                        <div
+                                            className={`sub-status-card total ${submissionFilterStatus === 'all' ? 'active' : ''}`}
+                                            onClick={() => setSubmissionFilterStatus('all')}
+                                        >
+                                            <div className="sub-status-icon bg-indigo"><Layers size={20} /></div>
+                                            <div className="sub-status-info">
+                                                <span>Total Turned In</span>
+                                                <h4>{sectionSubmissions.length}</h4>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            className={`sub-status-card pending ${submissionFilterStatus === 'pending' ? 'active' : ''}`}
+                                            onClick={() => setSubmissionFilterStatus('pending')}
+                                        >
+                                            <div className="sub-status-icon bg-amber"><AlertCircle size={20} /></div>
+                                            <div className="sub-status-info">
+                                                <span>Pending Review</span>
+                                                <h4>{pendingReviewCount}</h4>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            className={`sub-status-card completed ${submissionFilterStatus === 'completed' ? 'active' : ''}`}
+                                            onClick={() => setSubmissionFilterStatus('completed')}
+                                        >
+                                            <div className="sub-status-icon bg-emerald"><CheckCircle size={20} /></div>
+                                            <div className="sub-status-info">
+                                                <span>Completed / Graded</span>
+                                                <h4>{completedCount}</h4>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            className={`sub-status-card unsubmitted ${submissionFilterStatus === 'unsubmitted' ? 'active' : ''}`}
+                                            onClick={() => setSubmissionFilterStatus('unsubmitted')}
+                                        >
+                                            <div className="sub-status-icon bg-rose"><UserX size={20} /></div>
+                                            <div className="sub-status-info">
+                                                <span>Pending Students</span>
+                                                <h4>{unsubmittedStudentList.length}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {submissionFilterStatus === 'unsubmitted' ? (
+                                        unsubmittedStudentList.length === 0 ? (
+                                            <div className="empty-sub-card">
+                                                <CheckCircle size={32} color="var(--accent-emerald)" />
+                                                <h4>All Students Have Submitted!</h4>
+                                                <p>Every student in this section has turned in their PDF coursework.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="table-responsive">
+                                                <table className="custom-table submissions-grading-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Student Name & Photo</th>
+                                                            <th>Admission No</th>
+                                                            <th>Pending Task / Topic</th>
+                                                            <th>Due Date</th>
+                                                            <th>Parent / Contact</th>
+                                                            <th style={{ textAlign: 'right' }}>Submission Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {unsubmittedStudentList.map((item, idx) => (
+                                                            <tr key={`${item.student.id}_${item.task.id}_${idx}`}>
+                                                                <td>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <img
+                                                                            src={item.student.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                                            alt={item.student.name}
+                                                                            className="student-avatar"
+                                                                            style={{ width: 30, height: 30 }}
+                                                                        />
+                                                                        <strong>{item.student.name}</strong>
+                                                                    </div>
+                                                                </td>
+                                                                <td><code>#{item.student.admissionNo || 'N/A'}</code></td>
+                                                                <td>
+                                                                    <span className="topic-badge">{item.task.title} ({item.task.subject})</span>
+                                                                </td>
+                                                                <td style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>
+                                                                    {item.task.dueDate}
+                                                                </td>
+                                                                <td style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                                                    {item.student.guardianName || 'Parent'} ({item.student.phone || 'N/A'})
+                                                                </td>
+                                                                <td style={{ textAlign: 'right' }}>
+                                                                    <span className="status-badge status-absent">
+                                                                        <Clock size={11} /> NOT TURNED IN
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )
+                                    ) : (
+                                        displayedSubmissions.length === 0 ? (
+                                            <div className="empty-sub-card">
+                                                <FileText size={32} />
+                                                <h4>No Submissions Found</h4>
+                                            </div>
+                                        ) : (
+                                            <div className="table-responsive">
+                                                <table className="custom-table submissions-grading-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Student Name & ID</th>
+                                                            <th>Assignment</th>
+                                                            <th>PDF File</th>
+                                                            <th>Date</th>
+                                                            <th>Status</th>
+                                                            <th>Score (0-100)</th>
+                                                            <th style={{ textAlign: 'right' }}>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {displayedSubmissions.map((sub) => {
+                                                            const currentGrade = submissionGrades[sub.id] ?? (sub.obtainedMarks ?? '');
+                                                            const isGraded = sub.obtainedMarks !== undefined && sub.obtainedMarks !== null && sub.obtainedMarks !== '';
+
+                                                            return (
+                                                                <tr key={sub.id}>
+                                                                    <td>
+                                                                        <strong>{sub.studentName || 'Student'}</strong>
+                                                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                                            Adm No: <code>#{sub.admissionNo || 'N/A'}</code>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span className="topic-badge">{sub.taskTitle || 'Assignment'}</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <a
+                                                                            href={sub.pdfData}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="pdf-preview-link"
+                                                                        >
+                                                                            <ExternalLink size={13} /> {sub.fileName || 'Document.pdf'}
+                                                                        </a>
+                                                                    </td>
+                                                                    <td style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                                                        {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Recent'}
+                                                                    </td>
+                                                                    <td>
+                                                                        {isGraded ? (
+                                                                            <span className="status-badge status-present">
+                                                                                <Check size={11} /> GRADED ({sub.obtainedMarks})
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="status-badge status-absent">
+                                                                                <Clock size={11} /> PENDING
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            max="100"
+                                                                            placeholder="Score"
+                                                                            className="table-input grade-input"
+                                                                            value={currentGrade}
+                                                                            onChange={(e) => setSubmissionGrades({
+                                                                                ...submissionGrades,
+                                                                                [sub.id]: e.target.value
+                                                                            })}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ textAlign: 'right' }}>
+                                                                        <button
+                                                                            className="btn-save-grade"
+                                                                            onClick={() => handleSaveSubmissionGrade(sub.id, sub.studentId, sub.taskTitle)}
+                                                                            disabled={gradingLoadingId === sub.id}
+                                                                        >
+                                                                            {gradingLoadingId === sub.id ? 'Saving...' : <><Award size={13} /> Save Grade</>}
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SCHEDULE TAB */}
                     {activeTab === 'schedule' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
                                     <h3>Weekly Timetable</h3>
-                                    <p className="subtitle">Overview of your routine classes from the live database</p>
+                                    <p className="subtitle">Overview of routine classes</p>
                                 </div>
                             </div>
                             <div className="timetable-grid">
-                                {mySchedule.length === 0 ? (
-                                    <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No timetable slots found.</p>
-                                ) : (
-                                    mySchedule.map((item, idx) => (
-                                        <div key={item.id || idx} className="timetable-card">
-                                            <div className="time-pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
-                                                {item.day} — {item.timeSlot}
-                                            </div>
-                                            <h4 style={{ margin: '0 0 4px 0' }}>{item.subject}</h4>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                Class: {item.className || 'General'} | Room: {item.roomNo || 'N/A'}
-                                            </p>
+                                {mySchedule.map((item, idx) => (
+                                    <div key={item.id || idx} className="timetable-card">
+                                        <div className="time-pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
+                                            {item.day} — {item.timeSlot}
                                         </div>
-                                    ))
-                                )}
+                                        <h4 style={{ margin: '0 0 4px 0' }}>{item.subject}</h4>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                            Class: {item.className || 'General'} | Room: {item.roomNo || 'N/A'}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

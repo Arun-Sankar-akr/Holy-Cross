@@ -86,7 +86,7 @@ body {
 }
 
 /* ==========================================================================
-   SPECIFICALLY RESTYLED: Applications Management Card
+   Applications Management Card
    ========================================================================== */
 .applications-management-card {
   width: 80%;
@@ -112,7 +112,6 @@ body {
   background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent-pink), var(--accent-cyan));
 }
 
-/* Section Header */
 .applications-management-card h3 {
   font-size: 1.05rem;
   font-weight: 800;
@@ -136,7 +135,7 @@ body {
   color: var(--text-muted);
 }
 
-/* Modernized Card Forms */
+/* Card Forms */
 .applications-management-card form {
   background: #f8fafc;
   padding: 1rem 1.15rem;
@@ -163,6 +162,31 @@ body {
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
+/* Custom File Input Styling for Max 500 KB Uploads */
+.applications-management-card input[type="file"] {
+  padding: 0.35rem 0.55rem;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.applications-management-card input[type="file"]::file-selector-button {
+  background: #eef2ff;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.applications-management-card input[type="file"]::file-selector-button:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
 .applications-management-card input:focus,
 .applications-management-card select:focus,
 .applications-management-card textarea:focus {
@@ -171,7 +195,7 @@ body {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* Vibrant Action Buttons */
+/* Action Buttons */
 .add-notice-btn {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: #ffffff;
@@ -196,7 +220,27 @@ body {
   filter: brightness(1.05);
 }
 
-/* Card Lists & List Items */
+.cancel-btn {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Lists */
 .applications-management-card ul {
   list-style: none;
   padding: 0;
@@ -268,7 +312,87 @@ body {
 }
 
 /* ==========================================================================
-   Class, Section & Student ERP Mini-Cards
+   Timetable Grid & Action Controls (CRUD Update & Delete)
+   ========================================================================== */
+.timetable-grid-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.timetable-grid-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.timetable-grid-table th, .timetable-grid-table td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.timetable-grid-table th {
+  background: #f8fafc;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.timetable-slot-cell {
+  background: #f5f3ff;
+  border-top: 3px solid var(--secondary);
+  padding: 0.45rem 0.35rem;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  text-align: left;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.08);
+}
+
+.timetable-slot-cell:hover {
+  background: #ede9fe;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.16);
+}
+
+.timetable-slot-subject {
+  font-weight: 800;
+  color: #6d28d9;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  padding-right: 32px;
+}
+
+.timetable-slot-meta {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.timetable-slot-cell button {
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.timetable-slot-cell button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: scale(1.15);
+}
+
+/* ==========================================================================
+   Class, Section & Student ERP Cards
    ========================================================================== */
 .class-cards-grid, .sections-grid {
   display: grid;
@@ -396,11 +520,12 @@ body {
 }
 
 .student-avatar {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1.5px solid #e2e8f0;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .student-info { flex: 1; }
@@ -436,6 +561,31 @@ body {
   gap: 0.35rem;
 }
 
+.student-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.student-card-actions button {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-card-actions button:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
 .student-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -461,54 +611,6 @@ body {
   letter-spacing: 0.4px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.15rem;
-}
-
-/* Timetable Table */
-.timetable-grid-wrapper {
-  overflow-x: auto;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: #ffffff;
-}
-
-.timetable-grid-table {
-  width: 100%;
-  min-width: 650px;
-  border-collapse: collapse;
-  font-size: 0.74rem;
-}
-
-.timetable-grid-table th, .timetable-grid-table td {
-  border: 1px solid var(--border);
-  padding: 0.45rem 0.35rem;
-  text-align: center;
-}
-
-.timetable-grid-table th {
-  background: #f8fafc;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.timetable-slot-cell {
-  background: #faf5ff;
-  border-top: 2px solid var(--secondary);
-  padding: 0.3rem;
-  border-radius: 3px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.timetable-slot-subject {
-  font-weight: 700;
-  color: #7c3aed;
-  font-size: 0.72rem;
-}
-
-.timetable-slot-meta {
-  font-size: 0.64rem;
-  color: var(--text-muted);
 }
 
 /* Utilities */
@@ -549,7 +651,6 @@ body {
 }
 .back-btn:hover { color: var(--primary); }
 .save-btn { background: var(--accent-success); color: #ffffff; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; }
-.cancel-btn { background: var(--text-muted); color: #ffffff; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; }
 
 /* ==========================================================================
    Sidebar & Navigation
@@ -825,4 +926,243 @@ body {
   .student-form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==========================================================================
+   Admin Institution Analytics & KPI Styles
+   ========================================================================== */
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.admin-kpi-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.admin-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.admin-kpi-card.indigo { border-left: 3.5px solid var(--primary); }
+.admin-kpi-card.emerald { border-left: 3.5px solid var(--accent-success); }
+.admin-kpi-card.amber { border-left: 3.5px solid var(--accent-warning); }
+.admin-kpi-card.rose { border-left: 3.5px solid var(--accent-danger); }
+
+.kpi-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f8fafc;
+}
+
+.admin-kpi-card.indigo .kpi-icon-wrapper { background: #eef2ff; color: var(--primary); }
+.admin-kpi-card.emerald .kpi-icon-wrapper { background: #ecfdf5; color: var(--accent-success); }
+.admin-kpi-card.amber .kpi-icon-wrapper { background: #fffbeb; color: var(--accent-warning); }
+.admin-kpi-card.rose .kpi-icon-wrapper { background: #fff1f2; color: var(--accent-danger); }
+
+.kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-info span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-info h4 {
+  margin: 1px 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.kpi-info small {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* Global Search Component */
+.admin-search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.5rem;
+}
+
+.admin-search-input {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  outline: none;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  box-shadow: none !important;
+  flex: 1;
+}
+
+.clear-search-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+}
+
+.search-results-box {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.search-results-box h5 {
+  margin: 0 0 0.75rem;
+  font-size: 0.84rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.search-column-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.search-column-grid .sub-title {
+  font-size: 0.76rem;
+  color: var(--text-main);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.search-res-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.search-res-list li {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+}
+
+.search-res-list small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.no-res {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* System Health Cards */
+.system-health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.health-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+}
+
+.health-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.status-live {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent-success);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-success);
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.6);
+}
+
+/* Emergency Form */
+.emergency-form {
+  background: #fff1f2 !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+.emergency-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.settings-saved-pill {
+  background: #ecfdf5;
+  color: var(--accent-success);
+  border: 1px solid #a7f3d0;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .admin-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .system-health-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .admin-kpi-grid { grid-template-columns: 1fr; }
+  .search-column-grid { grid-template-columns: 1fr; }
 }
