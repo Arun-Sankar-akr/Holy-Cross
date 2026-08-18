@@ -18,12 +18,13 @@ export default function StaffDashboard() {
     const [showNotifications, setShowNotifications] = useState(false);
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
 
-    const [staffData, setStaffData] = useState({ name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
+    const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
     const [selectedClass, setSelectedClass] = useState('10th Std');
     const [selectedSection, setSelectedSection] = useState(null);
 
     const [allStudents, setAllStudents] = useState([]);
     const [sectionsList, setSectionsList] = useState([]);
+    const [staffTimetableList, setStaffTimetableList] = useState([]);
 
     const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
     const [studentMarks, setStudentMarks] = useState({});
@@ -46,6 +47,7 @@ export default function StaffDashboard() {
             try {
                 const user = JSON.parse(storedUser);
                 setStaffData({
+                    staffId: user.staffId || '',
                     name: user.name || 'Dr. R. Sharma',
                     department: user.department || 'Faculty'
                 });
@@ -73,11 +75,24 @@ export default function StaffDashboard() {
             console.error("Firestore error loading sections:", error);
         });
 
+        const unsubStaffTT = onSnapshot(collection(db, 'staff_timetables'), (snap) => {
+            setStaffTimetableList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (error) => {
+            console.error("Firestore error loading staff schedule:", error);
+        });
+
         return () => {
             unsubStudents();
             unsubSections();
+            unsubStaffTT();
         };
     }, []);
+
+    // Filter staff schedule matching the logged-in staff ID or name
+    const mySchedule = staffTimetableList.filter(item => 
+        (staffData.staffId && item.staffId === staffData.staffId) ||
+        (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
+    );
 
     const getActiveStudents = () => {
         return allStudents.filter(student => {
@@ -164,17 +179,10 @@ export default function StaffDashboard() {
     };
 
     const stats = [
-        { title: 'Total Classes', value: '4 Today', icon: BookOpen, color: 'indigo' },
+        { title: 'Scheduled Slots', value: `${mySchedule.length} Sessions`, icon: BookOpen, color: 'indigo' },
         { title: 'Assigned Roster', value: allStudents.length.toString(), icon: Users, color: 'rose' },
         { title: 'Pending Marks', value: '2 Exams', icon: FileText, color: 'amber' },
         { title: 'Attendance Rate', value: '98%', icon: CheckCircle, color: 'emerald' },
-    ];
-
-    const todaySchedule = [
-        { time: '09:00 AM - 09:45 AM', class: '10th Std', section: 'A', subject: 'Mathematics', room: 'Room 204' },
-        { time: '10:00 AM - 10:45 AM', class: '9th Std', section: 'B', subject: 'Physics', room: 'Lab 2' },
-        { time: '11:30 AM - 12:15 PM', class: '11th Std', section: 'A', subject: 'Mathematics', room: 'Room 301' },
-        { time: '02:00 PM - 02:45 PM', class: '10th Std', section: 'B', subject: 'Mathematics', room: 'Room 205' },
     ];
 
     const announcements = [
@@ -205,7 +213,6 @@ export default function StaffDashboard() {
                 </button>
             </header>
 
-            {/* Overlay when sidebar is open */}
             {isMobileMenuOpen && (
                 <div
                     className="mobile-overlay"
@@ -339,7 +346,7 @@ export default function StaffDashboard() {
                         <>
                             <div className="welcome-banner">
                                 <h2>Welcome back, {staffData.name}! 👋</h2>
-                                <p>You have 4 classes scheduled for today. Track student rosters and performance effortlessly.</p>
+                                <p>You have {mySchedule.length} classes scheduled in the live system matrix.</p>
                             </div>
 
                             <div className="stats-grid">
@@ -363,32 +370,25 @@ export default function StaffDashboard() {
                                 <div className="dash-card">
                                     <div className="card-header">
                                         <div>
-                                            <h3>Today's Schedule</h3>
-                                            <p className="subtitle">Classes assigned for today</p>
+                                            <h3>Assigned Schedule Slots</h3>
+                                            <p className="subtitle">Live database timetable entries</p>
                                         </div>
                                         <Clock size={18} />
                                     </div>
                                     <div className="schedule-list">
-                                        {todaySchedule.map((item, idx) => (
-                                            <div key={idx} className="schedule-item">
-                                                <div className="time-pill">{item.time}</div>
-                                                <div className="class-details">
-                                                    <strong>{item.class} (Sec {item.section}) — {item.subject}</strong>
-                                                    <span>{item.room}</span>
+                                        {mySchedule.length === 0 ? (
+                                            <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No timetable slots mapped to your staff profile yet.</p>
+                                        ) : (
+                                            mySchedule.map((item, idx) => (
+                                                <div key={item.id || idx} className="schedule-item">
+                                                    <div className="time-pill">{item.day} — {item.timeSlot}</div>
+                                                    <div className="class-details">
+                                                        <strong>{item.className || 'General Class'} — {item.subject}</strong>
+                                                        <span>Room: {item.roomNo || 'N/A'}</span>
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    className="action-btn"
-                                                    onClick={() => {
-                                                        setSelectedClass(item.class);
-                                                        const matchedSec = sectionsList.find(s => s.className === item.class && s.name.includes(item.section));
-                                                        setSelectedSection(matchedSec || null);
-                                                        setActiveTab('attendance');
-                                                    }}
-                                                >
-                                                    Take Attendance
-                                                </button>
-                                            </div>
-                                        ))}
+                                            ))
+                                        )}
                                     </div>
                                 </div>
 
@@ -415,7 +415,6 @@ export default function StaffDashboard() {
 
                     {activeTab === 'students' && (
                         <div className="dash-card full-width">
-                            {/* VIEW 1: SELECT CLASS */}
                             {!selectedClass && (
                                 <>
                                     <div className="card-header">
@@ -454,7 +453,6 @@ export default function StaffDashboard() {
                                 </>
                             )}
 
-                            {/* VIEW 2: SELECT SECTION */}
                             {selectedClass && !selectedSection && (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -495,7 +493,6 @@ export default function StaffDashboard() {
                                 </>
                             )}
 
-                            {/* VIEW 3: STUDENT ROSTER */}
                             {selectedClass && selectedSection && (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -716,21 +713,25 @@ export default function StaffDashboard() {
                             <div className="card-header">
                                 <div>
                                     <h3>Weekly Timetable</h3>
-                                    <p className="subtitle">Overview of your routine classes</p>
+                                    <p className="subtitle">Overview of your routine classes from the live database</p>
                                 </div>
                             </div>
                             <div className="timetable-grid">
-                                {todaySchedule.map((item, idx) => (
-                                    <div key={idx} className="timetable-card">
-                                        <div className="time-pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
-                                            {item.time}
+                                {mySchedule.length === 0 ? (
+                                    <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No timetable slots found.</p>
+                                ) : (
+                                    mySchedule.map((item, idx) => (
+                                        <div key={item.id || idx} className="timetable-card">
+                                            <div className="time-pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
+                                                {item.day} — {item.timeSlot}
+                                            </div>
+                                            <h4 style={{ margin: '0 0 4px 0' }}>{item.subject}</h4>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                Class: {item.className || 'General'} | Room: {item.roomNo || 'N/A'}
+                                            </p>
                                         </div>
-                                        <h4 style={{ margin: '0 0 4px 0' }}>{item.subject}</h4>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            Class: {item.class} (Sec {item.section}) | {item.room}
-                                        </p>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}

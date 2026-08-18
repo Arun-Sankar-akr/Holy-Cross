@@ -81,8 +81,6 @@ html {
     visibility: hidden;
 }
 
-/* Constrain sidebar to full view height */
-/* Constrain sidebar to full view height */
 .admin-sidebar {
     background: var(--bg-sidebar);
     padding: 24px 16px;
@@ -96,7 +94,7 @@ html {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s ease-in-out;
 }
 
-/* Updated Brand Header */
+/* Brand Header */
 .sidebar-brand {
     display: flex;
     align-items: center;
@@ -104,52 +102,6 @@ html {
     padding-bottom: 20px;
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-subtle);
-}
-
-/* Navigation Tabs Enhancements */
-.admin-tabs {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.admin-tab {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md);
-    font-family: var(--font-body);
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: left;
-    width: 100%;
-}
-
-.admin-tab:hover {
-    color: var(--text-primary);
-    background-color: var(--bg-hover);
-}
-
-/* Active State for Main/Child Tabs */
-.admin-tab.child-tab.active {
-    color: var(--primary);
-    background-color: var(--primary-light);
-    font-weight: 600;
-}
-
-.submenu-container {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-left: 10px;
-    margin: 4px 0 6px 14px;
-    border-left: 2px solid var(--border-subtle);
 }
 
 .admin-seal {
@@ -184,7 +136,35 @@ html {
     text-transform: uppercase;
 }
 
+/* Navigation Tabs */
+.admin-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
 
+.admin-tab {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+    width: 100%;
+}
+
+.admin-tab:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-hover);
+}
 
 .parent-tab {
     justify-content: space-between;
@@ -208,6 +188,14 @@ html {
     transform: rotate(180deg);
 }
 
+.submenu-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 10px;
+    margin: 4px 0 6px 14px;
+    border-left: 2px solid var(--border-subtle);
+}
 
 .child-tab {
     font-size: 0.86rem;
@@ -287,7 +275,6 @@ html {
     box-sizing: border-box;
 }
 
-/* Sidebar Toggle Button (Inside Main Content / Header) */
 .sidebar-toggle-btn {
     display: inline-flex;
     align-items: center;
@@ -332,9 +319,9 @@ html {
 }
 
 .applications-management-card form {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
     margin-bottom: 24px;
     padding: 18px;
     background: var(--bg-page);
@@ -342,13 +329,29 @@ html {
     border: 1px solid var(--border-subtle);
 }
 
-.applications-management-card form textarea {
-    grid-column: span 2;
+.applications-management-card form > div,
+.applications-management-card form .form-group {
+    flex: 1 1 calc(33.333% - 16px);
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
-.add-notice-btn {
-    grid-column: span 2;
-    justify-self: start;
+.applications-management-card form input[type="text"],
+.applications-management-card form input[type="email"],
+.applications-management-card form input[type="url"],
+.applications-management-card form input[type="date"],
+.applications-management-card form input[type="password"],
+.applications-management-card form select,
+.applications-management-card form textarea {
+    width: 100%;
+}
+
+.applications-management-card form textarea {
+    flex: 0 0 100%;
+    resize: vertical;
+    min-height: 110px;
 }
 
 .applications-management-card input[type="text"],
@@ -358,7 +361,6 @@ html {
 .applications-management-card input[type="password"],
 .applications-management-card select,
 .applications-management-card textarea {
-    width: 100%;
     padding: 10px 14px;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
@@ -379,14 +381,10 @@ html {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-.applications-management-card textarea {
-    resize: vertical;
-    min-height: 110px;
-}
-
 .add-notice-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 10px 20px;
     background-color: var(--primary);
@@ -398,6 +396,9 @@ html {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
+    flex: 0 0 100%;
+    margin-top: 8px;
+    align-self: flex-start;
 }
 
 .add-notice-btn:hover {
@@ -655,9 +656,14 @@ html {
 }
 
 .student-form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.student-form-grid > div {
+    flex: 1 1 calc(33.333% - 16px);
+    min-width: 220px;
 }
 
 .student-admission-form label {
@@ -689,6 +695,65 @@ html {
 .action-btn.delete:hover {
     background-color: var(--danger-light);
     color: var(--danger);
+}
+
+/* Timetable Table Enhancements */
+.timetable-grid-wrapper {
+    overflow-x: auto;
+    margin-top: 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+}
+
+.timetable-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    text-align: left;
+}
+
+.timetable-grid-table th {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+    font-weight: 700;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    white-space: nowrap;
+}
+
+.timetable-grid-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    vertical-align: top;
+    min-width: 120px;
+}
+
+.timetable-grid-table tr:last-child td {
+    border-bottom: none;
+}
+
+.timetable-slot-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid var(--border-subtle);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    position: relative;
+}
+
+.timetable-slot-subject {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.timetable-slot-meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
 }
 
 /* ============ Mobile Header & Overlay ============ */
@@ -754,7 +819,6 @@ html {
         grid-template-columns: 1fr;
     }
 
-    /* Fix mobile sidebar positioning and sliding behavior */
     .admin-sidebar {
         position: fixed;
         top: 60px;
@@ -796,17 +860,13 @@ html {
         padding: 16px;
     }
 
-    .applications-management-card form {
-        grid-template-columns: 1fr;
-    }
-
-    .applications-management-card form textarea,
-    .add-notice-btn {
-        grid-column: span 1;
+    .applications-management-card form > div,
+    .student-form-grid > div {
+        flex: 1 1 100%;
     }
 
     .student-form-grid {
-        grid-template-columns: 1fr;
+        flex-direction: column;
     }
 
     .class-cards-grid,

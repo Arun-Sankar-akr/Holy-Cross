@@ -132,7 +132,7 @@ export default function App() {
 
             {/* Student Dashboard */}
             <Route
-              path="/dashboard"
+              path="/erp/student/zzz"
               element={
                 <ProtectedRoute storageKey="studentUser" redirectPath="/login">
                   <StudentDashboard />

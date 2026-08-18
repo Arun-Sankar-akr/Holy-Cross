@@ -1,14 +1,13 @@
 import { db, auth } from '../service/firebase';
 import React, { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import StudentTimetableManager from '../admin/StudentTimetableManager';
 import {
     collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp
 } from 'firebase/firestore';
 import {
     Calendar, Shield, Award, Image as ImageIcon, Sun, Bell,
     PlusCircle, Trash2, LogOut, Radio, ChevronDown, Users, GraduationCap,
-    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, BookOpen, Menu, PanelLeftClose, PanelLeftOpen
+    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu, PanelLeftClose, PanelLeftOpen, User
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -25,10 +24,6 @@ export default function AdminDashboard() {
 
     // Mobile Navigation Drawer State & Desktop Sidebar Toggle State
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const toggleMobileSidebar = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
-
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     // Real-time Firestore state
@@ -40,9 +35,15 @@ export default function AdminDashboard() {
     const [announcements, setAnnouncements] = useState([]);
     const [staffList, setStaffList] = useState([]);
 
-    // Timetable States
-    const [studentTimetables, setStudentTimetables] = useState([]);
+    // Student Timetable Interactive Drill-down States
     const [staffTimetables, setStaffTimetables] = useState([]);
+    const [studentTimetables, setStudentTimetables] = useState([]);
+    const [selectedClassTT, setSelectedClassTT] = useState(null);
+    const [selectedSectionTT, setSelectedSectionTT] = useState(null);
+
+    // Staff Timetable Interactive Drill-down States
+    const [selectedStaffTT, setSelectedStaffTT] = useState(null);
+    const [selectedStaffDayTT, setSelectedStaffDayTT] = useState(null);
 
     // Students ERP State
     const [sectionsList, setSectionsList] = useState([]);
@@ -76,24 +77,13 @@ export default function AdminDashboard() {
                 setIsMobileMenuOpen(false);
             }
         }
-
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isMobileMenuOpen]);
 
     // Extended Student CRUD States
     const initialStudentForm = {
-        admissionNo: '',
-        admissionDate: '',
-        name: '',
-        dob: '',
-        photo: '',
-        bloodGroup: '',
-        guardianName: '',
-        phone: '',
-        address: ''
+        admissionNo: '', admissionDate: '', name: '', dob: '', photo: '', bloodGroup: '', guardianName: '', phone: '', address: ''
     };
     const [studentForm, setStudentForm] = useState(initialStudentForm);
     const [editingStudentId, setEditingStudentId] = useState(null);
@@ -101,30 +91,14 @@ export default function AdminDashboard() {
 
     // Timetable Form States
     const initialStudentTimetableForm = {
-        className: '',
-        sectionName: '',
-        day: 'Monday',
-        timeSlot: '',
-        subject: '',
-        teacherName: '',
-        roomNo: ''
+        className: '', sectionName: '', day: 'Monday', timeSlot: '', subject: '', teacherName: '', roomNo: ''
     };
     const [studentTimetableForm, setStudentTimetableForm] = useState(initialStudentTimetableForm);
-    const [editingStudentTTId, setEditingStudentTTId] = useState(null);
-    const [editStudentTTForm, setEditStudentTTForm] = useState(initialStudentTimetableForm);
 
     const initialStaffTimetableForm = {
-        staffId: '',
-        staffName: '',
-        day: 'Monday',
-        timeSlot: '',
-        subject: '',
-        className: '',
-        roomNo: ''
+        staffId: '', staffName: '', day: 'Monday', timeSlot: '', subject: '', className: '', roomNo: ''
     };
     const [staffTimetableForm, setStaffTimetableForm] = useState(initialStaffTimetableForm);
-    const [editingStaffTTId, setEditingStaffTTId] = useState(null);
-    const [editStaffTTForm, setEditStaffTTForm] = useState(initialStaffTimetableForm);
 
     const classList = [
         'LKG', 'UKG',
@@ -134,6 +108,19 @@ export default function AdminDashboard() {
     ];
 
     const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const timeSlots = [
+        '09:00 - 09:45 AM',
+        '09:45 - 10:20 AM',
+        '10:20 - 11:00 AM',
+        '11:15 - 11:50 AM',
+        '11:50 AM - 12:30 PM',
+        '01:00 - 01:45 PM',
+        '01:45 - 02:20 PM',
+        '02:20 - 02:40 PM',
+        '02:50 - 03:30 PM',
+        '03:30 - 04:10 PM'
+    ];
 
     const handleTabClick = (tabKey, extraCallback) => {
         setActiveTab(tabKey);
@@ -179,11 +166,11 @@ export default function AdminDashboard() {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), snap =>
             setStudentsList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
-        const unsubStudentTT = onSnapshot(collection(db, 'student_timetables'), snap =>
-            setStudentTimetables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-        );
         const unsubStaffTT = onSnapshot(collection(db, 'staff_timetables'), snap =>
             setStaffTimetables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
+        const unsubStudentTT = onSnapshot(collection(db, 'student_timetables'), snap =>
+            setStudentTimetables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
 
         return () => {
@@ -196,8 +183,8 @@ export default function AdminDashboard() {
             unsubStaff();
             unsubSections();
             unsubStudents();
-            unsubStudentTT();
             unsubStaffTT();
+            unsubStudentTT();
         };
     }, [user]);
 
@@ -226,9 +213,7 @@ export default function AdminDashboard() {
     const handleUpdateStaffName = async (id) => {
         if (!updatedStaffName.trim()) return;
         try {
-            await updateDoc(doc(db, 'staff_members', id), {
-                name: updatedStaffName.trim()
-            });
+            await updateDoc(doc(db, 'staff_members', id), { name: updatedStaffName.trim() });
             setEditingStaffId(null);
             setUpdatedStaffName('');
         } catch (error) {
@@ -262,9 +247,7 @@ export default function AdminDashboard() {
         if (window.confirm('Deleting this section will remove it permanently. Continue?')) {
             try {
                 await deleteDoc(doc(db, 'class_sections', sectionId));
-                if (selectedSection?.id === sectionId) {
-                    setSelectedSection(null);
-                }
+                if (selectedSection?.id === sectionId) setSelectedSection(null);
             } catch (error) {
                 console.error("Error deleting section: ", error);
             }
@@ -327,21 +310,19 @@ export default function AdminDashboard() {
         }, () => setStaffTimetableForm(initialStaffTimetableForm));
     };
 
-    const handleUpdateStaffTimetable = async (id) => {
-        try {
-            await updateDoc(doc(db, 'staff_timetables', id), {
-                staffId: editStaffTTForm.staffId,
-                staffName: editStaffTTForm.staffName,
-                day: editStaffTTForm.day,
-                timeSlot: editStaffTTForm.timeSlot,
-                subject: editStaffTTForm.subject,
-                className: editStaffTTForm.className,
-                roomNo: editStaffTTForm.roomNo
-            });
-            setEditingStaffTTId(null);
-        } catch (error) {
-            console.error("Error updating staff timetable: ", error);
-        }
+    const handleAddStudentTimetable = async (e) => {
+        e.preventDefault();
+        if (!studentTimetableForm.className || !studentTimetableForm.subject || !studentTimetableForm.timeSlot) return;
+
+        await handlePublish('student_timetables', {
+            className: studentTimetableForm.className.trim(),
+            sectionName: studentTimetableForm.sectionName.trim(),
+            day: studentTimetableForm.day,
+            timeSlot: studentTimetableForm.timeSlot.trim(),
+            subject: studentTimetableForm.subject.trim(),
+            teacherName: studentTimetableForm.teacherName.trim(),
+            roomNo: studentTimetableForm.roomNo.trim()
+        }, () => setStudentTimetableForm(initialStudentTimetableForm));
     };
 
     if (authLoading) {
@@ -354,28 +335,18 @@ export default function AdminDashboard() {
 
     return (
         <>
-            {/* Mobile Navigation Bar */}
+            {/* Mobile Header */}
             <header className="mobile-header">
                 <div className="mobile-header-title">
                     <div className="admin-seal" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>AC</div>
                     <h3>Admin Panel</h3>
                 </div>
-                <button
-                    className="mobile-menu-btn"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    aria-label="Toggle Navigation Menu"
-                >
+                <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
             </header>
 
-            {/* Mobile Backdrop Overlay */}
-            {isMobileMenuOpen && (
-                <div
-                    className="sidebar-overlay"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                />
-            )}
+            {isMobileMenuOpen && <div className="sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />}
 
             <div className={`admin-containers ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
@@ -390,18 +361,10 @@ export default function AdminDashboard() {
 
                         <nav className="admin-tabs">
                             {/* UPDATES TAB */}
-                            <button
-                                type="button"
-                                className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`}
-                                onClick={() => setUpdatesOpen(!updatesOpen)}
-                            >
-                                <div className="tab-label">
-                                    <Radio size={18} />
-                                    <span>Updates</span>
-                                </div>
+                            <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
+                                <div className="tab-label"><Radio size={18} /><span>Updates</span></div>
                                 <ChevronDown size={16} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
                             </button>
-
                             {updatesOpen && (
                                 <div className="submenu-container">
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => handleTabClick('calendar')}>
@@ -426,18 +389,10 @@ export default function AdminDashboard() {
                             )}
 
                             {/* ERP MANAGEMENT TAB */}
-                            <button
-                                type="button"
-                                className={`admin-tab parent-tab ${erpOpen ? 'expanded' : ''}`}
-                                onClick={() => setErpOpen(!erpOpen)}
-                            >
-                                <div className="tab-label">
-                                    <Users size={18} />
-                                    <span>ERP Management</span>
-                                </div>
+                            <button type="button" className={`admin-tab parent-tab ${erpOpen ? 'expanded' : ''}`} onClick={() => setErpOpen(!erpOpen)}>
+                                <div className="tab-label"><Users size={18} /><span>ERP Management</span></div>
                                 <ChevronDown size={16} className={`chevron-icon ${erpOpen ? 'rotated' : ''}`} />
                             </button>
-
                             {erpOpen && (
                                 <div className="submenu-container">
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => handleTabClick('staff')}>
@@ -450,24 +405,16 @@ export default function AdminDashboard() {
                             )}
 
                             {/* TIMETABLE TAB */}
-                            <button
-                                type="button"
-                                className={`admin-tab parent-tab ${timetableOpen ? 'expanded' : ''}`}
-                                onClick={() => setTimetableOpen(!timetableOpen)}
-                            >
-                                <div className="tab-label">
-                                    <Clock size={18} />
-                                    <span>Timetables</span>
-                                </div>
+                            <button type="button" className={`admin-tab parent-tab ${timetableOpen ? 'expanded' : ''}`} onClick={() => setTimetableOpen(!timetableOpen)}>
+                                <div className="tab-label"><Clock size={18} /><span>Timetables</span></div>
                                 <ChevronDown size={16} className={`chevron-icon ${timetableOpen ? 'rotated' : ''}`} />
                             </button>
-
                             {timetableOpen && (
                                 <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'student_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('student_timetable')}>
-                                        <BookOpen size={17} /> Student Timetable
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'student_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('student_timetable', () => { setSelectedClassTT(null); setSelectedSectionTT(null); })}>
+                                        <Clock size={17} /> Student Schedule
                                     </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'staff_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('staff_timetable')}>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'staff_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('staff_timetable', () => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); })}>
                                         <Clock size={17} /> Staff Schedule
                                     </button>
                                 </div>
@@ -487,16 +434,12 @@ export default function AdminDashboard() {
                 </aside>
 
                 <main className="admin-main-content">
-                    {/* Sidebar Toggle Button */}
-                    <button
-                        className="sidebar-toggle-btn"
-                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                        title="Toggle Sidebar"
-                    >
+                    <button className="sidebar-toggle-btn" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
                         {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
                         <span>{isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</span>
                     </button>
 
+                    {/* ACADEMIC CALENDAR */}
                     {activeTab === 'calendar' && (
                         <div className="applications-management-card">
                             <h3>Publish Academic Calendar Event</h3>
@@ -506,25 +449,31 @@ export default function AdminDashboard() {
                                     setCalendarForm({ month: '', date: '', day: '', title: '', category: 'General' })
                                 );
                             }}>
-                                <input type="text" placeholder="Month (e.g., June 2026)" value={calendarForm.month} onChange={e => setCalendarForm({ ...calendarForm, month: e.target.value })} required />
-                                <input type="text" placeholder="Date (e.g., 02)" value={calendarForm.date} onChange={e => setCalendarForm({ ...calendarForm, date: e.target.value })} required />
-                                <input type="text" placeholder="Day (e.g., Mon)" value={calendarForm.day} onChange={e => setCalendarForm({ ...calendarForm, day: e.target.value })} required />
-                                <input type="text" placeholder="Event Title" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required />
-                                <select value={calendarForm.category} onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}>
-                                    <option value="General">General</option>
-                                    <option value="Exam">Exam</option>
-                                    <option value="Meeting">Meeting</option>
-                                    <option value="Event">Event</option>
-                                </select>
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Event
-                                </button>
+                                <div>
+                                    <input type="text" placeholder="Month (e.g., June 2026)" value={calendarForm.month} onChange={e => setCalendarForm({ ...calendarForm, month: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Date (e.g., 02)" value={calendarForm.date} onChange={e => setCalendarForm({ ...calendarForm, date: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Day (e.g., Mon)" value={calendarForm.day} onChange={e => setCalendarForm({ ...calendarForm, day: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Event Title" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <select value={calendarForm.category} onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}>
+                                        <option value="General">General</option>
+                                        <option value="Exam">Exam</option>
+                                        <option value="Meeting">Meeting</option>
+                                        <option value="Event">Event</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Event</button>
                             </form>
 
                             <h4>Published Calendar Events <span className="count-badge">{calendarEvents.length}</span></h4>
-                            {calendarEvents.length === 0 ? (
-                                <div className="empty-state">No calendar events published yet.</div>
-                            ) : (
+                            {calendarEvents.length === 0 ? <div className="empty-state">No calendar events published yet.</div> : (
                                 <ul>
                                     {calendarEvents.map(item => (
                                         <li key={item.id}>
@@ -537,6 +486,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* ADMINISTRATORS */}
                     {activeTab === 'admins' && (
                         <div className="applications-management-card">
                             <h3>Publish Administrator Profile</h3>
@@ -546,21 +496,27 @@ export default function AdminDashboard() {
                                     setAdminForm({ name: '', role: '', qualification: '', message: '', email: '', phone: '' })
                                 );
                             }}>
-                                <input type="text" placeholder="Full Name" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required />
-                                <input type="text" placeholder="Role / Position" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required />
-                                <input type="text" placeholder="Qualifications" value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required />
-                                <input type="email" placeholder="Email Address" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required />
-                                <input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required />
+                                <div>
+                                    <input type="text" placeholder="Full Name" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Role / Position" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Qualifications" value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="email" placeholder="Email Address" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required />
+                                </div>
                                 <textarea placeholder="Administrator's Message" value={adminForm.message} onChange={e => setAdminForm({ ...adminForm, message: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Administrator
-                                </button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Administrator</button>
                             </form>
 
                             <h4>Published Administrators <span className="count-badge">{administrators.length}</span></h4>
-                            {administrators.length === 0 ? (
-                                <div className="empty-state">No administrators published yet.</div>
-                            ) : (
+                            {administrators.length === 0 ? <div className="empty-state">No administrators published yet.</div> : (
                                 <ul>
                                     {administrators.map(item => (
                                         <li key={item.id}>
@@ -573,6 +529,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* TOPPERS */}
                     {activeTab === 'toppers' && (
                         <div className="applications-management-card">
                             <h3>Publish Academic Topper</h3>
@@ -582,23 +539,27 @@ export default function AdminDashboard() {
                                     setTopperForm({ rank: 1, name: '', class: '', percentage: '' })
                                 );
                             }}>
-                                <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: Number(e.target.value) })}>
-                                    <option value={1}>Rank 1 (Gold)</option>
-                                    <option value={2}>Rank 2 (Silver)</option>
-                                    <option value={3}>Rank 3 (Bronze)</option>
-                                </select>
-                                <input type="text" placeholder="Student Name" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required />
-                                <input type="text" placeholder="Class / Stream" value={topperForm.class} onChange={e => setTopperForm({ ...topperForm, class: e.target.value })} required />
-                                <input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Topper
-                                </button>
+                                <div>
+                                    <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: Number(e.target.value) })}>
+                                        <option value={1}>Rank 1 (Gold)</option>
+                                        <option value={2}>Rank 2 (Silver)</option>
+                                        <option value={3}>Rank 3 (Bronze)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Student Name" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Class / Stream" value={topperForm.class} onChange={e => setTopperForm({ ...topperForm, class: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required />
+                                </div>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Topper</button>
                             </form>
 
                             <h4>Published Toppers <span className="count-badge">{toppers.length}</span></h4>
-                            {toppers.length === 0 ? (
-                                <div className="empty-state">No toppers published yet.</div>
-                            ) : (
+                            {toppers.length === 0 ? <div className="empty-state">No toppers published yet.</div> : (
                                 <ul>
                                     {toppers.map(item => (
                                         <li key={item.id}>
@@ -611,6 +572,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* GALLERY */}
                     {activeTab === 'gallery' && (
                         <div className="applications-management-card">
                             <h3>Publish Gallery Photo</h3>
@@ -620,24 +582,26 @@ export default function AdminDashboard() {
                                     setGalleryForm({ title: '', category: 'Campus', image: '', description: '' })
                                 );
                             }}>
-                                <input type="text" placeholder="Photo Title" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} required />
-                                <select value={galleryForm.category} onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value })}>
-                                    <option value="Campus">Campus</option>
-                                    <option value="Events">Events</option>
-                                    <option value="Sports">Sports</option>
-                                    <option value="Academics">Academics</option>
-                                </select>
-                                <input type="url" placeholder="Image URL (Hosted Link or Unsplash)" value={galleryForm.image} onChange={e => setGalleryForm({ ...galleryForm, image: e.target.value })} required />
+                                <div>
+                                    <input type="text" placeholder="Photo Title" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <select value={galleryForm.category} onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value })}>
+                                        <option value="Campus">Campus</option>
+                                        <option value="Events">Events</option>
+                                        <option value="Sports">Sports</option>
+                                        <option value="Academics">Academics</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <input type="url" placeholder="Image URL (Hosted Link or Unsplash)" value={galleryForm.image} onChange={e => setGalleryForm({ ...galleryForm, image: e.target.value })} required />
+                                </div>
                                 <textarea placeholder="Description" value={galleryForm.description} onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Gallery Photo
-                                </button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Gallery Photo</button>
                             </form>
 
                             <h4>Published Gallery Photos <span className="count-badge">{galleryItems.length}</span></h4>
-                            {galleryItems.length === 0 ? (
-                                <div className="empty-state">No gallery photos published yet.</div>
-                            ) : (
+                            {galleryItems.length === 0 ? <div className="empty-state">No gallery photos published yet.</div> : (
                                 <ul>
                                     {galleryItems.map(item => (
                                         <li key={item.id}>
@@ -650,6 +614,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* HOLIDAYS */}
                     {activeTab === 'holidays' && (
                         <div className="applications-management-card">
                             <h3>Publish Holiday</h3>
@@ -659,22 +624,26 @@ export default function AdminDashboard() {
                                     setHolidayForm({ date: '', day: '', occasion: '', type: 'National Holiday' })
                                 );
                             }}>
-                                <input type="text" placeholder="Date (e.g., 15 Aug 2026)" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required />
-                                <input type="text" placeholder="Day (e.g., Friday)" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required />
-                                <input type="text" placeholder="Occasion / Holiday Name" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required />
-                                <select value={holidayForm.type} onChange={e => setHolidayForm({ ...holidayForm, type: e.target.value })}>
-                                    <option value="National Holiday">National Holiday</option>
-                                    <option value="Festival">Festival</option>
-                                </select>
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Holiday
-                                </button>
+                                <div>
+                                    <input type="text" placeholder="Date (e.g., 15 Aug 2026)" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Day (e.g., Friday)" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Occasion / Holiday Name" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <select value={holidayForm.type} onChange={e => setHolidayForm({ ...holidayForm, type: e.target.value })}>
+                                        <option value="National Holiday">National Holiday</option>
+                                        <option value="Festival">Festival</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Holiday</button>
                             </form>
 
                             <h4>Published Holidays <span className="count-badge">{holidays.length}</span></h4>
-                            {holidays.length === 0 ? (
-                                <div className="empty-state">No holidays published yet.</div>
-                            ) : (
+                            {holidays.length === 0 ? <div className="empty-state">No holidays published yet.</div> : (
                                 <ul>
                                     {holidays.map(item => (
                                         <li key={item.id}>
@@ -687,6 +656,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* ANNOUNCEMENTS */}
                     {activeTab === 'announcements' && (
                         <div className="applications-management-card">
                             <h3>Publish Announcement</h3>
@@ -695,15 +665,11 @@ export default function AdminDashboard() {
                                 handlePublish('announcements', { content: noticeText }, () => setNoticeText(''));
                             }}>
                                 <textarea rows="3" placeholder="Enter notice content..." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Publish Announcement
-                                </button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Announcement</button>
                             </form>
 
                             <h4>Published Announcements <span className="count-badge">{announcements.length}</span></h4>
-                            {announcements.length === 0 ? (
-                                <div className="empty-state">No announcements published yet.</div>
-                            ) : (
+                            {announcements.length === 0 ? <div className="empty-state">No announcements published yet.</div> : (
                                 <ul>
                                     {announcements.map(item => (
                                         <li key={item.id}>
@@ -716,6 +682,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* STAFF DIRECTORY */}
                     {activeTab === 'staff' && (
                         <div className="applications-management-card">
                             <h3>Add Staff & Credentials</h3>
@@ -725,20 +692,26 @@ export default function AdminDashboard() {
                                     setStaffForm({ name: '', staffId: '', password: '', department: '', email: '' })
                                 );
                             }}>
-                                <input type="text" placeholder="Staff Full Name" value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} required />
-                                <input type="text" placeholder="Staff ID (e.g., STF2026)" value={staffForm.staffId} onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })} required />
-                                <input type="password" placeholder="Portal Password" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required />
-                                <input type="text" placeholder="Department / Subject" value={staffForm.department} onChange={e => setStaffForm({ ...staffForm, department: e.target.value })} required />
-                                <input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Add Staff Account
-                                </button>
+                                <div>
+                                    <input type="text" placeholder="Staff Full Name" value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Staff ID (e.g., STF2026)" value={staffForm.staffId} onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="password" placeholder="Portal Password" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="text" placeholder="Department / Subject" value={staffForm.department} onChange={e => setStaffForm({ ...staffForm, department: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required />
+                                </div>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Add Staff Account</button>
                             </form>
 
                             <h4>Staff Directory <span className="count-badge">{staffList.length}</span></h4>
-                            {staffList.length === 0 ? (
-                                <div className="empty-state">No staff members registered yet.</div>
-                            ) : (
+                            {staffList.length === 0 ? <div className="empty-state">No staff members registered yet.</div> : (
                                 <ul>
                                     {staffList.map(member => (
                                         <li key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -780,6 +753,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* STUDENTS ERP */}
                     {activeTab === 'students' && (
                         <div className="applications-management-card">
                             {!selectedClass && (
@@ -794,14 +768,8 @@ export default function AdminDashboard() {
                                             const countStudents = studentsList.filter(s => s.className === cls).length;
 
                                             return (
-                                                <div
-                                                    key={cls}
-                                                    className="class-card"
-                                                    onClick={() => setSelectedClass(cls)}
-                                                >
-                                                    <div className="class-card-icon">
-                                                        <GraduationCap size={24} />
-                                                    </div>
+                                                <div key={cls} className="class-card" onClick={() => setSelectedClass(cls)}>
+                                                    <div className="class-card-icon"><GraduationCap size={24} /></div>
                                                     <div className="class-card-content">
                                                         <h4>{cls}</h4>
                                                         <span>{countSections} Sections • {countStudents} Students</span>
@@ -823,22 +791,24 @@ export default function AdminDashboard() {
                                     </div>
 
                                     <form onSubmit={handleAddSection}>
-                                        <input
-                                            type="text"
-                                            placeholder="Section Name (e.g., Section A)"
-                                            value={sectionForm.name}
-                                            onChange={e => setSectionForm({ ...sectionForm, name: e.target.value })}
-                                            required
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Room No / Hall (e.g., Room 104)"
-                                            value={sectionForm.roomNo}
-                                            onChange={e => setSectionForm({ ...sectionForm, roomNo: e.target.value })}
-                                        />
-                                        <button type="submit" className="add-notice-btn">
-                                            <PlusCircle size={16} /> Add Section
-                                        </button>
+                                        <div>
+                                            <input
+                                                type="text"
+                                                placeholder="Section Name (e.g., Section A)"
+                                                value={sectionForm.name}
+                                                onChange={e => setSectionForm({ ...sectionForm, name: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="text"
+                                                placeholder="Room No / Hall (e.g., Room 104)"
+                                                value={sectionForm.roomNo}
+                                                onChange={e => setSectionForm({ ...sectionForm, roomNo: e.target.value })}
+                                            />
+                                        </div>
+                                        <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Add Section</button>
                                     </form>
 
                                     <h4>Available Sections <span className="count-badge">{sectionsList.filter(s => s.className === selectedClass).length}</span></h4>
@@ -1004,7 +974,7 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
 
-                                        <div style={{ marginTop: '10px' }}>
+                                        <div style={{ marginTop: '10px', width: '100%' }}>
                                             <label>Residential Address</label>
                                             <textarea
                                                 rows="2"
@@ -1086,149 +1056,624 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {activeTab === 'student_timetable' && <StudentTimetableManager />}
+                    {/* STUDENT TIMETABLE TAB */}
+                    {activeTab === 'student_timetable' && (
+                        <div className="applications-management-card">
+                            <h3>Add Student Class Schedule Slot</h3>
+                            <form onSubmit={handleAddStudentTimetable} className="student-admission-form">
+                                <div>
+                                    <label>Class</label>
+                                    <select
+                                        value={studentTimetableForm.className}
+                                        onChange={e => setStudentTimetableForm({
+                                            ...studentTimetableForm,
+                                            className: e.target.value,
+                                            sectionName: ''
+                                        })}
+                                        required
+                                    >
+                                        <option value="">Select Class</option>
+                                        {classList.map(cls => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
+                                <div>
+                                    <label>Section Name</label>
+                                    <select
+                                        value={studentTimetableForm.sectionName}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, sectionName: e.target.value })}
+                                        disabled={!studentTimetableForm.className}
+                                    >
+                                        <option value="">Select Section</option>
+                                        {sectionsList
+                                            .filter(sec => sec.className === studentTimetableForm.className)
+                                            .map(sec => (
+                                                <option key={sec.id} value={sec.name}>{sec.name}</option>
+                                            ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Day of Week</label>
+                                    <select
+                                        value={studentTimetableForm.day}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, day: e.target.value })}
+                                        required
+                                    >
+                                        {weekDays.map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Time Slot</label>
+                                    <select
+                                        value={studentTimetableForm.timeSlot}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, timeSlot: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select Time Slot</option>
+                                        {timeSlots.map(slot => (
+                                            <option key={slot} value={slot}>{slot}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Subject</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Mathematics"
+                                        value={studentTimetableForm.subject}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, subject: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>Teacher Name</label>
+                                    <select
+                                        value={studentTimetableForm.teacherName}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, teacherName: e.target.value })}
+                                    >
+                                        <option value="">Select Teacher</option>
+                                        {staffList.map(stf => (
+                                            <option key={stf.id} value={stf.name}>{stf.name} ({stf.department || 'Staff'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Room / Lab No</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Room 102"
+                                        value={studentTimetableForm.roomNo}
+                                        onChange={e => setStudentTimetableForm({ ...studentTimetableForm, roomNo: e.target.value })}
+                                    />
+                                </div>
+
+                                <button type="submit" className="add-notice-btn">
+                                    <PlusCircle size={16} /> Add Student Schedule Slot
+                                </button>
+                            </form>
+
+                            <h4 style={{ marginTop: '28px', marginBottom: '16px' }}>Student Directory — Class Timetables</h4>
+
+                            {/* BREADCRUMB / NAVIGATION BAR */}
+                            {(selectedClassTT || selectedSectionTT) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '0.95rem' }}>
+                                    <button
+                                        onClick={() => { setSelectedClassTT(null); setSelectedSectionTT(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                    >
+                                        All Classes
+                                    </button>
+                                    {selectedClassTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <button
+                                                onClick={() => setSelectedSectionTT(null)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: selectedSectionTT ? '#2563eb' : '#1e293b',
+                                                    cursor: selectedSectionTT ? 'pointer' : 'default',
+                                                    padding: 0,
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                {selectedClassTT}
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedSectionTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>Section {selectedSectionTT}</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* LEVEL 1: CLASS GRID */}
+                            {!selectedClassTT && (
+                                <div>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '-8px', marginBottom: '16px' }}>
+                                        Select a class to manage its section timetables.
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                                        {classList.map(cls => {
+                                            const classSections = sectionsList.filter(s => s.className === cls);
+                                            const totalSlots = studentTimetables.filter(tt => tt.className === cls).length;
+
+                                            return (
+                                                <div
+                                                    key={cls}
+                                                    onClick={() => setSelectedClassTT(cls)}
+                                                    style={{
+                                                        background: '#fff',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '16px',
+                                                        padding: '20px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '16px',
+                                                        transition: 'all 0.2s ease',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                                >
+                                                    <div style={{
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '50%',
+                                                        background: '#eff6ff',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#2563eb',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        <GraduationCap size={22} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>{cls}</h4>
+                                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                                            {classSections.length} Sections • {totalSlots} Slots
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* LEVEL 2: SECTION GRID */}
+                            {selectedClassTT && !selectedSectionTT && (
+                                <div>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                        Available Sections
+                                        <span className="count-badge" style={{ background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
+                                            {sectionsList.filter(s => s.className === selectedClassTT).length}
+                                        </span>
+                                    </h4>
+
+                                    {sectionsList.filter(s => s.className === selectedClassTT).length === 0 ? (
+                                        <div className="empty-state">No sections found for {selectedClassTT}. Create sections in Student ERP first.</div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                                            {sectionsList
+                                                .filter(s => s.className === selectedClassTT)
+                                                .map(sec => {
+                                                    const sectionSlots = studentTimetables.filter(
+                                                        tt => tt.className === selectedClassTT && tt.sectionName === sec.name
+                                                    ).length;
+
+                                                    return (
+                                                        <div
+                                                            key={sec.id}
+                                                            onClick={() => setSelectedSectionTT(sec.name)}
+                                                            style={{
+                                                                background: '#fff',
+                                                                border: '1px solid #e2e8f0',
+                                                                borderRadius: '16px',
+                                                                padding: '20px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '16px',
+                                                                transition: 'all 0.2s ease'
+                                                            }}
+                                                            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                                                            onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                                        >
+                                                            <div style={{
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                borderRadius: '10px',
+                                                                background: '#f8fafc',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: '#2563eb',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                <Folder size={20} />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Section {sec.name}</h4>
+                                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                                                    {sectionSlots} Timetable Slots
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* LEVEL 3: TIMETABLE GRID TABLE */}
+                            {selectedClassTT && selectedSectionTT && (
+                                <div>
+                                    <h4 style={{ marginBottom: '16px', color: '#0f172a' }}>
+                                        Class Schedule: {selectedClassTT} - Section {selectedSectionTT}
+                                    </h4>
+
+                                    <div className="timetable-grid-wrapper">
+                                        <table className="timetable-grid-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Day</th>
+                                                    {timeSlots.map(slot => (
+                                                        <th key={slot}>{slot}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {weekDays.map(day => (
+                                                    <tr key={day}>
+                                                        <td><strong>{day}</strong></td>
+                                                        {timeSlots.map(slot => {
+                                                            const match = studentTimetables.find(
+                                                                tt => tt.className === selectedClassTT &&
+                                                                    tt.sectionName === selectedSectionTT &&
+                                                                    tt.day === day &&
+                                                                    tt.timeSlot === slot
+                                                            );
+                                                            return (
+                                                                <td key={slot}>
+                                                                    {match ? (
+                                                                        <div className="timetable-slot-cell">
+                                                                            <span className="timetable-slot-subject">{match.subject}</span>
+                                                                            <span className="timetable-slot-meta">{match.teacherName || 'Unassigned'}</span>
+                                                                            {match.roomNo && <span className="timetable-slot-meta">({match.roomNo})</span>}
+                                                                            <button
+                                                                                onClick={() => handleDelete('student_timetables', match.id)}
+                                                                                title="Delete Slot"
+                                                                                style={{
+                                                                                    background: 'none',
+                                                                                    border: 'none',
+                                                                                    color: '#ef4444',
+                                                                                    cursor: 'pointer',
+                                                                                    position: 'absolute',
+                                                                                    top: '4px',
+                                                                                    right: '4px',
+                                                                                    padding: 0
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : null}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* STAFF TIMETABLE TAB */}
                     {/* STAFF TIMETABLE TAB */}
                     {activeTab === 'staff_timetable' && (
                         <div className="applications-management-card">
                             <h3>Add Staff Work Schedule Slot</h3>
                             <form onSubmit={handleAddStaffTimetable} className="student-admission-form">
-                                <div className="student-form-grid">
-                                    <div>
-                                        <label>Staff Member</label>
-                                        <select
-                                            value={staffTimetableForm.staffId}
-                                            onChange={e => {
-                                                const selected = staffList.find(s => s.staffId === e.target.value);
-                                                setStaffTimetableForm({
-                                                    ...staffTimetableForm,
-                                                    staffId: e.target.value,
-                                                    staffName: selected ? selected.name : ''
-                                                });
-                                            }}
-                                            required
-                                        >
-                                            <option value="">Select Staff Member</option>
-                                            {staffList.map(stf => (
-                                                <option key={stf.id} value={stf.staffId}>
-                                                    {stf.name} ({stf.staffId})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Day of Week</label>
-                                        <select
-                                            value={staffTimetableForm.day}
-                                            onChange={e => setStaffTimetableForm({ ...staffTimetableForm, day: e.target.value })}
-                                            required
-                                        >
-                                            {weekDays.map(day => (
-                                                <option key={day} value={day}>{day}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Time Slot</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. 10:00 - 10:45 AM"
-                                            value={staffTimetableForm.timeSlot}
-                                            onChange={e => setStaffTimetableForm({ ...staffTimetableForm, timeSlot: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Subject / Activity</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Physics Lab"
-                                            value={staffTimetableForm.subject}
-                                            onChange={e => setStaffTimetableForm({ ...staffTimetableForm, subject: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Assigned Class</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. 10th Std - Sec A"
-                                            value={staffTimetableForm.className}
-                                            onChange={e => setStaffTimetableForm({ ...staffTimetableForm, className: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Room / Lab No</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Lab 2"
-                                            value={staffTimetableForm.roomNo}
-                                            onChange={e => setStaffTimetableForm({ ...staffTimetableForm, roomNo: e.target.value })}
-                                        />
-                                    </div>
+                                <div>
+                                    <label>Staff Member</label>
+                                    <select
+                                        value={staffTimetableForm.staffId}
+                                        onChange={e => {
+                                            const selected = staffList.find(s => s.staffId === e.target.value);
+                                            setStaffTimetableForm({
+                                                ...staffTimetableForm,
+                                                staffId: e.target.value,
+                                                staffName: selected ? selected.name : ''
+                                            });
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Select Staff Member</option>
+                                        {staffList.map(stf => (
+                                            <option key={stf.id} value={stf.staffId}>
+                                                {stf.name} ({stf.staffId})
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                                <button type="submit" className="add-notice-btn" style={{ marginTop: '16px' }}>
+                                <div>
+                                    <label>Day of Week</label>
+                                    <select
+                                        value={staffTimetableForm.day}
+                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, day: e.target.value })}
+                                        required
+                                    >
+                                        {weekDays.map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Time Slot</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 10:00 - 10:45 AM"
+                                        value={staffTimetableForm.timeSlot}
+                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, timeSlot: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label>Subject / Activity</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Physics Lab"
+                                        value={staffTimetableForm.subject}
+                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, subject: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label>Assigned Class</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 10th Std - Sec A"
+                                        value={staffTimetableForm.className}
+                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, className: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label>Room / Lab No</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Lab 2"
+                                        value={staffTimetableForm.roomNo}
+                                        onChange={e => setStaffTimetableForm({ ...staffTimetableForm, roomNo: e.target.value })}
+                                    />
+                                </div>
+                                <button type="submit" className="add-notice-btn">
                                     <PlusCircle size={16} /> Add Staff Schedule Slot
                                 </button>
                             </form>
 
-                            <h4>Published Staff Work Schedules <span className="count-badge">{staffTimetables.length}</span></h4>
-                            {staffTimetables.length === 0 ? (
-                                <div className="empty-state">No staff timetables added yet.</div>
-                            ) : (
-                                <ul>
-                                    {staffTimetables.map(item => (
-                                        <li key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            {editingStaffTTId === item.id ? (
-                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: '100%', alignItems: 'center' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={editStaffTTForm.staffName}
-                                                        onChange={e => setEditStaffTTForm({ ...editStaffTTForm, staffName: e.target.value })}
-                                                        placeholder="Staff Name"
-                                                        style={{ width: '120px' }}
-                                                    />
-                                                    <select
-                                                        value={editStaffTTForm.day}
-                                                        onChange={e => setEditStaffTTForm({ ...editStaffTTForm, day: e.target.value })}
-                                                    >
-                                                        {weekDays.map(day => <option key={day} value={day}>{day}</option>)}
-                                                    </select>
-                                                    <input
-                                                        type="text"
-                                                        value={editStaffTTForm.timeSlot}
-                                                        onChange={e => setEditStaffTTForm({ ...editStaffTTForm, timeSlot: e.target.value })}
-                                                        placeholder="Time Slot"
-                                                        style={{ width: '130px' }}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={editStaffTTForm.subject}
-                                                        onChange={e => setEditStaffTTForm({ ...editStaffTTForm, subject: e.target.value })}
-                                                        placeholder="Subject"
-                                                        style={{ width: '110px' }}
-                                                    />
-                                                    <button onClick={() => handleUpdateStaffTimetable(item.id)} title="Save"><Check size={16} /></button>
-                                                    <button onClick={() => setEditingStaffTTId(null)} title="Cancel"><X size={16} /></button>
-                                                </div>
-                                            ) : (
-                                                <span>
-                                                    <strong>{item.staffName}</strong> (<code>{item.staffId}</code>) — {item.day} [{item.timeSlot}]: <strong>{item.subject}</strong> ({item.className || 'General'} • {item.roomNo || 'N/A'})
-                                                </span>
-                                            )}
+                            <h4 style={{ marginTop: '28px', marginBottom: '16px' }}>Staff Directory — Work Timetables</h4>
 
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                {editingStaffTTId !== item.id && (
-                                                    <button onClick={() => {
-                                                        setEditingStaffTTId(item.id);
-                                                        setEditStaffTTForm({ ...item });
-                                                    }} title="Edit Slot"><Edit2 size={16} /></button>
-                                                )}
-                                                <button onClick={() => handleDelete('staff_timetables', item.id)} title="Delete Slot"><Trash2 size={16} /></button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+                            {/* BREADCRUMB / NAVIGATION BAR */}
+                            {(selectedStaffTT || selectedStaffDayTT) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '0.95rem' }}>
+                                    <button
+                                        onClick={() => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                    >
+                                        All Staff
+                                    </button>
+                                    {selectedStaffTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <button
+                                                onClick={() => setSelectedStaffDayTT(null)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: selectedStaffDayTT ? '#059669' : '#1e293b',
+                                                    cursor: selectedStaffDayTT ? 'pointer' : 'default',
+                                                    padding: 0,
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                {selectedStaffTT.name}
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedStaffDayTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{selectedStaffDayTT}</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* LEVEL 1: STAFF MEMBERS GRID */}
+                            {!selectedStaffTT && (
+                                <div>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '-8px', marginBottom: '16px' }}>
+                                        Select a staff member to view their schedule breakdown.
+                                    </p>
+                                    {staffList.length === 0 ? (
+                                        <div className="empty-state">No staff members found in the directory.</div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                                            {staffList.map(stf => {
+                                                const totalSlots = staffTimetables.filter(tt => tt.staffId === stf.staffId || tt.staffName === stf.name).length;
+
+                                                return (
+                                                    <div
+                                                        key={stf.id}
+                                                        onClick={() => setSelectedStaffTT(stf)}
+                                                        style={{
+                                                            background: '#fff',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '16px',
+                                                            padding: '20px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '16px',
+                                                            transition: 'all 0.2s ease',
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                                        }}
+                                                        onMouseEnter={e => e.currentTarget.style.borderColor = '#10b981'}
+                                                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                                    >
+                                                        <div style={{
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            borderRadius: '50%',
+                                                            background: '#ecfdf5',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#059669',
+                                                            flexShrink: 0
+                                                        }}>
+                                                            <User size={22} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>{stf.name}</h4>
+                                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                                                {stf.department || 'General'} • {totalSlots} Slots
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* LEVEL 2: DAYS GRID */}
+                            {selectedStaffTT && !selectedStaffDayTT && (
+                                <div>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                        Days Schedule for {selectedStaffTT.name}
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                                        {weekDays.map(day => {
+                                            const daySlots = staffTimetables.filter(
+                                                tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === day
+                                            ).length;
+
+                                            return (
+                                                <div
+                                                    key={day}
+                                                    onClick={() => setSelectedStaffDayTT(day)}
+                                                    style={{
+                                                        background: '#fff',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '16px',
+                                                        padding: '20px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '16px',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#10b981'}
+                                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                                >
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        background: '#f8fafc',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#059669',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        <Calendar size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>{day}</h4>
+                                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                                            {daySlots} Work Slots
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* LEVEL 3: TIMETABLE SLOTS LIST */}
+                            {selectedStaffTT && selectedStaffDayTT && (
+                                <div>
+                                    <h4 style={{ marginBottom: '16px', color: '#0f172a' }}>
+                                        Schedule: {selectedStaffTT.name} — {selectedStaffDayTT}
+                                    </h4>
+
+                                    {staffTimetables.filter(
+                                        tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT
+                                    ).length === 0 ? (
+                                        <div className="empty-state">No schedule slots assigned for {selectedStaffTT.name} on {selectedStaffDayTT}.</div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {staffTimetables
+                                                .filter(tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT)
+                                                .map(item => (
+                                                    <div
+                                                        key={item.id}
+                                                        style={{
+                                                            background: '#fff',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '12px',
+                                                            padding: '14px 18px',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center'
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                            <span style={{ background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                                {item.timeSlot}
+                                                            </span>
+                                                            <div>
+                                                                <strong style={{ color: '#0f172a' }}>{item.subject}</strong>
+                                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                                                    Class: {item.className || 'General'} • Room: {item.roomNo || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleDelete('staff_timetables', item.id)}
+                                                            title="Delete Slot"
+                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}

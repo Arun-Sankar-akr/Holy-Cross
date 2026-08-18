@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../../service/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import {
     BookOpen,
     Calendar,
@@ -10,7 +12,6 @@ import {
     LogOut,
     Menu,
     X,
-    ChevronRight,
     Clock,
     FileText,
     Download,
@@ -24,25 +25,57 @@ export default function StudentDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
-    const [studentData, setStudentData] = useState({ name: 'Aarav Smith', grade: 'Class X - A', rollNo: '101' });
+    const [studentData, setStudentData] = useState({ name: 'Aaksh', grade: '10th Std', section: 'A', rollNo: '1497' });
+
+    const [timetableList, setTimetableList] = useState([]);
 
     const navigate = useNavigate();
 
+    // Load logged-in student info from localStorage
     useEffect(() => {
         const storedUser = localStorage.getItem('studentUser');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
+                console.log("Loaded Student User from localStorage:", user);
                 setStudentData({
-                    name: user.name || 'Aarav Smith',
-                    grade: user.grade || 'Class X - A',
-                    rollNo: user.rollNo || '101'
+                    name: user.name || user.studentName || 'Aaksh',
+                    grade: user.className || user.grade || '10th Std',
+                    section: user.sectionName || user.section || 'A',
+                    rollNo: user.admissionNo || user.rollNo || '1497'
                 });
             } catch (err) {
                 console.error("Failed to parse user data", err);
             }
         }
     }, []);
+
+    // FIXED: Sync student timetables from the correct 'timetables' collection used by Admin
+    useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'timetables'), (snap) => {
+            const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            console.log("Fetched Timetable from Firebase 'timetables' collection:", fetched);
+            setTimetableList(fetched);
+        }, (error) => {
+            console.error("Error loading student timetable:", error);
+        });
+
+        return () => unsub();
+    }, []);
+
+    // Strict Normalization and Matching for Timetable Filter based on Class & Section
+    const studentSchedule = timetableList.filter(item => {
+        const itemClass = (item.className || item.grade || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const studentClass = (studentData.grade || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const itemSec = (item.sectionName || item.section || '').toString().toLowerCase().trim();
+        const studentSec = (studentData.section || '').toString().toLowerCase().trim();
+
+        const classMatches = itemClass.includes(studentClass) || studentClass.includes(itemClass);
+        const sectionMatches = !itemSec || !studentSec || itemSec === studentSec;
+
+        return classMatches && sectionMatches;
+    });
 
     const handleLogout = () => {
         localStorage.removeItem('studentUser');
@@ -52,15 +85,8 @@ export default function StudentDashboard() {
     const stats = [
         { title: 'Attendance Rate', value: '94%', icon: CheckCircle, badge: '+2.4%', color: 'emerald' },
         { title: 'Current GPA', value: '3.8 / 4.0', icon: Award, badge: 'Top 5%', color: 'teal' },
-        { title: 'Today\'s Classes', value: '4 Sessions', icon: BookOpen, badge: 'On Time', color: 'green' },
+        { title: 'Scheduled Sessions', value: `${studentSchedule.length} Classes`, icon: BookOpen, badge: 'Active', color: 'green' },
         { title: 'Pending Tasks', value: '2 Due', icon: FileText, badge: 'High Priority', color: 'amber' },
-    ];
-
-    const todaySchedule = [
-        { time: '09:00 - 09:45 AM', subject: 'Mathematics', teacher: 'Dr. R. Sharma', room: 'Room 204' },
-        { time: '10:00 - 10:45 AM', subject: 'Physics', teacher: 'Prof. A. Verma', room: 'Lab 2' },
-        { time: '11:30 - 12:15 PM', subject: 'English Literature', teacher: 'Mrs. S. Gupta', room: 'Room 102' },
-        { time: '02:00 - 02:45 PM', subject: 'Computer Science', teacher: 'Mr. K. Nair', room: 'Lab 1' },
     ];
 
     const subjectGrades = [
@@ -86,7 +112,6 @@ export default function StudentDashboard() {
                 </button>
             </div>
 
-            {/* Mobile Overlay */}
             {isMobileMenuOpen && (
                 <div className="staff-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>
             )}
@@ -101,7 +126,7 @@ export default function StudentDashboard() {
                         </div>
                         <div className="staff-user-info">
                             <h4>{studentData.name}</h4>
-                            <p>{studentData.grade} • #{studentData.rollNo}</p>
+                            <p>{studentData.grade} • Section {studentData.section} • #{studentData.rollNo}</p>
                         </div>
                     </div>
 
@@ -148,7 +173,6 @@ export default function StudentDashboard() {
 
                 {/* Main Content Workspace */}
                 <div className="staff-main-workspace">
-                    {/* Top Action Bar */}
                     <header className="staff-top-header">
                         <div className="staff-search-input-group">
                             <Search size={16} className="search-icon" />
@@ -192,7 +216,7 @@ export default function StudentDashboard() {
                                 <div className="staff-welcome-card">
                                     <div>
                                         <h2>Welcome back, <span className="green-accent">{studentData.name}</span></h2>
-                                        <p>You have 4 scheduled classes today. Term 1 grades have been updated.</p>
+                                        <p>You have {studentSchedule.length} timetable entries synced for {studentData.grade} - Section {studentData.section}.</p>
                                     </div>
                                     <div className="staff-pill font-mono">
                                         <TrendingUp size={16} /> Status: Active
@@ -222,19 +246,23 @@ export default function StudentDashboard() {
                                 <div className="staff-two-col-grid">
                                     <div className="staff-card">
                                         <div className="card-header">
-                                            <h3>Today's Schedule</h3>
+                                            <h3>Class Schedule</h3>
                                             <Clock size={16} className="muted-icon" />
                                         </div>
                                         <div className="card-list">
-                                            {todaySchedule.map((item, idx) => (
-                                                <div key={idx} className="card-list-item">
-                                                    <span className="staff-time-pill">{item.time}</span>
-                                                    <div>
-                                                        <strong>{item.subject}</strong>
-                                                        <p>{item.teacher} • {item.room}</p>
+                                            {studentSchedule.length === 0 ? (
+                                                <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No schedule entries found matching your class ({studentData.grade}) and section ({studentData.section}).</p>
+                                            ) : (
+                                                studentSchedule.map((item, idx) => (
+                                                    <div key={item.id || idx} className="card-list-item">
+                                                        <span className="staff-time-pill">{item.day || 'Day'} — {item.timeSlot || 'Slot'}</span>
+                                                        <div>
+                                                            <strong>{item.subject || 'Subject'}</strong>
+                                                            <p>Instructor: {item.teacherName || item.staffName || 'N/A'} • Room: {item.roomNo || 'N/A'}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))
+                                            )}
                                         </div>
                                     </div>
 
@@ -342,19 +370,23 @@ export default function StudentDashboard() {
                         {activeTab === 'schedule' && (
                             <div className="staff-card full">
                                 <div className="card-header">
-                                    <h3>Weekly Timetable</h3>
+                                    <h3>Weekly Timetable — {studentData.grade} (Sec: {studentData.section})</h3>
                                 </div>
                                 <div className="staff-schedule-grid">
-                                    {todaySchedule.map((item, idx) => (
-                                        <div key={idx} className="staff-schedule-box">
-                                            <span className="staff-time-pill">{item.time}</span>
-                                            <h4>{item.subject}</h4>
-                                            <div className="schedule-details">
-                                                <p><strong>Instructor:</strong> {item.teacher}</p>
-                                                <p><strong>Room:</strong> {item.room}</p>
+                                    {studentSchedule.length === 0 ? (
+                                        <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No timetable slots found for your class and section combination.</p>
+                                    ) : (
+                                        studentSchedule.map((item, idx) => (
+                                            <div key={item.id || idx} className="staff-schedule-box">
+                                                <span className="staff-time-pill">{item.day} — {item.timeSlot}</span>
+                                                <h4>{item.subject}</h4>
+                                                <div className="schedule-details">
+                                                    <p><strong>Instructor:</strong> {item.teacherName || item.staffName || 'N/A'}</p>
+                                                    <p><strong>Room:</strong> {item.roomNo || 'N/A'}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         )}
