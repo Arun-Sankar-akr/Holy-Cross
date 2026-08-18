@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'; // Added useState and useEffect imports
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Auth Protection Wrapper
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
@@ -53,35 +53,18 @@ import ProgressReport from "./Erp/ProgressReport";
 
 import './App.css';
 
-export default function App() {
-  // 1. Moved Hooks inside the App component function
-  const [loading, setLoading] = useState(true);
-  const [fadeOut, setFadeOut] = useState(false);
-
-  useEffect(() => {
-    // Trigger fade-out animation after 2 seconds
-    const fadeTimer = setTimeout(() => {
-      setFadeOut(true);
-    }, 2000);
-
-    // Remove preloader completely from DOM after animation completes
-    const removeTimer = setTimeout(() => {
-      setLoading(false);
-    }, 2800);
-
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(removeTimer);
-    };
-  }, []);
+function AppContent({ loading, fadeOut }) {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
-    <BrowserRouter>
-      {/* 2. Display Preloader while loading */}
+    <>
       {loading && <Preloader fadeOut={fadeOut} />}
 
       <div className="app-container">
+        {/* Navbar stays across all routes */}
         <Navbar />
+        
         <main className="main-content">
           <Routes>
             {/* Public Pages */}
@@ -124,17 +107,17 @@ export default function App() {
             <Route
               path="/erp/staff/dashboard"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute storageKey="staffUser" redirectPath="/erp/staff">
                   <StaffDashboard />
                 </ProtectedRoute>
               }
             />
 
-            {/* Student Dashboard */}
+            {/* Protected Student Dashboard Route */}
             <Route
-              path="/erp/student/zzz"
+              path="/erp/student/dashboard"
               element={
-                <ProtectedRoute storageKey="studentUser" redirectPath="/login">
+                <ProtectedRoute storageKey="studentUser" redirectPath="/erp/student">
                   <StudentDashboard />
                 </ProtectedRoute>
               }
@@ -147,8 +130,36 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        <Footer />
+
+        {/* Render Footer only on non-admin routes */}
+        {!isAdminRoute && <Footer />}
       </div>
+    </>
+  );
+}
+
+export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => {
+      setFadeOut(true);
+    }, 2000);
+
+    const removeTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2800);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <AppContent loading={loading} fadeOut={fadeOut} />
     </BrowserRouter>
   );
 }

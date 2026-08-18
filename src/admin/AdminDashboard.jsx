@@ -314,9 +314,14 @@ export default function AdminDashboard() {
         e.preventDefault();
         if (!studentTimetableForm.className || !studentTimetableForm.subject || !studentTimetableForm.timeSlot) return;
 
+        const rawSection = studentTimetableForm.sectionName.trim();
+        const formattedSection = rawSection.toLowerCase().startsWith('section')
+            ? rawSection
+            : `Section ${rawSection}`;
+
         await handlePublish('student_timetables', {
             className: studentTimetableForm.className.trim(),
-            sectionName: studentTimetableForm.sectionName.trim(),
+            sectionName: formattedSection,
             day: studentTimetableForm.day,
             timeSlot: studentTimetableForm.timeSlot.trim(),
             subject: studentTimetableForm.subject.trim(),
@@ -335,14 +340,14 @@ export default function AdminDashboard() {
 
     return (
         <>
-            {/* Mobile Header */}
+            {/* Mobile Top Header */}
             <header className="mobile-header">
                 <div className="mobile-header-title">
-                    <div className="admin-seal" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>AC</div>
+                    <div className="admin-seal" style={{ width: 30, height: 30, fontSize: '0.85rem' }}>AC</div>
                     <h3>Admin Panel</h3>
                 </div>
                 <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                    {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
                 </button>
             </header>
 
@@ -362,60 +367,60 @@ export default function AdminDashboard() {
                         <nav className="admin-tabs">
                             {/* UPDATES TAB */}
                             <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
-                                <div className="tab-label"><Radio size={18} /><span>Updates</span></div>
-                                <ChevronDown size={16} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
+                                <div className="tab-label"><Radio size={16} /><span>Updates</span></div>
+                                <ChevronDown size={14} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
                             </button>
                             {updatesOpen && (
                                 <div className="submenu-container">
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => handleTabClick('calendar')}>
-                                        <Calendar size={17} /> Academic Calendar
+                                        <Calendar size={15} /> Academic Calendar
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => handleTabClick('admins')}>
-                                        <Shield size={17} /> Administrators
+                                        <Shield size={15} /> Administrators
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'toppers' ? 'active' : ''}`} onClick={() => handleTabClick('toppers')}>
-                                        <Award size={17} /> Exam Toppers
+                                        <Award size={15} /> Exam Toppers
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => handleTabClick('gallery')}>
-                                        <ImageIcon size={17} /> Photo Gallery
+                                        <ImageIcon size={15} /> Photo Gallery
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'holidays' ? 'active' : ''}`} onClick={() => handleTabClick('holidays')}>
-                                        <Sun size={17} /> School Holidays
+                                        <Sun size={15} /> School Holidays
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'announcements' ? 'active' : ''}`} onClick={() => handleTabClick('announcements')}>
-                                        <Bell size={17} /> Announcements
+                                        <Bell size={15} /> Announcements
                                     </button>
                                 </div>
                             )}
 
                             {/* ERP MANAGEMENT TAB */}
                             <button type="button" className={`admin-tab parent-tab ${erpOpen ? 'expanded' : ''}`} onClick={() => setErpOpen(!erpOpen)}>
-                                <div className="tab-label"><Users size={18} /><span>ERP Management</span></div>
-                                <ChevronDown size={16} className={`chevron-icon ${erpOpen ? 'rotated' : ''}`} />
+                                <div className="tab-label"><Users size={16} /><span>ERP Management</span></div>
+                                <ChevronDown size={14} className={`chevron-icon ${erpOpen ? 'rotated' : ''}`} />
                             </button>
                             {erpOpen && (
                                 <div className="submenu-container">
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => handleTabClick('staff')}>
-                                        <Users size={17} /> Staff Directory
+                                        <Users size={15} /> Staff Directory
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass(null); setSelectedSection(null); })}>
-                                        <GraduationCap size={17} /> Students ERP
+                                        <GraduationCap size={15} /> Students ERP
                                     </button>
                                 </div>
                             )}
 
                             {/* TIMETABLE TAB */}
                             <button type="button" className={`admin-tab parent-tab ${timetableOpen ? 'expanded' : ''}`} onClick={() => setTimetableOpen(!timetableOpen)}>
-                                <div className="tab-label"><Clock size={18} /><span>Timetables</span></div>
-                                <ChevronDown size={16} className={`chevron-icon ${timetableOpen ? 'rotated' : ''}`} />
+                                <div className="tab-label"><Clock size={16} /><span>Timetables</span></div>
+                                <ChevronDown size={14} className={`chevron-icon ${timetableOpen ? 'rotated' : ''}`} />
                             </button>
                             {timetableOpen && (
                                 <div className="submenu-container">
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'student_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('student_timetable', () => { setSelectedClassTT(null); setSelectedSectionTT(null); })}>
-                                        <Clock size={17} /> Student Schedule
+                                        <Clock size={15} /> Student Schedule
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('staff_timetable', () => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); })}>
-                                        <Clock size={17} /> Staff Schedule
+                                        <Clock size={15} /> Staff Schedule
                                     </button>
                                 </div>
                             )}
@@ -428,15 +433,15 @@ export default function AdminDashboard() {
                             <strong className="user-email">{user.email}</strong>
                         </div>
                         <button className="logout-btn" onClick={() => signOut(auth)}>
-                            <LogOut size={16} /> Log Out
+                            <LogOut size={14} /> Log Out
                         </button>
                     </div>
                 </aside>
 
                 <main className="admin-main-content">
                     <button className="sidebar-toggle-btn" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
-                        {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-                        <span>{isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</span>
+                        {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+                        <span>{isSidebarCollapsed ? 'Show' : 'Hide'}</span>
                     </button>
 
                     {/* ACADEMIC CALENDAR */}
@@ -469,7 +474,7 @@ export default function AdminDashboard() {
                                         <option value="Event">Event</option>
                                     </select>
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Event</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Event</button>
                             </form>
 
                             <h4>Published Calendar Events <span className="count-badge">{calendarEvents.length}</span></h4>
@@ -478,7 +483,7 @@ export default function AdminDashboard() {
                                     {calendarEvents.map(item => (
                                         <li key={item.id}>
                                             <span><strong>{item.month}</strong>: {item.title} ({item.date} {item.day})</span>
-                                            <button onClick={() => handleDelete('academic_calendar', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('academic_calendar', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -512,7 +517,7 @@ export default function AdminDashboard() {
                                     <input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required />
                                 </div>
                                 <textarea placeholder="Administrator's Message" value={adminForm.message} onChange={e => setAdminForm({ ...adminForm, message: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Administrator</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Administrator</button>
                             </form>
 
                             <h4>Published Administrators <span className="count-badge">{administrators.length}</span></h4>
@@ -521,7 +526,7 @@ export default function AdminDashboard() {
                                     {administrators.map(item => (
                                         <li key={item.id}>
                                             <span><strong>{item.name}</strong> - {item.role}</span>
-                                            <button onClick={() => handleDelete('administrators', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('administrators', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -555,7 +560,7 @@ export default function AdminDashboard() {
                                 <div>
                                     <input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required />
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Topper</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper</button>
                             </form>
 
                             <h4>Published Toppers <span className="count-badge">{toppers.length}</span></h4>
@@ -564,7 +569,7 @@ export default function AdminDashboard() {
                                     {toppers.map(item => (
                                         <li key={item.id}>
                                             <span>Rank {item.rank}: <strong>{item.name}</strong> - {item.percentage}</span>
-                                            <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -597,7 +602,7 @@ export default function AdminDashboard() {
                                     <input type="url" placeholder="Image URL (Hosted Link or Unsplash)" value={galleryForm.image} onChange={e => setGalleryForm({ ...galleryForm, image: e.target.value })} required />
                                 </div>
                                 <textarea placeholder="Description" value={galleryForm.description} onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Gallery Photo</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Gallery Photo</button>
                             </form>
 
                             <h4>Published Gallery Photos <span className="count-badge">{galleryItems.length}</span></h4>
@@ -606,7 +611,7 @@ export default function AdminDashboard() {
                                     {galleryItems.map(item => (
                                         <li key={item.id}>
                                             <span><strong>{item.title}</strong> ({item.category})</span>
-                                            <button onClick={() => handleDelete('gallery', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('gallery', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -639,7 +644,7 @@ export default function AdminDashboard() {
                                         <option value="Festival">Festival</option>
                                     </select>
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Holiday</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Holiday</button>
                             </form>
 
                             <h4>Published Holidays <span className="count-badge">{holidays.length}</span></h4>
@@ -648,7 +653,7 @@ export default function AdminDashboard() {
                                     {holidays.map(item => (
                                         <li key={item.id}>
                                             <span>{item.date} ({item.day}): <strong>{item.occasion}</strong></span>
-                                            <button onClick={() => handleDelete('holidays', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('holidays', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -665,7 +670,7 @@ export default function AdminDashboard() {
                                 handlePublish('announcements', { content: noticeText }, () => setNoticeText(''));
                             }}>
                                 <textarea rows="3" placeholder="Enter notice content..." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Publish Announcement</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Announcement</button>
                             </form>
 
                             <h4>Published Announcements <span className="count-badge">{announcements.length}</span></h4>
@@ -674,7 +679,7 @@ export default function AdminDashboard() {
                                     {announcements.map(item => (
                                         <li key={item.id}>
                                             <span>{item.content}</span>
-                                            <button onClick={() => handleDelete('announcements', item.id)}><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete('announcements', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
@@ -707,7 +712,7 @@ export default function AdminDashboard() {
                                 <div>
                                     <input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required />
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Add Staff Account</button>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Staff Account</button>
                             </form>
 
                             <h4>Staff Directory <span className="count-badge">{staffList.length}</span></h4>
@@ -716,16 +721,16 @@ export default function AdminDashboard() {
                                     {staffList.map(member => (
                                         <li key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             {editingStaffId === member.id ? (
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexGrow: 1 }}>
+                                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexGrow: 1 }}>
                                                     <input
                                                         type="text"
                                                         value={updatedStaffName}
                                                         onChange={(e) => setUpdatedStaffName(e.target.value)}
                                                         placeholder="New Staff Name"
-                                                        style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                        style={{ padding: '3px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                                                     />
-                                                    <button onClick={() => handleUpdateStaffName(member.id)} title="Save"><Check size={16} color="green" /></button>
-                                                    <button onClick={() => setEditingStaffId(null)} title="Cancel"><X size={16} color="red" /></button>
+                                                    <button onClick={() => handleUpdateStaffName(member.id)} title="Save"><Check size={14} color="#059669" /></button>
+                                                    <button onClick={() => setEditingStaffId(null)} title="Cancel"><X size={14} color="#e11d48" /></button>
                                                 </div>
                                             ) : (
                                                 <span>
@@ -739,11 +744,11 @@ export default function AdminDashboard() {
                                                         setEditingStaffId(member.id);
                                                         setUpdatedStaffName(member.name);
                                                     }} title="Update Name">
-                                                        <Edit2 size={16} />
+                                                        <Edit2 size={14} />
                                                     </button>
                                                 )}
                                                 <button onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </li>
@@ -759,7 +764,7 @@ export default function AdminDashboard() {
                             {!selectedClass && (
                                 <>
                                     <h3>Students Directory — Classes</h3>
-                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>
+                                    <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.8rem' }}>
                                         Select a class to manage its sections and student records.
                                     </p>
                                     <div className="class-cards-grid">
@@ -769,7 +774,7 @@ export default function AdminDashboard() {
 
                                             return (
                                                 <div key={cls} className="class-card" onClick={() => setSelectedClass(cls)}>
-                                                    <div className="class-card-icon"><GraduationCap size={24} /></div>
+                                                    <div className="class-card-icon"><GraduationCap size={20} /></div>
                                                     <div className="class-card-content">
                                                         <h4>{cls}</h4>
                                                         <span>{countSections} Sections • {countStudents} Students</span>
@@ -783,9 +788,9 @@ export default function AdminDashboard() {
 
                             {selectedClass && !selectedSection && (
                                 <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                         <button className="back-btn" onClick={() => setSelectedClass(null)}>
-                                            <ArrowLeft size={16} /> Back to Classes
+                                            <ArrowLeft size={15} /> Back to Classes
                                         </button>
                                         <h3 style={{ margin: 0 }}>{selectedClass} Sections</h3>
                                     </div>
@@ -808,7 +813,7 @@ export default function AdminDashboard() {
                                                 onChange={e => setSectionForm({ ...sectionForm, roomNo: e.target.value })}
                                             />
                                         </div>
-                                        <button type="submit" className="add-notice-btn"><PlusCircle size={16} /> Add Section</button>
+                                        <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Section</button>
                                     </form>
 
                                     <h4>Available Sections <span className="count-badge">{sectionsList.filter(s => s.className === selectedClass).length}</span></h4>
@@ -836,14 +841,14 @@ export default function AdminDashboard() {
                                                                     placeholder="Room No"
                                                                 />
                                                                 <div className="edit-actions">
-                                                                    <button onClick={() => handleUpdateSection(sec.id)} className="save-btn"><Check size={16} /></button>
-                                                                    <button onClick={() => setEditingSectionId(null)} className="cancel-btn"><X size={16} /></button>
+                                                                    <button onClick={() => handleUpdateSection(sec.id)} className="save-btn"><Check size={14} /></button>
+                                                                    <button onClick={() => setEditingSectionId(null)} className="cancel-btn"><X size={14} /></button>
                                                                 </div>
                                                             </div>
                                                         ) : (
                                                             <>
                                                                 <div className="section-card-body" onClick={() => setSelectedSection(sec)}>
-                                                                    <Folder size={22} className="section-folder-icon" />
+                                                                    <Folder size={18} className="section-folder-icon" />
                                                                     <div>
                                                                         <h5>{sec.name}</h5>
                                                                         <p>{sec.roomNo ? `Room: ${sec.roomNo} • ` : ''}{studentCount} Students</p>
@@ -853,8 +858,8 @@ export default function AdminDashboard() {
                                                                     <button onClick={() => {
                                                                         setEditingSectionId(sec.id);
                                                                         setEditSectionForm({ name: sec.name, roomNo: sec.roomNo || '' });
-                                                                    }} title="Edit Section"><Edit2 size={16} /></button>
-                                                                    <button onClick={() => handleDeleteSection(sec.id)} title="Delete Section"><Trash2 size={16} /></button>
+                                                                    }} title="Edit Section"><Edit2 size={14} /></button>
+                                                                    <button onClick={() => handleDeleteSection(sec.id)} title="Delete Section"><Trash2 size={14} /></button>
                                                                 </div>
                                                             </>
                                                         )}
@@ -868,12 +873,12 @@ export default function AdminDashboard() {
 
                             {selectedClass && selectedSection && (
                                 <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                         <button className="back-btn" onClick={() => setSelectedSection(null)}>
-                                            <ArrowLeft size={16} /> Back to Sections
+                                            <ArrowLeft size={15} /> Back to Sections
                                         </button>
                                         <h3 style={{ margin: 0 }}>
-                                            {selectedClass} — {selectedSection.name} Student Admission
+                                            {selectedClass} — {selectedSection.name} Admission
                                         </h3>
                                     </div>
 
@@ -881,7 +886,7 @@ export default function AdminDashboard() {
                                         <div className="form-section-title">Admission & Credentials</div>
                                         <div className="student-form-grid">
                                             <div>
-                                                <label>Admission No (Student ERP User ID)</label>
+                                                <label>Admission No (User ID)</label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. ADM2026-001"
@@ -904,7 +909,7 @@ export default function AdminDashboard() {
                                         <div className="form-section-title">Personal Details</div>
                                         <div className="student-form-grid">
                                             <div>
-                                                <label>Student Full Name</label>
+                                                <label>Student Name</label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Rahul Sharma"
@@ -914,7 +919,7 @@ export default function AdminDashboard() {
                                                 />
                                             </div>
                                             <div>
-                                                <label>Date of Birth (ERP Password)</label>
+                                                <label>DOB (Password)</label>
                                                 <input
                                                     type="date"
                                                     value={studentForm.dob}
@@ -940,7 +945,7 @@ export default function AdminDashboard() {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>Photo Link / Direct URL</label>
+                                                <label>Photo URL</label>
                                                 <input
                                                     type="url"
                                                     placeholder="https://..."
@@ -950,10 +955,10 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
 
-                                        <div className="form-section-title">Parent & Contact Details</div>
+                                        <div className="form-section-title">Parent & Contact</div>
                                         <div className="student-form-grid">
                                             <div>
-                                                <label>Parent / Guardian Name</label>
+                                                <label>Guardian Name</label>
                                                 <input
                                                     type="text"
                                                     placeholder="Parent's Name"
@@ -974,18 +979,18 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
 
-                                        <div style={{ marginTop: '10px', width: '100%' }}>
-                                            <label>Residential Address</label>
+                                        <div style={{ marginTop: '4px', width: '100%' }}>
+                                            <label>Address</label>
                                             <textarea
                                                 rows="2"
-                                                placeholder="Full Home Address..."
+                                                placeholder="Home Address..."
                                                 value={studentForm.address}
                                                 onChange={e => setStudentForm({ ...studentForm, address: e.target.value })}
                                             />
                                         </div>
 
-                                        <button type="submit" className="add-notice-btn" style={{ marginTop: '16px' }}>
-                                            <UserCheck size={16} /> Enroll & Generate Credentials
+                                        <button type="submit" className="add-notice-btn" style={{ marginTop: '8px' }}>
+                                            <UserCheck size={15} /> Enroll & Generate Credentials
                                         </button>
                                     </form>
 
@@ -1007,15 +1012,15 @@ export default function AdminDashboard() {
                                                                 <input type="text" value={editStudentForm.phone} onChange={e => setEditStudentForm({ ...editStudentForm, phone: e.target.value })} placeholder="Phone" />
                                                                 <input type="text" value={editStudentForm.bloodGroup} onChange={e => setEditStudentForm({ ...editStudentForm, bloodGroup: e.target.value })} placeholder="Blood Group" />
                                                             </div>
-                                                            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                                                                <button onClick={() => handleUpdateStudent(st.id)} className="save-btn"><Check size={16} /> Save</button>
-                                                                <button onClick={() => setEditingStudentId(null)} className="cancel-btn"><X size={16} /> Cancel</button>
+                                                            <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
+                                                                <button onClick={() => handleUpdateStudent(st.id)} className="save-btn"><Check size={14} /> Save</button>
+                                                                <button onClick={() => setEditingStudentId(null)} className="cancel-btn"><X size={14} /> Cancel</button>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="student-card-content">
                                                             <img
-                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop'}
+                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
                                                                 alt={st.name}
                                                                 className="student-avatar"
                                                             />
@@ -1033,8 +1038,8 @@ export default function AdminDashboard() {
                                                                 {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
 
                                                                 <div className="student-credentials-box">
-                                                                    <KeyRound size={14} />
-                                                                    <span>ERP Login: User ID: <strong>{st.admissionNo}</strong> | Password: <strong>{st.dob}</strong></span>
+                                                                    <KeyRound size={12} />
+                                                                    <span>ERP Login: User: <strong>{st.admissionNo}</strong> | Pass: <strong>{st.dob}</strong></span>
                                                                 </div>
                                                             </div>
 
@@ -1042,8 +1047,8 @@ export default function AdminDashboard() {
                                                                 <button onClick={() => {
                                                                     setEditingStudentId(st.id);
                                                                     setEditStudentForm({ ...st });
-                                                                }} title="Edit Record"><Edit2 size={16} /></button>
-                                                                <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={16} /></button>
+                                                                }} title="Edit Record"><Edit2 size={14} /></button>
+                                                                <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={14} /></button>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1059,7 +1064,172 @@ export default function AdminDashboard() {
                     {/* STUDENT TIMETABLE TAB */}
                     {activeTab === 'student_timetable' && (
                         <div className="applications-management-card">
-                            <h3>Add Student Class Schedule Slot</h3>
+                            {/* Student Directory — Class Timetables Section (Top) */}
+                            <h3 style={{ marginBottom: '14px' }}>Student Directory — Class Timetables</h3>
+
+                            {(selectedClassTT || selectedSectionTT) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
+                                    <button
+                                        onClick={() => { setSelectedClassTT(null); setSelectedSectionTT(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                    >
+                                        All Classes
+                                    </button>
+                                    {selectedClassTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <button
+                                                onClick={() => setSelectedSectionTT(null)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: selectedSectionTT ? '#4f46e5' : '#0f172a',
+                                                    cursor: selectedSectionTT ? 'pointer' : 'default',
+                                                    padding: 0,
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                {selectedClassTT}
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedSectionTT && (
+                                        <>
+                                            <span style={{ color: '#94a3b8' }}>/</span>
+                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                                                {selectedSectionTT.startsWith('Section') ? selectedSectionTT : `Section ${selectedSectionTT}`}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {!selectedClassTT && (
+                                <div>
+                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>
+                                        Select a class to manage its section timetables.
+                                    </p>
+                                    <div className="class-cards-grid">
+                                        {classList.map(cls => {
+                                            const classSections = sectionsList.filter(s => s.className === cls);
+                                            const totalSlots = studentTimetables.filter(tt => tt.className === cls).length;
+
+                                            return (
+                                                <div key={cls} className="class-card" onClick={() => setSelectedClassTT(cls)}>
+                                                    <div className="class-card-icon"><GraduationCap size={20} /></div>
+                                                    <div className="class-card-content">
+                                                        <h4>{cls}</h4>
+                                                        <span>{classSections.length} Sections • {totalSlots} Slots</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedClassTT && !selectedSectionTT && (
+                                <div>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                                        Available Sections
+                                        <span className="count-badge">
+                                            {sectionsList.filter(s => s.className === selectedClassTT).length}
+                                        </span>
+                                    </h4>
+
+                                    {sectionsList.filter(s => s.className === selectedClassTT).length === 0 ? (
+                                        <div className="empty-state">No sections found for {selectedClassTT}. Create sections in Student ERP first.</div>
+                                    ) : (
+                                        <div className="sections-grid">
+                                            {sectionsList
+                                                .filter(s => s.className === selectedClassTT)
+                                                .map(sec => {
+                                                    const sectionSlots = studentTimetables.filter(
+                                                        tt => tt.className === selectedClassTT && tt.sectionName === sec.name
+                                                    ).length;
+
+                                                    return (
+                                                        <div key={sec.id} className="section-card" onClick={() => setSelectedSectionTT(sec.name)}>
+                                                            <div className="section-card-body">
+                                                                <Folder size={18} className="section-folder-icon" />
+                                                                <div>
+                                                                    <h5>Section {sec.name}</h5>
+                                                                    <p>{sectionSlots} Slots</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedClassTT && selectedSectionTT && (
+                                <div>
+                                    <h4 style={{ marginBottom: '12px', color: '#0f172a' }}>
+                                        Schedule: {selectedClassTT} - {selectedSectionTT.toLowerCase().startsWith('section') ? selectedSectionTT : `Section ${selectedSectionTT}`}
+                                    </h4>
+
+                                    <div className="timetable-grid-wrapper">
+                                        <table className="timetable-grid-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Day</th>
+                                                    {timeSlots.map(slot => (
+                                                        <th key={slot}>{slot}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {weekDays.map(day => (
+                                                    <tr key={day}>
+                                                        <td><strong>{day}</strong></td>
+                                                        {timeSlots.map(slot => {
+                                                            const match = studentTimetables.find(
+                                                                tt => tt.className === selectedClassTT &&
+                                                                    tt.sectionName === selectedSectionTT &&
+                                                                    tt.day === day &&
+                                                                    tt.timeSlot === slot
+                                                            );
+                                                            return (
+                                                                <td key={slot}>
+                                                                    {match ? (
+                                                                        <div className="timetable-slot-cell" style={{ position: 'relative' }}>
+                                                                            <span className="timetable-slot-subject">{match.subject}</span>
+                                                                            <span className="timetable-slot-meta">{match.teacherName || 'Unassigned'}</span>
+                                                                            {match.roomNo && <span className="timetable-slot-meta">({match.roomNo})</span>}
+                                                                            <button
+                                                                                onClick={() => handleDelete('student_timetables', match.id)}
+                                                                                title="Delete Slot"
+                                                                                style={{
+                                                                                    background: 'none',
+                                                                                    border: 'none',
+                                                                                    color: '#e11d48',
+                                                                                    cursor: 'pointer',
+                                                                                    position: 'absolute',
+                                                                                    top: '2px',
+                                                                                    right: '2px',
+                                                                                    padding: 0
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 size={11} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : null}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Add Student Class Schedule Slot Section (Bottom) */}
+                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>Add Student Class Schedule Slot</h3>
                             <form onSubmit={handleAddStudentTimetable} className="student-admission-form">
                                 <div>
                                     <label>Class</label>
@@ -1157,96 +1327,101 @@ export default function AdminDashboard() {
                                 </div>
 
                                 <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Add Student Schedule Slot
+                                    <PlusCircle size={15} /> Add Student Schedule Slot
                                 </button>
                             </form>
+                        </div>
+                    )}
 
-                            <h4 style={{ marginTop: '28px', marginBottom: '16px' }}>Student Directory — Class Timetables</h4>
+                    {/* STAFF TIMETABLE TAB */}
+                    {activeTab === 'staff_timetable' && (
+                        <div className="applications-management-card">
+                            {/* Staff Directory — Work Timetables Section (Top) */}
+                            <h3 style={{ marginBottom: '14px' }}>Staff Directory — Work Timetables</h3>
 
-                            {/* BREADCRUMB / NAVIGATION BAR */}
-                            {(selectedClassTT || selectedSectionTT) && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '0.95rem' }}>
+                            {(selectedStaffTT || selectedStaffDayTT) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
                                     <button
-                                        onClick={() => { setSelectedClassTT(null); setSelectedSectionTT(null); }}
-                                        style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                        onClick={() => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); }}
+                                        style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontWeight: 600 }}
                                     >
-                                        All Classes
+                                        All Staff
                                     </button>
-                                    {selectedClassTT && (
+                                    {selectedStaffTT && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
                                             <button
-                                                onClick={() => setSelectedSectionTT(null)}
+                                                onClick={() => setSelectedStaffDayTT(null)}
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: selectedSectionTT ? '#2563eb' : '#1e293b',
-                                                    cursor: selectedSectionTT ? 'pointer' : 'default',
+                                                    color: selectedStaffDayTT ? '#059669' : '#0f172a',
+                                                    cursor: selectedStaffDayTT ? 'pointer' : 'default',
                                                     padding: 0,
                                                     fontWeight: 600
                                                 }}
                                             >
-                                                {selectedClassTT}
+                                                {selectedStaffTT.name}
                                             </button>
                                         </>
                                     )}
-                                    {selectedSectionTT && (
+                                    {selectedStaffDayTT && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>Section {selectedSectionTT}</span>
+                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{selectedStaffDayTT}</span>
                                         </>
                                     )}
                                 </div>
                             )}
 
-                            {/* LEVEL 1: CLASS GRID */}
-                            {!selectedClassTT && (
+                            {!selectedStaffTT && (
                                 <div>
-                                    <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '-8px', marginBottom: '16px' }}>
-                                        Select a class to manage its section timetables.
+                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>
+                                        Select a staff member to view their schedule breakdown.
                                     </p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-                                        {classList.map(cls => {
-                                            const classSections = sectionsList.filter(s => s.className === cls);
-                                            const totalSlots = studentTimetables.filter(tt => tt.className === cls).length;
+                                    {staffList.length === 0 ? (
+                                        <div className="empty-state">No staff members found in the directory.</div>
+                                    ) : (
+                                        <div className="class-cards-grid">
+                                            {staffList.map(stf => {
+                                                const totalSlots = staffTimetables.filter(tt => tt.staffId === stf.staffId || tt.staffName === stf.name).length;
+
+                                                return (
+                                                    <div key={stf.id} className="class-card" onClick={() => setSelectedStaffTT(stf)}>
+                                                        <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                                                            <User size={20} />
+                                                        </div>
+                                                        <div className="class-card-content">
+                                                            <h4>{stf.name}</h4>
+                                                            <span>{stf.department || 'General'} • {totalSlots} Slots</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedStaffTT && !selectedStaffDayTT && (
+                                <div>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                                        Days Schedule for {selectedStaffTT.name}
+                                    </h4>
+                                    <div className="class-cards-grid">
+                                        {weekDays.map(day => {
+                                            const daySlots = staffTimetables.filter(
+                                                tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === day
+                                            ).length;
 
                                             return (
-                                                <div
-                                                    key={cls}
-                                                    onClick={() => setSelectedClassTT(cls)}
-                                                    style={{
-                                                        background: '#fff',
-                                                        border: '1px solid #e2e8f0',
-                                                        borderRadius: '16px',
-                                                        padding: '20px',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '16px',
-                                                        transition: 'all 0.2s ease',
-                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                                                    }}
-                                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                                                >
-                                                    <div style={{
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        borderRadius: '50%',
-                                                        background: '#eff6ff',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#2563eb',
-                                                        flexShrink: 0
-                                                    }}>
-                                                        <GraduationCap size={22} />
+                                                <div key={day} className="class-card" onClick={() => setSelectedStaffDayTT(day)}>
+                                                    <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                                                        <Calendar size={18} />
                                                     </div>
-                                                    <div>
-                                                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>{cls}</h4>
-                                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                                            {classSections.length} Sections • {totalSlots} Slots
-                                                        </p>
+                                                    <div className="class-card-content">
+                                                        <h4>{day}</h4>
+                                                        <span>{daySlots} Work Slots</span>
                                                     </div>
                                                 </div>
                                             );
@@ -1255,143 +1430,60 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* LEVEL 2: SECTION GRID */}
-                            {selectedClassTT && !selectedSectionTT && (
+                            {selectedStaffTT && selectedStaffDayTT && (
                                 <div>
-                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                        Available Sections
-                                        <span className="count-badge" style={{ background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>
-                                            {sectionsList.filter(s => s.className === selectedClassTT).length}
-                                        </span>
+                                    <h4 style={{ marginBottom: '12px', color: '#0f172a' }}>
+                                        Schedule: {selectedStaffTT.name} — {selectedStaffDayTT}
                                     </h4>
 
-                                    {sectionsList.filter(s => s.className === selectedClassTT).length === 0 ? (
-                                        <div className="empty-state">No sections found for {selectedClassTT}. Create sections in Student ERP first.</div>
+                                    {staffTimetables.filter(
+                                        tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT
+                                    ).length === 0 ? (
+                                        <div className="empty-state">No schedule slots assigned for {selectedStaffTT.name} on {selectedStaffDayTT}.</div>
                                     ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-                                            {sectionsList
-                                                .filter(s => s.className === selectedClassTT)
-                                                .map(sec => {
-                                                    const sectionSlots = studentTimetables.filter(
-                                                        tt => tt.className === selectedClassTT && tt.sectionName === sec.name
-                                                    ).length;
-
-                                                    return (
-                                                        <div
-                                                            key={sec.id}
-                                                            onClick={() => setSelectedSectionTT(sec.name)}
-                                                            style={{
-                                                                background: '#fff',
-                                                                border: '1px solid #e2e8f0',
-                                                                borderRadius: '16px',
-                                                                padding: '20px',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '16px',
-                                                                transition: 'all 0.2s ease'
-                                                            }}
-                                                            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                                                            onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                                                        >
-                                                            <div style={{
-                                                                width: '40px',
-                                                                height: '40px',
-                                                                borderRadius: '10px',
-                                                                background: '#f8fafc',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: '#2563eb',
-                                                                flexShrink: 0
-                                                            }}>
-                                                                <Folder size={20} />
-                                                            </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            {staffTimetables
+                                                .filter(tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT)
+                                                .map(item => (
+                                                    <div
+                                                        key={item.id}
+                                                        style={{
+                                                            background: '#fff',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '8px',
+                                                            padding: '8px 12px',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center'
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <span style={{ background: '#ecfdf5', color: '#059669', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                                {item.timeSlot}
+                                                            </span>
                                                             <div>
-                                                                <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Section {sec.name}</h4>
-                                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                                                    {sectionSlots} Timetable Slots
-                                                                </p>
+                                                                <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}>{item.subject}</strong>
+                                                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                                                    Class: {item.className || 'General'} • Room: {item.roomNo || 'N/A'}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
+                                                        <button
+                                                            onClick={() => handleDelete('staff_timetables', item.id)}
+                                                            title="Delete Slot"
+                                                            style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* LEVEL 3: TIMETABLE GRID TABLE */}
-                            {selectedClassTT && selectedSectionTT && (
-                                <div>
-                                    <h4 style={{ marginBottom: '16px', color: '#0f172a' }}>
-                                        Class Schedule: {selectedClassTT} - Section {selectedSectionTT}
-                                    </h4>
-
-                                    <div className="timetable-grid-wrapper">
-                                        <table className="timetable-grid-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Day</th>
-                                                    {timeSlots.map(slot => (
-                                                        <th key={slot}>{slot}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {weekDays.map(day => (
-                                                    <tr key={day}>
-                                                        <td><strong>{day}</strong></td>
-                                                        {timeSlots.map(slot => {
-                                                            const match = studentTimetables.find(
-                                                                tt => tt.className === selectedClassTT &&
-                                                                    tt.sectionName === selectedSectionTT &&
-                                                                    tt.day === day &&
-                                                                    tt.timeSlot === slot
-                                                            );
-                                                            return (
-                                                                <td key={slot}>
-                                                                    {match ? (
-                                                                        <div className="timetable-slot-cell">
-                                                                            <span className="timetable-slot-subject">{match.subject}</span>
-                                                                            <span className="timetable-slot-meta">{match.teacherName || 'Unassigned'}</span>
-                                                                            {match.roomNo && <span className="timetable-slot-meta">({match.roomNo})</span>}
-                                                                            <button
-                                                                                onClick={() => handleDelete('student_timetables', match.id)}
-                                                                                title="Delete Slot"
-                                                                                style={{
-                                                                                    background: 'none',
-                                                                                    border: 'none',
-                                                                                    color: '#ef4444',
-                                                                                    cursor: 'pointer',
-                                                                                    position: 'absolute',
-                                                                                    top: '4px',
-                                                                                    right: '4px',
-                                                                                    padding: 0
-                                                                                }}
-                                                                            >
-                                                                                <Trash2 size={12} />
-                                                                            </button>
-                                                                        </div>
-                                                                    ) : null}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* STAFF TIMETABLE TAB */}
-                    {/* STAFF TIMETABLE TAB */}
-                    {activeTab === 'staff_timetable' && (
-                        <div className="applications-management-card">
-                            <h3>Add Staff Work Schedule Slot</h3>
+                            {/* Add Staff Work Schedule Slot Section (Bottom) */}
+                            <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>Add Staff Work Schedule Slot</h3>
                             <form onSubmit={handleAddStaffTimetable} className="student-admission-form">
                                 <div>
                                     <label>Staff Member</label>
@@ -1466,215 +1558,9 @@ export default function AdminDashboard() {
                                     />
                                 </div>
                                 <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={16} /> Add Staff Schedule Slot
+                                    <PlusCircle size={15} /> Add Staff Schedule Slot
                                 </button>
                             </form>
-
-                            <h4 style={{ marginTop: '28px', marginBottom: '16px' }}>Staff Directory — Work Timetables</h4>
-
-                            {/* BREADCRUMB / NAVIGATION BAR */}
-                            {(selectedStaffTT || selectedStaffDayTT) && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '0.95rem' }}>
-                                    <button
-                                        onClick={() => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); }}
-                                        style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontWeight: 600 }}
-                                    >
-                                        All Staff
-                                    </button>
-                                    {selectedStaffTT && (
-                                        <>
-                                            <span style={{ color: '#94a3b8' }}>/</span>
-                                            <button
-                                                onClick={() => setSelectedStaffDayTT(null)}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: selectedStaffDayTT ? '#059669' : '#1e293b',
-                                                    cursor: selectedStaffDayTT ? 'pointer' : 'default',
-                                                    padding: 0,
-                                                    fontWeight: 600
-                                                }}
-                                            >
-                                                {selectedStaffTT.name}
-                                            </button>
-                                        </>
-                                    )}
-                                    {selectedStaffDayTT && (
-                                        <>
-                                            <span style={{ color: '#94a3b8' }}>/</span>
-                                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{selectedStaffDayTT}</span>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* LEVEL 1: STAFF MEMBERS GRID */}
-                            {!selectedStaffTT && (
-                                <div>
-                                    <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '-8px', marginBottom: '16px' }}>
-                                        Select a staff member to view their schedule breakdown.
-                                    </p>
-                                    {staffList.length === 0 ? (
-                                        <div className="empty-state">No staff members found in the directory.</div>
-                                    ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-                                            {staffList.map(stf => {
-                                                const totalSlots = staffTimetables.filter(tt => tt.staffId === stf.staffId || tt.staffName === stf.name).length;
-
-                                                return (
-                                                    <div
-                                                        key={stf.id}
-                                                        onClick={() => setSelectedStaffTT(stf)}
-                                                        style={{
-                                                            background: '#fff',
-                                                            border: '1px solid #e2e8f0',
-                                                            borderRadius: '16px',
-                                                            padding: '20px',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '16px',
-                                                            transition: 'all 0.2s ease',
-                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                                                        }}
-                                                        onMouseEnter={e => e.currentTarget.style.borderColor = '#10b981'}
-                                                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                                                    >
-                                                        <div style={{
-                                                            width: '44px',
-                                                            height: '44px',
-                                                            borderRadius: '50%',
-                                                            background: '#ecfdf5',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            color: '#059669',
-                                                            flexShrink: 0
-                                                        }}>
-                                                            <User size={22} />
-                                                        </div>
-                                                        <div>
-                                                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>{stf.name}</h4>
-                                                            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                                                {stf.department || 'General'} • {totalSlots} Slots
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* LEVEL 2: DAYS GRID */}
-                            {selectedStaffTT && !selectedStaffDayTT && (
-                                <div>
-                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                        Days Schedule for {selectedStaffTT.name}
-                                    </h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-                                        {weekDays.map(day => {
-                                            const daySlots = staffTimetables.filter(
-                                                tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === day
-                                            ).length;
-
-                                            return (
-                                                <div
-                                                    key={day}
-                                                    onClick={() => setSelectedStaffDayTT(day)}
-                                                    style={{
-                                                        background: '#fff',
-                                                        border: '1px solid #e2e8f0',
-                                                        borderRadius: '16px',
-                                                        padding: '20px',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '16px',
-                                                        transition: 'all 0.2s ease'
-                                                    }}
-                                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#10b981'}
-                                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                                                >
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '10px',
-                                                        background: '#f8fafc',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#059669',
-                                                        flexShrink: 0
-                                                    }}>
-                                                        <Calendar size={20} />
-                                                    </div>
-                                                    <div>
-                                                        <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>{day}</h4>
-                                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                                            {daySlots} Work Slots
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* LEVEL 3: TIMETABLE SLOTS LIST */}
-                            {selectedStaffTT && selectedStaffDayTT && (
-                                <div>
-                                    <h4 style={{ marginBottom: '16px', color: '#0f172a' }}>
-                                        Schedule: {selectedStaffTT.name} — {selectedStaffDayTT}
-                                    </h4>
-
-                                    {staffTimetables.filter(
-                                        tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT
-                                    ).length === 0 ? (
-                                        <div className="empty-state">No schedule slots assigned for {selectedStaffTT.name} on {selectedStaffDayTT}.</div>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {staffTimetables
-                                                .filter(tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT)
-                                                .map(item => (
-                                                    <div
-                                                        key={item.id}
-                                                        style={{
-                                                            background: '#fff',
-                                                            border: '1px solid #e2e8f0',
-                                                            borderRadius: '12px',
-                                                            padding: '14px 18px',
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center'
-                                                        }}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                            <span style={{ background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 }}>
-                                                                {item.timeSlot}
-                                                            </span>
-                                                            <div>
-                                                                <strong style={{ color: '#0f172a' }}>{item.subject}</strong>
-                                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                                                    Class: {item.className || 'General'} • Room: {item.roomNo || 'N/A'}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleDelete('staff_timetables', item.id)}
-                                                            title="Delete Slot"
-                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     )}
                 </main>
