@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
+import logo from "../assets/logo.png"
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -535,7 +536,7 @@ export default function AdminDashboard() {
                 <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
                     <div>
                         <div className="sidebar-brand">
-                            <div className="admin-seal">AC</div>
+                            <div className="admin-seal"><img src={logo} alt="" id='logogs'/></div>
                             <div>
                                 <h2>Admin Control</h2>
                                 <p>Dashboard</p>

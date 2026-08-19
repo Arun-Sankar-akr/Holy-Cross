@@ -56,9 +56,11 @@ body {
     width: 100%;
 }
 
-/* -------------------------------------------------------------
-   1. Mobile & Tablet Sticky Topbar
-------------------------------------------------------------- */
+#logog {
+    width: 50px;
+    height: 50px;
+}
+
 .mobile-topbar {
     display: none;
     justify-content: space-between;
@@ -150,7 +152,7 @@ body {
 }
 
 .brand-titles {
-    font-size: 1.05rem;
+    font-size: 0.9rem;
     font-weight: 800;
     color: var(--text-main);
     letter-spacing: -0.2px;
@@ -920,7 +922,14 @@ body {
 ------------------------------------------------------------- */
 @media (max-width: 1024px) {
     .mobile-topbar {
+        position: relative;
+        top: 40px;
+        margin-bottom: 50px;
         display: flex !important;
+        border-radius: 20px;
+        width: 90%;
+        left: 5%;
+        padding: 40px 30px;
     }
 
     .dashboard-containers {
@@ -1267,6 +1276,7 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
 /* Submissions Pending & Completed Status Cards */
 .sub-status-cards-grid {
     display: grid;
@@ -1430,6 +1440,7 @@ body {
     background: var(--accent-emerald);
     color: #ffffff;
 }
+
 /* Edit and Action Buttons */
 .edit-task-btn {
     background: #eef2ff;
@@ -1472,8 +1483,15 @@ body {
 }
 
 @keyframes modalPop {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .modal-header {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
+import logo from "../../assets/logo.png"
 import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField
 } from 'firebase/firestore';
@@ -44,6 +45,10 @@ export default function StaffDashboard() {
     const [selectedClass, setSelectedClass] = useState('10th Std');
     const [selectedSection, setSelectedSection] = useState(null);
 
+    // Attendance Date & Period States
+    const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+    const [attendancePeriod, setAttendancePeriod] = useState('Period 1 (09:00 - 09:45 AM)');
+
     // Submissions Review State
     const [subClassFilter, setSubClassFilter] = useState(null);
     const [subSectionFilter, setSubSectionFilter] = useState(null);
@@ -83,6 +88,18 @@ export default function StaffDashboard() {
         '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std',
         '6th Std', '7th Std', '8th Std', '9th Std', '10th Std',
         '11th Std', '12th Std'
+    ];
+
+    const periodList = [
+        'Period 1 (09:00 - 09:45 AM)',
+        'Period 2 (09:45 - 10:20 AM)',
+        'Period 3 (10:20 - 11:00 AM)',
+        'Period 4 (11:15 - 11:50 AM)',
+        'Period 5 (11:50 AM - 12:30 PM)',
+        'Period 6 (01:00 - 01:45 PM)',
+        'Period 7 (01:45 - 02:20 PM)',
+        'Period 8 (02:50 - 03:30 PM)',
+        'Period 9 (03:30 - 04:10 PM)'
     ];
 
     const examList = [
@@ -244,7 +261,8 @@ export default function StaffDashboard() {
                 const studentRef = doc(db, 'students_records', student.id);
                 batch.update(studentRef, {
                     status: student.status || 'present',
-                    lastAttendanceDate: new Date().toISOString()
+                    lastAttendanceDate: attendanceDate,
+                    lastAttendancePeriod: attendancePeriod
                 });
             });
             await batch.commit();
@@ -519,8 +537,8 @@ export default function StaffDashboard() {
             {/* Mobile Topbar */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">
-                    <Sparkles size={20} />
-                    <span>EduPulse</span>
+                    <img src={logo} alt="" id='logog'/>
+                    <span>HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
                 </div>
                 <button
                     className="menu-toggle-btn"
@@ -538,8 +556,8 @@ export default function StaffDashboard() {
             {/* Sidebar */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon"><Sparkles size={20} /></div>
-                    <span className="brand-titles">EduPulse</span>
+                    <div className="brand-icon"><img src={logo} alt="" id='logog'/></div>
+                    <span className="brand-titles">HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
                 </div>
 
                 <div className="sidebar-user">
@@ -908,52 +926,77 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* ATTENDANCE TAB */}
+                    {/* ATTENDANCE TAB (Updated with Date & Period Filters) */}
                     {activeTab === 'attendance' && (
                         <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Mark Attendance</h3>
-                                    <p className="subtitle">
-                                        Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
-                                    </p>
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <select
-                                        className="custom-select"
-                                        value={selectedClass || ''}
-                                        onChange={(e) => {
-                                            setSelectedClass(e.target.value);
-                                            setSelectedSection(null);
-                                            setAttendanceSubmitted(false);
-                                        }}
-                                    >
-                                        {classList.map(cls => (
-                                            <option key={cls} value={cls}>{cls}</option>
-                                        ))}
-                                    </select>
+                            <div className="card-header" style={{ flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    <div>
+                                        <h3>Mark Attendance</h3>
+                                        <p className="subtitle">
+                                            Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Filters Bar: Class, Section, Date & Period */}
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <input
+                                            type="date"
+                                            className="custom-select"
+                                            value={attendanceDate}
+                                            onChange={(e) => setAttendanceDate(e.target.value)}
+                                            title="Attendance Date"
+                                        />
 
-                                    <select
-                                        className="custom-select"
-                                        value={selectedSection ? selectedSection.name : ''}
-                                        onChange={(e) => {
-                                            const sec = sectionsList.find(s => s.className === selectedClass && s.name === e.target.value);
-                                            setSelectedSection(sec || (e.target.value ? { name: e.target.value } : null));
-                                            setAttendanceSubmitted(false);
-                                        }}
-                                        disabled={!selectedClass}
-                                    >
-                                        <option value="">All Sections</option>
-                                        {sectionsList.filter(s => s.className === selectedClass).map(s => (
-                                            <option key={s.id} value={s.name}>{formatSectionTitle(s.name)}</option>
-                                        ))}
-                                    </select>
+                                        <select
+                                            className="custom-select"
+                                            value={attendancePeriod}
+                                            onChange={(e) => setAttendancePeriod(e.target.value)}
+                                            title="Period / Class Hour"
+                                        >
+                                            {periodList.map(per => (
+                                                <option key={per} value={per}>{per}</option>
+                                            ))}
+                                        </select>
+
+                                        <select
+                                            className="custom-select"
+                                            value={selectedClass || ''}
+                                            onChange={(e) => {
+                                                setSelectedClass(e.target.value);
+                                                setSelectedSection(null);
+                                                setAttendanceSubmitted(false);
+                                            }}
+                                            title="Select Class"
+                                        >
+                                            {classList.map(cls => (
+                                                <option key={cls} value={cls}>{cls}</option>
+                                            ))}
+                                        </select>
+
+                                        <select
+                                            className="custom-select"
+                                            value={selectedSection ? selectedSection.name : ''}
+                                            onChange={(e) => {
+                                                const sec = sectionsList.find(s => s.className === selectedClass && s.name === e.target.value);
+                                                setSelectedSection(sec || (e.target.value ? { name: e.target.value } : null));
+                                                setAttendanceSubmitted(false);
+                                            }}
+                                            disabled={!selectedClass}
+                                            title="Select Section"
+                                        >
+                                            <option value="">All Sections</option>
+                                            {sectionsList.filter(s => s.className === selectedClass).map(s => (
+                                                <option key={s.id} value={s.name}>{formatSectionTitle(s.name)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
                             {attendanceSubmitted && (
                                 <div style={{ color: 'var(--primary)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Check size={18} /> Attendance submitted successfully!
+                                    <Check size={18} /> Attendance submitted successfully for {attendanceDate} ({attendancePeriod})!
                                 </div>
                             )}
 

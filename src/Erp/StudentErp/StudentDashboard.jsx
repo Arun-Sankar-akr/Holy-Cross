@@ -6,7 +6,7 @@ import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
     Menu, X, Clock, FileText, User, AlertCircle, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
-    ChevronRight, BarChart2
+    ChevronRight, BarChart2, Filter
 } from 'lucide-react';
 import './StudentDashboard.css';
 
@@ -22,6 +22,10 @@ export default function StudentDashboard() {
     const [announcements, setAnnouncements] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
+
+    // Attendance Table Filters
+    const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
+    const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
 
     // PDF Upload States
     const [uploadingTaskId, setUploadingTaskId] = useState(null);
@@ -346,18 +350,37 @@ export default function StudentDashboard() {
     const totalScore = marksEntries.reduce((acc, curr) => acc + curr.score, 0);
     const averageScore = marksEntries.length > 0 ? (totalScore / marksEntries.length).toFixed(1) : 'N/A';
 
-    // Attendance Calculations
-    const currentAttendanceStatus = liveStudentRecord?.status || 'present';
-    const rawAttendanceRate = liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68);
-    const isDefaulter = rawAttendanceRate < 75;
+    // Attendance Calculations (Gatekeeping: Show only if staff submitted)
+    const hasStaffSubmittedAttendance = Boolean(liveStudentRecord?.lastAttendanceDate || liveStudentRecord?.status);
+    const currentAttendanceStatus = hasStaffSubmittedAttendance ? (liveStudentRecord?.status || 'present') : 'pending';
+    const rawAttendanceRate = hasStaffSubmittedAttendance ? (liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68)) : 0;
+    const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
+
+    // Detailed attendance log records from staff submission
+    const attendanceLogs = hasStaffSubmittedAttendance ? [
+        {
+            id: 1,
+            date: liveStudentRecord?.lastAttendanceDate || 'Today',
+            period: liveStudentRecord?.lastAttendancePeriod || 'Period 1 (09:00 - 09:45 AM)',
+            subject: 'General / Class Roll Call',
+            teacherName: 'Faculty Advisor',
+            status: liveStudentRecord?.status || 'present'
+        }
+    ] : [];
+
+    const filteredAttendanceLogs = attendanceLogs.filter(log => {
+        const matchesStatus = attendanceStatusFilter === 'all' || log.status === attendanceStatusFilter;
+        const matchesDate = !attendanceDateFilter || log.date === attendanceDateFilter;
+        return matchesStatus && matchesDate;
+    });
 
     const stats = [
         { 
             title: 'Attendance Rate', 
-            value: `${rawAttendanceRate}%`, 
+            value: hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : 'Pending', 
             icon: isDefaulter ? AlertTriangle : CheckCircle,
             color: isDefaulter ? 'rose' : 'emerald',
-            badge: isDefaulter ? 'Below 75% Minimum' : 'Compliant'
+            badge: hasStaffSubmittedAttendance ? (isDefaulter ? 'Below 75% Minimum' : 'Compliant') : 'Awaiting Faculty'
         },
         { 
             title: 'Coursework & PDFs', 
@@ -395,7 +418,7 @@ export default function StudentDashboard() {
                 </button>
                 <div className="portal-status-pill">
                     <span className={`status-dot ${currentAttendanceStatus}`} />
-                    {currentAttendanceStatus.toUpperCase()} ({rawAttendanceRate}%)
+                    {currentAttendanceStatus.toUpperCase()} {hasStaffSubmittedAttendance ? `(${rawAttendanceRate}%)` : ''}
                 </div>
             </div>
 
@@ -426,6 +449,12 @@ export default function StudentDashboard() {
                             onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                         >
                             <BookOpen size={16} /><span>Dashboard Overview</span>
+                        </button>
+                        <button 
+                            className={`staff-nav-item ${activeTab === 'attendance' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('attendance'); setIsMobileMenuOpen(false); }}
+                        >
+                            <BarChart2 size={16} /><span>Attendance Record</span>
                         </button>
                         <button 
                             className={`staff-nav-item ${activeTab === 'assignments' ? 'active' : ''}`} 
@@ -499,7 +528,7 @@ export default function StudentDashboard() {
                                     <div className="attendance-pill-box">
                                         <span className="pill-label">Roll Call:</span>
                                         <span className={`status-badge status-${currentAttendanceStatus}`}>
-                                            {currentAttendanceStatus === 'present' ? <Check size={12} /> : <XCircle size={12} />}
+                                            {currentAttendanceStatus === 'present' ? <Check size={12} /> : (currentAttendanceStatus === 'absent' ? <XCircle size={12} /> : <Clock size={12} />)}
                                             {currentAttendanceStatus.toUpperCase()}
                                         </span>
                                     </div>
@@ -606,7 +635,144 @@ export default function StudentDashboard() {
                         )}
 
                         {/* =========================================================
-                            2. PDF TASKS & UPLOADS
+                            2. ATTENDANCE RECORD TAB (GATEKEEPING + STYLED TABLE)
+                            ========================================================= */}
+                        {activeTab === 'attendance' && (
+                            <div className="staff-card full">
+                                <div className="card-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                                    <div>
+                                        <h3>Attendance Summary & Period Logs</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Real-time attendance record and daily roll call logs for {studentData.name} (#{studentData.rollNo})
+                                        </p>
+                                    </div>
+
+                                    {/* Filters Bar */}
+                                    {hasStaffSubmittedAttendance && (
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Filter size={14} color="var(--staff-text-muted)" />
+                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filters:</span>
+                                            </div>
+                                            
+                                            <input
+                                                type="date"
+                                                className="custom-select"
+                                                value={attendanceDateFilter}
+                                                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+                                                title="Filter by Date"
+                                                style={{ padding: '5px 8px', fontSize: '0.76rem' }}
+                                            />
+
+                                            <select
+                                                className="custom-select"
+                                                value={attendanceStatusFilter}
+                                                onChange={(e) => setAttendanceStatusFilter(e.target.value)}
+                                                style={{ padding: '5px 8px', fontSize: '0.76rem' }}
+                                            >
+                                                <option value="all">All Statuses</option>
+                                                <option value="present">Present Only</option>
+                                                <option value="absent">Absent Only</option>
+                                            </select>
+
+                                            {(attendanceDateFilter || attendanceStatusFilter !== 'all') && (
+                                                <button
+                                                    onClick={() => { setAttendanceDateFilter(''); setAttendanceStatusFilter('all'); }}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--staff-primary)', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                                                >
+                                                    Reset
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {!hasStaffSubmittedAttendance ? (
+                                    <div className="empty-sub-card" style={{ padding: '3rem 1rem' }}>
+                                        <Clock size={36} color="var(--staff-text-muted)" />
+                                        <h4>Attendance Pending Faculty Submission</h4>
+                                        <p>Your class advisor or faculty has not submitted or published attendance records for today yet. Please check back later.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="staff-stats-grid" style={{ marginTop: '1rem', marginBottom: '1.25rem' }}>
+                                            <div className="staff-stat-box">
+                                                <span className="stat-title">Overall Percentage</span>
+                                                <h3 className="stat-val" style={{ color: isDefaulter ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
+                                                    {rawAttendanceRate}%
+                                                </h3>
+                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>
+                                                    {isDefaulter ? 'Below 75% minimum requirement' : 'Meets standards'}
+                                                </span>
+                                            </div>
+                                            <div className="staff-stat-box">
+                                                <span className="stat-title">Current Status</span>
+                                                <h3 className="stat-val">
+                                                    <span className={`status-badge status-${currentAttendanceStatus}`} style={{ fontSize: '0.9rem', padding: '4px 10px' }}>
+                                                        {currentAttendanceStatus.toUpperCase()}
+                                                    </span>
+                                                </h3>
+                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>Latest faculty roll call</span>
+                                            </div>
+                                            <div className="staff-stat-box">
+                                                <span className="stat-title">Total Logs Recorded</span>
+                                                <h3 className="stat-val" style={{ fontSize: '1.1rem', fontWeight: 800 }}>
+                                                    {attendanceLogs.length} Periods
+                                                </h3>
+                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>Filtered: {filteredAttendanceLogs.length} rows</span>
+                                            </div>
+                                        </div>
+
+                                        <h4 style={{ fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.5rem' }}>Period-by-Period Roll Call Logs</h4>
+                                        
+                                        <div className="table-responsive" style={{ borderRadius: 'var(--staff-radius)', border: '1px solid var(--staff-border)' }}>
+                                            <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>DATE</th>
+                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>PERIOD / TIME</th>
+                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>SUBJECT</th>
+                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>TEACHER NAME</th>
+                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>STATUS</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filteredAttendanceLogs.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--staff-text-muted)' }}>
+                                                                No attendance logs found matching the selected filters.
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        filteredAttendanceLogs.map((log) => (
+                                                            <tr key={log.id} style={{ borderBottom: '1px solid var(--staff-border)' }}>
+                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', fontWeight: 700 }}>{log.date}</td>
+                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
+                                                                    <span className="task-target-tag">{log.period}</span>
+                                                                </td>
+                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
+                                                                    <span className="topic-badge">{log.subject}</span>
+                                                                </td>
+                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: 'var(--staff-text-muted)' }}>{log.teacherName}</td>
+                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
+                                                                    <span className={`status-badge status-${log.status}`}>
+                                                                        {log.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                        {log.status.toUpperCase()}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            3. PDF TASKS & UPLOADS
                             ========================================================= */}
                         {activeTab === 'assignments' && (
                             <div className="staff-card full">
@@ -718,7 +884,7 @@ export default function StudentDashboard() {
                         )}
 
                         {/* =========================================================
-                            3. CLASS ROUTINE / TIMETABLE
+                            4. CLASS ROUTINE / TIMETABLE
                             ========================================================= */}
                         {activeTab === 'schedule' && (
                             <div className="staff-card full">
@@ -780,7 +946,7 @@ export default function StudentDashboard() {
                         )}
 
                         {/* =========================================================
-                            4. EXAMINATION MARKS (Subject-Wise & Term Filter)
+                            5. EXAMINATION MARKS (Subject-Wise & Term Filter)
                             ========================================================= */}
                         {activeTab === 'marks' && (
                             <div className="staff-card full">
@@ -851,7 +1017,7 @@ export default function StudentDashboard() {
                         )}
 
                         {/* =========================================================
-                            5. SUBMISSION HISTORY TAB
+                            6. SUBMISSION HISTORY TAB
                             ========================================================= */}
                         {activeTab === 'submissions' && (
                             <div className="staff-card full">
@@ -924,7 +1090,7 @@ export default function StudentDashboard() {
                         )}
 
                         {/* =========================================================
-                            6. NOTICES & CIRCULARS
+                            7. NOTICES & CIRCULARS
                             ========================================================= */}
                         {activeTab === 'notices' && (
                             <div className="staff-card full">

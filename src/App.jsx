@@ -56,6 +56,7 @@ import './App.css';
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isStaffRoute = location.pathname.startsWith('/erp/staff/dashboar');
 
   return (
     <>
@@ -132,7 +133,7 @@ function AppContent({ loading, fadeOut }) {
         </main>
 
         {/* Render Footer only on non-admin routes */}
-        {!isAdminRoute && <Footer />}
+        {!isAdminRoute && !isStaffRoute && <Footer />}
       </div>
     </>
   );
