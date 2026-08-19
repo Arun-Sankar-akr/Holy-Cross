@@ -2,14 +2,15 @@ import { db, auth } from '../service/firebase';
 import React, { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
-    collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp, setDoc, writeBatch
+    collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp, setDoc, writeBatch, getDocs, query, where
 } from 'firebase/firestore';
 import {
     Calendar, Shield, Award, Image as ImageIcon, Sun, Bell,
     PlusCircle, Trash2, LogOut, Radio, ChevronDown, Users, GraduationCap,
     Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu,
     PanelLeftClose, PanelLeftOpen, User, RefreshCw, BarChart3, Settings,
-    Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send
+    Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send,
+    FileText, CheckCircle, XCircle, Eye
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -18,9 +19,10 @@ import logo from "../assets/logo.png"
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('analytics'); // Default to Analytics & Overview
+    const [activeTab, setActiveTab] = useState('analytics');
 
     // Collapsible states for sidebar dropdowns
+    const [admissionsOpen, setAdmissionsOpen] = useState(true);
     const [updatesOpen, setUpdatesOpen] = useState(true);
     const [erpOpen, setErpOpen] = useState(true);
     const [timetableOpen, setTimetableOpen] = useState(true);
@@ -38,6 +40,11 @@ export default function AdminDashboard() {
     const [holidays, setHolidays] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [staffList, setStaffList] = useState([]);
+
+    // Admissions Administration Panel States
+    const [admissionApplications, setAdmissionApplications] = useState([]);
+    const [selectedApp, setSelectedApp] = useState(null);
+    const [admissionLoading, setAdmissionLoading] = useState(false);
 
     // Student Timetable Interactive Drill-down States
     const [staffTimetables, setStaffTimetables] = useState([]);
@@ -198,6 +205,102 @@ export default function AdminDashboard() {
         if (extraCallback) extraCallback();
     };
 
+    // Fetch admissions from Firestore for AdminAdmissionPanel
+    const fetchAdmissionApplications = async () => {
+        setAdmissionLoading(true);
+        try {
+            const querySnapshot = await getDocs(collection(db, "admissions"));
+            const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAdmissionApplications(list);
+        } catch (error) {
+            console.error("Error fetching applications:", error);
+        } finally {
+            setAdmissionLoading(false);
+        }
+    };
+
+    // Add this state near your other admission states
+    const [approvalSections, setApprovalSections] = useState({}); // Stores selected section per app ID
+
+    const handleApproveAdmission = async (app) => {
+        try {
+            const assignedSectionName = approvalSections[app.id] || 'Section A';
+            const appRef = doc(db, "admissions", app.id);
+            await updateDoc(appRef, { status: 'Approved' });
+
+            const targetGrade = app.grade;
+
+            // 1. Resolve or create section
+            const sectionsQuery = query(
+                collection(db, "class_sections"),
+                where("className", "==", targetGrade),
+                where("name", "==", assignedSectionName)
+            );
+            const sectionSnap = await getDocs(sectionsQuery);
+
+            let resolvedSectionId = '';
+            if (!sectionSnap.empty) {
+                resolvedSectionId = sectionSnap.docs[0].id;
+            } else {
+                const newSectionRef = await addDoc(collection(db, "class_sections"), {
+                    className: targetGrade,
+                    name: assignedSectionName,
+                    roomNo: '101',
+                    createdAt: serverTimestamp()
+                });
+                resolvedSectionId = newSectionRef.id;
+            }
+
+            // 2. Build student ERP mapping payload
+            const studentErpData = {
+                admissionId: app.id,
+                admissionNo: app.acknowledgementNumber || 'HCMS20260000',
+                name: `${app.firstName} ${app.middleName ? app.middleName + ' ' : ''}${app.lastName}`,
+                className: targetGrade,
+                grade: targetGrade,
+                sectionName: assignedSectionName,
+                sectionId: resolvedSectionId,
+                guardianName: app.parentName,
+                phone: app.phone,
+                address: app.address,
+                status: 'Active',
+                enrolledAt: serverTimestamp()
+            };
+
+            // 3. Save to Students ERP & Records for instant visibility
+            await setDoc(doc(db, "students_erp", app.id), studentErpData);
+            await addDoc(collection(db, "students_records"), studentErpData);
+
+            alert(`Application approved! Student registered into Student ERP.`);
+            fetchAdmissionApplications();
+        } catch (error) {
+            console.error("Error approving application:", error);
+        }
+    };
+    // Handle Reject Action
+    const handleRejectAdmission = async (appId) => {
+        if (!window.confirm("Are you sure you want to reject this application?")) return;
+        try {
+            const appRef = doc(db, "admissions", appId);
+            await updateDoc(appRef, { status: 'Rejected' });
+            alert("Application marked as Rejected.");
+            fetchAdmissionApplications();
+        } catch (error) {
+            console.error("Error rejecting application:", error);
+        }
+    };
+
+    // Handle Delete Admission Application (CRUD)
+    const handleDeleteAdmission = async (appId) => {
+        if (!window.confirm("Are you sure you want to permanently delete this application?")) return;
+        try {
+            await deleteDoc(doc(db, "admissions", appId));
+            setAdmissionApplications(admissionApplications.filter(item => item.id !== appId));
+        } catch (error) {
+            console.error("Error deleting record:", error);
+        }
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
@@ -209,6 +312,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (!user) return;
 
+        fetchAdmissionApplications();
         const unsubCalendar = onSnapshot(collection(db, 'academic_calendar'), snap =>
             setCalendarEvents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
@@ -473,7 +577,6 @@ export default function AdminDashboard() {
         }
     };
 
-    // Emergency Broadcast Dispatcher
     const handleBroadcastEmergency = async (e) => {
         e.preventDefault();
         if (!emergencyNotice.trim()) return;
@@ -485,14 +588,12 @@ export default function AdminDashboard() {
         });
     };
 
-    // Save System Settings
     const handleSaveSettings = (e) => {
         e.preventDefault();
         setSettingsSavedMsg(true);
         setTimeout(() => setSettingsSavedMsg(false), 3500);
     };
 
-    // Filtered lists for Global Directory Search
     const searchMatchStudents = studentsList.filter(s =>
         globalSearch.trim() !== '' && (
             s.name?.toLowerCase().includes(globalSearch.toLowerCase()) ||
@@ -519,7 +620,6 @@ export default function AdminDashboard() {
 
     return (
         <>
-            {/* Mobile Top Header */}
             <header className="mobile-header">
                 <div className="mobile-header-title">
                     <div className="admin-seal" style={{ width: 30, height: 30, fontSize: '0.85rem' }}>AC</div>
@@ -536,7 +636,7 @@ export default function AdminDashboard() {
                 <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
                     <div>
                         <div className="sidebar-brand">
-                            <div className="admin-seal"><img src={logo} alt="" id='logogs'/></div>
+                            <div className="admin-seal"><img src={logo} alt="" id='logogs' /></div>
                             <div>
                                 <h2>Admin Control</h2>
                                 <p>Dashboard</p>
@@ -544,7 +644,6 @@ export default function AdminDashboard() {
                         </div>
 
                         <nav className="admin-tabs">
-                            {/* OVERVIEW & KPI METRICS */}
                             <button
                                 type="button"
                                 className={`admin-tab parent-tab ${activeTab === 'analytics' ? 'active' : ''}`}
@@ -553,7 +652,19 @@ export default function AdminDashboard() {
                                 <div className="tab-label"><BarChart3 size={16} /><span>Institution KPI</span></div>
                             </button>
 
-                            {/* UPDATES TAB */}
+                            {/* ADMISSIONS TAB SECTION WITH PANEL */}
+                            <button type="button" className={`admin-tab parent-tab ${admissionsOpen ? 'expanded' : ''}`} onClick={() => setAdmissionsOpen(!admissionsOpen)}>
+                                <div className="tab-label"><UserCheck size={16} /><span>Admissions</span></div>
+                                <ChevronDown size={14} className={`chevron-icon ${admissionsOpen ? 'rotated' : ''}`} />
+                            </button>
+                            {admissionsOpen && (
+                                <div className="submenu-container">
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'admission_panel' ? 'active' : ''}`} onClick={() => handleTabClick('admission_panel', fetchAdmissionApplications)}>
+                                        <FileText size={15} /> Admission Panel
+                                    </button>
+                                </div>
+                            )}
+
                             <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
                                 <div className="tab-label"><Radio size={16} /><span>Updates</span></div>
                                 <ChevronDown size={14} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
@@ -581,7 +692,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* ERP MANAGEMENT TAB */}
                             <button type="button" className={`admin-tab parent-tab ${erpOpen ? 'expanded' : ''}`} onClick={() => setErpOpen(!erpOpen)}>
                                 <div className="tab-label"><Users size={16} /><span>ERP Management</span></div>
                                 <ChevronDown size={14} className={`chevron-icon ${erpOpen ? 'rotated' : ''}`} />
@@ -600,7 +710,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* TIMETABLE TAB */}
                             <button type="button" className={`admin-tab parent-tab ${timetableOpen ? 'expanded' : ''}`} onClick={() => setTimetableOpen(!timetableOpen)}>
                                 <div className="tab-label"><Clock size={16} /><span>Timetables</span></div>
                                 <ChevronDown size={14} className={`chevron-icon ${timetableOpen ? 'rotated' : ''}`} />
@@ -616,7 +725,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* SYSTEM SETTINGS TAB */}
                             <button type="button" className={`admin-tab parent-tab ${systemOpen ? 'expanded' : ''}`} onClick={() => setSystemOpen(!systemOpen)}>
                                 <div className="tab-label"><Sliders size={16} /><span>System & Broadcast</span></div>
                                 <ChevronDown size={14} className={`chevron-icon ${systemOpen ? 'rotated' : ''}`} />
@@ -648,12 +756,132 @@ export default function AdminDashboard() {
                         <span>{isSidebarCollapsed ? 'Show' : 'Hide'}</span>
                     </button>
 
+                    {/* ADMISSIONS ADMINISTRATION PANEL */}
+                    {activeTab === 'admission_panel' && (
+                        <div className="admin-panel-container applications-management-card">
+                            <div className="admin-header" style={{ marginBottom: '20px' }}>
+                                <h3>Admissions Administration Panel</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Manage incoming online student registration files, evaluate qualifications, and push approved profiles directly to ERP records.</p>
+                            </div>
+
+                            {admissionLoading ? (
+                                <div className="admin-loading">Loading applications...</div>
+                            ) : (
+                                <div className="table-responsive-wrapper">
+                                    <table className="admin-data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Ack No.</th>
+                                                <th>Student Name</th>
+                                                <th>Grade</th>
+                                                <th>Parent Name</th>
+                                                <th>Phone</th>
+                                                <th>Section</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {admissionApplications.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="7" className="no-data-cell">No admission applications found.</td>
+                                                </tr>
+                                            ) : (
+                                                admissionApplications.map((app) => (
+                                                    <tr key={app.id}>
+                                                        <td className="ack-cell"><strong>{app.acknowledgementNumber || 'N/A'}</strong></td>
+                                                        <td>{app.firstName} {app.lastName}</td>
+                                                        <td><span className="grade-badge">{app.grade}</span></td>
+                                                        <td>{app.parentName}</td>
+                                                        <td>{app.phone}</td>
+                                                        <td>
+                                                            <select
+                                                                className="custom-select"
+                                                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', marginRight: '6px', border: '1px solid #cbd5e1' }}
+                                                                value={approvalSections[app.id] || 'Section A'}
+                                                                onChange={(e) => setApprovalSections({ ...approvalSections, [app.id]: e.target.value })}
+                                                            >
+                                                                {/* Filter available sections created for this specific application's grade */}
+                                                                {sectionsList
+                                                                    .filter(sec => sec.className === app.grade)
+                                                                    .length > 0 ? (
+                                                                    sectionsList
+                                                                        .filter(sec => sec.className === app.grade)
+                                                                        .map(sec => (
+                                                                            <option key={sec.id} value={sec.name}>{sec.name}</option>
+                                                                        ))
+                                                                ) : (
+                                                                    <option value="Section A">Section A (Default)</option>
+                                                                )
+                                                                }
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <div className="actions-cell">
+                                                                <button className="icon-btn view-btn" onClick={() => setSelectedApp(app)} title="View Details">
+                                                                    <Eye size={16} />
+                                                                </button>
+                                                                {app.status !== 'Approved' && (
+                                                                    <button className="icon-btn approve-btn" onClick={() => handleApproveAdmission(app)} title="Approve & Send to ERP">
+                                                                        <CheckCircle size={16} />
+                                                                    </button>
+                                                                )}
+                                                                {app.status !== 'Rejected' && (
+                                                                    <button className="icon-btn reject-btn" onClick={() => handleRejectAdmission(app.id)} title="Reject Application">
+                                                                        <XCircle size={16} />
+                                                                    </button>
+                                                                )}
+                                                                <button className="icon-btn delete-btn" onClick={() => handleDeleteAdmission(app.id)} title="Delete Record">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`status-pill ${app.status ? app.status.toLowerCase() : 'pending'}`}>
+                                                                {app.status || 'Pending'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* Modal for viewing individual application details */}
+                            {selectedApp && (
+                                <div className="admin-modal-backdrop">
+                                    <div className="admin-modal-card">
+                                        <h3>Application Full View</h3>
+                                        <div className="modal-grid">
+                                            <p><strong>Full Name:</strong> {selectedApp.firstName} {selectedApp.middleName} {selectedApp.lastName}</p>
+                                            <p><strong>Grade:</strong> {selectedApp.grade}</p>
+                                            <p><strong>Parent Name:</strong> {selectedApp.parentName}</p>
+                                            <p><strong>Phone:</strong> {selectedApp.phone}</p>
+                                            <p><strong>Address:</strong> {selectedApp.address}</p>
+                                            <p><strong>Religion / Caste:</strong> {selectedApp.religion} / {selectedApp.caste} ({selectedApp.subCaste || 'None'})</p>
+                                            <p><strong>Community Cert No:</strong> {selectedApp.communityCertNo}</p>
+                                            <p><strong>Physical Ability:</strong> {selectedApp.physicalAbility} {selectedApp.disabilityDetails ? `— ${selectedApp.disabilityDetails}` : ''}</p>
+                                        </div>
+                                        <div className="modal-docs">
+                                            <h4>Uploaded Files:</h4>
+                                            {selectedApp.aadharFileUrl && <a href={selectedApp.aadharFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Identity Document</a>}
+                                            {selectedApp.communityFileUrl && <a href={selectedApp.communityFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Community Certificate</a>}
+                                            {selectedApp.tcFileUrl && <a href={selectedApp.tcFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Transfer Certificate</a>}
+                                        </div>
+                                        <button className="close-modal-btn" onClick={() => setSelectedApp(null)}>Close Window</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* INSTITUTION ANALYTICS & GLOBAL SEARCH */}
                     {activeTab === 'analytics' && (
                         <div className="applications-management-card">
                             <h3><Activity size={18} color="var(--primary)" /> Institution Overview & Live Analytics</h3>
 
-                            {/* KPI Metrics Cards Grid */}
                             <div className="admin-kpi-grid">
                                 <div className="admin-kpi-card indigo">
                                     <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
@@ -692,7 +920,6 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            {/* Fast Global Directory Search */}
                             <h4 style={{ marginTop: '24px' }}>Quick Directory Search</h4>
                             <div className="admin-search-wrapper">
                                 <Search size={16} color="var(--text-muted)" />
@@ -747,23 +974,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Database & Environment Status */}
-                            <h4 style={{ marginTop: '24px' }}>Database Health & Synchronization</h4>
-                            <div className="system-health-grid">
-                                <div className="health-card">
-                                    <div className="health-header"><Database size={16} color="var(--primary)" /> <span>Firestore Database</span></div>
-                                    <p className="status-live"><span className="live-dot" /> Connected & Streaming</p>
-                                </div>
-                                <div className="health-card">
-                                    <div className="health-header"><ShieldCheck size={16} color="var(--accent-success)" /> <span>Security Rules</span></div>
-                                    <p className="status-live"><span className="live-dot" /> Authenticated Access</p>
-                                </div>
-                                <div className="health-card">
-                                    <div className="health-header"><Activity size={16} color="var(--secondary)" /> <span>Image Compression</span></div>
-                                    <p className="status-live"><span className="live-dot" /> Active (&le; 500 KB Canvas)</p>
-                                </div>
-                            </div>
                         </div>
                     )}
 
@@ -772,7 +982,6 @@ export default function AdminDashboard() {
                         <div className="applications-management-card">
                             <h3><Sliders size={18} color="var(--primary)" /> System Configuration & Emergency Dispatch</h3>
 
-                            {/* Emergency Broadcast Form */}
                             <form onSubmit={handleBroadcastEmergency} className="emergency-form">
                                 <div className="emergency-header">
                                     <AlertTriangle size={18} color="var(--accent-danger)" />
@@ -783,7 +992,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <textarea
                                     rows="2"
-                                    placeholder="Enter urgent broadcast message (e.g., Unplanned Holiday due to Heavy Rain / Campus Closure)..."
+                                    placeholder="Enter urgent broadcast message..."
                                     value={emergencyNotice}
                                     onChange={(e) => setEmergencyNotice(e.target.value)}
                                     required
@@ -793,7 +1002,6 @@ export default function AdminDashboard() {
                                 </button>
                             </form>
 
-                            {/* Institutional Metadata Settings */}
                             <h4 style={{ marginTop: '24px' }}>Institution Identity & Configuration</h4>
                             {settingsSavedMsg && (
                                 <div className="settings-saved-pill">
@@ -854,18 +1062,10 @@ export default function AdminDashboard() {
                                     setCalendarForm({ month: '', date: '', day: '', title: '', category: 'General' })
                                 );
                             }}>
-                                <div>
-                                    <input type="text" placeholder="Month (e.g., June 2026)" value={calendarForm.month} onChange={e => setCalendarForm({ ...calendarForm, month: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Date (e.g., 02)" value={calendarForm.date} onChange={e => setCalendarForm({ ...calendarForm, date: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Day (e.g., Mon)" value={calendarForm.day} onChange={e => setCalendarForm({ ...calendarForm, day: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Event Title" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Month (e.g., June 2026)" value={calendarForm.month} onChange={e => setCalendarForm({ ...calendarForm, month: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Date (e.g., 02)" value={calendarForm.date} onChange={e => setCalendarForm({ ...calendarForm, date: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Day (e.g., Mon)" value={calendarForm.day} onChange={e => setCalendarForm({ ...calendarForm, day: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Event Title" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required /></div>
                                 <div>
                                     <select value={calendarForm.category} onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}>
                                         <option value="General">General</option>
@@ -901,21 +1101,11 @@ export default function AdminDashboard() {
                                     setAdminForm({ name: '', role: '', qualification: '', message: '', email: '', phone: '' })
                                 );
                             }}>
-                                <div>
-                                    <input type="text" placeholder="Full Name" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Role / Position" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Qualifications" value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="email" placeholder="Email Address" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Full Name" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Role / Position" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Qualifications" value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required /></div>
+                                <div><input type="email" placeholder="Email Address" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required /></div>
                                 <textarea placeholder="Administrator's Message" value={adminForm.message} onChange={e => setAdminForm({ ...adminForm, message: e.target.value })} required />
                                 <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Administrator</button>
                             </form>
@@ -951,15 +1141,9 @@ export default function AdminDashboard() {
                                         <option value={3}>Rank 3 (Bronze)</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <input type="text" placeholder="Student Name" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Class / Stream" value={topperForm.class} onChange={e => setTopperForm({ ...topperForm, class: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Student Name" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Class / Stream" value={topperForm.class} onChange={e => setTopperForm({ ...topperForm, class: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required /></div>
                                 <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper</button>
                             </form>
 
@@ -987,9 +1171,7 @@ export default function AdminDashboard() {
                                     setGalleryForm({ title: '', category: 'Campus', image: '', description: '' })
                                 );
                             }}>
-                                <div>
-                                    <input type="text" placeholder="Photo Title" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Photo Title" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} required /></div>
                                 <div>
                                     <select value={galleryForm.category} onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value })}>
                                         <option value="Campus">Campus</option>
@@ -1000,7 +1182,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                        Upload Image (Auto-compressed to &lt; 500 KB • JPG, PNG, WEBP)
+                                        Upload Image (Auto-compressed to &lt; 500 KB)
                                     </label>
                                     <input
                                         type="file"
@@ -1045,15 +1227,9 @@ export default function AdminDashboard() {
                                     setHolidayForm({ date: '', day: '', occasion: '', type: 'National Holiday' })
                                 );
                             }}>
-                                <div>
-                                    <input type="text" placeholder="Date (e.g., 15 Aug 2026)" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Day (e.g., Friday)" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Occasion / Holiday Name" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Date (e.g., 15 Aug 2026)" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Day (e.g., Friday)" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Occasion / Holiday Name" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required /></div>
                                 <div>
                                     <select value={holidayForm.type} onChange={e => setHolidayForm({ ...holidayForm, type: e.target.value })}>
                                         <option value="National Holiday">National Holiday</option>
@@ -1113,21 +1289,11 @@ export default function AdminDashboard() {
                                     setStaffForm({ name: '', staffId: '', password: '', department: '', email: '' })
                                 );
                             }}>
-                                <div>
-                                    <input type="text" placeholder="Staff Full Name" value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Staff ID (e.g., STF2026)" value={staffForm.staffId} onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="password" placeholder="Portal Password" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="text" placeholder="Department / Subject" value={staffForm.department} onChange={e => setStaffForm({ ...staffForm, department: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required />
-                                </div>
+                                <div><input type="text" placeholder="Staff Full Name" value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Staff ID (e.g., STF2026)" value={staffForm.staffId} onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })} required /></div>
+                                <div><input type="password" placeholder="Portal Password" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Department / Subject" value={staffForm.department} onChange={e => setStaffForm({ ...staffForm, department: e.target.value })} required /></div>
+                                <div><input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required /></div>
                                 <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Staff Account</button>
                             </form>
 
@@ -1212,23 +1378,8 @@ export default function AdminDashboard() {
                                     </div>
 
                                     <form onSubmit={handleAddSection}>
-                                        <div>
-                                            <input
-                                                type="text"
-                                                placeholder="Section Name (e.g., Section A)"
-                                                value={sectionForm.name}
-                                                onChange={e => setSectionForm({ ...sectionForm, name: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <input
-                                                type="text"
-                                                placeholder="Room No / Hall (e.g., Room 104)"
-                                                value={sectionForm.roomNo}
-                                                onChange={e => setSectionForm({ ...sectionForm, roomNo: e.target.value })}
-                                            />
-                                        </div>
+                                        <div><input type="text" placeholder="Section Name (e.g., Section A)" value={sectionForm.name} onChange={e => setSectionForm({ ...sectionForm, name: e.target.value })} required /></div>
+                                        <div><input type="text" placeholder="Room No / Hall (e.g., Room 104)" value={sectionForm.roomNo} onChange={e => setSectionForm({ ...sectionForm, roomNo: e.target.value })} /></div>
                                         <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Section</button>
                                     </form>
 
@@ -1244,18 +1395,8 @@ export default function AdminDashboard() {
                                                     <div key={sec.id} className="section-card">
                                                         {editingSectionId === sec.id ? (
                                                             <div className="edit-form-box">
-                                                                <input
-                                                                    type="text"
-                                                                    value={editSectionForm.name}
-                                                                    onChange={e => setEditSectionForm({ ...editSectionForm, name: e.target.value })}
-                                                                    placeholder="Section Name"
-                                                                />
-                                                                <input
-                                                                    type="text"
-                                                                    value={editSectionForm.roomNo}
-                                                                    onChange={e => setEditSectionForm({ ...editSectionForm, roomNo: e.target.value })}
-                                                                    placeholder="Room No"
-                                                                />
+                                                                <input type="text" value={editSectionForm.name} onChange={e => setEditSectionForm({ ...editSectionForm, name: e.target.value })} placeholder="Section Name" />
+                                                                <input type="text" value={editSectionForm.roomNo} onChange={e => setEditSectionForm({ ...editSectionForm, roomNo: e.target.value })} placeholder="Room No" />
                                                                 <div className="edit-actions">
                                                                     <button onClick={() => handleUpdateSection(sec.id)} className="save-btn"><Check size={14} /></button>
                                                                     <button onClick={() => setEditingSectionId(null)} className="cancel-btn"><X size={14} /></button>
@@ -1302,7 +1443,6 @@ export default function AdminDashboard() {
                                         </h3>
                                     </div>
 
-                                    {/* Full Form for Adding and Updating Student Records */}
                                     <form ref={studentFormRef} onSubmit={editingStudentId ? handleUpdateStudent : handleAddStudent} className="student-admission-form">
                                         <div className="form-section-title">
                                             {editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}
@@ -1310,22 +1450,11 @@ export default function AdminDashboard() {
                                         <div className="student-form-grid">
                                             <div>
                                                 <label>Admission No (User ID)</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. ADM2026-001"
-                                                    value={studentForm.admissionNo}
-                                                    onChange={e => setStudentForm({ ...studentForm, admissionNo: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="text" placeholder="e.g. ADM2026-001" value={studentForm.admissionNo} onChange={e => setStudentForm({ ...studentForm, admissionNo: e.target.value })} required />
                                             </div>
                                             <div>
                                                 <label>Admission Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={studentForm.admissionDate}
-                                                    onChange={e => setStudentForm({ ...studentForm, admissionDate: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="date" value={studentForm.admissionDate} onChange={e => setStudentForm({ ...studentForm, admissionDate: e.target.value })} required />
                                             </div>
                                         </div>
 
@@ -1333,50 +1462,28 @@ export default function AdminDashboard() {
                                         <div className="student-form-grid">
                                             <div>
                                                 <label>Student Name</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. Rahul Sharma"
-                                                    value={studentForm.name}
-                                                    onChange={e => setStudentForm({ ...studentForm, name: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="text" placeholder="e.g. Rahul Sharma" value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} required />
                                             </div>
                                             <div>
                                                 <label>DOB (Password)</label>
-                                                <input
-                                                    type="date"
-                                                    value={studentForm.dob}
-                                                    onChange={e => setStudentForm({ ...studentForm, dob: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="date" value={studentForm.dob} onChange={e => setStudentForm({ ...studentForm, dob: e.target.value })} required />
                                             </div>
                                             <div>
                                                 <label>Blood Group</label>
-                                                <select
-                                                    value={studentForm.bloodGroup}
-                                                    onChange={e => setStudentForm({ ...studentForm, bloodGroup: e.target.value })}
-                                                >
+                                                <select value={studentForm.bloodGroup} onChange={e => setStudentForm({ ...studentForm, bloodGroup: e.target.value })}>
                                                     <option value="">Select Blood Group</option>
-                                                    <option value="A+">A+</option>
-                                                    <option value="A-">A-</option>
-                                                    <option value="B+">B+</option>
-                                                    <option value="B-">B-</option>
-                                                    <option value="O+">O+</option>
-                                                    <option value="O-">O-</option>
-                                                    <option value="AB+">AB+</option>
-                                                    <option value="AB-">AB-</option>
+                                                    <option value="A+">A+</option><option value="A-">A-</option>
+                                                    <option value="B+">B+</option><option value="B-">B-</option>
+                                                    <option value="O+">O+</option><option value="O-">O-</option>
+                                                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <label>Student Photo (Auto-compressed to &lt; 500 KB • JPG, PNG, WEBP)</label>
-                                                <input
-                                                    type="file"
-                                                    accept=".jpg,.jpeg,.png,.webp"
-                                                    onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))}
-                                                />
+                                                <label>Student Photo</label>
+                                                <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))} />
                                                 {studentForm.photo && (
                                                     <div style={{ marginTop: '4px' }}>
-                                                        <img src={studentForm.photo} alt="Student Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                                                        <img src={studentForm.photo} alt="Student Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
                                                     </div>
                                                 )}
                                             </div>
@@ -1386,53 +1493,25 @@ export default function AdminDashboard() {
                                         <div className="student-form-grid">
                                             <div>
                                                 <label>Guardian Name</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Parent's Name"
-                                                    value={studentForm.guardianName}
-                                                    onChange={e => setStudentForm({ ...studentForm, guardianName: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="text" placeholder="Parent's Name" value={studentForm.guardianName} onChange={e => setStudentForm({ ...studentForm, guardianName: e.target.value })} required />
                                             </div>
                                             <div>
                                                 <label>Phone Number</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Contact Number"
-                                                    value={studentForm.phone}
-                                                    onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })}
-                                                    required
-                                                />
+                                                <input type="text" placeholder="Contact Number" value={studentForm.phone} onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })} required />
                                             </div>
                                         </div>
 
                                         <div style={{ marginTop: '4px', width: '100%' }}>
                                             <label>Address</label>
-                                            <textarea
-                                                rows="2"
-                                                placeholder="Home Address..."
-                                                value={studentForm.address}
-                                                onChange={e => setStudentForm({ ...studentForm, address: e.target.value })}
-                                            />
+                                            <textarea rows="2" placeholder="Home Address..." value={studentForm.address} onChange={e => setStudentForm({ ...studentForm, address: e.target.value })} />
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                             <button type="submit" className="add-notice-btn">
-                                                {editingStudentId ? (
-                                                    <><RefreshCw size={15} /> Update Student Record</>
-                                                ) : (
-                                                    <><UserCheck size={15} /> Enroll & Generate Credentials</>
-                                                )}
+                                                {editingStudentId ? <><RefreshCw size={15} /> Update Student Record</> : <><UserCheck size={15} /> Enroll & Generate Credentials</>}
                                             </button>
                                             {editingStudentId && (
-                                                <button
-                                                    type="button"
-                                                    className="cancel-btn"
-                                                    onClick={() => {
-                                                        setEditingStudentId(null);
-                                                        setStudentForm(initialStudentForm);
-                                                    }}
-                                                >
+                                                <button type="button" className="cancel-btn" onClick={() => { setEditingStudentId(null); setStudentForm(initialStudentForm); }}>
                                                     <X size={14} /> Cancel Edit
                                                 </button>
                                             )}
@@ -1448,22 +1527,14 @@ export default function AdminDashboard() {
                                             {studentsList.filter(st => st.sectionId === selectedSection.id).map(st => (
                                                 <div key={st.id} className="student-detail-card">
                                                     <div className="student-card-content">
-                                                        <img
-                                                            src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
-                                                            alt={st.name}
-                                                            className="student-avatar"
-                                                        />
+                                                        <img src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'} alt={st.name} className="student-avatar" />
                                                         <div className="student-info">
                                                             <div className="student-header-row">
                                                                 <h5>{st.name}</h5>
                                                                 {st.bloodGroup && <span className="blood-badge">{st.bloodGroup}</span>}
                                                             </div>
-                                                            <p className="student-meta">
-                                                                <strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Adm Date:</strong> {st.admissionDate || 'N/A'}
-                                                            </p>
-                                                            <p className="student-meta">
-                                                                <strong>DOB:</strong> {st.dob || 'N/A'} | <strong>Parent:</strong> {st.guardianName} ({st.phone})
-                                                            </p>
+                                                            <p className="student-meta"><strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Adm Date:</strong> {st.admissionDate || 'N/A'}</p>
+                                                            <p className="student-meta"><strong>DOB:</strong> {st.dob || 'N/A'} | <strong>Parent:</strong> {st.guardianName} ({st.phone})</p>
                                                             {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
 
                                                             <div className="student-credentials-box">
@@ -1473,18 +1544,8 @@ export default function AdminDashboard() {
                                                         </div>
 
                                                         <div className="student-card-actions">
-                                                            <button
-                                                                onClick={() => startEditingStudent(st)}
-                                                                title="Edit Student Record"
-                                                            >
-                                                                <Edit2 size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete('students_records', st.id)}
-                                                                title="Delete Record"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <button onClick={() => startEditingStudent(st)} title="Edit Student Record"><Edit2 size={14} /></button>
+                                                            <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={14} /></button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1496,7 +1557,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* RESULTS & MASTER PUBLISHING TAB (Drill-down: Classes -> Sections -> Student Marks & Drafts + Publish for All on Overview) */}
+                    {/* RESULTS & MASTER PUBLISHING TAB */}
                     {activeTab === 'results' && (
                         <div className="applications-management-card">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
@@ -1506,8 +1567,7 @@ export default function AdminDashboard() {
                                         Review staff-entered draft scores by Class and Section, choose the Exam Type & Subject, and publish marks live for students.
                                     </p>
                                 </div>
-                                
-                                {/* "Publish for All Classes At Once" button placed right on the main overview/selection page */}
+
                                 {!selectedClassResults && (
                                     <button
                                         type="button"
@@ -1518,7 +1578,6 @@ export default function AdminDashboard() {
                                             if (!window.confirm(`Publish ALL draft marks across ALL classes and sections for ${compositeKey}?`)) return;
 
                                             const targetStudents = studentsList.filter(st => st.marksDraft?.[compositeKey] !== undefined);
-
                                             if (targetStudents.length === 0) {
                                                 alert(`No draft marks found anywhere in the school for ${compositeKey}.`);
                                                 return;
@@ -1551,31 +1610,13 @@ export default function AdminDashboard() {
                                 )}
                             </div>
 
-                            {/* Breadcrumb Navigation */}
                             {(selectedClassResults || selectedSectionResults) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
-                                    <button
-                                        onClick={() => { setSelectedClassResults(null); setSelectedSectionResults(null); }}
-                                        style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}
-                                    >
-                                        All Classes
-                                    </button>
+                                    <button onClick={() => { setSelectedClassResults(null); setSelectedSectionResults(null); }} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}>All Classes</button>
                                     {selectedClassResults && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
-                                            <button
-                                                onClick={() => setSelectedSectionResults(null)}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: selectedSectionResults ? '#4f46e5' : '#0f172a',
-                                                    cursor: selectedSectionResults ? 'pointer' : 'default',
-                                                    padding: 0,
-                                                    fontWeight: 600
-                                                }}
-                                            >
-                                                {selectedClassResults}
-                                            </button>
+                                            <button onClick={() => setSelectedSectionResults(null)} style={{ background: 'none', border: 'none', color: selectedSectionResults ? '#4f46e5' : '#0f172a', cursor: selectedSectionResults ? 'pointer' : 'default', padding: 0, fontWeight: 600 }}>{selectedClassResults}</button>
                                         </>
                                     )}
                                     {selectedSectionResults && (
@@ -1587,7 +1628,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Level 1: Select Class */}
                             {!selectedClassResults && (
                                 <div>
                                     <h4 style={{ marginBottom: '12px' }}>Select Class</h4>
@@ -1610,13 +1650,10 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Level 2: Select Section */}
                             {selectedClassResults && !selectedSectionResults && (
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                                        <button className="back-btn" onClick={() => setSelectedClassResults(null)}>
-                                            <ArrowLeft size={15} /> Back to Classes
-                                        </button>
+                                        <button className="back-btn" onClick={() => setSelectedClassResults(null)}><ArrowLeft size={15} /> Back to Classes</button>
                                         <h4 style={{ margin: 0 }}>{selectedClassResults} — Select Section</h4>
                                     </div>
 
@@ -1643,25 +1680,17 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Level 3: Student Marks Review & Publish */}
                             {selectedClassResults && selectedSectionResults && (
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                                        <button className="back-btn" onClick={() => setSelectedSectionResults(null)}>
-                                            <ArrowLeft size={15} /> Back to Sections
-                                        </button>
+                                        <button className="back-btn" onClick={() => setSelectedSectionResults(null)}><ArrowLeft size={15} /> Back to Sections</button>
                                         <h4 style={{ margin: 0 }}>{selectedClassResults} — Section {selectedSectionResults.name} Marks & Drafts</h4>
                                     </div>
 
-                                    {/* Exam Type & Subject Controls */}
                                     <div className="form-grid marks-four-col-grid" style={{ marginBottom: '1rem' }}>
                                         <div>
                                             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Exam Term</label>
-                                            <select
-                                                className="custom-select full-width"
-                                                value={examType}
-                                                onChange={(e) => setExamType(e.target.value)}
-                                            >
+                                            <select className="custom-select full-width" value={examType} onChange={(e) => setExamType(e.target.value)}>
                                                 <option value="1st Mid-Term exam">1st Mid-Term exam</option>
                                                 <option value="Quarterly Exam">Quarterly Exam</option>
                                                 <option value="2nd Mid-Term exam">2nd Mid-Term exam</option>
@@ -1674,11 +1703,7 @@ export default function AdminDashboard() {
 
                                         <div>
                                             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Subject</label>
-                                            <select
-                                                className="custom-select full-width"
-                                                value={selectedSubject}
-                                                onChange={(e) => setSelectedSubject(e.target.value)}
-                                            >
+                                            <select className="custom-select full-width" value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)}>
                                                 <option value="Mathematics">Mathematics</option>
                                                 <option value="Science">Science</option>
                                                 <option value="Physics">Physics</option>
@@ -1705,9 +1730,7 @@ export default function AdminDashboard() {
                                             <tbody>
                                                 {studentsList.filter(st => st.sectionId === selectedSectionResults.id).length === 0 ? (
                                                     <tr>
-                                                        <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-                                                            No students enrolled in this section.
-                                                        </td>
+                                                        <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No students enrolled in this section.</td>
                                                     </tr>
                                                 ) : (
                                                     studentsList.filter(st => st.sectionId === selectedSectionResults.id).map(st => {
@@ -1750,7 +1773,6 @@ export default function AdminDashboard() {
                                                 if (!window.confirm(`Publish all draft marks for ${selectedClassResults} - Section ${selectedSectionResults.name} (${compositeKey})?`)) return;
 
                                                 const targetStudents = studentsList.filter(st => st.sectionId === selectedSectionResults.id && st.marksDraft?.[compositeKey] !== undefined);
-
                                                 if (targetStudents.length === 0) {
                                                     alert("No draft marks found to publish for this section.");
                                                     return;
@@ -1793,36 +1815,17 @@ export default function AdminDashboard() {
 
                             {(selectedClassTT || selectedSectionTT) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
-                                    <button
-                                        onClick={() => { setSelectedClassTT(null); setSelectedSectionTT(null); }}
-                                        style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}
-                                    >
-                                        All Classes
-                                    </button>
+                                    <button onClick={() => { setSelectedClassTT(null); setSelectedSectionTT(null); }} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontWeight: 600 }}>All Classes</button>
                                     {selectedClassTT && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
-                                            <button
-                                                onClick={() => setSelectedSectionTT(null)}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: selectedSectionTT ? '#4f46e5' : '#0f172a',
-                                                    cursor: selectedSectionTT ? 'pointer' : 'default',
-                                                    padding: 0,
-                                                    fontWeight: 600
-                                                }}
-                                            >
-                                                {selectedClassTT}
-                                            </button>
+                                            <button onClick={() => setSelectedSectionTT(null)} style={{ background: 'none', border: 'none', color: selectedSectionTT ? '#4f46e5' : '#0f172a', cursor: selectedSectionTT ? 'pointer' : 'default', padding: 0, fontWeight: 600 }}>{selectedClassTT}</button>
                                         </>
                                     )}
                                     {selectedSectionTT && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
-                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                                                {selectedSectionTT.startsWith('Section') ? selectedSectionTT : `Section ${selectedSectionTT}`}
-                                            </span>
+                                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{selectedSectionTT.startsWith('Section') ? selectedSectionTT : `Section ${selectedSectionTT}`}</span>
                                         </>
                                     )}
                                 </div>
@@ -1830,9 +1833,7 @@ export default function AdminDashboard() {
 
                             {!selectedClassTT && (
                                 <div>
-                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>
-                                        Select a class to manage its section timetables.
-                                    </p>
+                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>Select a class to manage its section timetables.</p>
                                     <div className="class-cards-grid">
                                         {classList.map(cls => {
                                             const classSections = sectionsList.filter(s => s.className === cls);
@@ -1855,35 +1856,27 @@ export default function AdminDashboard() {
                             {selectedClassTT && !selectedSectionTT && (
                                 <div>
                                     <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                                        Available Sections
-                                        <span className="count-badge">
-                                            {sectionsList.filter(s => s.className === selectedClassTT).length}
-                                        </span>
+                                        Available Sections <span className="count-badge">{sectionsList.filter(s => s.className === selectedClassTT).length}</span>
                                     </h4>
 
                                     {sectionsList.filter(s => s.className === selectedClassTT).length === 0 ? (
                                         <div className="empty-state">No sections found for {selectedClassTT}. Create sections in Student ERP first.</div>
                                     ) : (
                                         <div className="sections-grid">
-                                            {sectionsList
-                                                .filter(s => s.className === selectedClassTT)
-                                                .map(sec => {
-                                                    const sectionSlots = studentTimetables.filter(
-                                                        tt => tt.className === selectedClassTT && tt.sectionName === sec.name
-                                                    ).length;
-
-                                                    return (
-                                                        <div key={sec.id} className="section-card" onClick={() => setSelectedSectionTT(sec.name)}>
-                                                            <div className="section-card-body">
-                                                                <Folder size={18} className="section-folder-icon" />
-                                                                <div>
-                                                                    <h5>Section {sec.name}</h5>
-                                                                    <p>{sectionSlots} Slots</p>
-                                                                </div>
+                                            {sectionsList.filter(s => s.className === selectedClassTT).map(sec => {
+                                                const sectionSlots = studentTimetables.filter(tt => tt.className === selectedClassTT && tt.sectionName === sec.name).length;
+                                                return (
+                                                    <div key={sec.id} className="section-card" onClick={() => setSelectedSectionTT(sec.name)}>
+                                                        <div className="section-card-body">
+                                                            <Folder size={18} className="section-folder-icon" />
+                                                            <div>
+                                                                <h5>Section {sec.name}</h5>
+                                                                <p>{sectionSlots} Slots</p>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -1900,9 +1893,7 @@ export default function AdminDashboard() {
                                             <thead>
                                                 <tr>
                                                     <th>Day</th>
-                                                    {timeSlots.map(slot => (
-                                                        <th key={slot}>{slot}</th>
-                                                    ))}
+                                                    {timeSlots.map(slot => (<th key={slot}>{slot}</th>))}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1925,35 +1916,8 @@ export default function AdminDashboard() {
                                                                             {match.roomNo && <span className="timetable-slot-meta">({match.roomNo})</span>}
 
                                                                             <div style={{ position: 'absolute', top: '2px', right: '2px', display: 'flex', gap: '3px' }}>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setEditingStudentTTId(match.id);
-                                                                                        setEditStudentTTForm({ ...match });
-                                                                                    }}
-                                                                                    title="Edit Slot"
-                                                                                    style={{
-                                                                                        background: 'none',
-                                                                                        border: 'none',
-                                                                                        color: '#4f46e5',
-                                                                                        cursor: 'pointer',
-                                                                                        padding: 0
-                                                                                    }}
-                                                                                >
-                                                                                    <Edit2 size={11} />
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => handleDelete('student_timetables', match.id)}
-                                                                                    title="Delete Slot"
-                                                                                    style={{
-                                                                                        background: 'none',
-                                                                                        border: 'none',
-                                                                                        color: '#e11d48',
-                                                                                        cursor: 'pointer',
-                                                                                        padding: 0
-                                                                                    }}
-                                                                                >
-                                                                                    <Trash2 size={11} />
-                                                                                </button>
+                                                                                <button onClick={() => { setEditingStudentTTId(match.id); setEditStudentTTForm({ ...match }); }} title="Edit Slot" style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0 }}><Edit2 size={11} /></button>
+                                                                                <button onClick={() => handleDelete('student_timetables', match.id)} title="Delete Slot" style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer', padding: 0 }}><Trash2 size={11} /></button>
                                                                             </div>
                                                                         </div>
                                                                     ) : null}
@@ -1968,7 +1932,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Add / Update Student Class Schedule Slot Form (Bottom) */}
                             <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>
                                 {editingStudentTTId ? 'Update Student Schedule Slot' : 'Add Student Class Schedule Slot'}
                             </h3>
@@ -1987,9 +1950,7 @@ export default function AdminDashboard() {
                                         required
                                     >
                                         <option value="">Select Class</option>
-                                        {classList.map(cls => (
-                                            <option key={cls} value={cls}>{cls}</option>
-                                        ))}
+                                        {classList.map(cls => (<option key={cls} value={cls}>{cls}</option>))}
                                     </select>
                                 </div>
 
@@ -2009,9 +1970,7 @@ export default function AdminDashboard() {
                                         <option value="">Select Section</option>
                                         {sectionsList
                                             .filter(sec => sec.className === (editingStudentTTId ? editStudentTTForm.className : studentTimetableForm.className))
-                                            .map(sec => (
-                                                <option key={sec.id} value={sec.name}>{sec.name}</option>
-                                            ))}
+                                            .map(sec => (<option key={sec.id} value={sec.name}>{sec.name}</option>))}
                                     </select>
                                 </div>
 
@@ -2028,9 +1987,7 @@ export default function AdminDashboard() {
                                         }}
                                         required
                                     >
-                                        {weekDays.map(day => (
-                                            <option key={day} value={day}>{day}</option>
-                                        ))}
+                                        {weekDays.map(day => (<option key={day} value={day}>{day}</option>))}
                                     </select>
                                 </div>
 
@@ -2048,9 +2005,7 @@ export default function AdminDashboard() {
                                         required
                                     >
                                         <option value="">Select Time Slot</option>
-                                        {timeSlots.map(slot => (
-                                            <option key={slot} value={slot}>{slot}</option>
-                                        ))}
+                                        {timeSlots.map(slot => (<option key={slot} value={slot}>{slot}</option>))}
                                     </select>
                                 </div>
 
@@ -2084,9 +2039,7 @@ export default function AdminDashboard() {
                                         }}
                                     >
                                         <option value="">Select Teacher</option>
-                                        {staffList.map(stf => (
-                                            <option key={stf.id} value={stf.name}>{stf.name} ({stf.department || 'Staff'})</option>
-                                        ))}
+                                        {staffList.map(stf => (<option key={stf.id} value={stf.name}>{stf.name} ({stf.department || 'Staff'})</option>))}
                                     </select>
                                 </div>
 
@@ -2108,21 +2061,10 @@ export default function AdminDashboard() {
 
                                 <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
                                     <button type="submit" className="add-notice-btn">
-                                        {editingStudentTTId ? (
-                                            <><RefreshCw size={15} /> Update Schedule Slot</>
-                                        ) : (
-                                            <><PlusCircle size={15} /> Add Student Schedule Slot</>
-                                        )}
+                                        {editingStudentTTId ? <><RefreshCw size={15} /> Update Schedule Slot</> : <><PlusCircle size={15} /> Add Student Schedule Slot</>}
                                     </button>
                                     {editingStudentTTId && (
-                                        <button
-                                            type="button"
-                                            className="cancel-btn"
-                                            onClick={() => {
-                                                setEditingStudentTTId(null);
-                                                setEditStudentTTForm(initialStudentTimetableForm);
-                                            }}
-                                        >
+                                        <button type="button" className="cancel-btn" onClick={() => { setEditingStudentTTId(null); setEditStudentTTForm(initialStudentTimetableForm); }}>
                                             <X size={14} /> Cancel Edit
                                         </button>
                                     )}
@@ -2138,28 +2080,11 @@ export default function AdminDashboard() {
 
                             {(selectedStaffTT || selectedStaffDayTT) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
-                                    <button
-                                        onClick={() => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); }}
-                                        style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontWeight: 600 }}
-                                    >
-                                        All Staff
-                                    </button>
+                                    <button onClick={() => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); }} style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontWeight: 600 }}>All Staff</button>
                                     {selectedStaffTT && (
                                         <>
                                             <span style={{ color: '#94a3b8' }}>/</span>
-                                            <button
-                                                onClick={() => setSelectedStaffDayTT(null)}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: selectedStaffDayTT ? '#059669' : '#0f172a',
-                                                    cursor: selectedStaffDayTT ? 'pointer' : 'default',
-                                                    padding: 0,
-                                                    fontWeight: 600
-                                                }}
-                                            >
-                                                {selectedStaffTT.name}
-                                            </button>
+                                            <button onClick={() => setSelectedStaffDayTT(null)} style={{ background: 'none', border: 'none', color: selectedStaffDayTT ? '#059669' : '#0f172a', cursor: selectedStaffDayTT ? 'pointer' : 'default', padding: 0, fontWeight: 600 }}>{selectedStaffTT.name}</button>
                                         </>
                                     )}
                                     {selectedStaffDayTT && (
@@ -2173,9 +2098,7 @@ export default function AdminDashboard() {
 
                             {!selectedStaffTT && (
                                 <div>
-                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>
-                                        Select a staff member to view their schedule breakdown.
-                                    </p>
+                                    <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '-4px', marginBottom: '12px' }}>Select a staff member to view their schedule breakdown.</p>
                                     {staffList.length === 0 ? (
                                         <div className="empty-state">No staff members found in the directory.</div>
                                     ) : (
@@ -2185,9 +2108,7 @@ export default function AdminDashboard() {
 
                                                 return (
                                                     <div key={stf.id} className="class-card" onClick={() => setSelectedStaffTT(stf)}>
-                                                        <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
-                                                            <User size={20} />
-                                                        </div>
+                                                        <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}><User size={20} /></div>
                                                         <div className="class-card-content">
                                                             <h4>{stf.name}</h4>
                                                             <span>{stf.department || 'General'} • {totalSlots} Slots</span>
@@ -2202,9 +2123,7 @@ export default function AdminDashboard() {
 
                             {selectedStaffTT && !selectedStaffDayTT && (
                                 <div>
-                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                                        Days Schedule for {selectedStaffTT.name}
-                                    </h4>
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>Days Schedule for {selectedStaffTT.name}</h4>
                                     <div className="class-cards-grid">
                                         {weekDays.map(day => {
                                             const daySlots = staffTimetables.filter(
@@ -2213,9 +2132,7 @@ export default function AdminDashboard() {
 
                                             return (
                                                 <div key={day} className="class-card" onClick={() => setSelectedStaffDayTT(day)}>
-                                                    <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
-                                                        <Calendar size={18} />
-                                                    </div>
+                                                    <div className="class-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}><Calendar size={18} /></div>
                                                     <div className="class-card-content">
                                                         <h4>{day}</h4>
                                                         <span>{daySlots} Work Slots</span>
@@ -2229,9 +2146,7 @@ export default function AdminDashboard() {
 
                             {selectedStaffTT && selectedStaffDayTT && (
                                 <div>
-                                    <h4 style={{ marginBottom: '12px', color: '#0f172a' }}>
-                                        Schedule: {selectedStaffTT.name} — {selectedStaffDayTT}
-                                    </h4>
+                                    <h4 style={{ marginBottom: '12px', color: '#0f172a' }}>Schedule: {selectedStaffTT.name} — {selectedStaffDayTT}</h4>
 
                                     {staffTimetables.filter(
                                         tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT
@@ -2242,47 +2157,17 @@ export default function AdminDashboard() {
                                             {staffTimetables
                                                 .filter(tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT)
                                                 .map(item => (
-                                                    <div
-                                                        key={item.id}
-                                                        style={{
-                                                            background: '#fff',
-                                                            border: '1px solid #e2e8f0',
-                                                            borderRadius: '8px',
-                                                            padding: '8px 12px',
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center'
-                                                        }}
-                                                    >
+                                                    <div key={item.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                            <span style={{ background: '#ecfdf5', color: '#059669', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-                                                                {item.timeSlot}
-                                                            </span>
+                                                            <span style={{ background: '#ecfdf5', color: '#059669', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{item.timeSlot}</span>
                                                             <div>
                                                                 <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}>{item.subject}</strong>
-                                                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                                                    Class: {item.className || 'General'} • Room: {item.roomNo || 'N/A'}
-                                                                </div>
+                                                                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Class: {item.className || 'General'} • Room: {item.roomNo || 'N/A'}</div>
                                                             </div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingStaffTTId(item.id);
-                                                                    setEditStaffTTForm({ ...item });
-                                                                }}
-                                                                title="Edit Slot"
-                                                                style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer' }}
-                                                            >
-                                                                <Edit2 size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete('staff_timetables', item.id)}
-                                                                title="Delete Slot"
-                                                                style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <button onClick={() => { setEditingStaffTTId(item.id); setEditStaffTTForm({ ...item }); }} title="Edit Slot" style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer' }}><Edit2 size={14} /></button>
+                                                            <button onClick={() => handleDelete('staff_timetables', item.id)} title="Delete Slot" style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}><Trash2 size={14} /></button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -2291,7 +2176,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Add / Update Staff Work Schedule Slot Form (Bottom) */}
                             <h3 style={{ marginTop: '28px', marginBottom: '10px' }}>
                                 {editingStaffTTId ? 'Update Staff Work Schedule Slot' : 'Add Staff Work Schedule Slot'}
                             </h3>
@@ -2303,27 +2187,15 @@ export default function AdminDashboard() {
                                         onChange={e => {
                                             const selected = staffList.find(s => s.staffId === e.target.value);
                                             if (editingStaffTTId) {
-                                                setEditStaffTTForm({
-                                                    ...editStaffTTForm,
-                                                    staffId: e.target.value,
-                                                    staffName: selected ? selected.name : ''
-                                                });
+                                                setEditStaffTTForm({ ...editStaffTTForm, staffId: e.target.value, staffName: selected ? selected.name : '' });
                                             } else {
-                                                setStaffTimetableForm({
-                                                    ...staffTimetableForm,
-                                                    staffId: e.target.value,
-                                                    staffName: selected ? selected.name : ''
-                                                });
+                                                setStaffTimetableForm({ ...staffTimetableForm, staffId: e.target.value, staffName: selected ? selected.name : '' });
                                             }
                                         }}
                                         required
                                     >
                                         <option value="">Select Staff Member</option>
-                                        {staffList.map(stf => (
-                                            <option key={stf.id} value={stf.staffId}>
-                                                {stf.name} ({stf.staffId})
-                                            </option>
-                                        ))}
+                                        {staffList.map(stf => (<option key={stf.id} value={stf.staffId}>{stf.name} ({stf.staffId})</option>))}
                                     </select>
                                 </div>
                                 <div>
@@ -2339,9 +2211,7 @@ export default function AdminDashboard() {
                                         }}
                                         required
                                     >
-                                        {weekDays.map(day => (
-                                            <option key={day} value={day}>{day}</option>
-                                        ))}
+                                        {weekDays.map(day => (<option key={day} value={day}>{day}</option>))}
                                     </select>
                                 </div>
                                 <div>
@@ -2409,21 +2279,10 @@ export default function AdminDashboard() {
 
                                 <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
                                     <button type="submit" className="add-notice-btn">
-                                        {editingStaffTTId ? (
-                                            <><RefreshCw size={15} /> Update Staff Schedule Slot</>
-                                        ) : (
-                                            <><PlusCircle size={15} /> Add Staff Schedule Slot</>
-                                        )}
+                                        {editingStaffTTId ? <><RefreshCw size={15} /> Update Staff Schedule Slot</> : <><PlusCircle size={15} /> Add Staff Schedule Slot</>}
                                     </button>
                                     {editingStaffTTId && (
-                                        <button
-                                            type="button"
-                                            className="cancel-btn"
-                                            onClick={() => {
-                                                setEditingStaffTTId(null);
-                                                setEditStaffTTForm(initialStaffTimetableForm);
-                                            }}
-                                        >
+                                        <button type="button" className="cancel-btn" onClick={() => { setEditingStaffTTId(null); setEditStaffTTForm(initialStaffTimetableForm); }}>
                                             <X size={14} /> Cancel Edit
                                         </button>
                                     )}

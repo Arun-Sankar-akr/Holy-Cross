@@ -1,92 +1,102 @@
-.admission-container {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 0 20px;
+.proc-container {
     font-family: 'Outfit', sans-serif;
 }
 
-.page-header {
+.proc-header {
     text-align: center;
-    margin-bottom: 36px;
+    margin-bottom: 30px;
 }
 
-.page-header h2 {
-    color: #8004c7;
-    font-size: 2rem;
-    font-weight: 800;
+.proc-header h3 {
+    color: #2c0344;
+    font-size: 1.5rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
 }
 
-.page-header p {
-    color: #666;
+.proc-header p {
+    color: #64748b;
+    font-size: 0.95rem;
     margin: 0;
 }
 
-.steps-wrapper {
+.proc-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.proc-card {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 25px -5px rgba(128, 4, 199, 0.04);
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    margin-bottom: 36px;
+    gap: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.procedure-card {
-    background: #ffffff;
-    border: 1px solid rgba(128, 4, 199, 0.15);
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
+.proc-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px -5px rgba(128, 4, 199, 0.08);
+    border-color: #f3e5f5;
 }
 
-.step-icon-box {
-    background: #f8eefc;
+.proc-icon-wrap {
+    background: #faf5ff;
     color: #8004c7;
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
 
-.step-content h3 {
-    margin: 0 0 6px 0;
-    color: #8004c7;
+.proc-text-content h4 {
+    margin: 0 0 8px 0;
+    color: #2c0344;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.proc-text-content p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.proc-eligibility-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    padding: 28px;
+    box-shadow: 0 10px 25px -5px rgba(128, 4, 199, 0.04);
+}
+
+.proc-eligibility-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.proc-eligibility-header h4 {
+    margin: 0;
+    color: #2c0344;
     font-size: 1.15rem;
     font-weight: 700;
 }
 
-.step-content p {
-    margin: 0;
-    font-size: 0.92rem;
-    color: #555;
-    line-height: 1.5;
-}
-
-.eligibility-box {
-    background: #ffffff;
-    border-radius: 12px;
-    border-left: 5px solid #8004c7;
-    border: 1px solid rgba(128, 4, 199, 0.15);
-    border-left-width: 5px;
-    padding: 28px;
-    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
-}
-
-.eligibility-box h3 {
-    margin: 0 0 16px 0;
-    color: #8004c7;
-    font-size: 1.2rem;
-}
-
-.eligibility-box ul {
+.proc-eligibility-card ul {
     margin: 0;
     padding-left: 20px;
     display: flex;
@@ -94,7 +104,8 @@
     gap: 10px;
 }
 
-.eligibility-box li {
+.proc-eligibility-card li {
     font-size: 0.92rem;
-    color: #444;
+    color: #475569;
+    line-height: 1.5;
 }

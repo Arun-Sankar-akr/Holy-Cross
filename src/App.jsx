@@ -13,6 +13,10 @@ import Footer from './components/Footer';
 // Admin Pages
 import AdminDashboard from './admin/AdminDashboard';
 
+import OfficeLogin from './admin/OfficeErp/OfficeLogin';
+import OfficeDashboard from './admin/OfficeErp/OfficeDashboard';
+import OfficeProtectedRoute from './admin/OfficeErp/OfficeProtectedRoute';
+
 // Pages & Sections
 import Calendar from './pages/AcademicCalendar';
 import Gallery from './pages/Gallery';
@@ -65,7 +69,7 @@ function AppContent({ loading, fadeOut }) {
       <div className="app-container">
         {/* Navbar stays across all routes */}
         <Navbar />
-        
+
         <main className="main-content">
           <Routes>
             {/* Public Pages */}
@@ -129,6 +133,17 @@ function AppContent({ loading, fadeOut }) {
 
             {/* Fallback Catch-All Redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
+
+            <Route path="/erp/office/login" element={<OfficeLogin />} />
+            <Route
+              path="/erp/office/dashboard"
+              element={
+                <OfficeProtectedRoute>
+                  <OfficeDashboard />
+                </OfficeProtectedRoute>
+              }
+            />
+
           </Routes>
         </main>
 

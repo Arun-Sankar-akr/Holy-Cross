@@ -5,52 +5,55 @@ import './AdmissionProcedure.css';
 export default function AdmissionProcedure() {
     const steps = [
         {
-            icon: <FileText size={24} />,
-            title: "1. Online/Offline Application",
-            desc: "Fill out the registration form either through the online portal or collect it directly from the school administration office."
+            icon: <FileText size={22} />,
+            title: "1. Online or Offline Application",
+            desc: "Fill out the registration form seamlessly through our digital portal or pick up a physical copy directly from the main administrative office."
         },
         {
-            icon: <ClipboardList size={24} />,
-            title: "2. Document Submission",
-            desc: "Submit mandatory documents including Transfer Certificate (TC), birth certificate, community certificate, and previous mark sheets."
+            icon: <ClipboardList size={22} />,
+            title: "2. Secure Document Submission",
+            desc: "Provide necessary verification paperwork, including your Transfer Certificate (TC), official birth certificate, and prior academic report cards."
         },
         {
-            icon: <UserCheck size={24} />,
-            title: "3. Interactive Assessment & Interview",
-            desc: "A short interaction/assessment for the student along with a parent meeting with the admission committee."
+            icon: <UserCheck size={22} />,
+            title: "3. Interactive Assessment & Meeting",
+            desc: "A friendly, low-stress developmental check-in for the child alongside a brief personal discussion between parents and the admissions board."
         },
         {
-            icon: <CheckCircle2 size={24} />,
-            title: "4. Confirmation & Fee Payment",
-            desc: "Upon selection, confirm admission by paying the prescribed term fees within the designated timeframe."
+            icon: <CheckCircle2 size={22} />,
+            title: "4. Seat Confirmation & Payment",
+            desc: "Upon successful selection, lock in your spot by submitting the required term admission payments within the designated schedule window."
         }
     ];
 
     return (
-        <div className="admission-container">
-            <div className="page-header">
-                <h2><ClipboardList size={28} /> Admission Procedure (2026–2027)</h2>
-                <p>Step-by-step guidance for enrolling your child at Holy Cross</p>
+        <div className="proc-container">
+            <div className="proc-header">
+                <h3><ClipboardList size={24} /> Step-by-Step Enrollment Guide</h3>
+                <p>Follow these simple milestones to secure your child's place for 2026–2027.</p>
             </div>
 
-            <div className="steps-wrapper">
+            <div className="proc-steps-grid">
                 {steps.map((step, idx) => (
-                    <div key={idx} className="procedure-card">
-                        <div className="step-icon-box">{step.icon}</div>
-                        <div className="step-content">
-                            <h3>{step.title}</h3>
+                    <div key={idx} className="proc-card">
+                        <div className="proc-icon-wrap">{step.icon}</div>
+                        <div className="proc-text-content">
+                            <h4>{step.title}</h4>
                             <p>{step.desc}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="eligibility-box">
-                <h3>Age & Eligibility Criteria</h3>
+            <div className="proc-eligibility-card">
+                <div className="proc-eligibility-header">
+                    <CheckCircle2 size={22} color="#8004c7" />
+                    <h4>Age & General Eligibility Guidelines</h4>
+                </div>
                 <ul>
-                    <li><strong>LKG / Kindergarten:</strong> Child must complete 3 years by March 31 of the admission year.</li>
-                    <li><strong>Class I:</strong> Child must complete 5 years by March 31 of the admission year.</li>
-                    <li><strong>Class XI:</strong> Admissions are based on Class X Board Examination marks and stream preference.</li>
+                    <li><strong>LKG / Kindergarten:</strong> Must complete 3 years of age by March 31 of the target academic admission year.</li>
+                    <li><strong>Class I:</strong> Must complete 5 years of age by March 31 of the target academic admission year.</li>
+                    <li><strong>Class XI:</strong> Placements are evaluated directly using Class X Board Examination marks and chosen stream tracks.</li>
                 </ul>
             </div>
         </div>

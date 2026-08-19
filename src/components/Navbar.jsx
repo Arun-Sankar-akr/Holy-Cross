@@ -73,13 +73,6 @@ export default function Navbar() {
                 { name: 'Staff Committees', path: '/staffs/committees' },
             ]
         },
-        {
-            title: 'ERP', id: 'erp', type: 'dropdown',
-            items: [
-                { name: 'Staff', path: '/erp/staff' },
-                { name: 'Student', path: '/erp/student' },
-            ]
-        },
         { title: 'Gallery', path: '/gallery', type: 'link' },
         {
             title: 'Services & Amenities', id: 'service', type: 'dropdown',
@@ -97,7 +90,15 @@ export default function Navbar() {
                 { name: 'Alumni Meets', path: '/alumni/meets' },
             ]
         },
+        {
+            title: 'ERP', id: 'erp', type: 'dropdown',
+            items: [
+                { name: 'Staff', path: '/erp/staff' },
+                { name: 'Student', path: '/erp/student' },
+            ]
+        },
         { title: 'Admissions 2026', path: '/admissions', type: 'link' },
+
     ];
 
     const toggleDropdown = (id) => {

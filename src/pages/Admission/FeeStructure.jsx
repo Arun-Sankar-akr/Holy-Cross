@@ -1,38 +1,39 @@
 import React from 'react';
-import { CreditCard, Info } from 'lucide-react';
+import { Info, CreditCard } from 'lucide-react';
 import './FeeStructure.css';
 
 export default function FeeStructure() {
-    const fees = [
-        { grade: "Primary (Classes I - V)", tuition: "₹ 12,000", term: "₹ 4,000", annual: "₹ 24,000" },
-        { grade: "Middle School (Classes VI - VIII)", tuition: "₹ 14,500", term: "₹ 4,500", annual: "₹ 28,000" },
-        { grade: "High School (Classes IX - X)", tuition: "₹ 16,500", term: "₹ 5,000", annual: "₹ 33,000" },
-        { grade: "Higher Secondary (Classes XI - XII)", tuition: "₹ 19,000", term: "₹ 6,000", annual: "₹ 38,000" },
+    const feeData = [
+        { grade: 'LKG / UKG', tuition: '₹35,000', development: '₹5,000', annual: '₹40,000' },
+        { grade: 'Class I – V', tuition: '₹45,000', development: '₹6,000', annual: '₹51,000' },
+        { grade: 'Class VI – VIII', tuition: '₹55,000', development: '₹7,000', annual: '₹62,000' },
+        { grade: 'Class IX – X', tuition: '₹65,000', development: '₹8,000', annual: '₹73,000' },
+        { grade: 'Class XI – XII', tuition: '₹75,000', development: '₹10,000', annual: '₹85,000' },
     ];
 
     return (
-        <div className="admission-container">
-            <div className="page-header">
-                <h2><CreditCard size={28} /> Fee Structure (2026–2027)</h2>
-                <p>Transparent fee schedule for academic and non-academic activities</p>
+        <div className="fee-container">
+            <div className="fee-header-text">
+                <h3><CreditCard size={24} /> Annual Tuition & Fee Blueprint</h3>
+                <p>Transparent fee allocations breakdown by tier for the upcoming school cycle.</p>
             </div>
 
-            <div className="fee-card">
+            <div className="fee-card-wrapper">
                 <table className="fee-table">
                     <thead>
                         <tr>
-                            <th>Grade / Level</th>
-                            <th>Tuition Fee (Per Term)</th>
-                            <th>Special & Activity Fee</th>
-                            <th>Total Annual Fee</th>
+                            <th>Grade Level</th>
+                            <th>Tuition Fee</th>
+                            <th>Development Fund</th>
+                            <th>Total Annual</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {fees.map((row, idx) => (
-                            <tr key={idx}>
+                        {feeData.map((row, index) => (
+                            <tr key={index}>
                                 <td className="grade-cell">{row.grade}</td>
                                 <td>{row.tuition}</td>
-                                <td>{row.term}</td>
+                                <td>{row.development}</td>
                                 <td className="annual-cell">{row.annual}</td>
                             </tr>
                         ))}
@@ -40,9 +41,9 @@ export default function FeeStructure() {
                 </table>
             </div>
 
-            <div className="fee-note">
+            <div className="fee-notice-box">
                 <Info size={20} />
-                <p><strong>Note:</strong> Fees can be paid in three installments (June, October, and January). Transport and hostel fees are billed separately based on route and accommodation selection.</p>
+                <p><strong>Note:</strong> Optional fees like transportation, uniform kits, and specialized extracurricular charges are calculated independently based on selected routes and student paths.</p>
             </div>
         </div>
     );
