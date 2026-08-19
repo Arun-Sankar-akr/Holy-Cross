@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../service/firebase';
 import { signOut } from 'firebase/auth';
+import logo from "../../assets/logo.png"
 import {
     collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus,
-    CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu
+    CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck
 } from 'lucide-react';
 import './OfficeDashboard.css';
 
@@ -15,21 +16,26 @@ export default function OfficeDashboard() {
     const [activeTab, setActiveTab] = useState('enquiries');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+    // Sidebar Submenu Open/Close Toggle State for Exam Halls
+    const [isExamMenuOpen, setIsExamMenuOpen] = useState(true);
+
     // Real-time Data States
     const [enquiries, setEnquiries] = useState([]);
     const [feesList, setFeesList] = useState([]);
     const [leaveRequests, setLeaveRequests] = useState([]);
     const [officeTasks, setOfficeTasks] = useState([]);
     const [staffList, setStaffList] = useState([]);
-    const [studentsList, setStudentsList] = useState([]); 
+    const [studentsList, setStudentsList] = useState([]);
+    const [examHalls, setExamHalls] = useState([]);
 
-    // Class-wise Directory Selection State
+    // Class-wise Directory Selection State for Fees
     const [selectedDirectoryClass, setSelectedDirectoryClass] = useState('');
 
     // Form States
     const [enquiryForm, setEnquiryForm] = useState({ studentName: '', parentName: '', phone: '', grade: '10th Std', notes: '' });
     const [feeForm, setFeeForm] = useState({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
     const [taskForm, setTaskForm] = useState({ title: '', assignedTo: '', priority: 'Normal', deadline: '' });
+    const [hallForm, setHallForm] = useState({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' });
 
     const navigate = useNavigate();
 
@@ -52,6 +58,9 @@ export default function OfficeDashboard() {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), snap =>
             setStudentsList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubHalls = onSnapshot(collection(db, 'exam_hall_allocations'), snap =>
+            setExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
 
         return () => {
             unsubEnquiries();
@@ -60,14 +69,15 @@ export default function OfficeDashboard() {
             unsubTasks();
             unsubStaff();
             unsubStudents();
+            unsubHalls();
         };
     }, []);
 
-    // Extract unique classes dynamically from students list for the class-wise directory
+    // Extract unique classes dynamically from students list for class-wise directory & exams
     const uniqueClasses = Array.from(new Set(studentsList.map(s => s.className || s.grade).filter(Boolean)));
-    
+
     // Filter students based on the selected class directory filter
-    const filteredStudentsByClass = selectedDirectoryClass 
+    const filteredStudentsByClass = selectedDirectoryClass
         ? studentsList.filter(s => (s.className || s.grade) === selectedDirectoryClass)
         : [];
 
@@ -104,7 +114,7 @@ export default function OfficeDashboard() {
             {/* Mobile Topbar */}
             <header className="mobile-topbar" style={{ display: 'none' }}>
                 <div className="mobile-brand">
-                    <span>Office Management Portal</span>
+                   <img src={logo} alt="" id='logogs' /> <span>Office Management Portal</span>
                 </div>
                 <button className="menu-toggle-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -116,7 +126,7 @@ export default function OfficeDashboard() {
             {/* Sidebar Navigation */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon" style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}>OP</div>
+                    <div className="brand-icon"> <img src={logo} alt=""  id='logogs'/> </div>
                     <span className="brand-titles">Front-Office Desk</span>
                 </div>
 
@@ -135,6 +145,33 @@ export default function OfficeDashboard() {
                     <button className={`nav-links ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => { setActiveTab('fees'); setIsMobileMenuOpen(false); }}>
                         <div className="nav-links-content"><DollarSign size={18} /><span>Fee Dues & Receipts</span></div>
                     </button>
+
+                    {/* ===== EXAM HALL ALLOCATION WITH SUBMENUS ===== */}
+                    <div className="sidebar-submenu-group" style={{ marginBottom: '10px' }}>
+                        <button
+                            className="nav-links submenu-parent-btn"
+                            onClick={() => setIsExamMenuOpen(!isExamMenuOpen)}
+                            style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 150, 105, 0.04)', border: 'none', cursor: 'pointer' }}
+                        >
+                            <div className="nav-links-content">
+                                <LayoutGrid size={18} />
+                                <span style={{ fontWeight: 600 }}>Exam Hall Allocation</span>
+                            </div>
+                            {isExamMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+
+                        {isExamMenuOpen && (
+                            <div className="submenu-children" style={{ display: 'flex', flexDirection: 'column', paddingLeft: '1.25rem', gap: '4px', marginTop: '6px' }}>
+                                <button className={`nav-links ${activeTab === 'exam-halls' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}>
+                                    <div className="nav-links-content"><Users size={16} /><span>Students</span></div>
+                                </button>
+                                <button className={`nav-links ${activeTab === 'exam-staff' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-staff'); setIsMobileMenuOpen(false); }}>
+                                    <div className="nav-links-content"><UserCheck size={16} /><span>Staff</span></div>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <button className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`} onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}>
                         <div className="nav-links-content"><Calendar size={18} /><span>Staff Leave Approvals</span></div>
                     </button>
@@ -268,16 +305,14 @@ export default function OfficeDashboard() {
                                     setSelectedDirectoryClass('');
                                 });
                             }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
-                                
-                                {/* Step 1: Filter by Class Directory Group */}
+
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669' }}>1. Select Class Directory</label>
-                                    <select 
+                                    <select
                                         className="custom-select full-width"
                                         value={selectedDirectoryClass}
                                         onChange={e => {
                                             setSelectedDirectoryClass(e.target.value);
-                                            // Reset student fields if class changes
                                             setFeeForm(prev => ({ ...prev, admissionNo: '', studentName: '', class: e.target.value }));
                                         }}
                                     >
@@ -288,11 +323,10 @@ export default function OfficeDashboard() {
                                     </select>
                                 </div>
 
-                                {/* Step 2: Select Student from that Specific Class */}
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669' }}>2. Select Student from Class</label>
-                                    <select 
-                                        className="custom-select full-width" 
+                                    <select
+                                        className="custom-select full-width"
                                         disabled={!selectedDirectoryClass}
                                         onChange={e => {
                                             const selectedId = e.target.value;
@@ -400,7 +434,136 @@ export default function OfficeDashboard() {
                         </div>
                     )}
 
-                    {/* 3. STAFF LEAVE APPROVALS */}
+                    {/* 3. EXAM HALL ALLOCATION - STUDENTS SUBMENU VIEW */}
+                    {activeTab === 'exam-halls' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Exam Hall & Seating Allocations (Students)</h3>
+                                    <p className="subtitle">Assign examination rooms and seating capacities for student groups</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handlePublish('exam_hall_allocations', hallForm, () =>
+                                    setHallForm({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' })
+                                );
+                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall / Room Number</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101 / Block B" value={hallForm.hallNo} onChange={e => setHallForm({ ...hallForm, hallNo: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Title / Subject</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid-Term Mathematics" value={hallForm.examName} onChange={e => setHallForm({ ...hallForm, examName: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Target Class / Grade</label>
+                                    <select className="custom-select full-width" value={hallForm.targetClass} onChange={e => setHallForm({ ...hallForm, targetClass: e.target.value })} required>
+                                        <option value="">Select Target Class</option>
+                                        {uniqueClasses.map(cls => (<option key={cls} value={cls}>{cls}</option>))}
+                                        <option value="All Classes">All Classes Combined</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Seating Capacity</label>
+                                    <input type="number" className="table-input full-width-input" placeholder="e.g. 30 seats" value={hallForm.capacity} onChange={e => setHallForm({ ...hallForm, capacity: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Assigned Invigilator</label>
+                                    <select className="custom-select full-width" value={hallForm.invigilator} onChange={e => setHallForm({ ...hallForm, invigilator: e.target.value })} required>
+                                        <option value="">Select Faculty Member</option>
+                                        {staffList.map(stf => (<option key={stf.id} value={stf.name}>{stf.name} ({stf.department})</option>))}
+                                    </select>
+                                </div>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                        <PlusCircle size={15} /> Allocate Exam Hall
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4>Active Student Exam Hall Allocations ({examHalls.length})</h4>
+                            <div className="table-responsive">
+                                <table className="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Hall / Room</th>
+                                            <th>Exam Title</th>
+                                            <th>Target Class</th>
+                                            <th>Capacity</th>
+                                            <th>Invigilator Assigned</th>
+                                            <th style={{ textAlign: 'right' }}>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {examHalls.length === 0 ? (
+                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No exam halls allocated yet.</td></tr>
+                                        ) : (
+                                            examHalls.map(hall => (
+                                                <tr key={hall.id}>
+                                                    <td><strong>{hall.hallNo}</strong></td>
+                                                    <td>{hall.examName}</td>
+                                                    <td><span className="task-target-tag">{hall.targetClass}</span></td>
+                                                    <td>{hall.capacity} Students</td>
+                                                    <td>{hall.invigilator}</td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', hall.id)} title="Remove Allocation"><X size={14} /></button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. EXAM HALL ALLOCATION - STAFF SUBMENU VIEW */}
+                    {activeTab === 'exam-staff' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Exam Duty & Invigilation Roster (Staff)</h3>
+                                    <p className="subtitle">Overview of staff member exam duties across different examination halls</p>
+                                </div>
+                            </div>
+
+                            <div className="table-responsive" style={{ marginTop: '0.75rem' }}>
+                                <table className="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Faculty Member</th>
+                                            <th>Assigned Hall</th>
+                                            <th>Exam Title</th>
+                                            <th>Target Class</th>
+                                            <th style={{ textAlign: 'right' }}>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {examHalls.length === 0 ? (
+                                            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No staff duties assigned through hall allocations yet.</td></tr>
+                                        ) : (
+                                            examHalls.map(hall => (
+                                                <tr key={hall.id}>
+                                                    <td><strong>{hall.invigilator || 'Unassigned'}</strong></td>
+                                                    <td>{hall.hallNo}</td>
+                                                    <td>{hall.examName}</td>
+                                                    <td><span className="task-target-tag">{hall.targetClass}</span></td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <span className="status-badge status-present">Assigned Duty</span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 5. STAFF LEAVE APPROVALS */}
                     {activeTab === 'leaves' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -431,8 +594,8 @@ export default function OfficeDashboard() {
                                                 <tr key={leave.id}>
                                                     <td><strong>{leave.staffName}</strong></td>
                                                     <td>{leave.leaveType || 'Casual Leave'}</td>
-                                                    <td>{leave.fromDate}</td>
-                                                    <td>{leave.toDate}</td>
+                                                    <td>{leave.fromDate || leave.startDate || leave.from || 'N/A'}</td>
+                                                    <td>{leave.toDate || leave.endDate || leave.to || 'N/A'}</td>
                                                     <td>{leave.reason}</td>
                                                     <td>
                                                         <span className={`status-badge ${leave.status === 'Approved' ? 'status-present' : leave.status === 'Rejected' ? 'status-absent' : 'status-present'}`}>
@@ -440,17 +603,18 @@ export default function OfficeDashboard() {
                                                         </span>
                                                     </td>
                                                     <td style={{ textAlign: 'right' }}>
-                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                            <button className="btn-save-grade" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Approved' })} title="Approve Leave">
+                                                        <div className="leave-action-btns">
+                                                            <button className="btn-approve-leave" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Approved' })} title="Approve Leave">
                                                                 <CheckCircle size={14} /> Approve
                                                             </button>
-                                                            <button className="delete-task-btn" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Rejected' })} title="Reject Leave">
+                                                            <button className="btn-reject-leave" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Rejected' })} title="Reject Leave">
                                                                 <XCircle size={14} /> Reject
                                                             </button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             ))
+
                                         )}
                                     </tbody>
                                 </table>
@@ -458,7 +622,7 @@ export default function OfficeDashboard() {
                         </div>
                     )}
 
-                    {/* 4. INTERNAL TASK BOARD */}
+                    {/* 6. INTERNAL TASK BOARD */}
                     {activeTab === 'tasks' && (
                         <div className="dash-card full-width">
                             <div className="card-header">

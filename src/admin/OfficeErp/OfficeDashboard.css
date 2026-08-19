@@ -77,6 +77,8 @@
     align-items: center;
     justify-content: center;
     font-weight: 700;
+    background-color: none;
+    background: none;
     font-size: 0.9rem;
 }
 
@@ -271,7 +273,9 @@
     gap: 1rem;
 }
 
-.table-input, .custom-select, .custom-textarea {
+.table-input,
+.custom-select,
+.custom-textarea {
     width: 100%;
     padding: 0.6rem 0.75rem;
     border: 1px solid #d1d5db;
@@ -283,12 +287,15 @@
     transition: border-color 0.2s;
 }
 
-.table-input:focus, .custom-select:focus, .custom-textarea:focus {
+.table-input:focus,
+.custom-select:focus,
+.custom-textarea:focus {
     border-color: #059669;
     box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
 }
 
-.full-width-input, .full-width {
+.full-width-input,
+.full-width {
     width: 100%;
 }
 
@@ -327,7 +334,8 @@
     border-collapse: collapse;
     text-align: left;
     font-size: 0.85rem;
-    min-width: 650px; /* Prevents text collapsing on tiny screens */
+    min-width: 650px;
+    /* Prevents text collapsing on tiny screens */
 }
 
 .custom-table th {
@@ -381,20 +389,23 @@
 .delete-task-btn {
     background: #fee2e2;
     color: #dc2626;
-    border: none;
-    width: 28px;
-    height: 28px;
+    border: 1px solid #a7f3d0;
+    padding: 0.35rem 0.65rem;
     border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
     cursor: pointer;
     transition: background 0.2s;
+    white-space: nowrap;
     flex-shrink: 0;
 }
 
 .delete-task-btn:hover {
-    background: #fecaca;
+    background: #ec0707;
+    color: #f3f4f6;
 }
 
 .btn-save-grade {
@@ -415,7 +426,7 @@
 }
 
 .btn-save-grade:hover {
-    background: #d1fae5;
+    background: #005a2c;
 }
 
 /* --- Responsive Media Queries for All Screen Sizes --- */
@@ -485,6 +496,55 @@
     }
 
     .topbar-actions {
-        display: none; /* Hide secondary verbose labels on ultra-small screens */
+        display: none;
+        /* Hide secondary verbose labels on ultra-small screens */
     }
+}
+
+/* Container for action buttons */
+.leave-action-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* Approve Button Style */
+.btn-approve-leave {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #059669;
+    color: #ffffff;
+    border: none;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-approve-leave:hover {
+    background-color: #047857;
+}
+
+/* Reject Button Style */
+.btn-reject-leave {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-reject-leave:hover {
+    background-color: #fecaca;
 }

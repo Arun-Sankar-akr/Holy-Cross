@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import logo from "../../assets/logo.png"
 import {
-    collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField
+    collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where
 } from 'firebase/firestore';
 import {
     Users, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
     LogOut, Search, Menu, X, Check, GraduationCap, ArrowLeft,
     Folder, KeyRound, Sparkles, ChevronDown, PlusCircle, Trash2, Layers,
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
-    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw
+    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -22,6 +22,18 @@ export default function StaffDashboard() {
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
+    
+    // Leave Request States
+    const [staffLeaveList, setStaffLeaveList] = useState([]);
+    const [leaveForm, setLeaveForm] = useState({
+        leaveType: 'Casual Leave',
+        startDate: '',
+        endDate: '',
+        reason: ''
+    });
+    const [isLeaveSubmitting, setIsLeaveSubmitting] = useState(false);
+    const [leaveActionStatus, setLeaveActionStatus] = useState('');
+
     const clearOldMarks = async (studentDocId) => {
         const studentRef = doc(db, 'students_records', studentDocId);
 
@@ -169,12 +181,20 @@ export default function StaffDashboard() {
             setSubmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        // Fetch Staff Leave Requests
+        const unsubLeaves = onSnapshot(collection(db, 'staff_leaves'), (snap) => {
+            const leaves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Filter leaves for current staff member if staffId exists
+            setStaffLeaveList(leaves);
+        });
+
         return () => {
             unsubStudents();
             unsubSections();
             unsubStaffTT();
             unsubAssignments();
             unsubSubmissions();
+            unsubLeaves();
         };
     }, []);
 
@@ -197,6 +217,11 @@ export default function StaffDashboard() {
     };
 
     const mySchedule = staffTimetableList.filter(item =>
+        (staffData.staffId && item.staffId === staffData.staffId) ||
+        (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
+    );
+
+    const myLeaveRequests = staffLeaveList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
@@ -271,6 +296,44 @@ export default function StaffDashboard() {
             console.error("Batch attendance submission error:", error);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Leave Request Handler
+    const handleSubmitleaveRequest = async (e) => {
+        e.preventDefault();
+        if (!leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason) {
+            alert('Please fill out all fields for the leave request.');
+            return;
+        }
+
+        setIsLeaveSubmitting(true);
+        try {
+            await addDoc(collection(db, 'staff_leaves'), {
+                staffId: staffData.staffId || 'UNKNOWN_ID',
+                staffName: staffData.name,
+                department: staffData.department,
+                leaveType: leaveForm.leaveType,
+                startDate: leaveForm.startDate,
+                endDate: leaveForm.endDate,
+                reason: leaveForm.reason,
+                status: 'Pending',
+                createdAt: serverTimestamp()
+            });
+
+            setLeaveForm({
+                leaveType: 'Casual Leave',
+                startDate: '',
+                endDate: '',
+                reason: ''
+            });
+            setLeaveActionStatus('Leave request submitted successfully to administration.');
+            setTimeout(() => setLeaveActionStatus(''), 4000);
+        } catch (error) {
+            console.error("Error submitting leave request:", error);
+            alert("Failed to submit leave request.");
+        } finally {
+            setIsLeaveSubmitting(false);
         }
     };
 
@@ -668,6 +731,17 @@ export default function StaffDashboard() {
                             <span>Class Schedule</span>
                         </div>
                     </button>
+
+                    {/* NEW: Leave Requests Navigation Link */}
+                    <button
+                        className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
+                    >
+                        <div className="nav-links-content">
+                            <SendHorizonal size={18} />
+                            <span>Leave Requests</span>
+                        </div>
+                    </button>
                 </nav>
 
                 <div className="sidebar-footer">
@@ -926,7 +1000,7 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* ATTENDANCE TAB (Updated with Date & Period Filters) */}
+                    {/* ATTENDANCE TAB */}
                     {activeTab === 'attendance' && (
                         <div className="dash-card full-width">
                             <div className="card-header" style={{ flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
@@ -938,7 +1012,6 @@ export default function StaffDashboard() {
                                         </p>
                                     </div>
                                     
-                                    {/* Filters Bar: Class, Section, Date & Period */}
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                         <input
                                             type="date"
@@ -1175,7 +1248,7 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* MARKS ENTRY & CRUD TAB (Staff restricted to Drafts) */}
+                    {/* MARKS ENTRY & CRUD TAB */}
                     {activeTab === 'marks' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -1536,7 +1609,6 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            {/* In-Place Edit Modal */}
                             {editingAssignment && (
                                 <div className="modal-overlay">
                                     <div className="modal-container">
@@ -1938,6 +2010,124 @@ export default function StaffDashboard() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* NEW: LEAVE REQUESTS TAB */}
+                    {activeTab === 'leaves' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Staff Leave Applications</h3>
+                                    <p className="subtitle">Apply for leave and track the approval status from the administration.</p>
+                                </div>
+                            </div>
+
+                            {leaveActionStatus && (
+                                <div style={{ color: 'var(--accent-emerald)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Check size={18} /> {leaveActionStatus}
+                                </div>
+                            )}
+
+                            {/* Leave Application Form */}
+                            <form onSubmit={handleSubmitleaveRequest} className="assignment-form-grid" style={{ marginBottom: '30px' }}>
+                                <div>
+                                    <label>Leave Type</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={leaveForm.leaveType}
+                                        onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
+                                        required
+                                    >
+                                        <option value="Casual Leave">Casual Leave (CL)</option>
+                                        <option value="Medical Leave">Medical Leave (ML)</option>
+                                        <option value="Earned Leave">Earned Leave (EL)</option>
+                                        <option value="On Duty">On Duty (OD)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Start Date</label>
+                                    <input
+                                        type="date"
+                                        className="table-input full-width-input"
+                                        value={leaveForm.startDate}
+                                        onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label>End Date</label>
+                                    <input
+                                        type="date"
+                                        className="table-input full-width-input"
+                                        value={leaveForm.endDate}
+                                        onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label>Reason for Leave</label>
+                                    <textarea
+                                        rows="3"
+                                        className="custom-textarea"
+                                        placeholder="Provide detailed reason for absence..."
+                                        value={leaveForm.reason}
+                                        onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary" disabled={isLeaveSubmitting}>
+                                        <SendHorizonal size={15} /> {isLeaveSubmitting ? 'Submitting Application...' : 'Submit Leave Request'}
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
+                                My Leave Application History ({myLeaveRequests.length})
+                            </h4>
+
+                            {myLeaveRequests.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <Calendar size={28} />
+                                    <p>No past or active leave requests found.</p>
+                                </div>
+                            ) : (
+                                <div className="table-responsive">
+                                    <table className="custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Leave Type</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Reason</th>
+                                                <th style={{ textAlign: 'right' }}>Admin Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {myLeaveRequests.map((leave) => (
+                                                <tr key={leave.id}>
+                                                    <td>
+                                                        <span className="topic-badge">{leave.leaveType}</span>
+                                                    </td>
+                                                    <td>{leave.startDate}</td>
+                                                    <td>{leave.endDate}</td>
+                                                    <td>{leave.reason}</td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <span className={`status-badge status-${leave.status === 'Approved' ? 'present' : leave.status === 'Rejected' ? 'absent' : 'pending'}`}>
+                                                            {(leave.status || 'Pending').toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
