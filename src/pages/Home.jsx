@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../service/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import {
     HeartHandshake, BookOpen, Users, ArrowRight,
     Compass, CheckCircle2, Target, Globe2,
@@ -18,7 +20,6 @@ import campusBg9 from '../assets/bg10.jpg';
 import campusBg10 from '../assets/bg11.jpg';
 
 import photo from '../assets/photo1.png';
-
 
 import HomeNoticeBoard from './HomeNoticeBoard';
 import './Home.css';
@@ -44,6 +45,10 @@ export default function Home({ setActivePage }) {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
 
+    // Dynamic states for Admin-controlled sections
+    const [upcomingEvents, setUpcomingEvents] = useState([]);
+    const [toppersList, setToppersList] = useState([]);
+
     // Handle scroll tracker for the 'scroll-to-top' button
     useEffect(() => {
         const handleScroll = () => {
@@ -65,6 +70,22 @@ export default function Home({ setActivePage }) {
             setCurrentSlide((prev) => (prev + 1) % heroImages.length);
         }, 5000);
         return () => clearInterval(interval);
+    }, []);
+
+    // Fetch live data from Firestore for Upcoming Events & Board Toppers
+    useEffect(() => {
+        const unsubEvents = onSnapshot(collection(db, 'upcoming_events'), (snapshot) => {
+            setUpcomingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        const unsubToppers = onSnapshot(collection(db, 'exam_toppers'), (snapshot) => {
+            setToppersList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        return () => {
+            unsubEvents();
+            unsubToppers();
+        };
     }, []);
 
     const scrollToTop = () => {
@@ -174,8 +195,6 @@ export default function Home({ setActivePage }) {
             {/* 4. Notice Board / Circulars */}
             <HomeNoticeBoard onNavigate={setActivePage} />
 
-
-
             {/* 5. Core Pillars Grid */}
             <section className="section-container">
                 <div className="cards-grid-3">
@@ -214,12 +233,11 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* NEW: Principal's Desk Feature Section */}
+            {/* Principal's Desk Feature Section */}
             <section className="section-container">
                 <div className="principal-desk-wrapper">
                     <div className="principal-card-img">
                         <img src={photo} alt="" />
-                        {/* <Users size={64} className="principal-placeholder-icon" /> */}
                     </div>
                     <div className="principal-content">
                         <span className="section-badge">LEADERSHIP MESSAGE</span>
@@ -299,7 +317,7 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* NEW: Upcoming Events & Calendar Highlights Section */}
+            {/* DYNAMIC: Upcoming Events & Activities Section (Controlled by AdminDashboard) */}
             <section className="section-container">
                 <div className="events-section-header">
                     <div>
@@ -312,51 +330,29 @@ export default function Home({ setActivePage }) {
                 </div>
 
                 <div className="events-grid-3">
-                    <div className="event-card">
-                        <div className="event-date-badge">
-                            <span className="event-month">SEP</span>
-                            <span className="event-day">12</span>
-                        </div>
-                        <div className="event-details">
-                            <h3>Annual Sports Meet 2026</h3>
-                            <p>Inter-house athletic competitions, track events, and march-past displays on the campus grounds.</p>
-                            <div className="event-meta">
-                                <span className="event-time"><Clock size={13} /> 9:00 AM Onwards</span>
+                    {upcomingEvents.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)' }}>No upcoming events published at the moment.</p>
+                    ) : (
+                        upcomingEvents.map((ev) => (
+                            <div className="event-card" key={ev.id}>
+                                <div className="event-date-badge">
+                                    <span className="event-month">{ev.month}</span>
+                                    <span className="event-day">{ev.day}</span>
+                                </div>
+                                <div className="event-details">
+                                    <h3>{ev.title}</h3>
+                                    <p>{ev.description}</p>
+                                    <div className="event-meta">
+                                        <span className="event-time"><Clock size={13} /> {ev.time}</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="event-card">
-                        <div className="event-date-badge">
-                            <span className="event-month">SEP</span>
-                            <span className="event-day">25</span>
-                        </div>
-                        <div className="event-details">
-                            <h3>Mid-Term Assessment Begins</h3>
-                            <p>Scheduled examinations for Grades X, XI, and XII to track progress toward historical board exam results.</p>
-                            <div className="event-meta">
-                                <span className="event-time"><Clock size={13} /> 9:30 AM - 12:30 PM</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="event-card">
-                        <div className="event-date-badge">
-                            <span className="event-month">OCT</span>
-                            <span className="event-day">05</span>
-                        </div>
-                        <div className="event-details">
-                            <h3>Science & Innovation Expo</h3>
-                            <p>Exhibition showcasing student science projects, model displays, and coding/tech demonstrations.</p>
-                            <div className="event-meta">
-                                <span className="event-time"><Clock size={13} /> 10:00 AM - 3:00 PM</span>
-                            </div>
-                        </div>
-                    </div>
+                        ))
+                    )}
                 </div>
             </section>
 
-            {/* SECTION 1: Student Achievements & Board Toppers */}
+            {/* DYNAMIC: Board Exam Toppers & Achievers Section (Controlled by AdminDashboard) */}
             <section className="section-container">
                 <div className="events-section-header">
                     <div>
@@ -369,26 +365,18 @@ export default function Home({ setActivePage }) {
                 </div>
 
                 <div className="achievements-grid">
-                    <div className="achievement-card">
-                        <div className="achievement-avatar">A</div>
-                        <h3>Aarthi S.</h3>
-                        <span className="achievement-grade">Grade XII • State Board</span>
-                        <div className="achievement-score">491 / 500 (District Rank)</div>
-                    </div>
-
-                    <div className="achievement-card">
-                        <div className="achievement-avatar">V</div>
-                        <h3>Vignesh R.</h3>
-                        <span className="achievement-grade">Grade X • Matriculation</span>
-                        <div className="achievement-score">485 / 500 (School Topper)</div>
-                    </div>
-
-                    <div className="achievement-card">
-                        <div className="achievement-avatar">P</div>
-                        <h3>Priya Dharshini</h3>
-                        <span className="achievement-grade">Grade XII • Science Bio</span>
-                        <div className="achievement-score">482 / 500 (Centum in Math)</div>
-                    </div>
+                    {toppersList.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)' }}>No toppers published yet.</p>
+                    ) : (
+                        toppersList.map((topper) => (
+                            <div className="achievement-card" key={topper.id}>
+                                <div className="achievement-avatar">{topper.name?.charAt(0) || '★'}</div>
+                                <h3>{topper.name}</h3>
+                                <span className="achievement-grade">{topper.streamOrGrade}</span>
+                                <div className="achievement-score">{topper.scoreOrPercentage}</div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </section>
 
@@ -404,15 +392,15 @@ export default function Home({ setActivePage }) {
                 <div className="gallery-grid">
                     <div className="gallery-thumb">
                         <img src={campusBg} alt="Campus Infrastructure" />
-                        <div className="gallery-overlay-caption">Main Administrative Block</div>
+                        <div className="gallery-overlay-caption">Main Gate</div>
                     </div>
                     <div className="gallery-thumb">
                         <img src={campusBg1} alt="Science Laboratories" />
-                        <div className="gallery-overlay-caption">Advanced Science Laboratory</div>
+                        <div className="gallery-overlay-caption">Andre Block</div>
                     </div>
                     <div className="gallery-thumb">
                         <img src={campusBg2} alt="Sports Ground" />
-                        <div className="gallery-overlay-caption">More</div>
+                        <div className="gallery-overlay-caption">Moreau Block</div>
                     </div>
                     <div className="gallery-thumb">
                         <img src={campusBg3} alt="Cultural Events" />
@@ -486,45 +474,6 @@ export default function Home({ setActivePage }) {
                     </div>
                 </div>
             </section>
-
-            {/* SECTION C: Admissions Step-by-Step Guide */}
-            {/* <section className="section-container">
-                <div className="events-section-header">
-                    <div>
-                        <span className="section-badge">PROCESS</span>
-                        <h2>How to Apply for Admissions</h2>
-                    </div>
-                    <button className="events-view-all" onClick={() => setActivePage('admissions')}>
-                        Open Portal &rarr;
-                    </button>
-                </div>
-
-                <div className="steps-grid">
-                    <div className="step-card">
-                        <span className="step-number-badge">Step 1</span>
-                        <h3>Submit Online Enquiry</h3>
-                        <p>Fill out basic student details and choose your preferred grade level (X, XI, or XII) via our online portal.</p>
-                    </div>
-
-                    <div className="step-card">
-                        <span className="step-number-badge">Step 2</span>
-                        <h3>Campus Interaction</h3>
-                        <p>Visit our Somarasampettai campus with parents for a warm academic counseling and orientation session.</p>
-                    </div>
-
-                    <div className="step-card">
-                        <span className="step-number-badge">Step 3</span>
-                        <h3>Document Verification</h3>
-                        <p>Submit previous academic transcripts, transfer certificates, and passport photographs for clearance.</p>
-                    </div>
-
-                    <div className="step-card">
-                        <span className="step-number-badge">Step 4</span>
-                        <h3>Enrollment Confirmation</h3>
-                        <p>Complete fee formalities and officially welcome your child into the Holy Cross family!</p>
-                    </div>
-                </div>
-            </section> */}
 
             {/* SECTION E: Frequently Asked Questions (FAQ) */}
             <section className="section-container">

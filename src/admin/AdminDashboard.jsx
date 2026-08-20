@@ -36,6 +36,7 @@ export default function AdminDashboard() {
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [administrators, setAdministrators] = useState([]);
     const [toppers, setToppers] = useState([]);
+    const [upcomingEvents, setUpcomingEvents] = useState([]); // Controlled via Updates submenu
     const [galleryItems, setGalleryItems] = useState([]);
     const [holidays, setHolidays] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
@@ -71,7 +72,8 @@ export default function AdminDashboard() {
     // Form inputs state
     const [calendarForm, setCalendarForm] = useState({ month: '', date: '', day: '', title: '', category: 'General' });
     const [adminForm, setAdminForm] = useState({ name: '', role: '', qualification: '', message: '', email: '', phone: '' });
-    const [topperForm, setTopperForm] = useState({ rank: 1, name: '', class: '', percentage: '' });
+    const [topperForm, setTopperForm] = useState({ name: '', streamOrGrade: '', scoreOrPercentage: '' });
+    const [eventForm, setEventForm] = useState({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' });
     const [galleryForm, setGalleryForm] = useState({ title: '', category: 'Campus', image: '', description: '' });
     const [holidayForm, setHolidayForm] = useState({ date: '', day: '', occasion: '', type: 'National Holiday' });
     const [noticeText, setNoticeText] = useState('');
@@ -205,7 +207,6 @@ export default function AdminDashboard() {
         if (extraCallback) extraCallback();
     };
 
-    // Fetch admissions from Firestore for AdminAdmissionPanel
     const fetchAdmissionApplications = async () => {
         setAdmissionLoading(true);
         try {
@@ -219,8 +220,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // Add this state near your other admission states
-    const [approvalSections, setApprovalSections] = useState({}); // Stores selected section per app ID
+    const [approvalSections, setApprovalSections] = useState({});
 
     const handleApproveAdmission = async (app) => {
         try {
@@ -229,8 +229,6 @@ export default function AdminDashboard() {
             await updateDoc(appRef, { status: 'Approved' });
 
             const targetGrade = app.grade;
-
-            // 1. Resolve or create section
             const sectionsQuery = query(
                 collection(db, "class_sections"),
                 where("className", "==", targetGrade),
@@ -251,7 +249,6 @@ export default function AdminDashboard() {
                 resolvedSectionId = newSectionRef.id;
             }
 
-            // 2. Build student ERP mapping payload
             const studentErpData = {
                 admissionId: app.id,
                 admissionNo: app.acknowledgementNumber || 'HCMS20260000',
@@ -267,7 +264,6 @@ export default function AdminDashboard() {
                 enrolledAt: serverTimestamp()
             };
 
-            // 3. Save to Students ERP & Records for instant visibility
             await setDoc(doc(db, "students_erp", app.id), studentErpData);
             await addDoc(collection(db, "students_records"), studentErpData);
 
@@ -277,7 +273,7 @@ export default function AdminDashboard() {
             console.error("Error approving application:", error);
         }
     };
-    // Handle Reject Action
+
     const handleRejectAdmission = async (appId) => {
         if (!window.confirm("Are you sure you want to reject this application?")) return;
         try {
@@ -290,7 +286,6 @@ export default function AdminDashboard() {
         }
     };
 
-    // Handle Delete Admission Application (CRUD)
     const handleDeleteAdmission = async (appId) => {
         if (!window.confirm("Are you sure you want to permanently delete this application?")) return;
         try {
@@ -322,6 +317,9 @@ export default function AdminDashboard() {
         const unsubToppers = onSnapshot(collection(db, 'exam_toppers'), snap =>
             setToppers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubEvents = onSnapshot(collection(db, 'upcoming_events'), snap =>
+            setUpcomingEvents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
         const unsubGallery = onSnapshot(collection(db, 'gallery'), snap =>
             setGalleryItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
@@ -351,6 +349,7 @@ export default function AdminDashboard() {
             unsubCalendar();
             unsubAdmins();
             unsubToppers();
+            unsubEvents();
             unsubGallery();
             unsubHolidays();
             unsubAnnouncements();
@@ -665,20 +664,24 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
+                            {/* UPDATES TAB SECTION WITH SUBMENUS FOR EVENTS & TOPPERS */}
                             <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
                                 <div className="tab-label"><Radio size={16} /><span>Updates</span></div>
                                 <ChevronDown size={14} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
                             </button>
                             {updatesOpen && (
                                 <div className="submenu-container">
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'upcoming_events' ? 'active' : ''}`} onClick={() => handleTabClick('upcoming_events')}>
+                                        <Calendar size={15} /> Upcoming Events & Activities
+                                    </button>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'toppers' ? 'active' : ''}`} onClick={() => handleTabClick('toppers')}>
+                                        <Award size={15} /> Board Exam Toppers & Achievers
+                                    </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => handleTabClick('calendar')}>
-                                        <Calendar size={15} /> Academic Calendar
+                                        <Clock size={15} /> Academic Calendar
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => handleTabClick('admins')}>
                                         <Shield size={15} /> Administrators
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'toppers' ? 'active' : ''}`} onClick={() => handleTabClick('toppers')}>
-                                        <Award size={15} /> Exam Toppers
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => handleTabClick('gallery')}>
                                         <ImageIcon size={15} /> Photo Gallery
@@ -756,6 +759,68 @@ export default function AdminDashboard() {
                         <span>{isSidebarCollapsed ? 'Show' : 'Hide'}</span>
                     </button>
 
+                    {/* UPCOMING EVENTS & ACTIVITIES SUBMENU PANEL */}
+                    {activeTab === 'upcoming_events' && (
+                        <div className="applications-management-card">
+                            <h3>Publish Upcoming Event & Activity</h3>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handlePublish('upcoming_events', eventForm, () =>
+                                    setEventForm({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' })
+                                );
+                            }}>
+                                <div><input type="text" placeholder="Month Abbr (e.g., SEP)" value={eventForm.month} onChange={e => setEventForm({ ...eventForm, month: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Day Number (e.g., 12)" value={eventForm.day} onChange={e => setEventForm({ ...eventForm, day: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Event Title" value={eventForm.title} onChange={e => setEventForm({ ...eventForm, title: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Time Details (e.g., 9:00 AM Onwards)" value={eventForm.time} onChange={e => setEventForm({ ...eventForm, time: e.target.value })} required /></div>
+                                <textarea placeholder="Event Description" value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} required />
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Event</button>
+                            </form>
+
+                            <h4>Published Events <span className="count-badge">{upcomingEvents.length}</span></h4>
+                            {upcomingEvents.length === 0 ? <div className="empty-state">No upcoming events published yet.</div> : (
+                                <ul>
+                                    {upcomingEvents.map(item => (
+                                        <li key={item.id}>
+                                            <span><strong>[{item.month} {item.day}]</strong> {item.title} ({item.time})</span>
+                                            <button onClick={() => handleDelete('upcoming_events', item.id)}><Trash2 size={14} /></button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    {/* BOARD EXAM TOPPERS & ACHIEVERS SUBMENU PANEL */}
+                    {activeTab === 'toppers' && (
+                        <div className="applications-management-card">
+                            <h3>Publish Board Exam Topper & Achiever</h3>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handlePublish('exam_toppers', topperForm, () =>
+                                    setTopperForm({ name: '', streamOrGrade: '', scoreOrPercentage: '' })
+                                );
+                            }}>
+                                <div><input type="text" placeholder="Student Name (e.g., Aarthi S.)" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Grade & Board (e.g., Grade XII • State Board)" value={topperForm.streamOrGrade} onChange={e => setTopperForm({ ...topperForm, streamOrGrade: e.target.value })} required /></div>
+                                <div><input type="text" placeholder="Score / Achievement (e.g., 491 / 500 (District Rank))" value={topperForm.scoreOrPercentage} onChange={e => setTopperForm({ ...topperForm, scoreOrPercentage: e.target.value })} required /></div>
+                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper Profile</button>
+                            </form>
+
+                            <h4>Published Toppers & Achievers <span className="count-badge">{toppers.length}</span></h4>
+                            {toppers.length === 0 ? <div className="empty-state">No toppers published yet.</div> : (
+                                <ul>
+                                    {toppers.map(item => (
+                                        <li key={item.id}>
+                                            <span><strong>{item.name}</strong> ({item.streamOrGrade}) — {item.scoreOrPercentage}</span>
+                                            <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={14} /></button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
                     {/* ADMISSIONS ADMINISTRATION PANEL */}
                     {activeTab === 'admission_panel' && (
                         <div className="admin-panel-container applications-management-card">
@@ -801,7 +866,6 @@ export default function AdminDashboard() {
                                                                 value={approvalSections[app.id] || 'Section A'}
                                                                 onChange={(e) => setApprovalSections({ ...approvalSections, [app.id]: e.target.value })}
                                                             >
-                                                                {/* Filter available sections created for this specific application's grade */}
                                                                 {sectionsList
                                                                     .filter(sec => sec.className === app.grade)
                                                                     .length > 0 ? (
@@ -849,7 +913,6 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {/* Modal for viewing individual application details */}
                             {selectedApp && (
                                 <div className="admin-modal-backdrop">
                                     <div className="admin-modal-card">
@@ -1117,43 +1180,6 @@ export default function AdminDashboard() {
                                         <li key={item.id}>
                                             <span><strong>{item.name}</strong> - {item.role}</span>
                                             <button onClick={() => handleDelete('administrators', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    )}
-
-                    {/* TOPPERS */}
-                    {activeTab === 'toppers' && (
-                        <div className="applications-management-card">
-                            <h3>Publish Academic Topper</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('exam_toppers', topperForm, () =>
-                                    setTopperForm({ rank: 1, name: '', class: '', percentage: '' })
-                                );
-                            }}>
-                                <div>
-                                    <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: Number(e.target.value) })}>
-                                        <option value={1}>Rank 1 (Gold)</option>
-                                        <option value={2}>Rank 2 (Silver)</option>
-                                        <option value={3}>Rank 3 (Bronze)</option>
-                                    </select>
-                                </div>
-                                <div><input type="text" placeholder="Student Name" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Class / Stream" value={topperForm.class} onChange={e => setTopperForm({ ...topperForm, class: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Percentage (e.g., 98.6%)" value={topperForm.percentage} onChange={e => setTopperForm({ ...topperForm, percentage: e.target.value })} required /></div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper</button>
-                            </form>
-
-                            <h4>Published Toppers <span className="count-badge">{toppers.length}</span></h4>
-                            {toppers.length === 0 ? <div className="empty-state">No toppers published yet.</div> : (
-                                <ul>
-                                    {toppers.map(item => (
-                                        <li key={item.id}>
-                                            <span>Rank {item.rank}: <strong>{item.name}</strong> - {item.percentage}</span>
-                                            <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
                                 </ul>
