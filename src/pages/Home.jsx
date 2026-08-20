@@ -229,7 +229,9 @@ export default function Home({ setActivePage }) {
                             "Education is not merely about preparing for a living, but building a foundation for life. At Holy Cross, we strive to cultivate intellectual curiosity, emotional strength, and spiritual grounding in every child. We invite you to partner with us as we guide your children toward soaring into a bright, purposeful future."
                         </p>
                         <div className="principal-signature">
-                            - Fr Paul Raj</div>
+                            - Fr. A. AROKIA SAHAYARAJ <span>(Principal
+
+)</span></div>
                     </div>
                 </div>
             </section>
