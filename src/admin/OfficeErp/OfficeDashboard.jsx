@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus,
-    CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck
+    CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare
 } from 'lucide-react';
 import './OfficeDashboard.css';
 
@@ -27,15 +27,19 @@ export default function OfficeDashboard() {
     const [staffList, setStaffList] = useState([]);
     const [studentsList, setStudentsList] = useState([]);
     const [examHalls, setExamHalls] = useState([]);
+    const [staffExamHalls, setStaffExamHalls] = useState([]);
 
-    // Class-wise Directory Selection State for Fees
-    const [selectedDirectoryClass, setSelectedDirectoryClass] = useState('');
+    // Fee Navigation & Drill-Down States
+    const [feeViewMode, setFeeViewMode] = useState('classes'); // 'classes' | 'sections' | 'students-fee'
+    const [selectedFeeClass, setSelectedFeeClass] = useState(null);
+    const [selectedFeeSection, setSelectedFeeSection] = useState(null);
 
     // Form States
     const [enquiryForm, setEnquiryForm] = useState({ studentName: '', parentName: '', phone: '', grade: '10th Std', notes: '' });
     const [feeForm, setFeeForm] = useState({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
     const [taskForm, setTaskForm] = useState({ title: '', assignedTo: '', priority: 'Normal', deadline: '' });
     const [hallForm, setHallForm] = useState({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' });
+    const [staffHallForm, setStaffHallForm] = useState({ hallNo: '', examName: '', staffName: '', dutyTime: '' });
 
     const navigate = useNavigate();
 
@@ -61,6 +65,9 @@ export default function OfficeDashboard() {
         const unsubHalls = onSnapshot(collection(db, 'exam_hall_allocations'), snap =>
             setExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubStaffHalls = onSnapshot(collection(db, 'staff_exam_halls'), snap =>
+            setStaffExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
 
         return () => {
             unsubEnquiries();
@@ -70,16 +77,12 @@ export default function OfficeDashboard() {
             unsubStaff();
             unsubStudents();
             unsubHalls();
+            unsubStaffHalls();
         };
     }, []);
 
-    // Extract unique classes dynamically from students list for class-wise directory & exams
+    // Extract unique classes dynamically from students list
     const uniqueClasses = Array.from(new Set(studentsList.map(s => s.className || s.grade).filter(Boolean)));
-
-    // Filter students based on the selected class directory filter
-    const filteredStudentsByClass = selectedDirectoryClass
-        ? studentsList.filter(s => (s.className || s.grade) === selectedDirectoryClass)
-        : [];
 
     const handlePublish = async (collectionName, data, resetFn) => {
         try {
@@ -103,6 +106,14 @@ export default function OfficeDashboard() {
         }
     };
 
+    const handleUpdateLeaveStatus = async (id, status) => {
+        try {
+            await updateDoc(doc(db, 'staff_leaves', id), { status });
+        } catch (error) {
+            console.error("Error updating leave status: ", error);
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('officeUser');
         signOut(auth);
@@ -111,22 +122,10 @@ export default function OfficeDashboard() {
 
     return (
         <div className="dashboard-containers">
-            {/* Mobile Topbar */}
-            <header className="mobile-topbar" style={{ display: 'none' }}>
-                <div className="mobile-brand">
-                   <img src={logo} alt="" id='logogs' /> <span>Office Management Portal</span>
-                </div>
-                <button className="menu-toggle-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
-            </header>
-
-            {isMobileMenuOpen && <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} style={{ display: 'block' }} />}
-
             {/* Sidebar Navigation */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon"> <img src={logo} alt=""  id='logogs'/> </div>
+                    <div className="brand-icon"> <img src={logo} alt="" id='logogs'/> </div>
                     <span className="brand-titles">Front-Office Desk</span>
                 </div>
 
@@ -146,7 +145,7 @@ export default function OfficeDashboard() {
                         <div className="nav-links-content"><DollarSign size={18} /><span>Fee Dues & Receipts</span></div>
                     </button>
 
-                    {/* ===== EXAM HALL ALLOCATION WITH SUBMENUS ===== */}
+                    {/* Exam Hall Allocation with Submenus */}
                     <div className="sidebar-submenu-group" style={{ marginBottom: '10px' }}>
                         <button
                             className="nav-links submenu-parent-btn"
@@ -197,7 +196,7 @@ export default function OfficeDashboard() {
                 </header>
 
                 <div className="dashboard-content">
-                    {/* 1. ENQUIRIES MODULE */}
+                    {/* ENQUIRIES MODULE */}
                     {activeTab === 'enquiries' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -228,9 +227,6 @@ export default function OfficeDashboard() {
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Target Grade / Class</label>
                                     <select className="custom-select full-width" value={enquiryForm.grade} onChange={e => setEnquiryForm({ ...enquiryForm, grade: e.target.value })}>
-                                        <option value="LKG">LKG / UKG</option>
-                                        <option value="1st Std">1st Std - 5th Std</option>
-                                        <option value="6th Std">6th Std - 8th Std</option>
                                         <option value="9th Std">9th Std</option>
                                         <option value="10th Std">10th Std</option>
                                         <option value="11th Std">11th Std</option>
@@ -262,185 +258,253 @@ export default function OfficeDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {enquiries.length === 0 ? (
-                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No active enquiries recorded.</td></tr>
-                                        ) : (
-                                            enquiries.map(item => (
-                                                <tr key={item.id}>
-                                                    <td><strong>{item.studentName}</strong></td>
-                                                    <td>{item.parentName}</td>
-                                                    <td>{item.phone}</td>
-                                                    <td><span className="task-target-tag">{item.grade}</span></td>
-                                                    <td>{item.notes || 'N/A'}</td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button className="delete-task-btn" onClick={() => handleDelete('office_enquiries', item.id)} title="Delete Entry"><X size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
+                                        {enquiries.map(item => (
+                                            <tr key={item.id}>
+                                                <td><strong>{item.studentName}</strong></td>
+                                                <td>{item.parentName}</td>
+                                                <td>{item.phone}</td>
+                                                <td><span className="task-target-tag">{item.grade}</span></td>
+                                                <td>{item.notes || 'N/A'}</td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('office_enquiries', item.id)} title="Delete Entry"><X size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
-                    {/* 2. FEES MODULE WITH CLASS-WISE DIRECTORY INTEGRATION */}
+                    {/* FEES MODULE WITH DRILL-DOWN & SET FEES */}
                     {activeTab === 'fees' && (
                         <div className="dash-card full-width">
-                            <div className="card-header">
+                            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h3>Fee Collection & Payment Desk</h3>
-                                    <p className="subtitle">Select class and pick student from the class-wise directory</p>
+                                    <h3>Fee Collection & Class Directory</h3>
+                                    <p className="subtitle">
+                                        {feeViewMode === 'classes' && "Select a class to view its sections and students"}
+                                        {feeViewMode === 'sections' && `Class: ${selectedFeeClass} — Choose a Section`}
+                                        {feeViewMode === 'students-fee' && `Class: ${selectedFeeClass} (${selectedFeeSection}) — Select Student or Assign Fee`}
+                                    </p>
                                 </div>
+                                {feeViewMode !== 'classes' && (
+                                    <button 
+                                        className="btn-primary" 
+                                        style={{ background: '#64748b', padding: '6px 12px', fontSize: '0.8rem' }}
+                                        onClick={() => {
+                                            if (feeViewMode === 'students-fee') setFeeViewMode('sections');
+                                            else if (feeViewMode === 'sections') { setFeeViewMode('classes'); setSelectedFeeClass(null); }
+                                        }}
+                                    >
+                                        <ArrowLeft size={14} /> Back
+                                    </button>
+                                )}
                             </div>
 
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('fee_collections', {
-                                    ...feeForm,
-                                    balance: Number(feeForm.totalFee) - Number(feeForm.paidAmount),
-                                    status: Number(feeForm.paidAmount) >= Number(feeForm.totalFee) ? 'Paid' : 'Partial'
-                                }, () => {
-                                    setFeeForm({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
-                                    setSelectedDirectoryClass('');
-                                });
-                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
+                            {/* VIEW MODE 1: CLASSES */}
+                            {feeViewMode === 'classes' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                    {uniqueClasses.map(clsName => {
+                                        const classStudents = studentsList.filter(s => (s.className || s.grade) === clsName);
+                                        const sections = Array.from(new Set(classStudents.map(s => s.sectionName || 'General').filter(Boolean)));
+                                        return (
+                                            <div 
+                                                key={clsName} 
+                                                onClick={() => { setSelectedFeeClass(clsName); setFeeViewMode('sections'); }}
+                                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                                            >
+                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#059669' }}></div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                                    <div style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669', padding: '8px', borderRadius: '8px' }}>
+                                                        <GraduationCap size={20} />
+                                                    </div>
+                                                    <h4 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>{clsName}</h4>
+                                                </div>
+                                                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0' }}>{sections.length} Sections • {classStudents.length} Students</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669' }}>1. Select Class Directory</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={selectedDirectoryClass}
-                                        onChange={e => {
-                                            setSelectedDirectoryClass(e.target.value);
-                                            setFeeForm(prev => ({ ...prev, admissionNo: '', studentName: '', class: e.target.value }));
-                                        }}
-                                    >
-                                        <option value="">-- Choose Class --</option>
-                                        {uniqueClasses.map(className => (
-                                            <option key={className} value={className}>{className}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* VIEW MODE 2: SECTIONS */}
+                            {feeViewMode === 'sections' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                    {(() => {
+                                        const classStudents = studentsList.filter(s => (s.className || s.grade) === selectedFeeClass);
+                                        const sectionsMap = {};
+                                        classStudents.forEach(s => {
+                                            const sec = s.sectionName || 'General';
+                                            if (!sectionsMap[sec]) sectionsMap[sec] = [];
+                                            sectionsMap[sec].push(s);
+                                        });
 
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669' }}>2. Select Student from Class</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        disabled={!selectedDirectoryClass}
-                                        onChange={e => {
-                                            const selectedId = e.target.value;
-                                            if (!selectedId) return;
-                                            const foundStudent = studentsList.find(s => s.id === selectedId);
-                                            if (foundStudent) {
-                                                setFeeForm({
-                                                    ...feeForm,
-                                                    admissionNo: foundStudent.admissionNo || '',
-                                                    studentName: foundStudent.name || '',
-                                                    class: `${foundStudent.className || foundStudent.grade || ''} ${foundStudent.sectionName ? `- ${foundStudent.sectionName}` : ''}`.trim()
-                                                });
-                                            }
-                                        }}
-                                        defaultValue=""
-                                    >
-                                        <option value="" disabled>
-                                            {selectedDirectoryClass ? `-- Select Student (${filteredStudentsByClass.length} available) --` : '-- Select a class first --'}
-                                        </option>
-                                        {filteredStudentsByClass.map(st => (
-                                            <option key={st.id} value={st.id}>
-                                                {st.name} (Adm: #{st.admissionNo}) {st.sectionName ? `[Sec: ${st.sectionName}]` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        return Object.entries(sectionsMap).map(([secName, secStudents]) => (
+                                            <div 
+                                                key={secName} 
+                                                onClick={() => { setSelectedFeeSection(secName); setFeeViewMode('students-fee'); }}
+                                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                                            >
+                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#1e293b' }}>Section: {secName}</h4>
+                                                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>{secStudents.length} Students Enrolled</p>
+                                            </div>
+                                        ));
+                                    })()}
                                 </div>
+                            )}
 
+                            {/* VIEW MODE 3: STUDENTS & FEE ASSIGNMENT FORM */}
+                            {feeViewMode === 'students-fee' && (
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Admission No</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. ADM001" value={feeForm.admissionNo} onChange={e => setFeeForm({ ...feeForm, admissionNo: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Student Full Name</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="Student Name" value={feeForm.studentName} onChange={e => setFeeForm({ ...feeForm, studentName: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Class</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 10th Std" value={feeForm.class} onChange={e => setFeeForm({ ...feeForm, class: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Term</label>
-                                    <select className="custom-select full-width" value={feeForm.term} onChange={e => setFeeForm({ ...feeForm, term: e.target.value })}>
-                                        <option value="Term 1">Term 1</option>
-                                        <option value="Term 2">Term 2</option>
-                                        <option value="Term 3">Term 3</option>
-                                        <option value="Annual Full Fee">Annual Full Fee</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Total Fee (₹)</label>
-                                    <input type="number" className="table-input full-width-input" placeholder="Total Amount" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Paid Amount (₹)</label>
-                                    <input type="number" className="table-input full-width-input" placeholder="Paid Amount" value={feeForm.paidAmount} onChange={e => setFeeForm({ ...feeForm, paidAmount: e.target.value })} required />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Record Payment & Ledger
-                                    </button>
-                                </div>
-                            </form>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h4 style={{ margin: 0 }}>Students in {selectedFeeClass} - Section {selectedFeeSection}</h4>
+                                    </div>
 
+                                    <div className="table-responsive" style={{ marginBottom: '2rem' }}>
+                                        <table className="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Adm No</th>
+                                                    <th>Student Name</th>
+                                                    <th>Parent Phone</th>
+                                                    <th style={{ textAlign: 'right' }}>Set Fee for Student</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {studentsList
+                                                    .filter(s => (s.className || s.grade) === selectedFeeClass && (s.sectionName || 'General') === selectedFeeSection)
+                                                    .map(st => (
+                                                        <tr key={st.id}>
+                                                            <td><code>#{st.admissionNo || 'N/A'}</code></td>
+                                                            <td><strong>{st.name}</strong></td>
+                                                            <td>{st.phone || st.parentPhone || 'N/A'}</td>
+                                                            <td style={{ textAlign: 'right' }}>
+                                                                <button 
+                                                                    className="btn-save-grade" 
+                                                                    onClick={() => {
+                                                                        setFeeForm({
+                                                                            admissionNo: st.admissionNo || '',
+                                                                            studentName: st.name || '',
+                                                                            class: `${selectedFeeClass} - ${selectedFeeSection}`,
+                                                                            totalFee: '',
+                                                                            paidAmount: '0',
+                                                                            term: 'Term 1'
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    Select & Set Fee
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Set Fee Entry Form */}
+                                    <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('fee_collections', {
+                                            ...feeForm,
+                                            balance: Number(feeForm.totalFee) - Number(feeForm.paidAmount),
+                                            status: Number(feeForm.paidAmount) >= Number(feeForm.totalFee) ? 'Paid' : 'Pending'
+                                        }, () => {
+                                            setFeeForm({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
+                                            alert("Fee dues assigned successfully! Student dashboard alert triggered.");
+                                        });
+                                    }} className="form-grid" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                                        <h4 style={{ gridColumn: '1 / -1', margin: '0 0 5px 0' }}>Set Dues for: <span style={{ color: '#059669' }}>{feeForm.studentName || 'None Selected'}</span></h4>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Admission No</label>
+                                            <input type="text" className="table-input full-width-input" value={feeForm.admissionNo} onChange={e => setFeeForm({ ...feeForm, admissionNo: e.target.value })} required />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Student Name</label>
+                                            <input type="text" className="table-input full-width-input" value={feeForm.studentName} onChange={e => setFeeForm({ ...feeForm, studentName: e.target.value })} required />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Term</label>
+                                            <select className="custom-select full-width" value={feeForm.term} onChange={e => setFeeForm({ ...feeForm, term: e.target.value })}>
+                                                <option value="Term 1">Term 1</option>
+                                                <option value="Term 2">Term 2</option>
+                                                <option value="Annual">Annual Full Fee</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Total Fee Amount (₹)</label>
+                                            <input type="number" className="table-input full-width-input" placeholder="Total Amount" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
+                                        </div>
+                                        <div style={{ gridColumn: '1 / -1' }}>
+                                            <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                                <PlusCircle size={15} /> Publish Fee Dues to Student
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+
+                            {/* Fee Collections Master List & Quick Mark Paid */}
                             <h4>Fee Ledgers & Records ({feesList.length})</h4>
-                            <div className="table-responsive">
+                            <div className="table-responsive" style={{ marginBottom: '2rem' }}>
                                 <table className="custom-table">
                                     <thead>
                                         <tr>
                                             <th>Adm No</th>
                                             <th>Student Name</th>
-                                            <th>Class</th>
                                             <th>Term</th>
-                                            <th>Paid / Total</th>
-                                            <th>Balance Due</th>
+                                            <th>Total / Paid</th>
+                                            <th>Balance</th>
                                             <th>Status</th>
-                                            <th style={{ textAlign: 'right' }}>Action</th>
+                                            <th style={{ textAlign: 'right' }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {feesList.length === 0 ? (
-                                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No fee transactions logged.</td></tr>
-                                        ) : (
-                                            feesList.map(item => (
-                                                <tr key={item.id}>
-                                                    <td><code>#{item.admissionNo}</code></td>
-                                                    <td><strong>{item.studentName}</strong></td>
-                                                    <td>{item.class}</td>
-                                                    <td>{item.term}</td>
-                                                    <td>₹{item.paidAmount} / ₹{item.totalFee}</td>
-                                                    <td style={{ color: item.balance > 0 ? 'var(--accent-rose)' : 'var(--accent-emerald)', fontWeight: 700 }}>₹{item.balance}</td>
-                                                    <td>
-                                                        <span className={`status-badge ${item.status === 'Paid' ? 'status-present' : 'status-absent'}`}>
-                                                            {item.status}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button className="delete-task-btn" onClick={() => handleDelete('fee_collections', item.id)} title="Delete Record"><X size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
+                                        {feesList.map(item => (
+                                            <tr key={item.id}>
+                                                <td><code>#{item.admissionNo}</code></td>
+                                                <td><strong>{item.studentName}</strong></td>
+                                                <td>{item.term}</td>
+                                                <td>₹{item.totalFee} / ₹{item.paidAmount}</td>
+                                                <td style={{ color: item.balance > 0 ? 'red' : 'green', fontWeight: 700 }}>₹{item.balance}</td>
+                                                <td>
+                                                    <span className={`status-badge ${item.status === 'Paid' ? 'status-present' : 'status-absent'}`}>
+                                                        {item.status || 'Pending'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    {item.status !== 'Paid' && (
+                                                        <button 
+                                                            className="btn-save-grade" 
+                                                            onClick={async () => {
+                                                                await updateDoc(doc(db, 'fee_collections', item.id), { 
+                                                                    paidAmount: item.totalFee, 
+                                                                    balance: 0, 
+                                                                    status: 'Paid' 
+                                                                });
+                                                                alert("Marked as Paid! Receipt generated for student.");
+                                                            }}
+                                                        >
+                                                            <Check size={13} /> Mark Paid & Send Receipt
+                                                        </button>
+                                                    )}
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('fee_collections', item.id)} title="Delete"><X size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
-                    {/* 3. EXAM HALL ALLOCATION - STUDENTS SUBMENU VIEW */}
+                    {/* EXAM HALLS MODULE - STUDENTS */}
                     {activeTab === 'exam-halls' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
-                                    <h3>Exam Hall & Seating Allocations (Students)</h3>
-                                    <p className="subtitle">Assign examination rooms and seating capacities for student groups</p>
+                                    <h3>Exam Hall Allocation - Students</h3>
+                                    <p className="subtitle">Assign students to specific examination seating arrangements</p>
                                 </div>
                             </div>
 
@@ -451,209 +515,217 @@ export default function OfficeDashboard() {
                                 );
                             }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall / Room Number</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101 / Block B" value={hallForm.hallNo} onChange={e => setHallForm({ ...hallForm, hallNo: e.target.value })} required />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall No / Room</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101" value={hallForm.hallNo} onChange={e => setHallForm({ ...hallForm, hallNo: e.target.value })} required />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Title / Subject</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid-Term Mathematics" value={hallForm.examName} onChange={e => setHallForm({ ...hallForm, examName: e.target.value })} required />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Name</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid Term Exam" value={hallForm.examName} onChange={e => setHallForm({ ...hallForm, examName: e.target.value })} required />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Target Class / Grade</label>
-                                    <select className="custom-select full-width" value={hallForm.targetClass} onChange={e => setHallForm({ ...hallForm, targetClass: e.target.value })} required>
-                                        <option value="">Select Target Class</option>
-                                        {uniqueClasses.map(cls => (<option key={cls} value={cls}>{cls}</option>))}
-                                        <option value="All Classes">All Classes Combined</option>
-                                    </select>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Target Class</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 10th Std" value={hallForm.targetClass} onChange={e => setHallForm({ ...hallForm, targetClass: e.target.value })} required />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Seating Capacity</label>
-                                    <input type="number" className="table-input full-width-input" placeholder="e.g. 30 seats" value={hallForm.capacity} onChange={e => setHallForm({ ...hallForm, capacity: e.target.value })} required />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Capacity</label>
+                                    <input type="number" className="table-input full-width-input" placeholder="e.g. 30" value={hallForm.capacity} onChange={e => setHallForm({ ...hallForm, capacity: e.target.value })} required />
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Assigned Invigilator</label>
-                                    <select className="custom-select full-width" value={hallForm.invigilator} onChange={e => setHallForm({ ...hallForm, invigilator: e.target.value })} required>
-                                        <option value="">Select Faculty Member</option>
-                                        {staffList.map(stf => (<option key={stf.id} value={stf.name}>{stf.name} ({stf.department})</option>))}
-                                    </select>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Invigilator Assigned</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="Faculty Name" value={hallForm.invigilator} onChange={e => setHallForm({ ...hallForm, invigilator: e.target.value })} required />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Allocate Exam Hall
+                                        <PlusCircle size={15} /> Save Student Hall Allocation
                                     </button>
                                 </div>
                             </form>
 
-                            <h4>Active Student Exam Hall Allocations ({examHalls.length})</h4>
+                            <h4>Allocated Examination Rooms ({examHalls.length})</h4>
                             <div className="table-responsive">
                                 <table className="custom-table">
                                     <thead>
                                         <tr>
-                                            <th>Hall / Room</th>
-                                            <th>Exam Title</th>
-                                            <th>Target Class</th>
+                                            <th>Hall No</th>
+                                            <th>Exam Name</th>
+                                            <th>Class</th>
                                             <th>Capacity</th>
-                                            <th>Invigilator Assigned</th>
+                                            <th>Invigilator</th>
                                             <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {examHalls.length === 0 ? (
-                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No exam halls allocated yet.</td></tr>
-                                        ) : (
-                                            examHalls.map(hall => (
-                                                <tr key={hall.id}>
-                                                    <td><strong>{hall.hallNo}</strong></td>
-                                                    <td>{hall.examName}</td>
-                                                    <td><span className="task-target-tag">{hall.targetClass}</span></td>
-                                                    <td>{hall.capacity} Students</td>
-                                                    <td>{hall.invigilator}</td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', hall.id)} title="Remove Allocation"><X size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
+                                        {examHalls.map(item => (
+                                            <tr key={item.id}>
+                                                <td><strong>{item.hallNo}</strong></td>
+                                                <td>{item.examName}</td>
+                                                <td><span className="task-target-tag">{item.targetClass}</span></td>
+                                                <td>{item.capacity} Seats</td>
+                                                <td>{item.invigilator}</td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', item.id)} title="Delete"><X size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
-                    {/* 4. EXAM HALL ALLOCATION - STAFF SUBMENU VIEW */}
+                    {/* EXAM HALLS MODULE - STAFF */}
                     {activeTab === 'exam-staff' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
-                                    <h3>Exam Duty & Invigilation Roster (Staff)</h3>
-                                    <p className="subtitle">Overview of staff member exam duties across different examination halls</p>
-                                </div>
-                            </div>
-
-                            <div className="table-responsive" style={{ marginTop: '0.75rem' }}>
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Faculty Member</th>
-                                            <th>Assigned Hall</th>
-                                            <th>Exam Title</th>
-                                            <th>Target Class</th>
-                                            <th style={{ textAlign: 'right' }}>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {examHalls.length === 0 ? (
-                                            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No staff duties assigned through hall allocations yet.</td></tr>
-                                        ) : (
-                                            examHalls.map(hall => (
-                                                <tr key={hall.id}>
-                                                    <td><strong>{hall.invigilator || 'Unassigned'}</strong></td>
-                                                    <td>{hall.hallNo}</td>
-                                                    <td>{hall.examName}</td>
-                                                    <td><span className="task-target-tag">{hall.targetClass}</span></td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <span className="status-badge status-present">Assigned Duty</span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 5. STAFF LEAVE APPROVALS */}
-                    {activeTab === 'leaves' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Staff Attendance & Leave Approvals</h3>
-                                    <p className="subtitle">Review casual or medical leave requests submitted by faculty</p>
-                                </div>
-                            </div>
-
-                            <div className="table-responsive" style={{ marginTop: '0.75rem' }}>
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Staff Name</th>
-                                            <th>Leave Type</th>
-                                            <th>From Date</th>
-                                            <th>To Date</th>
-                                            <th>Reason</th>
-                                            <th>Status</th>
-                                            <th style={{ textAlign: 'right' }}>Decision Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {leaveRequests.length === 0 ? (
-                                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No pending leave requests.</td></tr>
-                                        ) : (
-                                            leaveRequests.map(leave => (
-                                                <tr key={leave.id}>
-                                                    <td><strong>{leave.staffName}</strong></td>
-                                                    <td>{leave.leaveType || 'Casual Leave'}</td>
-                                                    <td>{leave.fromDate || leave.startDate || leave.from || 'N/A'}</td>
-                                                    <td>{leave.toDate || leave.endDate || leave.to || 'N/A'}</td>
-                                                    <td>{leave.reason}</td>
-                                                    <td>
-                                                        <span className={`status-badge ${leave.status === 'Approved' ? 'status-present' : leave.status === 'Rejected' ? 'status-absent' : 'status-present'}`}>
-                                                            {leave.status || 'Pending'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <div className="leave-action-btns">
-                                                            <button className="btn-approve-leave" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Approved' })} title="Approve Leave">
-                                                                <CheckCircle size={14} /> Approve
-                                                            </button>
-                                                            <button className="btn-reject-leave" onClick={() => updateDoc(doc(db, 'staff_leaves', leave.id), { status: 'Rejected' })} title="Reject Leave">
-                                                                <XCircle size={14} /> Reject
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 6. INTERNAL TASK BOARD */}
-                    {activeTab === 'tasks' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Internal Office Task Board</h3>
-                                    <p className="subtitle">Assign administrative tasks or office operations to personnel</p>
+                                    <h3>Exam Hall Allocation - Staff Duties</h3>
+                                    <p className="subtitle">Assign faculty invigilation duties across exam halls</p>
                                 </div>
                             </div>
 
                             <form onSubmit={(e) => {
                                 e.preventDefault();
-                                handlePublish('office_tasks', { ...taskForm, status: 'Open' }, () =>
+                                handlePublish('staff_exam_halls', staffHallForm, () =>
+                                    setStaffHallForm({ hallNo: '', examName: '', staffName: '', dutyTime: '' })
+                                );
+                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall No / Room</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101" value={staffHallForm.hallNo} onChange={e => setStaffHallForm({ ...staffHallForm, hallNo: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Name</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid Term Exam" value={staffHallForm.examName} onChange={e => setStaffHallForm({ ...staffHallForm, examName: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Staff Member</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="Faculty Name" value={staffHallForm.staffName} onChange={e => setStaffHallForm({ ...staffHallForm, staffName: e.target.value })} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Duty Time / Slot</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 09:30 AM - 12:30 PM" value={staffHallForm.dutyTime} onChange={e => setStaffHallForm({ ...staffHallForm, dutyTime: e.target.value })} required />
+                                </div>
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                        <PlusCircle size={15} /> Assign Staff Duty
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4>Assigned Staff Invigilation Duties ({staffExamHalls.length})</h4>
+                            <div className="table-responsive">
+                                <table className="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Hall No</th>
+                                            <th>Exam Name</th>
+                                            <th>Staff Member</th>
+                                            <th>Duty Time</th>
+                                            <th style={{ textAlign: 'right' }}>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {staffExamHalls.map(item => (
+                                            <tr key={item.id}>
+                                                <td><strong>{item.hallNo}</strong></td>
+                                                <td>{item.examName}</td>
+                                                <td>{item.staffName}</td>
+                                                <td><span className="task-target-tag">{item.dutyTime}</span></td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('staff_exam_halls', item.id)} title="Delete"><X size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STAFF LEAVE APPROVALS */}
+                    {activeTab === 'leaves' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Staff Leave Applications & Approvals</h3>
+                                    <p className="subtitle">Review and approve or reject staff leave requests</p>
+                                </div>
+                            </div>
+
+                            <div className="table-responsive">
+                                <table className="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Staff Name</th>
+                                            <th>Leave Type</th>
+                                            <th>From - To</th>
+                                            <th>Reason</th>
+                                            <th>Status</th>
+                                            <th style={{ textAlign: 'right' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {leaveRequests.length === 0 ? (
+                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b' }}>No pending leave requests.</td></tr>
+                                        ) : (
+                                            leaveRequests.map(leave => (
+                                                <tr key={leave.id}>
+                                                    <td><strong>{leave.staffName || 'Faculty Member'}</strong></td>
+                                                    <td>{leave.leaveType || 'Casual Leave'}</td>
+                                                    <td>{leave.fromDate} to {leave.toDate}</td>
+                                                    <td>{leave.reason || 'Personal'}</td>
+                                                    <td>
+                                                        <span className={`status-badge ${leave.status === 'Approved' ? 'status-present' : leave.status === 'Rejected' ? 'status-absent' : ''}`}>
+                                                            {leave.status || 'Pending'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')} style={{ background: '#059669', padding: '4px 8px' }}>
+                                                            <Check size={12} /> Approve
+                                                        </button>
+                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Rejected')} style={{ background: '#dc2626', padding: '4px 8px' }}>
+                                                            <X size={12} /> Reject
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* INTERNAL TASK BOARD */}
+                    {activeTab === 'tasks' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Front Office Internal Task Board</h3>
+                                    <p className="subtitle">Manage daily front-desk administrative tasks</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handlePublish('office_tasks', taskForm, () =>
                                     setTaskForm({ title: '', assignedTo: '', priority: 'Normal', deadline: '' })
                                 );
                             }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Task Title / Objective</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Audit fee collection receipts" value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} required />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Task Title</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="Task description..." value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} required />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Assign To Staff</label>
-                                    <select className="custom-select full-width" value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} required>
-                                        <option value="">Select Staff Member</option>
-                                        {staffList.map(stf => (<option key={stf.id} value={stf.name}>{stf.name} ({stf.department})</option>))}
-                                    </select>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Assigned To</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="Staff Name" value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} required />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Priority Level</label>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Priority</label>
                                     <select className="custom-select full-width" value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
-                                        <option value="Normal">Normal Priority</option>
-                                        <option value="Urgent">Urgent Priority</option>
+                                        <option value="Normal">Normal</option>
+                                        <option value="High">High Priority</option>
+                                        <option value="Urgent">Urgent</option>
                                     </select>
                                 </div>
                                 <div>
@@ -662,56 +734,35 @@ export default function OfficeDashboard() {
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Assign Task
+                                        <PlusCircle size={15} /> Add Task
                                     </button>
                                 </div>
                             </form>
 
-                            <h4>Assigned Task Directory ({officeTasks.length})</h4>
+                            <h4>Active Office Tasks ({officeTasks.length})</h4>
                             <div className="table-responsive">
                                 <table className="custom-table">
                                     <thead>
                                         <tr>
-                                            <th>Task Objective</th>
+                                            <th>Task Title</th>
                                             <th>Assigned To</th>
                                             <th>Priority</th>
                                             <th>Deadline</th>
-                                            <th>Status</th>
-                                            <th style={{ textAlign: 'right' }}>Actions</th>
+                                            <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {officeTasks.length === 0 ? (
-                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>No active office tasks assigned.</td></tr>
-                                        ) : (
-                                            officeTasks.map(task => (
-                                                <tr key={task.id}>
-                                                    <td><strong>{task.title}</strong></td>
-                                                    <td>{task.assignedTo}</td>
-                                                    <td>
-                                                        <span style={{ color: task.priority === 'Urgent' ? 'var(--accent-rose)' : '#059669', fontWeight: 700 }}>
-                                                            {task.priority}
-                                                        </span>
-                                                    </td>
-                                                    <td>{task.deadline}</td>
-                                                    <td>
-                                                        <span className={`status-badge ${task.status === 'Completed' ? 'status-present' : 'status-absent'}`}>
-                                                            {task.status}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                            <button className="btn-save-grade" onClick={() => updateDoc(doc(db, 'office_tasks', task.id), { status: 'Completed' })} title="Mark Completed">
-                                                                <Check size={13} /> Complete
-                                                            </button>
-                                                            <button className="delete-task-btn" onClick={() => handleDelete('office_tasks', task.id)} title="Delete Task">
-                                                                <X size={14} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
+                                        {officeTasks.map(item => (
+                                            <tr key={item.id}>
+                                                <td><strong>{item.title}</strong></td>
+                                                <td>{item.assignedTo}</td>
+                                                <td><span className="task-target-tag">{item.priority}</span></td>
+                                                <td>{item.deadline}</td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('office_tasks', item.id)} title="Delete Task"><X size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

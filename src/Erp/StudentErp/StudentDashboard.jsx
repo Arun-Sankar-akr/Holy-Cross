@@ -6,9 +6,10 @@ import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
     Menu, X, Clock, FileText, User, AlertCircle, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
-    ChevronRight, BarChart2, Filter
+    ChevronRight, BarChart2, Filter, DollarSign, Receipt
 } from 'lucide-react';
 import './StudentDashboard.css';
+import logo from "../../assets/logo.png"
 
 export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
@@ -19,9 +20,14 @@ export default function StudentDashboard() {
     // Live Synced States
     const [timetableList, setTimetableList] = useState([]);
     const [liveStudentRecord, setLiveStudentRecord] = useState(null);
-    const [announcements, setAnnouncements] = useState([]);
+    const [announcementsList, setAnnouncementsList] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
+    const [feeRecords, setFeeRecords] = useState([]);
+    const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
+
+    // Selected Receipt state for printing the official fee receipt view
+    const [selectedPrintReceipt, setSelectedPrintReceipt] = useState(null);
 
     // Attendance Table Filters
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
@@ -262,7 +268,7 @@ export default function StudentDashboard() {
         };
     }, []);
 
-    // 2. Real-time Live Synchronized Records
+    // 2. Real-time Live Synchronized Records & Fees Listeners
     useEffect(() => {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), (snap) => {
             const current = snap.docs.find(doc => {
@@ -278,7 +284,7 @@ export default function StudentDashboard() {
         });
 
         const unsubAnnounce = onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snap) => {
-            setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setAnnouncementsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
         const unsubAssignments = onSnapshot(collection(db, 'class_assignments'), (snap) => {
@@ -292,11 +298,26 @@ export default function StudentDashboard() {
             setSubmissionsList(mySubmissions);
         });
 
+        const unsubFees = onSnapshot(collection(db, 'fee_collections'), (snap) => {
+            const allFees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const myFees = allFees.filter(f =>
+                cleanString(f.admissionNo) === cleanString(studentData.rollNo) ||
+                cleanString(f.studentName) === cleanString(studentData.name)
+            );
+            setFeeRecords(myFees);
+
+            const hasUnpaid = myFees.some(f => f.status !== 'Paid' && Number(f.balance) > 0);
+            if (hasUnpaid) {
+                setShowFeeAlertModal(true);
+            }
+        });
+
         return () => {
             unsubStudents();
             unsubAnnounce();
             unsubAssignments();
             unsubSubmissions();
+            unsubFees();
         };
     }, [studentData]);
 
@@ -343,20 +364,19 @@ export default function StudentDashboard() {
         };
     });
 
-    const filteredMarksEntries = selectedExamView === 'All' 
-        ? marksEntries 
+    const filteredMarksEntries = selectedExamView === 'All'
+        ? marksEntries
         : marksEntries.filter(m => cleanString(m.examName) === cleanString(selectedExamView));
 
     const totalScore = marksEntries.reduce((acc, curr) => acc + curr.score, 0);
     const averageScore = marksEntries.length > 0 ? (totalScore / marksEntries.length).toFixed(1) : 'N/A';
 
-    // Attendance Calculations (Gatekeeping: Show only if staff submitted)
+    // Attendance Calculations
     const hasStaffSubmittedAttendance = Boolean(liveStudentRecord?.lastAttendanceDate || liveStudentRecord?.status);
     const currentAttendanceStatus = hasStaffSubmittedAttendance ? (liveStudentRecord?.status || 'present') : 'pending';
     const rawAttendanceRate = hasStaffSubmittedAttendance ? (liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68)) : 0;
     const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
 
-    // Detailed attendance log records from staff submission
     const attendanceLogs = hasStaffSubmittedAttendance ? [
         {
             id: 1,
@@ -374,34 +394,37 @@ export default function StudentDashboard() {
         return matchesStatus && matchesDate;
     });
 
+    const pendingFeesList = feeRecords.filter(f => f.status !== 'Paid');
+    const paidFeesList = feeRecords.filter(f => f.status === 'Paid');
+
     const stats = [
-        { 
-            title: 'Attendance Rate', 
-            value: hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : 'Pending', 
+        {
+            title: 'Attendance Rate',
+            value: hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : 'Pending',
             icon: isDefaulter ? AlertTriangle : CheckCircle,
             color: isDefaulter ? 'rose' : 'emerald',
             badge: hasStaffSubmittedAttendance ? (isDefaulter ? 'Below 75% Minimum' : 'Compliant') : 'Awaiting Faculty'
         },
-        { 
-            title: 'Coursework & PDFs', 
-            value: `${studentAssignments.length} Tasks`, 
-            icon: Layers, 
-            color: 'amber',
-            badge: `${submissionsList.length} Turned In` 
+        {
+            title: 'Fee Status',
+            value: pendingFeesList.length > 0 ? `₹${pendingFeesList.reduce((acc, curr) => acc + Number(curr.balance), 0)} Due` : 'Paid',
+            icon: DollarSign,
+            color: pendingFeesList.length > 0 ? 'rose' : 'emerald',
+            badge: pendingFeesList.length > 0 ? 'Dues Pending' : 'All Cleared'
         },
-        { 
-            title: 'Published Exam Scores', 
-            value: averageScore !== 'N/A' ? `${averageScore}%` : 'Pending', 
-            icon: Award, 
+        {
+            title: 'Published Exam Scores',
+            value: averageScore !== 'N/A' ? `${averageScore}%` : 'Pending',
+            icon: Award,
             color: 'indigo',
-            badge: `${marksEntries.length} Subjects` 
+            badge: `${marksEntries.length} Subjects`
         },
-        { 
-            title: 'Class Routine', 
-            value: `${studentSchedule.length} Sessions`, 
-            icon: BookOpen, 
+        {
+            title: 'Class Routine',
+            value: `${studentSchedule.length} Sessions`,
+            icon: BookOpen,
             color: 'cyan',
-            badge: 'Live Matrix' 
+            badge: 'Live Matrix'
         },
     ];
 
@@ -411,6 +434,196 @@ export default function StudentDashboard() {
 
     return (
         <div className="staff-style-dashboard">
+            {/* INLINE CSS TO PREVENT OVERPADDING & FORCE SINGLE-PAGE A4 PRINT FIT WITH A CRISP BORDER */}
+            <style>{`
+                @media print {
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    .receipt-modal-overlay, .receipt-modal-overlay * {
+                        visibility: visible !important;
+                    }
+                    .receipt-modal-overlay {
+                        position: fixed !important;
+                        left: 0 !important;
+                        top: -50px !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        background: white !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        overflow: hidden !important;
+                        z-index: 99999 !important;
+                        padding: 0 !important;
+                    }
+                    .official-receipt-card {
+                        box-shadow: none !important;
+                        border: 2px solid #0f172a !important;
+                        width: 100% !important;
+                        max-width: 180mm !important;
+                        padding: 28mm 10mm 70mm 10mm !important;
+                        margin: 0 auto !important;
+                        transform: scale(0.98);
+                    }
+                    .receipt-modal-overlay button {
+                        display: none !important;
+                    }
+                    @page {
+                        size: A4 portrait;
+                        margin: 5mm;
+                    }
+                }
+            `}</style>
+
+            {/* POPUP MODAL FOR OFFICIAL FEE RECEIPT VIEW & PRINT */}
+            {selectedPrintReceipt && (
+                <div className="receipt-modal-overlay" style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, overflowY: 'auto', padding: '15px'
+                }}>
+                    <div className="official-receipt-card" style={{
+                        background: '#ffffff', width: '100%', maxWidth: '580px', padding: '20px 24px', borderRadius: '12px',
+                        border: '2px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', position: 'relative', color: '#1e293b', fontFamily: 'Arial, sans-serif'
+                    }}>
+                        <button
+                            onClick={() => setSelectedPrintReceipt(null)}
+                            style={{ position: 'absolute', top: '12px', right: '12px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                            <X size={16} />
+                        </button>
+
+                        {/* RECEIPT HEADER WITH UPLOADED SCHOOL EMBLEM & EXACT SCHOOL NAME */}
+                        <div style={{ textAlign: 'center', borderBottom: '2px solid #cbd5e1', paddingBottom: '10px', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '4px' }}>
+                                <img
+                                    src={logo}
+                                    alt="Holy Cross Emblem"
+                                    style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0284c7' }}
+                                />
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    HOLY CROSS MATRIC. HR. SEC. SCHOOL
+                                </h2>
+                            </div>
+                            <p style={{ margin: '2px 0', fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>Somarasampettai, Tiruchirapalli 102</p>
+                            <div style={{ marginTop: '6px', display: 'inline-block', background: '#f0fdf4', color: '#166534', padding: '2px 10px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700, border: '1px solid #bbf7d0' }}>
+                                OFFICIAL FEE PAYMENT RECEIPT
+                            </div>
+                        </div>
+
+                        {/* RECEIPT META */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '10px', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px' }}>
+                            <div><strong>Receipt No:</strong> RCPT-{selectedPrintReceipt.id ? selectedPrintReceipt.id.substring(0, 8).toUpperCase() : '2026/001'}</div>
+                            <div><strong>Date:</strong> {selectedPrintReceipt.date || new Date().toLocaleDateString()}</div>
+                        </div>
+
+                        {/* STUDENT & PAYMENT DETAILS BREAKDOWN */}
+                        <div style={{ marginBottom: '12px' }}>
+                            <h4 style={{ fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', marginBottom: '6px', color: '#334155' }}>Student Details</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.78rem', marginBottom: '10px' }}>
+                                <div><strong>Student Name:</strong> {studentData.name}</div>
+                                <div><strong>Admission Number:</strong> {studentData.rollNo || 'N/A'}</div>
+                                <div><strong>Class:</strong> {studentData.grade || 'N/A'}</div>
+                                <div><strong>Section:</strong> {studentData.section || 'N/A'}</div>
+                            </div>
+
+                            <h4 style={{ fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', marginBottom: '6px', color: '#334155' }}>Transaction Details</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.78rem' }}>
+                                <div><strong>Which Fees / Term:</strong> {selectedPrintReceipt.term || 'Term 1'}</div>
+                                <div><strong>Transaction ID:</strong> TXN-{Math.floor(100000000 + Math.random() * 900000000)}</div>
+                                <div><strong>Payment Mode:</strong> Cash / Online Verified</div>
+                                <div><strong>Status:</strong> <span style={{ color: '#16a34a', fontWeight: 700 }}>SUCCESS</span></div>
+                            </div>
+                        </div>
+
+                        {/* TABLE SUMMARY */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px', fontSize: '0.78rem' }}>
+                            <thead>
+                                <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
+                                    <th style={{ padding: '5px 8px', border: '1px solid #cbd5e1', width: '40px' }}>S.No</th>
+                                    <th style={{ padding: '5px 8px', border: '1px solid #cbd5e1' }}>Fee Description</th>
+                                    <th style={{ padding: '5px 8px', border: '1px solid #cbd5e1', textAlign: 'right' }}>Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style={{ padding: '5px 8px', border: '1px solid #cbd5e1' }}>1</td>
+                                    <td style={{ padding: '5px 8px', border: '1px solid #cbd5e1' }}>{selectedPrintReceipt.term || 'Term 1'}</td>
+                                    <td style={{ padding: '5px 8px', border: '1px solid #cbd5e1', textAlign: 'right' }}>₹{selectedPrintReceipt.totalFee || selectedPrintReceipt.paidAmount || '0.00'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '8px 10px', borderRadius: '6px', marginBottom: '14px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Total Amount Paid:</span>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0284c7' }}>₹{selectedPrintReceipt.totalFee || selectedPrintReceipt.paidAmount || '0.00'}</span>
+                        </div>
+
+                        {/* SIGNATURES & FOOTER */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.74rem', color: '#64748b' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ borderTop: '1px solid #94a3b8', width: '130px', paddingTop: '3px', margin: '0 auto' }}>Student Signature</div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ borderTop: '1px solid #94a3b8', width: '130px', paddingTop: '3px', margin: '0 auto' }}>Authorized Signatory</div>
+                            </div>
+                        </div>
+
+                        {/* ACTION BUTTONS */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                            <button
+                                onClick={() => window.print()}
+                                style={{ flex: 1, background: '#0284c7', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                <Printer size={15} /> Print / Download Receipt
+                            </button>
+                            <button
+                                onClick={() => setSelectedPrintReceipt(null)}
+                                style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* POPUP ALERT FOR PENDING FEE DUES */}
+            {showFeeAlertModal && pendingFeesList.length > 0 && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
+                }}>
+                    <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h3 style={{ margin: 0, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <DollarSign size={22} /> Fee Dues Alert!
+                            </h3>
+                            <button onClick={() => setShowFeeAlertModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#475569' }}>
+                            Dear <strong>{studentData.name}</strong>, you have pending fee balances assigned by the front office desk. Please clear them at the office counter.
+                        </p>
+                        <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', margin: '1rem 0' }}>
+                            {pendingFeesList.map(fee => (
+                                <div key={fee.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                    <span>{fee.term}:</span>
+                                    <strong style={{ color: '#dc2626' }}>₹{fee.balance} Pending</strong>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => { setShowFeeAlertModal(false); setActiveTab('fees-history'); }}
+                            style={{ width: '100%', background: '#059669', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                            View Fee History & Receipts
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="staff-mobile-toggle-bar">
                 <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -444,44 +657,50 @@ export default function StudentDashboard() {
                     </div>
 
                     <nav className="staff-nav-list">
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'overview' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                         >
                             <BookOpen size={16} /><span>Dashboard Overview</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'attendance' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'attendance' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('attendance'); setIsMobileMenuOpen(false); }}
                         >
                             <BarChart2 size={16} /><span>Attendance Record</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'assignments' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'assignments' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
                         >
                             <Layers size={16} /><span>PDF Tasks & Uploads</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
                         >
                             <Calendar size={16} /><span>Class Routine Table</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'marks' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'marks' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('marks'); setIsMobileMenuOpen(false); }}
                         >
                             <Award size={16} /><span>Examination Marks</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'submissions' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'fees-history' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('fees-history'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Receipt size={16} /><span>Fees History and Receipt</span>
+                        </button>
+                        <button
+                            className={`staff-nav-item ${activeTab === 'submissions' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('submissions'); setIsMobileMenuOpen(false); }}
                         >
                             <FileCheck size={16} /><span>Submission History</span>
                         </button>
-                        <button 
-                            className={`staff-nav-item ${activeTab === 'notices' ? 'active' : ''}`} 
+                        <button
+                            className={`staff-nav-item ${activeTab === 'notices' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('notices'); setIsMobileMenuOpen(false); }}
                         >
                             <Bell size={16} /><span>School Bulletins</span>
@@ -499,11 +718,11 @@ export default function StudentDashboard() {
                     <header className="staff-top-header">
                         <div className="staff-search-input-group">
                             <Search size={15} className="search-icon" />
-                            <input 
-                                type="text" 
-                                placeholder="Search courses or assignments..." 
-                                value={searchQuery} 
-                                onChange={(e) => setSearchQuery(e.target.value)} 
+                            <input
+                                type="text"
+                                placeholder="Search courses or assignments..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
 
@@ -515,15 +734,12 @@ export default function StudentDashboard() {
                     </header>
 
                     <div className="staff-content-container">
-                        {/* =========================================================
-                            1. OVERVIEW WITH ATTENDANCE COMPLIANCE BAR
-                            ========================================================= */}
                         {activeTab === 'overview' && (
                             <>
                                 <div className="staff-welcome-card">
                                     <div>
                                         <h2>Welcome back, <span className="green-accent">{studentData.name}</span>! 👋</h2>
-                                        <p>Enrolled in {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''} • Somarasampettai Campus</p>
+                                        <p>Enrolled in {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''} • Student Portal</p>
                                     </div>
                                     <div className="attendance-pill-box">
                                         <span className="pill-label">Roll Call:</span>
@@ -534,7 +750,6 @@ export default function StudentDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Attendance Threshold Bar */}
                                 {isDefaulter && (
                                     <div className="attendance-warning-banner">
                                         <div className="warning-content">
@@ -545,9 +760,9 @@ export default function StudentDashboard() {
                                             </div>
                                         </div>
                                         <div className="attendance-progress-track">
-                                            <div 
-                                                className="attendance-progress-fill alert" 
-                                                style={{ width: `${rawAttendanceRate}%` }} 
+                                            <div
+                                                className="attendance-progress-fill alert"
+                                                style={{ width: `${rawAttendanceRate}%` }}
                                             />
                                         </div>
                                     </div>
@@ -557,7 +772,12 @@ export default function StudentDashboard() {
                                     {stats.map((s, idx) => {
                                         const IconComp = s.icon;
                                         return (
-                                            <div key={idx} className="staff-stat-box">
+                                            <div
+                                                key={idx}
+                                                className="staff-stat-box"
+                                                onClick={() => s.title === 'Fee Status' && setActiveTab('fees-history')}
+                                                style={s.title === 'Fee Status' ? { cursor: 'pointer' } : {}}
+                                            >
                                                 <div className="stat-head">
                                                     <div className={`stat-icon-bg bg-${s.color}`}>
                                                         <IconComp size={18} />
@@ -574,7 +794,6 @@ export default function StudentDashboard() {
                                 </div>
 
                                 <div className="student-two-col-grid">
-                                    {/* Active Coursework */}
                                     <div className="staff-card">
                                         <div className="card-header">
                                             <h3>Active Coursework</h3>
@@ -610,22 +829,21 @@ export default function StudentDashboard() {
                                         )}
                                     </div>
 
-                                    {/* Notice Bulletins */}
                                     <div className="staff-card">
                                         <div className="card-header">
                                             <h3>Notice Board Circulars</h3>
                                             <Bell size={16} className="muted-icon" />
                                         </div>
                                         <div className="student-notice-list">
-                                            {announcements.slice(0, 3).map((item) => (
+                                            {announcementsList.slice(0, 3).map((item) => (
                                                 <div key={item.id} className="student-notice-item">
-                                                    <p>{item.content}</p>
+                                                    <p>{item.content || item.message}</p>
                                                     <span className="notice-time">
-                                                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Recent'}
+                                                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : (item.date || 'Recent')}
                                                     </span>
                                                 </div>
                                             ))}
-                                            {announcements.length === 0 && (
+                                            {announcementsList.length === 0 && (
                                                 <p style={{ color: 'var(--staff-text-muted)', fontSize: '0.78rem' }}>No announcements available.</p>
                                             )}
                                         </div>
@@ -634,9 +852,6 @@ export default function StudentDashboard() {
                             </>
                         )}
 
-                        {/* =========================================================
-                            2. ATTENDANCE RECORD TAB (GATEKEEPING + STYLED TABLE)
-                            ========================================================= */}
                         {activeTab === 'attendance' && (
                             <div className="staff-card full">
                                 <div className="card-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
@@ -647,14 +862,13 @@ export default function StudentDashboard() {
                                         </p>
                                     </div>
 
-                                    {/* Filters Bar */}
                                     {hasStaffSubmittedAttendance && (
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <Filter size={14} color="var(--staff-text-muted)" />
                                                 <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filters:</span>
                                             </div>
-                                            
+
                                             <input
                                                 type="date"
                                                 className="custom-select"
@@ -724,7 +938,7 @@ export default function StudentDashboard() {
                                         </div>
 
                                         <h4 style={{ fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.5rem' }}>Period-by-Period Roll Call Logs</h4>
-                                        
+
                                         <div className="table-responsive" style={{ borderRadius: 'var(--staff-radius)', border: '1px solid var(--staff-border)' }}>
                                             <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                                 <thead>
@@ -771,9 +985,6 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* =========================================================
-                            3. PDF TASKS & UPLOADS
-                            ========================================================= */}
                         {activeTab === 'assignments' && (
                             <div className="staff-card full">
                                 <div className="card-header">
@@ -883,9 +1094,6 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* =========================================================
-                            4. CLASS ROUTINE / TIMETABLE
-                            ========================================================= */}
                         {activeTab === 'schedule' && (
                             <div className="staff-card full">
                                 <div className="card-header">
@@ -945,9 +1153,6 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* =========================================================
-                            5. EXAMINATION MARKS (Subject-Wise & Term Filter)
-                            ========================================================= */}
                         {activeTab === 'marks' && (
                             <div className="staff-card full">
                                 <div className="card-header">
@@ -959,7 +1164,7 @@ export default function StudentDashboard() {
                                     </div>
                                     <div className="exam-filter-group">
                                         <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filter Exam:</label>
-                                        <select 
+                                        <select
                                             className="custom-select"
                                             value={selectedExamView}
                                             onChange={(e) => setSelectedExamView(e.target.value)}
@@ -1016,9 +1221,85 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* =========================================================
-                            6. SUBMISSION HISTORY TAB
-                            ========================================================= */}
+                        {activeTab === 'fees-history' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Fees History and Official Receipts</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            View your payment ledgers and open official term receipts containing School Logo, Term Name, Student Name, Admission Number, Class, Section, and Transaction ID.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <h4 style={{ marginTop: '1rem' }}>Pending Fee Dues</h4>
+                                <div className="table-responsive" style={{ marginBottom: '2rem' }}>
+                                    <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr>
+                                                <th>Term / Fees</th>
+                                                <th>Total Fee</th>
+                                                <th>Paid Amount</th>
+                                                <th>Balance Due</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pendingFeesList.length === 0 ? (
+                                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1rem', color: 'green' }}>No pending fee dues. All accounts clear!</td></tr>
+                                            ) : (
+                                                pendingFeesList.map(fee => (
+                                                    <tr key={fee.id}>
+                                                        <td><strong>{fee.term}</strong></td>
+                                                        <td>₹{fee.totalFee}</td>
+                                                        <td>₹{fee.paidAmount || 0}</td>
+                                                        <td style={{ color: 'red', fontWeight: 700 }}>₹{fee.balance}</td>
+                                                        <td><span className="status-badge status-absent">Pending Counter Payment</span></td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <h4>Settled Transactions & Downloadable Official Receipts</h4>
+                                <div className="table-responsive">
+                                    <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr>
+                                                <th>Which Fees (Term)</th>
+                                                <th>Amount Paid</th>
+                                                <th>Payment Status</th>
+                                                <th style={{ textAlign: 'right' }}>Official Receipt View</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paidFeesList.length === 0 ? (
+                                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: '#64748b' }}>No completed payments found.</td></tr>
+                                            ) : (
+                                                paidFeesList.map(fee => (
+                                                    <tr key={fee.id}>
+                                                        <td><strong>{fee.term}</strong></td>
+                                                        <td>₹{fee.totalFee}</td>
+                                                        <td><span className="status-badge status-present"><Check size={12} /> PAID</span></td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            <button
+                                                                className="btn-save-grade"
+                                                                onClick={() => setSelectedPrintReceipt(fee)}
+                                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#0284c7', color: '#fff', cursor: 'pointer' }}
+                                                            >
+                                                                <Receipt size={13} /> View & Print Receipt
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'submissions' && (
                             <div className="staff-card full">
                                 <div className="card-header">
@@ -1089,27 +1370,24 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* =========================================================
-                            7. NOTICES & CIRCULARS
-                            ========================================================= */}
                         {activeTab === 'notices' && (
                             <div className="staff-card full">
                                 <div className="card-header">
                                     <h3>Campus Circulars & Bulletins</h3>
                                 </div>
                                 <div className="full-notices-container">
-                                    {announcements.map((item) => (
+                                    {announcementsList.map((item) => (
                                         <div key={item.id} className="bulletin-card">
                                             <div className="bulletin-header">
                                                 <span className="bulletin-tag">Official Notice</span>
                                                 <span className="bulletin-date">
-                                                    {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Live'}
+                                                    {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : (item.date || 'Live')}
                                                 </span>
                                             </div>
-                                            <p>{item.content}</p>
+                                            <p>{item.content || item.message}</p>
                                         </div>
                                     ))}
-                                    {announcements.length === 0 && (
+                                    {announcementsList.length === 0 && (
                                         <div className="empty-sub-card">
                                             <Bell size={28} />
                                             <p>No circulars posted at this time.</p>

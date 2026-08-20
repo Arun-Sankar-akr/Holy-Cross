@@ -69,7 +69,7 @@ export default function OfficeLogin() {
                                 type="email"
                                 id="email"
                                 name="email"
-                                placeholder="office@edupulse.edu"
+                                placeholder="office login id or mail"
                                 value={credentials.email}
                                 onChange={handleChange}
                                 required
