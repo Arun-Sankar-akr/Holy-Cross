@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import Lenis from 'lenis';
 
 // Auth Protection Wrapper
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
@@ -61,9 +62,42 @@ import './App.css';
 
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
+  const lenisRef = useRef(null);
+
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isStaffRoute = location.pathname.startsWith('/erp/staff/dashboard');
   const isOfficeRoute = location.pathname.startsWith('/erp/office/dashboard');
+
+  // Initialize Lenis Smooth Scrolling
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.5,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+    });
+
+    lenisRef.current = lenis;
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
+  // Scroll to top smoothly via Lenis on route change
+  useEffect(() => {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: false });
+    }
+  }, [location.pathname]);
 
   return (
     <>
@@ -108,11 +142,6 @@ function AppContent({ loading, fadeOut }) {
             <Route path="/admissions" element={<AdmissionDashboard />} />
 
             {/* ERP Login Routes - Correctly mapped */}
-            <Route path="/erp/staff" element={<StaffErp />} />
-            <Route path="/erp/student" element={<StudentErp />} />
-
-            {/* Protected Dashboards */}
-            {/* ERP Login Routes */}
             <Route path="/erp/staff" element={<StaffErp />} />
             <Route path="/erp/student" element={<StudentErp />} />
 

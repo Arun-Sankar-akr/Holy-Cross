@@ -3,17 +3,48 @@ import {
     HeartHandshake, BookOpen, Users, ArrowRight,
     Compass, CheckCircle2, Target, Globe2,
     GraduationCap, Trophy, Megaphone, MapPin,
-    Navigation, Phone, ArrowUp, Sparkles, Clock, Award, Sparkle
+    Navigation, Phone, ArrowUp, Sparkles, Clock
 } from 'lucide-react';
-import campusBg from '../assets/image.png';
+import campusBg from '../assets/bg1.jpg';
+import campusBg1 from '../assets/bg2.png';
+import campusBg2 from '../assets/bg3.png';
+import campusBg3 from '../assets/bg4.png';
+import campusBg4 from '../assets/bg5.png';
+import campusBg5 from '../assets/bg6.png';
+import campusBg6 from '../assets/bg7.jpg';
+import campusBg7 from '../assets/bg8.jpg';
+import campusBg8 from '../assets/bg9.jpg';
+import campusBg9 from '../assets/bg10.jpg';
+import campusBg10 from '../assets/bg11.jpg';
+
+import photo from '../assets/photo1.png';
+
+
 import HomeNoticeBoard from './HomeNoticeBoard';
 import './Home.css';
 
 const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1217.4431145839242!2d78.63602594809008!3d10.81217436534207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3baa5f9fba5a591b%3A0x1754db7db8c5c932!2sHoly%20Cross%20Matriculation%20Higher%20Secondary%20School!5e1!3m2!1sen!2sin!4v1786864178052!5m2!1sen!2sin";
 
+// Define your carousel background images array here
+const heroImages = [
+    campusBg,
+    campusBg1,
+    campusBg2,
+    campusBg3,
+    campusBg4,
+    campusBg5,
+    campusBg6,
+    campusBg7,
+    campusBg8,
+    campusBg9,
+    campusBg10,
+];
+
 export default function Home({ setActivePage }) {
     const [showScrollTop, setShowScrollTop] = useState(false);
+    const [currentSlide, setCurrentSlide] = useState(0);
 
+    // Handle scroll tracker for the 'scroll-to-top' button
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 300) {
@@ -25,6 +56,15 @@ export default function Home({ setActivePage }) {
 
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Handle automated carousel background transition (every 5 seconds)
+    useEffect(() => {
+        if (heroImages.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+        }, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     const scrollToTop = () => {
@@ -55,11 +95,15 @@ export default function Home({ setActivePage }) {
                 </div>
             </div>
 
-            {/* 2. Hero Section */}
-            <section
-                className="hero-section"
-                style={{ '--hero-bg-image': `url(${campusBg})` }}
-            >
+            {/* 2. Hero Section Carousel */}
+            <section className="hero-section">
+                {heroImages.map((img, index) => (
+                    <div
+                        key={index}
+                        className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
+                        style={{ backgroundImage: `url(${img})` }}
+                    />
+                ))}
                 <div className="hero-overlay"></div>
                 <div className="hero-content">
                     <div className="hero-tag">
@@ -130,6 +174,8 @@ export default function Home({ setActivePage }) {
             {/* 4. Notice Board / Circulars */}
             <HomeNoticeBoard onNavigate={setActivePage} />
 
+
+
             {/* 5. Core Pillars Grid */}
             <section className="section-container">
                 <div className="cards-grid-3">
@@ -164,6 +210,26 @@ export default function Home({ setActivePage }) {
                         </div>
                         <h3>Soaring Towards Bright Future</h3>
                         <p>Nurturing personal excellence through scholastic training, cultural festivals, athletic meets, and enrichment programs.</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* NEW: Principal's Desk Feature Section */}
+            <section className="section-container">
+                <div className="principal-desk-wrapper">
+                    <div className="principal-card-img">
+                        <img src={photo} alt="" />
+                        {/* <Users size={64} className="principal-placeholder-icon" /> */}
+                    </div>
+                    <div className="principal-content">
+                        <span className="section-badge">LEADERSHIP MESSAGE</span>
+                        <h3>From the Principal's Desk</h3>
+                        <span className="principal-title-sub">Holy Cross Fathers, Province of Tamilnadu</span>
+                        <p className="principal-quote">
+                            "Education is not merely about preparing for a living, but building a foundation for life. At Holy Cross, we strive to cultivate intellectual curiosity, emotional strength, and spiritual grounding in every child. We invite you to partner with us as we guide your children toward soaring into a bright, purposeful future."
+                        </p>
+                        <div className="principal-signature">
+                            - Fr Paul Raj</div>
                     </div>
                 </div>
             </section>
@@ -229,6 +295,260 @@ export default function Home({ setActivePage }) {
                             <div className="m-bullet"><CheckCircle2 size={15} /> Holistic Talent Development</div>
                             <div className="m-bullet"><CheckCircle2 size={15} /> Academic Theme: "Soaring towards Bright Future"</div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* NEW: Upcoming Events & Calendar Highlights Section */}
+            <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">SCHOOL CALENDAR</span>
+                        <h2>Upcoming Events & Activities</h2>
+                    </div>
+                    <button className="events-view-all" onClick={() => setActivePage('calendar')}>
+                        View Full Calendar &rarr;
+                    </button>
+                </div>
+
+                <div className="events-grid-3">
+                    <div className="event-card">
+                        <div className="event-date-badge">
+                            <span className="event-month">SEP</span>
+                            <span className="event-day">12</span>
+                        </div>
+                        <div className="event-details">
+                            <h3>Annual Sports Meet 2026</h3>
+                            <p>Inter-house athletic competitions, track events, and march-past displays on the campus grounds.</p>
+                            <div className="event-meta">
+                                <span className="event-time"><Clock size={13} /> 9:00 AM Onwards</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="event-card">
+                        <div className="event-date-badge">
+                            <span className="event-month">SEP</span>
+                            <span className="event-day">25</span>
+                        </div>
+                        <div className="event-details">
+                            <h3>Mid-Term Assessment Begins</h3>
+                            <p>Scheduled examinations for Grades X, XI, and XII to track progress toward historical board exam results.</p>
+                            <div className="event-meta">
+                                <span className="event-time"><Clock size={13} /> 9:30 AM - 12:30 PM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="event-card">
+                        <div className="event-date-badge">
+                            <span className="event-month">OCT</span>
+                            <span className="event-day">05</span>
+                        </div>
+                        <div className="event-details">
+                            <h3>Science & Innovation Expo</h3>
+                            <p>Exhibition showcasing student science projects, model displays, and coding/tech demonstrations.</p>
+                            <div className="event-meta">
+                                <span className="event-time"><Clock size={13} /> 10:00 AM - 3:00 PM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* SECTION 1: Student Achievements & Board Toppers */}
+            <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">EXCELLENCE</span>
+                        <h2>Board Exam Toppers & Achievers</h2>
+                    </div>
+                    <button className="events-view-all" onClick={() => setActivePage('progress-report')}>
+                        View All Scorecards &rarr;
+                    </button>
+                </div>
+
+                <div className="achievements-grid">
+                    <div className="achievement-card">
+                        <div className="achievement-avatar">A</div>
+                        <h3>Aarthi S.</h3>
+                        <span className="achievement-grade">Grade XII • State Board</span>
+                        <div className="achievement-score">491 / 500 (District Rank)</div>
+                    </div>
+
+                    <div className="achievement-card">
+                        <div className="achievement-avatar">V</div>
+                        <h3>Vignesh R.</h3>
+                        <span className="achievement-grade">Grade X • Matriculation</span>
+                        <div className="achievement-score">485 / 500 (School Topper)</div>
+                    </div>
+
+                    <div className="achievement-card">
+                        <div className="achievement-avatar">P</div>
+                        <h3>Priya Dharshini</h3>
+                        <span className="achievement-grade">Grade XII • Science Bio</span>
+                        <div className="achievement-score">482 / 500 (Centum in Math)</div>
+                    </div>
+                </div>
+            </section>
+
+            {/* SECTION 2: Campus Photo Gallery Preview */}
+            <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">LIFE AT HOLY CROSS</span>
+                        <h2>Campus Gallery Highlights</h2>
+                    </div>
+                </div>
+
+                <div className="gallery-grid">
+                    <div className="gallery-thumb">
+                        <img src={campusBg} alt="Campus Infrastructure" />
+                        <div className="gallery-overlay-caption">Main Administrative Block</div>
+                    </div>
+                    <div className="gallery-thumb">
+                        <img src={campusBg1} alt="Science Laboratories" />
+                        <div className="gallery-overlay-caption">Advanced Science Laboratory</div>
+                    </div>
+                    <div className="gallery-thumb">
+                        <img src={campusBg2} alt="Sports Ground" />
+                        <div className="gallery-overlay-caption">More</div>
+                    </div>
+                    <div className="gallery-thumb">
+                        <img src={campusBg3} alt="Cultural Events" />
+                        <div className="gallery-overlay-caption">The Giving Hands</div>
+                    </div>
+                </div>
+            </section>
+
+            {/* SECTION A: School Statistics & Quick Facts */}
+            <section className="section-container">
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <div className="stat-number">2002</div>
+                        <div className="stat-label">Established Year</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-number">100%</div>
+                        <div className="stat-label">Board Exam Focus</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-number">15+</div>
+                        <div className="stat-label">Acres Green Campus</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-number">24+</div>
+                        <div className="stat-label">Expert Faculty</div>
+                    </div>
+                </div>
+            </section>
+
+            {/* SECTION B: Co-Curricular & Student Clubs */}
+            <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">STUDENT LIFE</span>
+                        <h2>Co-Curricular Clubs & Activities</h2>
+                    </div>
+                </div>
+
+                <div className="clubs-grid">
+                    <div className="club-card">
+                        <div className="club-icon">
+                            <BookOpen size={20} />
+                        </div>
+                        <h3>Science & IT Club</h3>
+                        <p>Encouraging hands-on experiments, robotics models, and foundational computer coding training.</p>
+                    </div>
+
+                    <div className="club-card">
+                        <div className="club-icon">
+                            <Trophy size={20} />
+                        </div>
+                        <h3>Sports & Athletics</h3>
+                        <p>Professional coaching in football, cricket, basketball, track events, and indoor board games.</p>
+                    </div>
+
+                    <div className="club-card">
+                        <div className="club-icon">
+                            <Sparkles size={20} />
+                        </div>
+                        <h3>Cultural & Arts</h3>
+                        <p>Training in classical & folk dance, instrumental music, choir singing, dramatics, and fine arts.</p>
+                    </div>
+
+                    <div className="club-card">
+                        <div className="club-icon">
+                            <Users size={20} />
+                        </div>
+                        <h3>Eco & Service Corps</h3>
+                        <p>Instilling social responsibility through campus green drives, community outreach, and value education.</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* SECTION C: Admissions Step-by-Step Guide */}
+            {/* <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">PROCESS</span>
+                        <h2>How to Apply for Admissions</h2>
+                    </div>
+                    <button className="events-view-all" onClick={() => setActivePage('admissions')}>
+                        Open Portal &rarr;
+                    </button>
+                </div>
+
+                <div className="steps-grid">
+                    <div className="step-card">
+                        <span className="step-number-badge">Step 1</span>
+                        <h3>Submit Online Enquiry</h3>
+                        <p>Fill out basic student details and choose your preferred grade level (X, XI, or XII) via our online portal.</p>
+                    </div>
+
+                    <div className="step-card">
+                        <span className="step-number-badge">Step 2</span>
+                        <h3>Campus Interaction</h3>
+                        <p>Visit our Somarasampettai campus with parents for a warm academic counseling and orientation session.</p>
+                    </div>
+
+                    <div className="step-card">
+                        <span className="step-number-badge">Step 3</span>
+                        <h3>Document Verification</h3>
+                        <p>Submit previous academic transcripts, transfer certificates, and passport photographs for clearance.</p>
+                    </div>
+
+                    <div className="step-card">
+                        <span className="step-number-badge">Step 4</span>
+                        <h3>Enrollment Confirmation</h3>
+                        <p>Complete fee formalities and officially welcome your child into the Holy Cross family!</p>
+                    </div>
+                </div>
+            </section> */}
+
+            {/* SECTION E: Frequently Asked Questions (FAQ) */}
+            <section className="section-container">
+                <div className="events-section-header">
+                    <div>
+                        <span className="section-badge">SUPPORT</span>
+                        <h2>Frequently Asked Questions</h2>
+                    </div>
+                </div>
+
+                <div className="faq-grid">
+                    <div className="faq-card">
+                        <h3><span>Q.</span> What curricula and grades are offered?</h3>
+                        <p>We offer State Board and Matriculation syllabi focusing extensively on high-performance training for Grades X, XI, and XII.</p>
+                    </div>
+
+                    <div className="faq-card">
+                        <h3><span>Q.</span> Where is the school located?</h3>
+                        <p>Our campus is situated in Somarasampettai, Tiruchirappalli (Trichy), Tamil Nadu, offering a peaceful and accessible learning environment.</p>
+                    </div>
+
+                    <div className="faq-card">
+                        <h3><span>Q.</span> Are transport facilities available?</h3>
+                        <p>Yes, safe and reliable school bus transportation covers various routes across the Trichy district for student convenience.</p>
                     </div>
                 </div>
             </section>

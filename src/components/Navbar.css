@@ -9,7 +9,6 @@
     z-index: 1000;
     background-color: #8004c7;
     color: #ffffff;
-    /* background: linear-gradient(100deg, #8004c7 0%,#620697 25% ,#0766af 75% , #077bd4 100%); */
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     font-family: 'Outfit', sans-serif;
     transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -160,7 +159,7 @@
 }
 
 /* ==========================================
-   Dropdown Panels Alignment
+   Dropdown Panels Alignment & Hover Effect
    ========================================== */
 .nav-dropdown-group {
     position: relative;
@@ -168,19 +167,35 @@
     align-items: center;
 }
 
+/* Hide panel by default, show on state or desktop hover */
 .dropdown-panel {
+    display: none;
     position: absolute;
     top: 100%;
     left: 0;
     background-color: #8004c7;
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-top: 3px solid #ffffff;
+    /* border-top: 3px solid #ffffff; */
     border-radius: 0 0 8px 8px;
     min-width: 210px;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
     padding: 6px 0;
     z-index: 1005;
     animation: menuFadeIn 0.2s ease-out forwards;
+}
+
+.dropdown-panel.is-open {
+    display: block;
+}
+
+/* Enable hover on desktop viewports */
+@media (min-width: 1025px) {
+    .nav-dropdown-group:hover .dropdown-panel {
+        display: block;
+    }
+    .nav-dropdown-group:hover .arrow-indicator {
+        transform: rotate(180deg);
+    }
 }
 
 .dropdown-link {

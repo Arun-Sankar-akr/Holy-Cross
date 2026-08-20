@@ -98,7 +98,6 @@ export default function Navbar() {
             ]
         },
         { title: 'Admissions 2026', path: '/admissions', type: 'link' },
-
     ];
 
     const toggleDropdown = (id) => {
@@ -141,19 +140,17 @@ export default function Navbar() {
                                     <ChevronDown size={14} className={`arrow-indicator ${openDropdown === nav.id ? 'is-rotated' : ''}`} />
                                 </button>
 
-                                {openDropdown === nav.id && (
-                                    <div className="dropdown-panel">
-                                        {nav.items.map((item) => (
-                                            <Link
-                                                key={item.path}
-                                                to={item.path}
-                                                className={`dropdown-link ${location.pathname === item.path ? 'is-active' : ''}`}
-                                            >
-                                                {item.name}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
+                                <div className={`dropdown-panel ${openDropdown === nav.id ? 'is-open' : ''}`}>
+                                    {nav.items.map((item) => (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            className={`dropdown-link ${location.pathname === item.path ? 'is-active' : ''}`}
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
                         )
                     ))}
