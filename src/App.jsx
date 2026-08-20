@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 
 // Auth Protection Wrapper
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
+import StdProtectedRoute from './Erp/StudentErp/StdProtectedRoute'
 
 import Preloader from './components/Preloader';
 
@@ -51,6 +52,7 @@ import AdmissionDashboard from './pages/Admission/AdmissionDashboard';
 // ERP & Dashboards
 import StaffErp from './Erp/StaffErp/StaffErp';
 import StudentErp from './Erp/StudentErp/StudentErp';
+
 import StaffDashboard from './Erp/StaffErp/StaffDashboard';
 import StudentDashboard from './Erp/StudentErp/StudentDashboard';
 import ProgressReport from "./Erp/ProgressReport";
@@ -105,6 +107,11 @@ function AppContent({ loading, fadeOut }) {
             {/* Admissions */}
             <Route path="/admissions" element={<AdmissionDashboard />} />
 
+            {/* ERP Login Routes - Correctly mapped */}
+            <Route path="/erp/staff" element={<StaffErp />} />
+            <Route path="/erp/student" element={<StudentErp />} />
+
+            {/* Protected Dashboards */}
             {/* ERP Login Routes */}
             <Route path="/erp/staff" element={<StaffErp />} />
             <Route path="/erp/student" element={<StudentErp />} />
@@ -123,18 +130,16 @@ function AppContent({ loading, fadeOut }) {
             <Route
               path="/erp/student/dashboard"
               element={
-                <ProtectedRoute storageKey="studentUser" redirectPath="/erp/student">
+                <StdProtectedRoute storageKey="studentUser" redirectPath="/erp/student">
                   <StudentDashboard />
-                </ProtectedRoute>
+                </StdProtectedRoute>
               }
             />
 
             {/* Admin Dashboard */}
             <Route path="/admin" element={<AdminDashboard />} />
 
-            {/* Fallback Catch-All Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-
+            {/* Office ERP Routes */}
             <Route path="/erp/office/login" element={<OfficeLogin />} />
             <Route
               path="/erp/office/dashboard"
@@ -145,6 +150,8 @@ function AppContent({ loading, fadeOut }) {
               }
             />
 
+            {/* Fallback Catch-All Redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
 

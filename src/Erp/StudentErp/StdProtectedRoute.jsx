@@ -3,8 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 export default function ProtectedRoute({ 
     children, 
-    storageKey = 'staffUser', 
-    redirectPath = '/erp/staff' 
+    storageKey = 'studentUser', 
+    redirectPath = '/erp/student' 
 }) {
     const location = useLocation();
     const storedUser = localStorage.getItem(storageKey);
