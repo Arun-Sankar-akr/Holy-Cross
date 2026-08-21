@@ -1325,43 +1325,45 @@ export default function AdminDashboard() {
 
                             <h4>Staff Directory <span className="count-badge">{staffList.length}</span></h4>
                             {staffList.length === 0 ? <div className="empty-state">No staff members registered yet.</div> : (
-                                <ul>
-                                    {staffList.map(member => (
-                                        <li key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            {editingStaffId === member.id ? (
-                                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexGrow: 1 }}>
-                                                    <input
-                                                        type="text"
-                                                        value={updatedStaffName}
-                                                        onChange={(e) => setUpdatedStaffName(e.target.value)}
-                                                        placeholder="New Staff Name"
-                                                        style={{ padding: '3px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                    />
-                                                    <button onClick={() => handleUpdateStaffName(member.id)} title="Save"><Check size={14} color="#059669" /></button>
-                                                    <button onClick={() => setEditingStaffId(null)} title="Cancel"><X size={14} color="#e11d48" /></button>
-                                                </div>
-                                            ) : (
-                                                <span>
-                                                    <strong>{member.name}</strong> ({member.department}) — ID: <code>{member.staffId}</code> | Pass: <code>{member.password}</code>
-                                                </span>
-                                            )}
-
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                {editingStaffId !== member.id && (
-                                                    <button onClick={() => {
-                                                        setEditingStaffId(member.id);
-                                                        setUpdatedStaffName(member.name);
-                                                    }} title="Update Name">
-                                                        <Edit2 size={14} />
-                                                    </button>
+                                <div >
+                                    <ul className="staff-lists">
+                                        {staffList.map(member => (
+                                            <li key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                {editingStaffId === member.id ? (
+                                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexGrow: 1 }}>
+                                                        <input
+                                                            type="text"
+                                                            value={updatedStaffName}
+                                                            onChange={(e) => setUpdatedStaffName(e.target.value)}
+                                                            placeholder="New Staff Name"
+                                                            style={{ padding: '3px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                                        />
+                                                        <button onClick={() => handleUpdateStaffName(member.id)} title="Save"><Check size={14} color="#059669" /></button>
+                                                        <button onClick={() => setEditingStaffId(null)} title="Cancel"><X size={14} color="#e11d48" /></button>
+                                                    </div>
+                                                ) : (
+                                                    <span>
+                                                        <strong>{member.name}</strong> ({member.department}) — ID: <code>{member.staffId}</code> | Pass: <code>{member.password}</code>
+                                                    </span>
                                                 )}
-                                                <button onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    {editingStaffId !== member.id && (
+                                                        <button onClick={() => {
+                                                            setEditingStaffId(member.id);
+                                                            setUpdatedStaffName(member.name);
+                                                        }} title="Update Name">
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             )}
                         </div>
                     )}

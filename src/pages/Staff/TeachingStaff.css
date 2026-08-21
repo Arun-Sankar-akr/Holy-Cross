@@ -65,11 +65,16 @@
     border: 1px solid rgba(128, 4, 199, 0.15);
     border-radius: 12px;
     padding: 28px 20px;
-    text-align: center;
     box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
     display: flex;
     flex-direction: column;
     align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.teacher-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(128, 4, 199, 0.12);
 }
 
 .teacher-avatar {
@@ -85,7 +90,19 @@
     border: 2px solid #e2bbf5;
 }
 
-.teacher-name {
+.teacher-avatar svg {
+    color: #8004c7 !important;
+}
+
+.teacher-info {
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.teacher-info h3 {
     margin: 0 0 4px 0;
     color: #8004c7;
     font-size: 1.2rem;
@@ -96,34 +113,49 @@
     font-weight: 700;
     color: #333;
     font-size: 0.88rem;
-}
-
-.teacher-qual {
-    margin: 4px 0 16px 0;
-    font-size: 0.82rem;
-    color: #777;
-    font-weight: 600;
-}
-
-.teacher-meta {
-    width: 100%;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 0.84rem;
-    color: #555;
-    margin-top: auto;
-}
-
-.teacher-meta div {
+    margin: 0 0 16px 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
 }
 
-.teacher-meta svg {
+.teacher-role svg {
     color: #8004c7;
+}
+
+.teacher-details {
+    width: 100%;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.84rem;
+    color: #555;
+    margin-top: auto;
+}
+
+.teacher-details p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.teacher-details svg {
+    color: #8004c7;
+    flex-shrink: 0;
+}
+
+.teacher-details a {
+    color: #8004c7;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.teacher-details a:hover {
+    text-decoration: underline;
 }
