@@ -73,7 +73,7 @@ body {
 /* App Containers */
 .admin-containers {
   display: flex;
-  height: 190vh;
+  height: fit-content;
   width: 100vw;
   overflow: hidden;
   position: relative;
@@ -335,6 +335,211 @@ body {
   background: #f8fafc;
   border-radius: var(--radius-md);
   border: 1px dashed #cbd5e1;
+}
+
+/* Compact Grid with dynamic spacing */
+.staff-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+/* Colorful Mini Card */
+.staff-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid #6366f1;
+  /* Vibrant Accent Border */
+  border-radius: 8px;
+  padding: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.staff-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+  border-color: #cbd5e1;
+  border-top-color: #4f46e5;
+}
+
+/* Colorful Header & Avatar */
+.staff-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 2.2rem;
+}
+
+.staff-avatar-placeholder {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.25);
+  flex-shrink: 0;
+}
+
+.staff-header-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.staff-header-info h5 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Colorful Department Badge */
+.staff-dept-badge {
+  display: inline-block;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 12px;
+}
+
+/* Vibrant Details Box */
+.staff-card-body {
+  font-size: 0.68rem;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.5rem;
+  background: #f8fafc;
+  padding: 0.45rem;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+}
+
+.staff-detail-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-detail-item strong {
+  color: #1e293b;
+}
+
+.staff-password-code {
+  background: #f1f5f9;
+  color: #d97706;
+  /* Warm highlight color for password */
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Action Buttons with Hover Colors */
+.staff-card-actions {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: flex;
+  gap: 2px;
+}
+
+.staff-card-actions .icon-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.staff-card-actions .view-btn {
+  color: #0284c7;
+}
+
+.staff-card-actions .view-btn:hover {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.staff-card-actions .delete-btn {
+  color: #e11d48;
+}
+
+.staff-card-actions .delete-btn:hover {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+/* Compact Edit Form Styling */
+.staff-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.staff-edit-form input {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  outline: none;
+}
+
+.staff-edit-form input:focus {
+  border-color: #6366f1;
+}
+
+/* Container for the cards section to enable scrolling */
+.staff-cards-container {
+  max-height: 480px;
+  /* Adjust height based on your layout needs */
+  overflow-y: auto;
+  /* Adds vertical scrollbar when contents overflow */
+  padding-right: 0.5rem;
+  /* Prevents scrollbar from covering card edges */
+  margin-top: 0.75rem;
+}
+
+/* Custom Scrollbar Styling (Optional for cleaner look) */
+.staff-cards-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.staff-cards-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.staff-cards-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.staff-cards-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* ==========================================================================

@@ -1,19 +1,20 @@
 /* TeachingStaff.css */
+
 .staff-container {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 40px auto;
-    padding: 0 20px;
+    padding: 0 16px;
     font-family: 'Outfit', sans-serif;
 }
 
 .page-header {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .page-header h2 {
     color: #8004c7;
-    font-size: 2rem;
+    font-size: 1.75rem;
     font-weight: 800;
     display: flex;
     align-items: center;
@@ -25,6 +26,7 @@
 .page-header p {
     color: #666;
     margin: 0;
+    font-size: 0.9rem;
 }
 
 .filter-tabs {
@@ -32,16 +34,16 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .filter-btn {
     background: #ffffff;
     border: 1px solid rgba(128, 4, 199, 0.2);
     color: #8004c7;
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 0.88rem;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -54,108 +56,171 @@
     border-color: #8004c7;
 }
 
+/* 4 Cards per row on Desktop Grid */
 .teacher-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
 }
 
+/* Compact Main Grid Cards */
 .teacher-card {
     background: #ffffff;
     border: 1px solid rgba(128, 4, 199, 0.15);
-    border-radius: 12px;
-    padding: 28px 20px;
-    box-shadow: 0 6px 20px rgba(128, 4, 199, 0.05);
+    border-radius: 10px;
+    padding: 12px 10px;
+    box-shadow: 0 4px 14px rgba(128, 4, 199, 0.05);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.teacher-card.clickable {
+    cursor: pointer;
 }
 
 .teacher-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(128, 4, 199, 0.12);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 8px 18px rgba(128, 4, 199, 0.12);
 }
 
 .teacher-avatar {
-    width: 64px;
-    height: 64px;
+    width: 40px;
+    height: 40px;
+    margin-top: 20px;
     border-radius: 50%;
     background: #f8eefc;
     color: #8004c7;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 14px;
     border: 2px solid #e2bbf5;
-}
-
-.teacher-avatar svg {
-    color: #8004c7 !important;
+    flex-shrink: 0;
 }
 
 .teacher-info {
     width: 100%;
-    text-align: center;
+    text-align: left;
+    margin-left: 10px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    overflow: hidden;
 }
 
 .teacher-info h3 {
-    margin: 0 0 4px 0;
+    margin: 0 0 2px 0;
     color: #8004c7;
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .teacher-role {
     font-weight: 700;
     color: #333;
-    font-size: 0.88rem;
-    margin: 0 0 16px 0;
+    font-size: 0.72rem;
+    margin: 0 0 6px 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.teacher-role svg {
-    color: #8004c7;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .teacher-details {
     width: 100%;
     border-top: 1px solid #f0f0f0;
-    padding-top: 14px;
+    padding-top: 6px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 0.84rem;
+    gap: 4px;
+    font-size: 0.7rem;
     color: #555;
-    margin-top: auto;
 }
 
 .teacher-details p {
     margin: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.teacher-details svg {
-    color: #8004c7;
-    flex-shrink: 0;
+/* Modal Animations */
+.modal-backdrop {
+    animation: fadeIn 0.25s ease forwards;
 }
 
-.teacher-details a {
-    color: #8004c7;
-    text-decoration: none;
-    word-break: break-all;
+.preview-modal {
+    animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.teacher-details a:hover {
-    text-decoration: underline;
+.close-preview-btn:hover {
+    background: #8004c7 !important;
+    color: #ffffff !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: scale(0.92) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Responsive: 3 Cards per row on Tablet */
+@media (max-width: 992px) {
+    .teacher-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
+}
+
+/* Responsive: 2 Cards per row on Mobile */
+@media (max-width: 640px) {
+    .teacher-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .teacher-card {
+        padding: 10px 8px;
+        gap: 8px;
+    }
+
+    .teacher-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .teacher-info h3 {
+        font-size: 0.82rem;
+    }
+
+    .teacher-role {
+        font-size: 0.68rem;
+    }
+
+    .preview-modal {
+        padding: 16px !important;
+        gap: 12px !important;
+    }
 }

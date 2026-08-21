@@ -14,12 +14,15 @@ import {
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
-import logo from "../assets/logo.png"
+import logo from "../assets/logo.png";
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('analytics');
+
+    const [staffSearchQuery, setStaffSearchQuery] = React.useState('');
+
 
     // Collapsible states for sidebar dropdowns
     const [admissionsOpen, setAdmissionsOpen] = useState(true);
@@ -36,7 +39,7 @@ export default function AdminDashboard() {
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [administrators, setAdministrators] = useState([]);
     const [toppers, setToppers] = useState([]);
-    const [upcomingEvents, setUpcomingEvents] = useState([]); // Controlled via Updates submenu
+    const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [galleryItems, setGalleryItems] = useState([]);
     const [holidays, setHolidays] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
@@ -90,9 +93,10 @@ export default function AdminDashboard() {
     const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
     // Staff Form & Update States
-    const [staffForm, setStaffForm] = useState({ name: '', staffId: '', password: '', department: '', email: '' });
+    const initialStaffForm = { name: '', staffId: '', password: '', department: '', email: '' };
+    const [staffForm, setStaffForm] = useState(initialStaffForm);
     const [editingStaffId, setEditingStaffId] = useState(null);
-    const [updatedStaffName, setUpdatedStaffName] = useState('');
+    const [editStaffForm, setEditStaffForm] = useState(initialStaffForm);
 
     // Section CRUD States
     const [sectionForm, setSectionForm] = useState({ name: '', roomNo: '' });
@@ -383,17 +387,6 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleUpdateStaffName = async (id) => {
-        if (!updatedStaffName.trim()) return;
-        try {
-            await updateDoc(doc(db, 'staff_members', id), { name: updatedStaffName.trim() });
-            setEditingStaffId(null);
-            setUpdatedStaffName('');
-        } catch (error) {
-            console.error("Error updating staff name: ", error);
-        }
-    };
-
     const handleAddSection = async (e) => {
         e.preventDefault();
         if (!sectionForm.name.trim()) return;
@@ -609,6 +602,46 @@ export default function AdminDashboard() {
         )
     );
 
+    const handleAddStaff = async (e) => {
+        e.preventDefault();
+        if (!staffForm.name.trim() || !staffForm.staffId.trim()) return;
+        await handlePublish('staff_members', {
+            name: staffForm.name.trim(),
+            staffId: staffForm.staffId.trim(),
+            password: staffForm.password.trim(),
+            department: staffForm.department.trim(),
+            email: staffForm.email.trim()
+        }, () => setStaffForm(initialStaffForm));
+    };
+
+    const handleStartEditStaff = (member) => {
+        setEditingStaffId(member.id);
+        setEditStaffForm({
+            name: member.name || '',
+            staffId: member.staffId || '',
+            password: member.password || '',
+            department: member.department || '',
+            email: member.email || ''
+        });
+    };
+
+    const handleUpdateStaff = async (id) => {
+        if (!editStaffForm.name.trim() || !editStaffForm.staffId.trim()) return;
+        try {
+            await updateDoc(doc(db, 'staff_members', id), {
+                name: editStaffForm.name.trim(),
+                staffId: editStaffForm.staffId.trim(),
+                password: editStaffForm.password.trim(),
+                department: editStaffForm.department.trim(),
+                email: editStaffForm.email.trim()
+            });
+            setEditingStaffId(null);
+            setEditStaffForm(initialStaffForm);
+        } catch (error) {
+            console.error("Error updating staff member: ", error);
+        }
+    };
+
     if (authLoading) {
         return <div style={{ textAlign: 'center', padding: '60px' }}>Checking Authorization...</div>;
     }
@@ -635,7 +668,7 @@ export default function AdminDashboard() {
                 <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
                     <div>
                         <div className="sidebar-brand">
-                            <div className="admin-seal"><img src={logo} alt="" id='logogs' /></div>
+                            <div className="admin-seal"><img src={logo} alt="Logo" id='logogs' /></div>
                             <div>
                                 <h2>Admin Control</h2>
                                 <p>Dashboard</p>
@@ -849,7 +882,7 @@ export default function AdminDashboard() {
                                         <tbody>
                                             {admissionApplications.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan="7" className="no-data-cell">No admission applications found.</td>
+                                                    <td colSpan="8" className="no-data-cell">No admission applications found.</td>
                                                 </tr>
                                             ) : (
                                                 admissionApplications.map((app) => (
@@ -881,6 +914,11 @@ export default function AdminDashboard() {
                                                             </select>
                                                         </td>
                                                         <td>
+                                                            <span className={`status-pill ${app.status ? app.status.toLowerCase() : 'pending'}`}>
+                                                                {app.status || 'Pending'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
                                                             <div className="actions-cell">
                                                                 <button className="icon-btn view-btn" onClick={() => setSelectedApp(app)} title="View Details">
                                                                     <Eye size={16} />
@@ -899,11 +937,6 @@ export default function AdminDashboard() {
                                                                     <Trash2 size={16} />
                                                                 </button>
                                                             </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`status-pill ${app.status ? app.status.toLowerCase() : 'pending'}`}>
-                                                                {app.status || 'Pending'}
-                                                            </span>
                                                         </td>
                                                     </tr>
                                                 ))
@@ -1306,67 +1339,191 @@ export default function AdminDashboard() {
                     )}
 
                     {/* STAFF DIRECTORY */}
-                    {activeTab === 'staff' && (
-                        <div className="applications-management-card">
-                            <h3>Add Staff & Credentials</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('staff_members', staffForm, () =>
-                                    setStaffForm({ name: '', staffId: '', password: '', department: '', email: '' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Staff Full Name" value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Staff ID (e.g., STF2026)" value={staffForm.staffId} onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })} required /></div>
-                                <div><input type="password" placeholder="Portal Password" value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Department / Subject" value={staffForm.department} onChange={e => setStaffForm({ ...staffForm, department: e.target.value })} required /></div>
-                                <div><input type="email" placeholder="Official Email" value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} required /></div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Staff Account</button>
-                            </form>
+                    {activeTab === 'staff' && (() => {
+                        // Local search state for Staff Directory filtering
 
-                            <h4>Staff Directory <span className="count-badge">{staffList.length}</span></h4>
-                            {staffList.length === 0 ? <div className="empty-state">No staff members registered yet.</div> : (
-                                <div >
-                                    <ul className="staff-lists">
-                                        {staffList.map(member => (
-                                            <li key={member.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                {editingStaffId === member.id ? (
-                                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexGrow: 1 }}>
-                                                        <input
-                                                            type="text"
-                                                            value={updatedStaffName}
-                                                            onChange={(e) => setUpdatedStaffName(e.target.value)}
-                                                            placeholder="New Staff Name"
-                                                            style={{ padding: '3px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                                                        />
-                                                        <button onClick={() => handleUpdateStaffName(member.id)} title="Save"><Check size={14} color="#059669" /></button>
-                                                        <button onClick={() => setEditingStaffId(null)} title="Cancel"><X size={14} color="#e11d48" /></button>
-                                                    </div>
-                                                ) : (
-                                                    <span>
-                                                        <strong>{member.name}</strong> ({member.department}) — ID: <code>{member.staffId}</code> | Pass: <code>{member.password}</code>
-                                                    </span>
-                                                )}
+                        // Filter staff members based on search input
+                        const filteredStaffList = staffList.filter(member => {
+                            const query = staffSearchQuery.toLowerCase().trim();
+                            if (!query) return true;
+                            return (
+                                member.name?.toLowerCase().includes(query) ||
+                                member.staffId?.toLowerCase().includes(query) ||
+                                member.department?.toLowerCase().includes(query) ||
+                                member.email?.toLowerCase().includes(query)
+                            );
+                        });
 
-                                                <div style={{ display: 'flex', gap: '6px' }}>
-                                                    {editingStaffId !== member.id && (
-                                                        <button onClick={() => {
-                                                            setEditingStaffId(member.id);
-                                                            setUpdatedStaffName(member.name);
-                                                        }} title="Update Name">
-                                                            <Edit2 size={14} />
-                                                        </button>
-                                                    )}
-                                                    <button onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
+                        return (
+                            <div className="applications-management-card">
+                                <h3><Users size={18} color="var(--primary)" /> Staff Directory Management</h3>
+
+                                {/* CREATE FORM */}
+                                <form onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Full Name</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Dr. John Doe"
+                                            value={staffForm.name}
+                                            onChange={e => setStaffForm({ ...staffForm, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Staff ID</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. STF102"
+                                            value={staffForm.staffId}
+                                            onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Password</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Login password"
+                                            value={staffForm.password}
+                                            onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Department</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Mathematics"
+                                            value={staffForm.department}
+                                            onChange={e => setStaffForm({ ...staffForm, department: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
+                                        <input
+                                            type="email"
+                                            placeholder="staff@school.edu"
+                                            value={staffForm.email}
+                                            onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <button type="submit" className="add-notice-btn" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+                                        <PlusCircle size={15} /> Add Staff Member
+                                    </button>
+                                </form>
+
+                                {/* SEARCH BAR */}
+                                <div className="admin-search-wrapper" style={{ marginBottom: '16px' }}>
+                                    <Search size={16} color="var(--text-muted)" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search staff by name, ID, department, or email..."
+                                        value={staffSearchQuery}
+                                        onChange={(e) => setStaffSearchQuery(e.target.value)}
+                                        className="admin-search-input"
+                                    />
+                                    {staffSearchQuery && (
+                                        <button className="clear-search-btn" onClick={() => setStaffSearchQuery('')}>
+                                            <X size={14} />
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    )}
+
+                                {/* STAFF LIST */}
+                                <h4>
+                                    Registered Staff Members
+                                    <span className="count-badge" style={{ marginLeft: '8px' }}>
+                                        {filteredStaffList.length} / {staffList.length}
+                                    </span>
+                                </h4>
+
+                                {filteredStaffList.length === 0 ? (
+                                    <div className="empty-state">
+                                        {staffSearchQuery ? `No staff members found matching "${staffSearchQuery}".` : 'No staff members registered yet.'}
+                                    </div>
+                                ) : (
+                                    <div className="staff-cards-container">
+                                        <div className="staff-cards-grid">
+                                            {filteredStaffList.map(member => (
+                                                <div className="staff-card" key={member.id}>
+                                                    {editingStaffId === member.id ? (
+                                                        <div className="staff-edit-form">
+                                                            <input
+                                                                type="text"
+                                                                value={editStaffForm.name}
+                                                                onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
+                                                                placeholder="Name"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={editStaffForm.staffId}
+                                                                onChange={e => setEditStaffForm({ ...editStaffForm, staffId: e.target.value })}
+                                                                placeholder="Staff ID"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={editStaffForm.password}
+                                                                onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })}
+                                                                placeholder="Password"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={editStaffForm.department}
+                                                                onChange={e => setEditStaffForm({ ...editStaffForm, department: e.target.value })}
+                                                                placeholder="Department"
+                                                            />
+                                                            <input
+                                                                type="email"
+                                                                value={editStaffForm.email}
+                                                                onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
+                                                                placeholder="Email"
+                                                            />
+                                                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                                                <button className="save-btn" onClick={() => handleUpdateStaff(member.id)}>
+                                                                    <Check size={12} /> Save
+                                                                </button>
+                                                                <button className="cancel-btn" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => setEditingStaffId(null)}>
+                                                                    <X size={12} /> Cancel
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="staff-card-actions">
+                                                                <button className="icon-btn view-btn" onClick={() => handleStartEditStaff(member)} title="Edit Staff">
+                                                                    <Edit2 size={12} />
+                                                                </button>
+                                                                <button className="icon-btn delete-btn" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="staff-card-header">
+                                                                <div className="staff-avatar-placeholder">
+                                                                    {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
+                                                                </div>
+                                                                <div className="staff-header-info">
+                                                                    <h5>{member.name}</h5>
+                                                                    <span className="staff-dept-badge">{member.department || 'General'}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="staff-card-body">
+                                                                <div className="staff-detail-item"><strong>ID:</strong> {member.staffId}</div>
+                                                                <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
+                                                                <div className="staff-detail-item"><strong>Email:</strong> {member.email}</div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* STUDENTS ERP */}
                     {activeTab === 'students' && (
@@ -2275,7 +2432,7 @@ export default function AdminDashboard() {
                                     />
                                 </div>
                                 <div>
-                                    <label>Assigned Class</label>
+                                    <label>Class Assigned</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. 10th Std - Sec A"
@@ -2290,10 +2447,10 @@ export default function AdminDashboard() {
                                     />
                                 </div>
                                 <div>
-                                    <label>Room / Lab No</label>
+                                    <label>Room No</label>
                                     <input
                                         type="text"
-                                        placeholder="e.g. Lab 2"
+                                        placeholder="e.g. Room 204"
                                         value={editingStaffTTId ? editStaffTTForm.roomNo : staffTimetableForm.roomNo}
                                         onChange={e => {
                                             if (editingStaffTTId) {
@@ -2304,10 +2461,9 @@ export default function AdminDashboard() {
                                         }}
                                     />
                                 </div>
-
                                 <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
                                     <button type="submit" className="add-notice-btn">
-                                        {editingStaffTTId ? <><RefreshCw size={15} /> Update Staff Schedule Slot</> : <><PlusCircle size={15} /> Add Staff Schedule Slot</>}
+                                        {editingStaffTTId ? <><RefreshCw size={15} /> Update Work Schedule Slot</> : <><PlusCircle size={15} /> Add Staff Work Schedule Slot</>}
                                     </button>
                                     {editingStaffTTId && (
                                         <button type="button" className="cancel-btn" onClick={() => { setEditingStaffTTId(null); setEditStaffTTForm(initialStaffTimetableForm); }}>
