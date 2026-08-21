@@ -7,7 +7,17 @@ import {
     GraduationCap, Trophy, Megaphone, MapPin,
     Navigation, Phone, ArrowUp, Sparkles, Clock
 } from 'lucide-react';
-import campusBg from '../assets/bg1.jpg';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 import campusBg1 from '../assets/bg2.png';
 import campusBg2 from '../assets/bg3.png';
 import campusBg3 from '../assets/bg4.png';
@@ -17,39 +27,36 @@ import campusBg6 from '../assets/bg7.jpg';
 import campusBg7 from '../assets/bg8.jpg';
 import campusBg8 from '../assets/bg9.jpg';
 import campusBg9 from '../assets/bg10.jpg';
-import campusBg10 from '../assets/bg11.jpg';
+import campusBg10 from '../assets/image.png';
 
 import photo from '../assets/photo1.png';
 
 import HomeNoticeBoard from './HomeNoticeBoard';
 import './Home.css';
 
-const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1217.4431145839242!2d78.63602594809008!3d10.81217436534207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3baa5f9fba5a591b%3A0x1754db7db8c5c932!2sHoly%20Cross%20Matriculation%20Higher%20Secondary%20School!5e1!3m2!1sen!2sin!4v1786864178052!5m2!1sen!2sin";
+const schoolCoordinates = [10.8124016, 78.6360993]; // Somarasampettai location
 
-// Define your carousel background images array here
 const heroImages = [
-    campusBg,
     campusBg1,
     campusBg2,
     campusBg3,
+    campusBg10,
     campusBg4,
     campusBg5,
     campusBg6,
     campusBg7,
     campusBg8,
     campusBg9,
-    campusBg10,
 ];
 
 export default function Home({ setActivePage }) {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
 
-    // Dynamic states for Admin-controlled sections
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [toppersList, setToppersList] = useState([]);
 
-    // Handle scroll tracker for the 'scroll-to-top' button
+    // Scroll-to-top button visibility listener
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 300) {
@@ -59,11 +66,36 @@ export default function Home({ setActivePage }) {
             }
         };
 
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Handle automated carousel background transition (every 5 seconds)
+    // Intersection Observer for scroll reveal animations
+    useEffect(() => {
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.12
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                } else {
+                    entry.target.classList.remove('is-visible');
+                }
+            });
+        }, observerOptions);
+
+        const animatedElements = document.querySelectorAll('.scroll-animate');
+        animatedElements.forEach(el => observer.observe(el));
+
+        return () => {
+            animatedElements.forEach(el => observer.unobserve(el));
+        };
+    }, [upcomingEvents, toppersList]);
+
     useEffect(() => {
         if (heroImages.length <= 1) return;
         const interval = setInterval(() => {
@@ -72,7 +104,6 @@ export default function Home({ setActivePage }) {
         return () => clearInterval(interval);
     }, []);
 
-    // Fetch live data from Firestore for Upcoming Events & Board Toppers
     useEffect(() => {
         const unsubEvents = onSnapshot(collection(db, 'upcoming_events'), (snapshot) => {
             setUpcomingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -128,7 +159,7 @@ export default function Home({ setActivePage }) {
                 <div className="hero-overlay"></div>
                 <div className="hero-content">
                     <div className="hero-tag">
-                        <Sparkles size={13} className="hero-sparkle" />
+                        {/* <Sparkles size={13} className="hero-sparkle" /> */}
                         <span>ESTD 2002 • TRICHY, TAMIL NADU</span>
                     </div>
                     <h2>Holy Cross Matric. Hr. Sec. School</h2>
@@ -147,8 +178,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* 3. Quick Action Portals */}
-            <section className="quick-portals-wrapper">
+            {/* 3. Quick Action Portals (Scale Up Animation) */}
+            <section className="quick-portals-wrapper scroll-animate anim-scale-up">
                 <div className="portal-grid">
                     <div className="portal-card portal-purple" onClick={() => setActivePage('admissions')}>
                         <div className="portal-icon-wrapper">
@@ -192,11 +223,13 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* 4. Notice Board / Circulars */}
-            <HomeNoticeBoard onNavigate={setActivePage} />
+            {/* 4. Notice Board / Circulars (Fade Up Animation) */}
+            <div className="scroll-animate anim-fade-up">
+                <HomeNoticeBoard onNavigate={setActivePage} />
+            </div>
 
-            {/* 5. Core Pillars Grid */}
-            <section className="section-container">
+            {/* 5. Core Pillars Grid (Slide From Left Animation) */}
+            <section className="section-container scroll-animate anim-slide-left">
                 <div className="cards-grid-3">
                     <div className="info-card">
                         <div className="card-header-flex">
@@ -233,8 +266,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* Principal's Desk Feature Section */}
-            <section className="section-container">
+            {/* Principal's Desk Feature Section (Slide From Right Animation) */}
+            <section className="section-container scroll-animate anim-slide-right">
                 <div className="principal-desk-wrapper">
                     <div className="principal-card-img">
                         <img src={photo} alt="" />
@@ -252,8 +285,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* 6. Updated About Us Section */}
-            <section className="section-container">
+            {/* 6. Updated About Us Section (Blur Zoom Animation) */}
+            <section className="section-container scroll-animate anim-blur-zoom">
                 <div className="institution-grid">
                     <div className="institution-main">
                         <span className="section-badge">ABOUT US</span>
@@ -279,7 +312,6 @@ export default function Home({ setActivePage }) {
                             Our dream is to develop HCMHSS into a reputed Higher Secondary School in Trichy District. Every student, especially X, XI, and XII students are trained and motivated to produce historical results every year. The annual magazine, annual cultural programmes, sports and co-curricular activities in the school help students to exhibit their talents and skills.
                         </p>
 
-                        {/* Milestones Timeline */}
                         <div className="timeline-milestones">
                             <div className="milestone-item">
                                 <div className="milestone-year">2002</div>
@@ -296,7 +328,6 @@ export default function Home({ setActivePage }) {
                         </div>
                     </div>
 
-                    {/* Mission Sidebar */}
                     <div className="mission-sidebar">
                         <div className="widget-header">
                             <Globe2 size={18} />
@@ -317,8 +348,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* DYNAMIC: Upcoming Events & Activities Section (Controlled by AdminDashboard) */}
-            <section className="section-container">
+            {/* Upcoming Events Section (Fade Up Animation) */}
+            <section className="section-container scroll-animate anim-fade-up">
                 <div className="events-section-header">
                     <div>
                         <span className="section-badge">SCHOOL CALENDAR</span>
@@ -352,8 +383,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* DYNAMIC: Board Exam Toppers & Achievers Section (Controlled by AdminDashboard) */}
-            <section className="section-container">
+            {/* Board Exam Toppers Section (Scale Up Animation) */}
+            <section className="section-container scroll-animate anim-scale-up">
                 <div className="events-section-header">
                     <div>
                         <span className="section-badge">EXCELLENCE</span>
@@ -380,8 +411,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* SECTION 2: Campus Photo Gallery Preview */}
-            <section className="section-container">
+            {/* Campus Photo Gallery Preview (Slide Left Animation) */}
+            <section className="section-container scroll-animate anim-slide-left">
                 <div className="events-section-header">
                     <div>
                         <span className="section-badge">LIFE AT HOLY CROSS</span>
@@ -391,7 +422,7 @@ export default function Home({ setActivePage }) {
 
                 <div className="gallery-grid">
                     <div className="gallery-thumb">
-                        <img src={campusBg} alt="Campus Infrastructure" />
+                        <img src={campusBg5} alt="Campus Infrastructure" />
                         <div className="gallery-overlay-caption">Main Gate</div>
                     </div>
                     <div className="gallery-thumb">
@@ -409,8 +440,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* SECTION A: School Statistics & Quick Facts */}
-            <section className="section-container">
+            {/* School Statistics (Fade Up Animation) */}
+            <section className="section-container scroll-animate anim-fade-up">
                 <div className="stats-grid">
                     <div className="stat-card">
                         <div className="stat-number">2002</div>
@@ -431,8 +462,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* SECTION B: Co-Curricular & Student Clubs */}
-            <section className="section-container">
+            {/* Co-Curricular & Student Clubs (Slide Right Animation) */}
+            <section className="section-container scroll-animate anim-slide-right">
                 <div className="events-section-header">
                     <div>
                         <span className="section-badge">STUDENT LIFE</span>
@@ -475,8 +506,8 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* SECTION E: Frequently Asked Questions (FAQ) */}
-            <section className="section-container">
+            {/* FAQ (Fade Up Animation) */}
+            <section className="section-container scroll-animate anim-fade-up">
                 <div className="events-section-header">
                     <div>
                         <span className="section-badge">SUPPORT</span>
@@ -502,15 +533,15 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* 7. Campus Location Section */}
-            <section className="section-container map-section-container">
+            {/* 7. Campus Location Section (Blur Zoom Animation) */}
+            <section className="section-container map-section-container scroll-animate anim-blur-zoom">
                 <div className="map-header">
                     <div>
                         <span className="section-badge">CAMPUS LOCATION</span>
                         <h2>Find & Visit Our Campus</h2>
                     </div>
                     <a
-                        href="https://www.google.com/maps/place/Holy+Cross+Matriculation+Higher+Secondary+School/@10.8121744,78.6360259,280m/data=!3m1!1e3!4m6!3m5!1s0x3baa5f9fba5a591b:0x1754db7db8c5c932!8m2!3d10.8124016!4d78.6360993!16s%2Fg%2F1tdwt34q"
+                        href="https://www.google.com/maps/place/Holy+Cross+Matriculation+Higher+Secondary+School/@10.8121744,78.6360259,280m"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="map-directions-btn"
@@ -530,17 +561,24 @@ export default function Home({ setActivePage }) {
                         </div>
                     </div>
 
-                    <div className="map-frame-container">
-                        <iframe
-                            title="Holy Cross School Location Map"
-                            src={mapEmbedUrl}
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            allowFullScreen=""
-                            loading="lazy"
-                            referrerPolicy="strict-origin-when-cross-origin"
-                        ></iframe>
+                    <div className="map-frame-container" style={{ width: '100%', height: '350px', position: 'relative' }}>
+                        <MapContainer
+                            center={schoolCoordinates}
+                            zoom={16}
+                            scrollWheelZoom={false}
+                            style={{ width: '100%', height: '100%' }}
+                        >
+                            <TileLayer
+                                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                maxZoom={19}
+                            />
+                            <Marker position={schoolCoordinates}>
+                                <Popup>
+                                    Holy Cross Matric. Hr. Sec. School <br /> Somarasampettai, Trichy.
+                                </Popup>
+                            </Marker>
+                        </MapContainer>
                     </div>
                 </div>
             </section>

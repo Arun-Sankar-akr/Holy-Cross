@@ -119,7 +119,7 @@
 }
 
 /* -------------------------------------------------------------
-   2. Hero Carousel Section (Fixed Aspect Ratio & Alignment)
+   2. Hero Carousel Section
 ------------------------------------------------------------- */
 .hero-section {
     color: #ffffff;
@@ -133,7 +133,6 @@
     overflow: hidden;
 }
 
-/* Carousel Background Slides Fitted to Section */
 .hero-slide {
     position: absolute;
     inset: 0;
@@ -145,7 +144,6 @@
     opacity: 0;
     transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     transform: none;
-    /* Removed scale transform to prevent over-zooming */
     z-index: 0;
 }
 
@@ -262,7 +260,6 @@
 .quick-portals-wrapper {
     max-width: 1140px;
     margin: -50px auto 40px;
-    /* Smooth overlay above taller hero */
     padding: 0 20px;
     position: relative;
     z-index: 10;
@@ -516,7 +513,6 @@
     margin-bottom: 12px;
 }
 
-/* Milestones */
 .timeline-milestones {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -548,7 +544,6 @@
     font-weight: 500;
 }
 
-/* Mission Sidebar Widget */
 .mission-sidebar {
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -606,7 +601,7 @@
 }
 
 /* -------------------------------------------------------------
-   6. Map Section
+   6. Map Section (Leaflet custom integration)
 ------------------------------------------------------------- */
 .map-section-container {
     padding-bottom: 60px;
@@ -695,12 +690,8 @@
     width: 100%;
     height: 100%;
     min-height: 300px;
-}
-
-.map-frame-container iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
+    position: relative;
+    z-index: 1;
 }
 
 /* -------------------------------------------------------------
@@ -732,9 +723,6 @@
 
 /* -------------------------------------------------------------
    8. Responsive Adjustments
-------------------------------------------------------------- */
-/* -------------------------------------------------------------
-   8. Responsive Adjustments & Mobile Carousel Optimization
 ------------------------------------------------------------- */
 @media (max-width: 1024px) {
     .hero-section {
@@ -773,11 +761,6 @@
     .hero-section {
         min-height: 420px;
         padding: 100px 16px 130px;
-    }
-
-    .hero-slide {
-        background-size: cover;
-        background-position: center center;
     }
 
     .hero-content h2 {
@@ -821,55 +804,7 @@
     }
 }
 
-@media (max-width: 768px) {
-    .news-ticker-bar {
-        height: 36px;
-    }
-
-    .ticker-label {
-        font-size: 0.7rem;
-        padding: 0 10px;
-    }
-
-    .hero-section {
-        min-height: 400px;
-        padding: 90px 16px 120px;
-    }
-
-    .hero-buttons {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .btn-primary,
-    .btn-secondary {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .quick-portals-wrapper {
-        margin-top: -36px;
-        padding: 0 14px;
-    }
-
-    .portal-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .cards-grid-3 {
-        grid-template-columns: 1fr;
-    }
-
-    .timeline-milestones {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-}
-
-/* -------------------------------------------------------------
-   Principal's Desk Section
-------------------------------------------------------------- */
+/* Principal's Desk Section */
 .principal-desk-wrapper {
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -900,11 +835,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.principal-placeholder-icon {
-    color: var(--primary);
-    opacity: 0.5;
 }
 
 .principal-content h3 {
@@ -952,9 +882,6 @@
     }
 }
 
-/* -------------------------------------------------------------
-   Upcoming Events & Calendar Highlights Section
-------------------------------------------------------------- */
 .events-section-header {
     display: flex;
     justify-content: space-between;
@@ -1071,10 +998,6 @@
     border-color: #cbd5e1;
 }
 
-/* -------------------------------------------------------------
-   Additional Sections: Achievements, Gallery, Testimonials
-------------------------------------------------------------- */
-/* Toppers & Achievements Section */
 .achievements-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1138,7 +1061,6 @@
     display: inline-block;
 }
 
-/* Photo Gallery Preview Section */
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1177,48 +1099,6 @@
     font-size: 0.84rem;
 }
 
-/* Testimonials Section */
-.testimonials-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.testimonial-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
-    position: relative;
-}
-
-.testimonial-card p {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    line-height: 1.6;
-    font-style: italic;
-    margin: 0 0 16px 0;
-}
-
-.testimonial-author h4 {
-    margin: 0;
-    font-size: 0.94rem;
-    font-weight: 800;
-    color: var(--text-dark);
-}
-
-.testimonial-author span {
-    font-size: 0.76rem;
-    color: var(--primary);
-    font-weight: 600;
-}
-
-
-/* -------------------------------------------------------------
-   5 Additional Sections: Clubs, Faculty, Admissions, Stats, FAQ
-------------------------------------------------------------- */
-/* 1. School Stats Counters */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1251,7 +1131,6 @@
     letter-spacing: 0.05em;
 }
 
-/* 2. Co-Curricular Clubs Grid */
 .clubs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1298,101 +1177,6 @@
     margin: 0;
 }
 
-/* 3. Admissions Step-by-Step Guide */
-.steps-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-}
-
-.step-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    position: relative;
-    box-shadow: var(--shadow-sm);
-}
-
-.step-number-badge {
-    position: absolute;
-    top: -12px;
-    left: 22px;
-    background: var(--primary-gradient);
-    color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 800;
-    padding: 2px 10px;
-    border-radius: 12px;
-}
-
-.step-card h3 {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin: 10px 0 6px 0;
-}
-
-.step-card p {
-    font-size: 0.84rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin: 0;
-}
-
-/* 4. Faculty & Leadership Spotlights */
-.faculty-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-}
-
-.faculty-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-}
-
-.faculty-avatar-box {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: #f1f5f9;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 14px;
-    border: 2px solid var(--border);
-}
-
-.faculty-card h3 {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin: 0 0 2px 0;
-}
-
-.faculty-role {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-    display: block;
-}
-
-.faculty-desc {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin: 0;
-}
-
-/* 5. Frequently Asked Questions (FAQ) */
 .faq-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1428,7 +1212,106 @@
     margin: 0;
 }
 
-#roles{
+#roles {
     font-weight: 400;
     color: #a7a7a5;
+}
+
+.leaflet-control-attribution {
+    display: none !important;
+}
+
+/* -------------------------------------------------------------
+   Scroll Direction Animations & Smooth Transitions
+------------------------------------------------------------- */
+.home-wrapper {
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease;
+}
+
+/* Animation when user scrolls DOWN */
+.home-wrapper.scroll-down .section-container,
+.home-wrapper.scroll-down .quick-portals-wrapper {
+    transform: translateY(4px) scale(0.995);
+    filter: brightness(0.98);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+}
+
+/* Animation when user scrolls UP */
+.home-wrapper.scroll-up .section-container,
+.home-wrapper.scroll-up .quick-portals-wrapper {
+    transform: translateY(-4px) scale(1.002);
+    filter: brightness(1.02);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+}
+
+/* Individual card directional micro-interactions */
+.home-wrapper.scroll-down .info-card,
+.home-wrapper.scroll-down .portal-card {
+    border-color: rgba(79, 70, 229, 0.3);
+}
+
+.home-wrapper.scroll-up .info-card,
+.home-wrapper.scroll-up .portal-card {
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+/* -------------------------------------------------------------
+   Scroll Reveal Animations & Smooth Transitions
+------------------------------------------------------------- */
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.animate-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* -------------------------------------------------------------
+   Multi-Style Directional Scroll Animations (Up & Down Safe)
+------------------------------------------------------------- */
+.scroll-animate {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        filter 0.7s ease;
+    will-change: opacity, transform, filter;
+}
+
+/* 1. Classic Fade Up */
+.scroll-animate.anim-fade-up {
+    transform: translateY(45px);
+}
+
+/* 2. Slide In From Left */
+.scroll-animate.anim-slide-left {
+    transform: translateX(-50px);
+}
+
+/* 3. Slide In From Right */
+.scroll-animate.anim-slide-right {
+    transform: translateX(50px);
+}
+
+/* 4. Scale Up */
+.scroll-animate.anim-scale-up {
+    transform: scale(0.94) translateY(20px);
+}
+
+/* 5. Blur Zoom */
+.scroll-animate.anim-blur-zoom {
+    transform: scale(0.96);
+    filter: blur(6px);
+}
+
+/* Triggered State (Active when in view) */
+.scroll-animate.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(0, 0) scale(1);
+    filter: blur(0);
 }
