@@ -6,7 +6,8 @@ import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
     Menu, X, Clock, FileText, User, AlertCircle, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
-    ChevronRight, BarChart2, Filter, DollarSign, Receipt
+    ChevronRight, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
+    Download, Sparkles, Eye
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
@@ -41,6 +42,15 @@ export default function StudentDashboard() {
     // Subject/Exam filter on Marks tab
     const [selectedExamView, setSelectedExamView] = useState('All');
 
+    // --- FEATURE 1: Dark / Light Mode Theme Toggle State ---
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('portalTheme') === 'dark');
+
+    // --- FEATURE 2: Header Notification Drawer Dropdown State ---
+    const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+
+    // --- FEATURE 5: Interactive Quick Detail View Modal State ---
+    const [detailModalContent, setDetailModalContent] = useState(null);
+
     const navigate = useNavigate();
 
     const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -67,6 +77,12 @@ export default function StudentDashboard() {
         'Annual Exam',
         'Class Unit Test'
     ];
+
+    // Feature 1 Theme Effect
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        localStorage.setItem('portalTheme', darkMode ? 'dark' : 'light');
+    }, [darkMode]);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('studentUser');
@@ -432,6 +448,34 @@ export default function StudentDashboard() {
         window.print();
     };
 
+    // --- FEATURE 3: Global CSV / Data Export Function ---
+    const handleExportCSV = () => {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        if (activeTab === 'marks') {
+            csvContent += "Exam,Subject,Max Marks,Score\n";
+            filteredMarksEntries.forEach(m => {
+                csvContent += `"${m.examName}","${m.subject}",100,${m.score}\n`;
+            });
+        } else if (activeTab === 'fees-history') {
+            csvContent += "Term,Total Fee,Paid Amount,Balance,Status\n";
+            feeRecords.forEach(f => {
+                csvContent += `"${f.term}",${f.totalFee},${f.paidAmount || 0},${f.balance},"${f.status}"\n`;
+            });
+        } else {
+            csvContent += "Title,Type,DueDate\n";
+            studentAssignments.forEach(a => {
+                csvContent += `"${a.title}","${a.type}","${a.dueDate}"\n`;
+            });
+        }
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${studentData.name}_${activeTab}_export.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="staff-style-dashboard">
             {/* INLINE CSS TO PREVENT OVERPADDING & FORCE SINGLE-PAGE A4 PRINT FIT WITH A CRISP BORDER */}
@@ -475,6 +519,28 @@ export default function StudentDashboard() {
                     }
                 }
             `}</style>
+
+            {/* FEATURE 5: INTERACTIVE QUICK DETAIL VIEW MODAL */}
+            {detailModalContent && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10005, padding: '20px'
+                }}>
+                    <div style={{ background: 'var(--staff-bg-surface)', width: '100%', maxWidth: '480px', padding: '20px', borderRadius: '12px', border: '1px solid var(--staff-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--staff-border)', paddingBottom: '8px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Sparkles size={16} color="var(--staff-primary)" /> Quick View Detail</h3>
+                            <button onClick={() => setDetailModalContent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--staff-text-main)' }}><X size={18} /></button>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--staff-text-main)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <p style={{ margin: 0 }}><strong>Title:</strong> {detailModalContent.title || detailModalContent.message || detailModalContent.content}</p>
+                            {detailModalContent.subject && <p style={{ margin: 0 }}><strong>Subject:</strong> {detailModalContent.subject}</p>}
+                            {detailModalContent.dueDate && <p style={{ margin: 0 }}><strong>Due Date:</strong> {detailModalContent.dueDate}</p>}
+                            {detailModalContent.description && <p style={{ margin: 0, background: 'var(--staff-bg-app)', padding: '8px', borderRadius: '6px' }}>{detailModalContent.description}</p>}
+                        </div>
+                        <button onClick={() => setDetailModalContent(null)} style={{ marginTop: '16px', width: '100%', background: 'var(--staff-primary)', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Close Preview</button>
+                    </div>
+                </div>
+            )}
 
             {/* POPUP MODAL FOR OFFICIAL FEE RECEIPT VIEW & PRINT */}
             {selectedPrintReceipt && (
@@ -594,19 +660,19 @@ export default function StudentDashboard() {
                     position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
                     background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
                 }}>
-                    <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+                    <div style={{ background: 'var(--staff-bg-surface)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <h3 style={{ margin: 0, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <DollarSign size={22} /> Fee Dues Alert!
                             </h3>
-                            <button onClick={() => setShowFeeAlertModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => setShowFeeAlertModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--staff-text-main)' }}>
                                 <X size={18} />
                             </button>
                         </div>
-                        <p style={{ fontSize: '0.9rem', color: '#475569' }}>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--staff-text-muted)' }}>
                             Dear <strong>{studentData.name}</strong>, you have pending fee balances assigned by the front office desk. Please clear them at the office counter.
                         </p>
-                        <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', margin: '1rem 0' }}>
+                        <div style={{ background: 'var(--staff-bg-app)', padding: '10px', borderRadius: '8px', margin: '1rem 0' }}>
                             {pendingFeesList.map(fee => (
                                 <div key={fee.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                                     <span>{fee.term}:</span>
@@ -638,6 +704,11 @@ export default function StudentDashboard() {
             {isMobileMenuOpen && (
                 <div className="staff-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />
             )}
+
+            {/* FEATURE 4: PERSISTENT FLOATING QUICK ACTION BUTTON */}
+            <button className="floating-action-fab" onClick={handleExportCSV} title="Export Current View Data">
+                <Download size={16} /> <span>Quick Export</span>
+            </button>
 
             <div className="staff-layout-grid">
                 <aside className={`staff-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -727,29 +798,75 @@ export default function StudentDashboard() {
                         </div>
 
                         <div className="topbar-actions">
+                            {/* FEATURE 1: Dark Mode Toggle Button */}
+                            <button
+                                className="topbar-icon-btn"
+                                onClick={() => setDarkMode(!darkMode)}
+                                title="Toggle Dark/Light Mode"
+                            >
+                                {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+                            </button>
+
+                            {/* FEATURE 2: Quick Notifications Drawer Toggle Button */}
+                            <button
+                                className="topbar-icon-btn"
+                                onClick={() => setShowNotifDrawer(!showNotifDrawer)}
+                                title="Notifications"
+                            >
+                                <Bell size={15} />
+                                {announcementsList.length > 0 && (
+                                    <span className="notif-badge-count">{announcementsList.length}</span>
+                                )}
+                            </button>
+
+                            {/* FEATURE 2: Notifications Dropdown Drawer */}
+                            {showNotifDrawer && (
+                                <div className="notif-drawer-dropdown">
+                                    <div className="notif-drawer-header">
+                                        <h4>Circular Notices</h4>
+                                        <X size={14} style={{ cursor: 'pointer' }} onClick={() => setShowNotifDrawer(false)} />
+                                    </div>
+                                    {announcementsList.slice(0, 3).map(item => (
+                                        <div
+                                            key={item.id}
+                                            className="notif-drawer-item"
+                                            onClick={() => { setDetailModalContent(item); setShowNotifDrawer(false); }}
+                                        >
+                                            <p>{item.content || item.message}</p>
+                                            <span>{item.date || 'Recent'}</span>
+                                        </div>
+                                    ))}
+                                    {announcementsList.length === 0 && (
+                                        <p style={{ fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>No recent announcements.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* FEATURE 3: Global CSV / Page Data Export Button */}
+                            <button
+                                className="topbar-icon-btn"
+                                onClick={handleExportCSV}
+                                title="Export Page Data to CSV"
+                            >
+                                <Download size={15} />
+                            </button>
+
                             <div className="sync-badge">
                                 <span className="sync-dot" /> Live Portal Sync
                             </div>
+
+                            <button className="ps-header-btn ghost" onClick={() => setActiveTab('marks')}>
+                                <Award size={14} /> Exam Result
+                            </button>
+                            <button className="ps-header-btn solid" onClick={() => setActiveTab('fees-history')}>
+                                <Receipt size={14} /> Fees Details
+                            </button>
                         </div>
                     </header>
 
                     <div className="staff-content-container">
                         {activeTab === 'overview' && (
                             <>
-                                <div className="staff-welcome-card">
-                                    <div>
-                                        <h2>Welcome back, <span className="green-accent">{studentData.name}</span>! 👋</h2>
-                                        <p>Enrolled in {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''} • Student Portal</p>
-                                    </div>
-                                    <div className="attendance-pill-box">
-                                        <span className="pill-label">Roll Call:</span>
-                                        <span className={`status-badge status-${currentAttendanceStatus}`}>
-                                            {currentAttendanceStatus === 'present' ? <Check size={12} /> : (currentAttendanceStatus === 'absent' ? <XCircle size={12} /> : <Clock size={12} />)}
-                                            {currentAttendanceStatus.toUpperCase()}
-                                        </span>
-                                    </div>
-                                </div>
-
                                 {isDefaulter && (
                                     <div className="attendance-warning-banner">
                                         <div className="warning-content">
@@ -768,7 +885,265 @@ export default function StudentDashboard() {
                                     </div>
                                 )}
 
-                                <div className="staff-stats-grid">
+                                <div className="preskool-grid">
+                                    {/* ===== COLUMN 1: Profile + Today's Class ===== */}
+                                    <div className="preskool-col">
+                                        <div className="ps-profile-card">
+                                            <div className="ps-profile-top">
+                                                <div className="ps-profile-avatar">
+                                                    {liveStudentRecord?.photo ? (
+                                                        <img src={liveStudentRecord.photo} alt={studentData.name} />
+                                                    ) : (
+                                                        <User size={28} />
+                                                    )}
+                                                </div>
+                                                <div className="ps-profile-info">
+                                                    <span className="ps-profile-id">#ST{(studentData.rollNo || '00000').toString().padStart(5, '0')}</span>
+                                                    <h4>{studentData.name}</h4>
+                                                    <p>Class: {studentData.grade || 'N/A'} {studentData.section ? `- ${studentData.section}` : ''} &nbsp; Roll No: {studentData.rollNo || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="ps-profile-bottom">
+                                                <span className="ps-quarterly-pill">
+                                                    <Award size={12} /> {averageScore !== 'N/A' ? `Avg ${averageScore}%` : '1st Quarterly'}
+                                                </span>
+                                                <button className="ps-edit-btn" onClick={() => setActiveTab('marks')}>
+                                                    <ChevronRight size={13} /> View Profile
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="ps-panel">
+                                            <div className="ps-panel-header">
+                                                <h3>Today's Class</h3>
+                                                <span className="ps-panel-date">
+                                                    <Calendar size={12} /> {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </span>
+                                            </div>
+                                            <div className="ps-class-list">
+                                                {studentSchedule.length === 0 ? (
+                                                    <div className="empty-sub-card">
+                                                        <BookOpen size={22} color="var(--dash-text-muted)" />
+                                                        <p>No classes scheduled for today.</p>
+                                                    </div>
+                                                ) : (
+                                                    studentSchedule.slice(0, 4).map((cls, idx) => (
+                                                        <div className="ps-class-row" key={cls.id || idx}>
+                                                            <div className="ps-class-icon">
+                                                                <BookOpen size={16} />
+                                                            </div>
+                                                            <div className="ps-class-mid">
+                                                                <h5>{cls.subject}</h5>
+                                                                <span><Clock size={11} /> {cls.timeSlot}</span>
+                                                            </div>
+                                                            <span className={`ps-class-status ${idx === 0 ? 'done' : idx === 1 ? 'progress' : 'upcoming'}`}>
+                                                                {idx === 0 ? 'Completed' : idx === 1 ? 'Ongoing' : 'Upcoming'}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="ps-panel">
+                                            <div className="ps-panel-header">
+                                                <h3>Active Coursework</h3>
+                                                <Layers size={15} className="muted-icon" />
+                                            </div>
+                                            {studentAssignments.length === 0 ? (
+                                                <div className="empty-sub-card">
+                                                    <CheckCircle size={22} color="var(--accent-emerald)" />
+                                                    <p>All caught up! No active tasks assigned.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="student-tasks-list">
+                                                    {studentAssignments.slice(0, 3).map(task => {
+                                                        const isSubmitted = submissionsList.some(sub => sub.taskId === task.id);
+                                                        return (
+                                                            <div
+                                                                key={task.id}
+                                                                className="student-task-item"
+                                                                onClick={() => setDetailModalContent(task)}
+                                                            >
+                                                                <div className="task-top-flex">
+                                                                    <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
+                                                                        {task.type}
+                                                                    </span>
+                                                                    {isSubmitted ? (
+                                                                        <span className="submitted-pill"><FileCheck size={12} /> Submitted</span>
+                                                                    ) : (
+                                                                        <span className="due-date-pill">Due: {task.dueDate}</span>
+                                                                    )}
+                                                                </div>
+                                                                <h5>{task.title}</h5>
+                                                                <span className="task-sub">{task.subject} • Faculty: {task.staffName}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* ===== COLUMN 2: Attendance Ring ===== */}
+                                    <div className="preskool-col">
+                                        <div className="ps-panel">
+                                            <div className="ps-panel-header">
+                                                <h3>Attendance</h3>
+                                                <span className="ps-panel-tag"><Calendar size={11} /> This Month</span>
+                                            </div>
+
+                                            <div className="ps-attendance-summary">
+                                                <div>
+                                                    <span className="ps-att-num">{studentSchedule.length > 0 ? studentSchedule.length * 4 : 28}</span>
+                                                    <span className="ps-att-label">Total Working Days</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="ps-att-minicards">
+                                                <div className="ps-att-mini">
+                                                    <span className="dot present" />
+                                                    <div>
+                                                        <strong>{hasStaffSubmittedAttendance && currentAttendanceStatus === 'present' ? 25 : 0}</strong>
+                                                        <p>Present</p>
+                                                    </div>
+                                                </div>
+                                                <div className="ps-att-mini">
+                                                    <span className="dot absent" />
+                                                    <div>
+                                                        <strong>{hasStaffSubmittedAttendance && currentAttendanceStatus === 'absent' ? 3 : 0}</strong>
+                                                        <p>Absent</p>
+                                                    </div>
+                                                </div>
+                                                <div className="ps-att-mini">
+                                                    <span className="dot halfday" />
+                                                    <div>
+                                                        <strong>0</strong>
+                                                        <p>Half Day</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="ps-ring-wrap">
+                                                <svg viewBox="0 0 140 140" className="ps-ring-svg">
+                                                    <circle cx="70" cy="70" r="58" fill="none" stroke="var(--dash-border)" strokeWidth="14" />
+                                                    <circle
+                                                        cx="70" cy="70" r="58" fill="none"
+                                                        stroke="var(--accent-emerald)"
+                                                        strokeWidth="14"
+                                                        strokeDasharray={`${2 * Math.PI * 58}`}
+                                                        strokeDashoffset={`${2 * Math.PI * 58 * (1 - (hasStaffSubmittedAttendance ? rawAttendanceRate : 95) / 100)}`}
+                                                        strokeLinecap="round"
+                                                        transform="rotate(-90 70 70)"
+                                                    />
+                                                </svg>
+                                                <div className="ps-ring-center">
+                                                    <span>{hasStaffSubmittedAttendance ? rawAttendanceRate : 95}%</span>
+                                                    <p>Attendance</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="ps-ring-legend">
+                                                <span><i className="dot present" />Present</span>
+                                                <span><i className="dot absent" />Absent</span>
+                                                <span><i className="dot halfday" />Late</span>
+                                                <span><i className="dot halfday" />Half Day</span>
+                                            </div>
+
+                                            <div className="ps-last7-header">Last 7 Days</div>
+                                            <div className="ps-last7-strip">
+                                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => {
+                                                    const state = i < 5 ? 'present' : i === 5 ? 'absent' : 'off';
+                                                    return (
+                                                        <div key={i} className={`ps-day-chip ${state}`}>
+                                                            {d}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* ===== COLUMN 3: Schedule / Calendar / Notices ===== */}
+                                    <div className="preskool-col">
+                                        <div className="ps-panel">
+                                            <div className="ps-panel-header">
+                                                <h3>Schedules</h3>
+                                                <button className="ps-add-btn" onClick={() => setActiveTab('schedule')}>+ Add New</button>
+                                            </div>
+
+                                            <div className="ps-mini-cal-head">
+                                                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                            </div>
+                                            <div className="ps-mini-cal-grid">
+                                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                                                    <span key={i} className="ps-cal-dow">{d}</span>
+                                                ))}
+                                                {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, i) => (
+                                                    <span key={`blank-${i}`} />
+                                                ))}
+                                                {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }).map((_, i) => {
+                                                    const dayNum = i + 1;
+                                                    const isToday = dayNum === new Date().getDate();
+                                                    return (
+                                                        <span key={dayNum} className={`ps-cal-day ${isToday ? 'today' : ''}`}>
+                                                            {dayNum}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="ps-exams-header">Exams</div>
+                                            <div className="ps-exam-list">
+                                                {marksEntries.length === 0 ? (
+                                                    <div className="ps-exam-item">
+                                                        <div className="ps-exam-icon"><Award size={14} /></div>
+                                                        <div className="ps-exam-mid">
+                                                            <h5>No Exams Scheduled</h5>
+                                                            <span>Check back later</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    [...new Set(marksEntries.map(m => m.examName))].slice(0, 2).map((examName, idx) => (
+                                                        <div className="ps-exam-item" key={idx}>
+                                                            <div className="ps-exam-icon"><Award size={14} /></div>
+                                                            <div className="ps-exam-mid">
+                                                                <h5>{examName}</h5>
+                                                                <span>{marksEntries.filter(m => m.examName === examName).length} Subjects</span>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="ps-panel">
+                                            <div className="ps-panel-header">
+                                                <h3>Notice Board</h3>
+                                                <Bell size={15} className="muted-icon" />
+                                            </div>
+                                            <div className="student-notice-list">
+                                                {announcementsList.slice(0, 3).map((item) => (
+                                                    <div
+                                                        key={item.id}
+                                                        className="student-notice-item"
+                                                        onClick={() => setDetailModalContent(item)}
+                                                    >
+                                                        <p>{item.content || item.message}</p>
+                                                        <span className="notice-time">
+                                                            {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : (item.date || 'Recent')}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {announcementsList.length === 0 && (
+                                                    <p style={{ color: 'var(--dash-text-muted)', fontSize: '0.78rem' }}>No announcements available.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="staff-stats-grid ps-stats-row">
                                     {stats.map((s, idx) => {
                                         const IconComp = s.icon;
                                         return (
@@ -791,63 +1166,6 @@ export default function StudentDashboard() {
                                             </div>
                                         );
                                     })}
-                                </div>
-
-                                <div className="student-two-col-grid">
-                                    <div className="staff-card">
-                                        <div className="card-header">
-                                            <h3>Active Coursework</h3>
-                                            <Layers size={16} className="muted-icon" />
-                                        </div>
-                                        {studentAssignments.length === 0 ? (
-                                            <div className="empty-sub-card">
-                                                <CheckCircle size={24} color="var(--accent-emerald)" />
-                                                <p>All caught up! No active tasks assigned for your class.</p>
-                                            </div>
-                                        ) : (
-                                            <div className="student-tasks-list">
-                                                {studentAssignments.slice(0, 3).map(task => {
-                                                    const isSubmitted = submissionsList.some(sub => sub.taskId === task.id);
-                                                    return (
-                                                        <div key={task.id} className="student-task-item">
-                                                            <div className="task-top-flex">
-                                                                <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
-                                                                    {task.type}
-                                                                </span>
-                                                                {isSubmitted ? (
-                                                                    <span className="submitted-pill"><FileCheck size={12} /> Submitted</span>
-                                                                ) : (
-                                                                    <span className="due-date-pill">Due: {task.dueDate}</span>
-                                                                )}
-                                                            </div>
-                                                            <h5>{task.title}</h5>
-                                                            <span className="task-sub">{task.subject} • Faculty: {task.staffName}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="staff-card">
-                                        <div className="card-header">
-                                            <h3>Notice Board Circulars</h3>
-                                            <Bell size={16} className="muted-icon" />
-                                        </div>
-                                        <div className="student-notice-list">
-                                            {announcementsList.slice(0, 3).map((item) => (
-                                                <div key={item.id} className="student-notice-item">
-                                                    <p>{item.content || item.message}</p>
-                                                    <span className="notice-time">
-                                                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : (item.date || 'Recent')}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            {announcementsList.length === 0 && (
-                                                <p style={{ color: 'var(--staff-text-muted)', fontSize: '0.78rem' }}>No announcements available.</p>
-                                            )}
-                                        </div>
-                                    </div>
                                 </div>
                             </>
                         )}
@@ -1377,7 +1695,11 @@ export default function StudentDashboard() {
                                 </div>
                                 <div className="full-notices-container">
                                     {announcementsList.map((item) => (
-                                        <div key={item.id} className="bulletin-card">
+                                        <div
+                                            key={item.id}
+                                            className="bulletin-card"
+                                            onClick={() => setDetailModalContent(item)}
+                                        >
                                             <div className="bulletin-header">
                                                 <span className="bulletin-tag">Official Notice</span>
                                                 <span className="bulletin-date">
