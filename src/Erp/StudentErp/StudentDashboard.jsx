@@ -51,6 +51,23 @@ export default function StudentDashboard() {
     // --- FEATURE 5: Interactive Quick Detail View Modal State ---
     const [detailModalContent, setDetailModalContent] = useState(null);
 
+    // --- FEATURE 6: Personal Scheduled Reminder Popup ---
+    // Stored locally in this browser. No Firebase Cloud Messaging or Cloud Functions.
+    const [showReminderModal, setShowReminderModal] = useState(false);
+    const [showReminderPopup, setShowReminderPopup] = useState(false);
+    const [currentReminder, setCurrentReminder] = useState(null);
+    const [reminderTitle, setReminderTitle] = useState('');
+    const [reminderDate, setReminderDate] = useState('');
+    const [reminderTime, setReminderTime] = useState('');
+    const [reminderNote, setReminderNote] = useState('');
+    const [reminders, setReminders] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('studentReminders')) || [];
+        } catch {
+            return [];
+        }
+    });
+
     const navigate = useNavigate();
 
     const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -78,6 +95,46 @@ export default function StudentDashboard() {
         'Class Unit Test'
     ];
 
+    // Check scheduled reminders while the dashboard is open.
+    // A reminder is shown once when its date/time is reached.
+    useEffect(() => {
+        const checkScheduledReminders = () => {
+            try {
+                const saved = JSON.parse(localStorage.getItem('studentReminders')) || [];
+                const now = new Date();
+                const today = [
+                    now.getFullYear(),
+                    String(now.getMonth() + 1).padStart(2, '0'),
+                    String(now.getDate()).padStart(2, '0')
+                ].join('-');
+                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+                const dueReminder = saved.find(item => {
+                    if (!item || item.completed || item.date !== today || !item.time) return false;
+                    return item.time <= currentTime;
+                });
+
+                if (!dueReminder) return;
+
+                const updated = saved.map(item =>
+                    item.id === dueReminder.id ? { ...item, completed: true } : item
+                );
+
+                localStorage.setItem('studentReminders', JSON.stringify(updated));
+                setReminders(updated);
+                setCurrentReminder(dueReminder);
+                setShowReminderPopup(true);
+            } catch (error) {
+                console.error('Reminder check failed:', error);
+            }
+        };
+
+        checkScheduledReminders();
+        const reminderTimer = setInterval(checkScheduledReminders, 10000);
+
+        return () => clearInterval(reminderTimer);
+    }, []);
+
     // Feature 1 Theme Effect
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -101,6 +158,41 @@ export default function StudentDashboard() {
             }
         }
     }, []);
+
+    const saveReminder = () => {
+        if (!reminderTitle.trim() || !reminderDate || !reminderTime) {
+            alert('Please enter reminder title, date and time.');
+            return;
+        }
+
+        const newReminder = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: reminderTitle.trim(),
+            date: reminderDate,
+            time: reminderTime,
+            note: reminderNote.trim(),
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+
+        const updated = [...reminders, newReminder].sort((a, b) =>
+            `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)
+        );
+
+        localStorage.setItem('studentReminders', JSON.stringify(updated));
+        setReminders(updated);
+        setReminderTitle('');
+        setReminderDate('');
+        setReminderTime('');
+        setReminderNote('');
+        setShowReminderModal(false);
+    };
+
+    const deleteReminder = (id) => {
+        const updated = reminders.filter(item => item.id !== id);
+        localStorage.setItem('studentReminders', JSON.stringify(updated));
+        setReminders(updated);
+    };
 
     const cleanString = (str) => {
         if (!str) return '';
@@ -392,6 +484,12 @@ export default function StudentDashboard() {
     const currentAttendanceStatus = hasStaffSubmittedAttendance ? (liveStudentRecord?.status || 'present') : 'pending';
     const rawAttendanceRate = hasStaffSubmittedAttendance ? (liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68)) : 0;
     const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
+
+    // Attendance graph figures — derived from rawAttendanceRate so the ring chart,
+    // percentage label, and Present/Absent mini-cards always stay in sync with each other.
+    const totalWorkingDays = studentSchedule.length > 0 ? studentSchedule.length * 4 : 28;
+    const presentDaysCount = hasStaffSubmittedAttendance ? Math.round((rawAttendanceRate / 100) * totalWorkingDays) : 0;
+    const absentDaysCount = hasStaffSubmittedAttendance ? totalWorkingDays - presentDaysCount : 0;
 
     const attendanceLogs = hasStaffSubmittedAttendance ? [
         {
@@ -995,7 +1093,7 @@ export default function StudentDashboard() {
 
                                             <div className="ps-attendance-summary">
                                                 <div>
-                                                    <span className="ps-att-num">{studentSchedule.length > 0 ? studentSchedule.length * 4 : 28}</span>
+                                                    <span className="ps-att-num">{totalWorkingDays}</span>
                                                     <span className="ps-att-label">Total Working Days</span>
                                                 </div>
                                             </div>
@@ -1004,14 +1102,14 @@ export default function StudentDashboard() {
                                                 <div className="ps-att-mini">
                                                     <span className="dot present" />
                                                     <div>
-                                                        <strong>{hasStaffSubmittedAttendance && currentAttendanceStatus === 'present' ? 25 : 0}</strong>
+                                                        <strong>{presentDaysCount}</strong>
                                                         <p>Present</p>
                                                     </div>
                                                 </div>
                                                 <div className="ps-att-mini">
                                                     <span className="dot absent" />
                                                     <div>
-                                                        <strong>{hasStaffSubmittedAttendance && currentAttendanceStatus === 'absent' ? 3 : 0}</strong>
+                                                        <strong>{absentDaysCount}</strong>
                                                         <p>Absent</p>
                                                     </div>
                                                 </div>
@@ -1029,16 +1127,16 @@ export default function StudentDashboard() {
                                                     <circle cx="70" cy="70" r="58" fill="none" stroke="var(--dash-border)" strokeWidth="14" />
                                                     <circle
                                                         cx="70" cy="70" r="58" fill="none"
-                                                        stroke="var(--accent-emerald)"
+                                                        stroke={isDefaulter ? 'var(--accent-rose)' : 'var(--accent-emerald)'}
                                                         strokeWidth="14"
                                                         strokeDasharray={`${2 * Math.PI * 58}`}
-                                                        strokeDashoffset={`${2 * Math.PI * 58 * (1 - (hasStaffSubmittedAttendance ? rawAttendanceRate : 95) / 100)}`}
+                                                        strokeDashoffset={`${2 * Math.PI * 58 * (1 - rawAttendanceRate / 100)}`}
                                                         strokeLinecap="round"
                                                         transform="rotate(-90 70 70)"
                                                     />
                                                 </svg>
                                                 <div className="ps-ring-center">
-                                                    <span>{hasStaffSubmittedAttendance ? rawAttendanceRate : 95}%</span>
+                                                    <span>{hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : '--'}</span>
                                                     <p>Attendance</p>
                                                 </div>
                                             </div>
@@ -1069,7 +1167,7 @@ export default function StudentDashboard() {
                                         <div className="ps-panel">
                                             <div className="ps-panel-header">
                                                 <h3>Schedules</h3>
-                                                <button className="ps-add-btn" onClick={() => setActiveTab('schedule')}>+ Add New</button>
+                                                <button className="ps-add-btn" onClick={() => setShowReminderModal(true)}>+ Add New</button>
                                             </div>
 
                                             <div className="ps-mini-cal-head">
@@ -1721,6 +1819,127 @@ export default function StudentDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* ===== SCHEDULE REMINDER MODAL ===== */}
+            {showReminderModal && (
+                <div className="reminder-overlay" role="dialog" aria-modal="true" aria-label="Schedule Reminder">
+                    <div className="reminder-modal">
+                        <div className="reminder-modal-header">
+                            <div>
+                                <h3>Schedule Reminder</h3>
+                                <p>Remember something on a specific day and time.</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="reminder-close-btn"
+                                onClick={() => setShowReminderModal(false)}
+                                aria-label="Close"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="reminder-form">
+                            <label htmlFor="reminder-title">Reminder Title</label>
+                            <input
+                                id="reminder-title"
+                                type="text"
+                                placeholder="Example: Submit Assignment"
+                                value={reminderTitle}
+                                onChange={(e) => setReminderTitle(e.target.value)}
+                                autoFocus
+                            />
+
+                            <div className="reminder-date-time-row">
+                                <div>
+                                    <label htmlFor="reminder-date">Date</label>
+                                    <input
+                                        id="reminder-date"
+                                        type="date"
+                                        value={reminderDate}
+                                        onChange={(e) => setReminderDate(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="reminder-time">Time</label>
+                                    <input
+                                        id="reminder-time"
+                                        type="time"
+                                        value={reminderTime}
+                                        onChange={(e) => setReminderTime(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <label htmlFor="reminder-note">Note (Optional)</label>
+                            <textarea
+                                id="reminder-note"
+                                placeholder="Add a note..."
+                                value={reminderNote}
+                                onChange={(e) => setReminderNote(e.target.value)}
+                                rows={3}
+                            />
+
+                            <button type="button" className="save-reminder-btn" onClick={saveReminder}>
+                                <Check size={16} />
+                                Save Reminder
+                            </button>
+                        </div>
+
+                        {reminders.filter(item => !item.completed).length > 0 && (
+                            <div className="scheduled-reminders-list">
+                                <div className="scheduled-reminders-title">Upcoming Reminders</div>
+                                {reminders.filter(item => !item.completed).slice(0, 5).map(item => (
+                                    <div className="scheduled-reminder-item" key={item.id}>
+                                        <div className="scheduled-reminder-info">
+                                            <strong>{item.title}</strong>
+                                            <span>{item.date} · {item.time}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="delete-reminder-btn"
+                                            onClick={() => deleteReminder(item.id)}
+                                            aria-label={`Delete ${item.title}`}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ===== REMINDER ALERT POPUP ===== */}
+            {showReminderPopup && currentReminder && (
+                <div className="reminder-overlay" role="alertdialog" aria-modal="true">
+                    <div className="reminder-alert-popup">
+                        <div className="reminder-alert-icon">
+                            <Bell size={28} />
+                        </div>
+                        <h2>Reminder</h2>
+                        <h3>{currentReminder.title}</h3>
+                        <p>{currentReminder.note || 'You have a scheduled reminder.'}</p>
+                        <div className="reminder-alert-time">
+                            <Calendar size={15} />
+                            <span>{currentReminder.date}</span>
+                            <Clock size={15} />
+                            <span>{currentReminder.time}</span>
+                        </div>
+                        <button
+                            type="button"
+                            className="dismiss-reminder-btn"
+                            onClick={() => {
+                                setShowReminderPopup(false);
+                                setCurrentReminder(null);
+                            }}
+                        >
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

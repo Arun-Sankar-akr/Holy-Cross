@@ -1521,3 +1521,244 @@ td {
     display: none !important;
   }
 }
+/* -------------------------------------------------------------
+   6. Personal Scheduled Reminder Popup
+   ------------------------------------------------------------- */
+.reminder-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.reminder-modal,
+.reminder-alert-popup {
+  width: min(100%, 430px);
+  background: var(--dash-surface);
+  color: var(--dash-text-main);
+  border: 1px solid var(--dash-border);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.reminder-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.reminder-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--dash-text-main);
+}
+
+.reminder-modal-header p {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  color: var(--dash-text-muted);
+}
+
+.reminder-close-btn,
+.delete-reminder-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-bg);
+  color: var(--dash-text-main);
+  cursor: pointer;
+}
+
+.reminder-close-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+}
+
+.reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.reminder-form label {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.reminder-form input,
+.reminder-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-bg);
+  color: var(--dash-text-main);
+  border-radius: 9px;
+  padding: 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.reminder-form input:focus,
+.reminder-form textarea:focus {
+  border-color: var(--dash-primary);
+}
+
+.reminder-form textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.reminder-date-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.reminder-date-time-row > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.save-reminder-btn,
+.dismiss-reminder-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  background: var(--dash-primary-grad);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.save-reminder-btn {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.scheduled-reminders-list {
+  margin-top: 20px;
+  border-top: 1px solid var(--dash-border);
+  padding-top: 14px;
+}
+
+.scheduled-reminders-title {
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.scheduled-reminder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.scheduled-reminder-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.scheduled-reminder-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  color: var(--dash-text-main);
+}
+
+.scheduled-reminder-info span {
+  font-size: 0.66rem;
+  color: var(--dash-text-muted);
+}
+
+.delete-reminder-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 8px;
+}
+
+.reminder-alert-popup {
+  max-width: 380px;
+  padding: 28px;
+  text-align: center;
+  animation: reminderPopupIn 0.25s ease;
+}
+
+.reminder-alert-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reminder-alert-popup h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--dash-primary);
+}
+
+.reminder-alert-popup h3 {
+  margin: 10px 0 5px;
+  color: var(--dash-text-main);
+}
+
+.reminder-alert-popup p {
+  margin: 0 0 15px;
+  color: var(--dash-text-muted);
+  font-size: 0.82rem;
+}
+
+.reminder-alert-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  color: var(--dash-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@keyframes reminderPopupIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .reminder-overlay { padding: 12px; }
+  .reminder-modal, .reminder-alert-popup { padding: 18px; }
+  .reminder-date-time-row { grid-template-columns: 1fr; gap: 0; }
+}

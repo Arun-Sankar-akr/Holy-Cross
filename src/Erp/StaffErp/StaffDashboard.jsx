@@ -8,9 +8,11 @@ import {
 import {
     Users, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
     LogOut, Search, Menu, X, Check, GraduationCap, ArrowLeft,
-    Folder, KeyRound, Sparkles, ChevronDown, PlusCircle, Trash2, Layers,
+    Folder, KeyRound, Sparkles, ChevronDown, ChevronRight, ChevronLeft, PlusCircle, Trash2, Layers,
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
-    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal
+    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
+    LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
+    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -19,7 +21,15 @@ export default function StaffDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [showAiHint, setShowAiHint] = useState(false);
+    const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date().toDateString());
+    const [dayEvents, setDayEvents] = useState({});
+    const [showAddEventForm, setShowAddEventForm] = useState(false);
+    const [newEventForm, setNewEventForm] = useState({ title: '', time: '' });
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
     
@@ -141,9 +151,11 @@ export default function StaffDashboard() {
 
     useEffect(() => {
         const storedUser = localStorage.getItem('staffUser');
+        let resolvedStaffId = '';
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
+                resolvedStaffId = user.staffId || '';
                 setStaffData({
                     staffId: user.staffId || '',
                     name: user.name || 'Dr. R. Sharma',
@@ -152,6 +164,16 @@ export default function StaffDashboard() {
             } catch (err) {
                 console.error("Failed to parse user data", err);
             }
+        }
+
+        // Load this staff member's previously saved schedule events (grouped by day)
+        try {
+            const storedEvents = localStorage.getItem(`staffScheduleEvents_${resolvedStaffId || 'default'}`);
+            if (storedEvents) {
+                setDayEvents(JSON.parse(storedEvents));
+            }
+        } catch (err) {
+            console.error("Failed to parse saved schedule events", err);
         }
     }, []);
 
@@ -537,6 +559,103 @@ export default function StaffDashboard() {
         { id: 3, title: 'Independence Day Event Photos Uploaded', date: 'Aug 15, 2026', type: 'normal' },
     ];
 
+    // ---------- Right-rail: Weekly Schedule Calendar ----------
+    const todayRef = new Date();
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const startOfCurrentWeek = new Date(todayRef);
+    startOfCurrentWeek.setDate(todayRef.getDate() - todayRef.getDay() + (calendarWeekOffset * 7));
+    const calendarWeekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(startOfCurrentWeek);
+        d.setDate(startOfCurrentWeek.getDate() + i);
+        return d;
+    });
+    const calendarMonthLabel = calendarWeekDays[3].toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const selectedDayEvents = dayEvents[selectedCalendarDate] || [];
+
+    const persistDayEvents = (updated) => {
+        setDayEvents(updated);
+        try {
+            localStorage.setItem(`staffScheduleEvents_${staffData.staffId || 'default'}`, JSON.stringify(updated));
+        } catch (err) {
+            console.error("Failed to save schedule events", err);
+        }
+    };
+
+    const handleAddScheduleEvent = () => {
+        if (!newEventForm.title.trim()) return;
+        const updated = {
+            ...dayEvents,
+            [selectedCalendarDate]: [
+                ...(dayEvents[selectedCalendarDate] || []),
+                { id: `evt-${Date.now()}`, title: newEventForm.title.trim(), time: newEventForm.time }
+            ]
+        };
+        persistDayEvents(updated);
+        setNewEventForm({ title: '', time: '' });
+        setShowAddEventForm(false);
+    };
+
+    const handleDeleteScheduleEvent = (dateKey, eventId) => {
+        const updated = {
+            ...dayEvents,
+            [dateKey]: (dayEvents[dateKey] || []).filter(ev => ev.id !== eventId)
+        };
+        persistDayEvents(updated);
+    };
+
+    // ---------- Left column: Today's Plan (from live timetable) ----------
+    const todayWeekdayName = todayRef.toLocaleDateString('en-US', { weekday: 'long' });
+    const todaysPlanItems = (mySchedule.filter(i => i.day === todayWeekdayName).length > 0
+        ? mySchedule.filter(i => i.day === todayWeekdayName)
+        : mySchedule
+    ).slice(0, 3);
+
+    // ---------- Left column: Documents (latest turned-in submissions) ----------
+    const recentDocuments = [...submissionsList]
+        .sort((a, b) => {
+            const aT = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
+            const bT = b.submittedAt?.toDate ? b.submittedAt.toDate().getTime() : 0;
+            return bT - aT;
+        })
+        .slice(0, 4);
+
+    // ---------- Left column: Class Progress (live attendance rate per class) ----------
+    const classProgressData = classList
+        .map(cls => {
+            const studentsInClass = allStudents.filter(s => s.className === cls);
+            if (studentsInClass.length === 0) return null;
+            const presentCount = studentsInClass.filter(s => s.status === 'present').length;
+            const rate = Math.round((presentCount / studentsInClass.length) * 100);
+            return { className: cls, count: studentsInClass.length, rate };
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+
+    // ---------- Right-rail: Upcoming Activities (from live schedule + assignments) ----------
+    const upcomingActivities = [
+        ...mySchedule.slice(0, 1).map(item => ({
+            id: `sch-${item.id}`,
+            title: item.subject || 'Class Session',
+            meta: `${item.day || 'Today'} • ${item.timeSlot || 'TBA'}`,
+            icon: Calendar
+        })),
+        ...[...assignmentsList]
+            .filter(a => a.dueDate)
+            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+            .slice(0, 2)
+            .map(a => ({
+                id: `asg-${a.id}`,
+                title: a.title || 'Assignment',
+                meta: `Due ${a.dueDate}`,
+                icon: ClipboardList
+            }))
+    ].slice(0, 3);
+
+    // ---------- Right-rail: Notifications (live counts, no fabricated data) ----------
+    const pendingLeaveCount = myLeaveRequests.filter(l => (l.status || 'Pending') === 'Pending').length;
+    const ungradedSubmissionsCount = submissionsList.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
+    const dueSoonAssignmentsCount = assignmentsList.filter(a => a.dueDate && new Date(a.dueDate) >= new Date(new Date().setHours(0, 0, 0, 0))).length;
+
     const filteredStudents = activeStudents.filter(s =>
         s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -632,116 +751,231 @@ export default function StaffDashboard() {
                 </div>
 
                 <nav className="sidebar-nav">
-                    <button
-                        className={`nav-links ${activeTab === 'overview' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
-                    >
-                        <div className="nav-links-content">
-                            <BookOpen size={18} />
-                            <span>Dashboard</span>
-                        </div>
-                    </button>
+                    {/* GROUP: MY WORKSPACE */}
+                    <div className="sidebar-group">
+                        <span className="sidebar-group-label">My Workspace</span>
 
-                    <div className="nav-group">
                         <button
-                            className={`nav-links ${academicMenuOpen ? 'expanded' : ''}`}
-                            onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
+                            className={`nav-links ${activeTab === 'overview' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                         >
                             <div className="nav-links-content">
-                                <GraduationCap size={18} />
-                                <span>Academic Management</span>
+                                <LayoutGrid size={18} />
+                                <span>Dashboard</span>
                             </div>
-                            <ChevronDown size={16} className="chevron" />
                         </button>
 
-                        {academicMenuOpen && (
-                            <div className="sub-menu">
-                                <button
-                                    className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('students');
-                                        setSelectedClass(null);
-                                        setSelectedSection(null);
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                >
-                                    Student Roster
-                                </button>
-                                <button
-                                    className={`sub-link ${activeTab === 'attendance' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('attendance');
-                                        setSelectedClass('10th Std');
-                                        setSelectedSection(null);
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                >
-                                    Attendance
-                                </button>
-                                <button
-                                    className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('analytics');
-                                        setSelectedClass('10th Std');
-                                        setSelectedSection(null);
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                >
-                                    Attendance Analytics
-                                </button>
-                                <button
-                                    className={`sub-link ${activeTab === 'marks' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('marks');
-                                        setSelectedClass('10th Std');
-                                        setSelectedSection(null);
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                >
-                                    Marks Entry & CRUD
-                                </button>
-                                <button
-                                    className={`sub-link ${activeTab === 'assignments' ? 'active' : ''}`}
-                                    onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
-                                >
-                                    Assign Tasks & Tests
-                                </button>
-                                <button
-                                    className={`sub-link ${activeTab === 'submissions' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('submissions');
-                                        setSubClassFilter(null);
-                                        setSubSectionFilter(null);
-                                        setSubmissionFilterStatus('all');
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                >
-                                    PDF Submissions & Grading
-                                </button>
+                        <button
+                            className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Calendar size={18} />
+                                <span>Timetable</span>
                             </div>
-                        )}
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'departments' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('departments'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Building2 size={18} />
+                                <span>Departments</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <ClipboardList size={18} />
+                                <span>Tasks</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'marks' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveTab('marks');
+                                setSelectedClass('10th Std');
+                                setSelectedSection(null);
+                                setIsMobileMenuOpen(false);
+                            }}
+                        >
+                            <div className="nav-links-content">
+                                <Award size={18} />
+                                <span>Gradebook</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'attendance' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveTab('attendance');
+                                setSelectedClass('10th Std');
+                                setSelectedSection(null);
+                                setIsMobileMenuOpen(false);
+                            }}
+                        >
+                            <div className="nav-links-content">
+                                <CheckCircle size={18} />
+                                <span>Attendance</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
+                            onClick={() => {
+                                setActiveTab('submissions');
+                                setSubClassFilter(null);
+                                setSubSectionFilter(null);
+                                setSubmissionFilterStatus('all');
+                                setIsMobileMenuOpen(false);
+                            }}
+                        >
+                            <div className="nav-links-content">
+                                <FileCheck size={18} />
+                                <span>Assessments</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <div className="nav-group">
+                            <button
+                                className={`nav-links ${academicMenuOpen ? 'expanded' : ''} ${['students', 'analytics'].includes(activeTab) ? 'active-parent' : ''}`}
+                                onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
+                            >
+                                <div className="nav-links-content">
+                                    <GraduationCap size={18} />
+                                    <span>More Academic Tools</span>
+                                </div>
+                                <ChevronDown size={16} className="chevron" />
+                            </button>
+
+                            {academicMenuOpen && (
+                                <div className="sub-menu">
+                                    <button
+                                        className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setActiveTab('students');
+                                            setSelectedClass(null);
+                                            setSelectedSection(null);
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                    >
+                                        Student Roster
+                                    </button>
+                                    <button
+                                        className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setActiveTab('analytics');
+                                            setSelectedClass('10th Std');
+                                            setSelectedSection(null);
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                    >
+                                        Attendance Analytics
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <button
-                        className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
-                    >
-                        <div className="nav-links-content">
-                            <Calendar size={18} />
-                            <span>Class Schedule</span>
-                        </div>
-                    </button>
+                    {/* GROUP: COMMUNICATION */}
+                    <div className="sidebar-group">
+                        <span className="sidebar-group-label">Communication</span>
 
-                    {/* NEW: Leave Requests Navigation Link */}
-                    <button
-                        className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
-                    >
-                        <div className="nav-links-content">
-                            <SendHorizonal size={18} />
-                            <span>Leave Requests</span>
-                        </div>
-                    </button>
+                        <button
+                            className={`nav-links ${activeTab === 'chats' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('chats'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <MessageCircle size={18} />
+                                <span>Chats</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'staffroom' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('staffroom'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Users size={18} />
+                                <span>Staff Room</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'schoolnews' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('schoolnews'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Newspaper size={18} />
+                                <span>School News</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+                    </div>
+
+                    {/* GROUP: APPROVALS & ALERTS */}
+                    <div className="sidebar-group">
+                        <span className="sidebar-group-label">Approval & Alerts</span>
+
+                        <button
+                            className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <SendHorizonal size={18} />
+                                <span>Leave Requests</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+                    </div>
+
+                    {/* GROUP: OTHERS */}
+                    <div className="sidebar-group">
+                        <span className="sidebar-group-label">Others</span>
+
+                        <button
+                            className={`nav-links ${activeTab === 'downloads' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('downloads'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Download size={18} />
+                                <span>Downloads</span>
+                            </div>
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'library' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('library'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <Library size={18} />
+                                <span>Library</span>
+                            </div>
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'events' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <PartyPopper size={18} />
+                                <span>Events</span>
+                            </div>
+                        </button>
+                    </div>
                 </nav>
 
                 <div className="sidebar-footer">
@@ -768,37 +1002,76 @@ export default function StaffDashboard() {
                             />
                         </div>
                         <div className="topbar-actions">
-                        <div className="notification-wrapper" style={{ position: 'relative' }}>
-                            <button className="icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
-                                <Bell size={18} />
-                                <span className="notification-badge">{announcements.length}</span>
+                            <button
+                                className={`icon-btn ${isDarkMode ? 'icon-btn-on' : ''}`}
+                                onClick={() => setIsDarkMode(!isDarkMode)}
+                                aria-label="Toggle dark mode"
+                            >
+                                <Moon size={17} />
                             </button>
-                            {showNotifications && (
-                                <div className="notification-dropdown">
-                                    <div className="dropdown-header">
-                                        <h4>Notifications</h4>
-                                        <span className="badge-count">{announcements.length} New</span>
+
+                            <div className="notification-wrapper" style={{ position: 'relative' }}>
+                                <button className="icon-btn" onClick={() => { setShowNotifications(!showNotifications); setShowAiHint(false); }}>
+                                    <Bell size={17} />
+                                    <span className="notification-badge">{announcements.length}</span>
+                                </button>
+                                {showNotifications && (
+                                    <div className="notification-dropdown">
+                                        <div className="dropdown-header">
+                                            <h4>Notifications</h4>
+                                            <span className="badge-count">{announcements.length} New</span>
+                                        </div>
+                                        <ul>
+                                            {announcements.map((a) => (
+                                                <li key={a.id} className={`notify-item ${a.type}`}>
+                                                    <strong>{a.title}</strong>
+                                                    <span>{a.date}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
-                                    <ul>
-                                        {announcements.map((a) => (
-                                            <li key={a.id} className={`notify-item ${a.type}`}>
-                                                <strong>{a.title}</strong>
-                                                <span>{a.date}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+
+                            <div className="notification-wrapper" style={{ position: 'relative' }}>
+                                <button className="icon-btn icon-btn-accent" onClick={() => { setShowAiHint(!showAiHint); setShowNotifications(false); }}>
+                                    <Sparkles size={17} />
+                                </button>
+                                {showAiHint && (
+                                    <div className="notification-dropdown ai-hint-dropdown">
+                                        <div className="dropdown-header">
+                                            <h4>AI Assistant</h4>
+                                        </div>
+                                        <div style={{ padding: '14px 16px', fontSize: '.8rem', color: 'var(--muted)' }}>
+                                            Smart suggestions for your day are coming soon.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="topbar-profile">
-                            <div className="topbar-avatar">{staffData.name.charAt(0)}</div>
-                            <div className="topbar-profile-copy">
-                                <strong>{staffData.name}</strong>
-                                <span>{staffData.department || 'Staff User'}</span>
+                        <div className="notification-wrapper" style={{ position: 'relative' }}>
+                            <div
+                                className="topbar-profile"
+                                onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); setShowAiHint(false); }}
+                            >
+                                <div className="topbar-avatar">{staffData.name.charAt(0)}</div>
+                                <div className="topbar-profile-copy">
+                                    <strong>{staffData.name}</strong>
+                                    <span>{staffData.department || 'Staff User'}</span>
+                                </div>
+                                <ChevronDown size={17} />
                             </div>
-                            <ChevronDown size={17} />
+                            {showProfileMenu && (
+                                <div className="notification-dropdown profile-dropdown">
+                                    <button className="profile-dropdown-item" onClick={() => { setActiveTab('leaves'); setShowProfileMenu(false); }}>
+                                        <SendHorizonal size={15} /> My Leave Requests
+                                    </button>
+                                    <button className="profile-dropdown-item logout-item" onClick={handleLogout}>
+                                        <LogOut size={15} /> Sign Out
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -806,138 +1079,323 @@ export default function StaffDashboard() {
                 <div className="dashboard-content">
                     {/* OVERVIEW TAB */}
                     {activeTab === 'overview' && (
-                        <>
-                            <div className="welcome-banner">
-                                <div className="welcome-copy">
-                                    <h2>Hello {staffData.name.split(' ')[0]},</h2>
-                                    <p>
-                                        Navigate the future of <strong>Education</strong> with
-                                        intuitive <strong>School Management Software.</strong>
-                                    </p>
-                                    <button
-                                        type="button"
-                                        className="welcome-action"
-                                        onClick={() => setActiveTab('students')}
-                                    >
-                                        Learn More
-                                    </button>
-                                </div>
-                                <div className="welcome-visual" aria-hidden="true">
-                                    <div className="welcome-check"><Check size={22} /></div>
-                                    <div className="welcome-laptop"><div className="laptop-dot" /></div>
-                                    <div className="welcome-person">
-                                        <div className="person-head" />
-                                        <div className="person-body" />
+                        <div className="overview-layout">
+                            <div className="overview-left">
+                                <div className="welcome-banner">
+                                    <div className="welcome-copy">
+                                        <h2>Good morning, {staffData.name.split(' ')[0]}!</h2>
+                                        <p>Have a great day at work!</p>
+                                        {announcements[0] && (
+                                            <p className="welcome-notice">
+                                                <strong>Important notice:</strong> {announcements[0].title} — {announcements[0].date}. Don't miss it!
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="welcome-visual" aria-hidden="true">
+                                        <div className="welcome-check"><Check size={22} /></div>
+                                        <div className="welcome-laptop"><div className="laptop-dot" /></div>
+                                        <div className="welcome-person">
+                                            <div className="person-head" />
+                                            <div className="person-body" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="stats-grid">
-                                {stats.map((stat, idx) => {
-                                    const IconComponent = stat.icon;
-                                    return (
-                                        <div key={idx} className={`stat-card stat-card-${idx + 1}`}>
-                                            <div className="stat-details">
-                                                <span className="stat-title">{stat.title}</span>
-                                                <div className="stat-value">{stat.value}</div>
-                                            </div>
-                                            <div className={`stat-icon bg-${stat.color}`}>
-                                                <IconComponent size={22} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="content-grid overview-grid">
-                                <div className="dash-card overview-main-card">
-                                    <div className="card-header">
-                                        <div>
-                                            <h3>Class & Student Info.</h3>
-                                            <p className="subtitle">Your latest assigned classes and timetable</p>
-                                        </div>
-                                        <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>
-                                            See All <span>→</span>
+                                <div className="dash-card quick-links-card">
+                                    <div className="card-header compact">
+                                        <div><h3>Quick Links</h3></div>
+                                    </div>
+                                    <div className="quick-links-grid">
+                                        <button className="quick-link-item" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}>
+                                            <div className="quick-link-icon bg-indigo"><Folder size={20} /></div>
+                                            <span>Class Roster</span>
+                                        </button>
+                                        <button className="quick-link-item" onClick={() => setActiveTab('schedule')}>
+                                            <div className="quick-link-icon bg-rose"><Calendar size={20} /></div>
+                                            <span>Time Table</span>
+                                        </button>
+                                        <button className="quick-link-item" onClick={() => setActiveTab('assignments')}>
+                                            <div className="quick-link-icon bg-amber"><ClipboardList size={20} /></div>
+                                            <span>Lesson Plans</span>
+                                        </button>
+                                        <button className="quick-link-item" onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}>
+                                            <div className="quick-link-icon bg-indigo"><Award size={20} /></div>
+                                            <span>Gradebook</span>
+                                        </button>
+                                        <button className="quick-link-item" onClick={() => setActiveTab('library')}>
+                                            <div className="quick-link-icon bg-emerald"><Library size={20} /></div>
+                                            <span>Resources</span>
                                         </button>
                                     </div>
+                                </div>
 
-                                    <div className="overview-schedule-table">
-                                        <div className="overview-table-head">
-                                            <span>Class / Subject</span>
-                                            <span>Day</span>
-                                            <span>Time</span>
-                                            <span>Room</span>
+                                <div className="stats-grid">
+                                    {stats.map((stat, idx) => {
+                                        const IconComponent = stat.icon;
+                                        return (
+                                            <div key={idx} className={`stat-card stat-card-${idx + 1}`}>
+                                                <div className="stat-details">
+                                                    <span className="stat-title">{stat.title}</span>
+                                                    <div className="stat-value">{stat.value}</div>
+                                                </div>
+                                                <div className={`stat-icon bg-${stat.color}`}>
+                                                    <IconComponent size={22} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="content-grid overview-grid">
+                                    <div className="dash-card overview-main-card">
+                                        <div className="card-header">
+                                            <div>
+                                                <h3>Today's Plan</h3>
+                                                <p className="subtitle">Classes lined up for you today</p>
+                                            </div>
+                                            <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>
+                                                See All <span>→</span>
+                                            </button>
                                         </div>
 
-                                        {mySchedule.length === 0 ? (
+                                        {todaysPlanItems.length === 0 ? (
                                             <div className="overview-empty">
                                                 No timetable slots mapped to your staff profile yet.
                                             </div>
                                         ) : (
-                                            mySchedule.slice(0, 5).map((item, idx) => (
-                                                <div key={item.id || idx} className={`overview-table-row ${idx === 1 ? 'featured-row' : ''}`}>
-                                                    <div className="overview-class-cell">
-                                                        <div className="row-avatar">{(item.subject || 'S').charAt(0)}</div>
-                                                        <div>
-                                                            <strong>{item.className || 'General Class'}</strong>
-                                                            <span>{item.subject || 'Subject'}</span>
+                                            <div className="todays-plan-list">
+                                                {todaysPlanItems.map((item, idx) => (
+                                                    <div key={item.id || idx} className="plan-row">
+                                                        <div className="plan-avatar">{(item.subject || 'S').charAt(0)}</div>
+                                                        <div className="plan-info">
+                                                            <strong>{item.subject || 'Subject'}</strong>
+                                                            <button className="plan-class-link" onClick={() => setActiveTab('students')}>
+                                                                {item.className || 'General Class'}
+                                                            </button>
+                                                        </div>
+                                                        <div className="plan-meta">
+                                                            <span><Layers size={13} /> {item.roomNo || 'Room N/A'}</span>
+                                                            <span><Clock size={13} /> {item.timeSlot || 'TBA'}</span>
                                                         </div>
                                                     </div>
-                                                    <span>{item.day || '—'}</span>
-                                                    <span>{item.timeSlot || '—'}</span>
-                                                    <span>{item.roomNo || 'N/A'}</span>
-                                                </div>
-                                            ))
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="dash-card">
+                                        <div className="card-header compact">
+                                            <div>
+                                                <h3>Documents</h3>
+                                                <p className="subtitle">Recently turned-in files</p>
+                                            </div>
+                                            <button className="see-all-btn" onClick={() => setActiveTab('downloads')}>See all</button>
+                                        </div>
+                                        {recentDocuments.length === 0 ? (
+                                            <div className="overview-empty">No documents submitted yet.</div>
+                                        ) : (
+                                            <div className="documents-list">
+                                                {recentDocuments.map((doc) => (
+                                                    <div key={doc.id} className="document-row">
+                                                        <div className="document-icon"><FileText size={16} /></div>
+                                                        <div className="document-info">
+                                                            <strong>{doc.taskTitle || 'Assignment'}</strong>
+                                                            <span>{doc.submittedAt?.toDate ? doc.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="overview-side">
-                                    <div className="dash-card attendance-card">
-                                        <div className="card-header compact">
-                                            <div><h3>Class Attendance</h3></div>
-                                            <div className="chart-legend">
-                                                <span><i className="legend-present" />Present</span>
-                                                <span><i className="legend-absent" />Absent</span>
-                                            </div>
+                                <div className="dash-card full-width">
+                                    <div className="card-header compact">
+                                        <div>
+                                            <h3>Class Progress</h3>
+                                            <p className="subtitle">Live attendance rate by class</p>
                                         </div>
-                                        <div className="attendance-chart">
-                                            {[
-                                                ['Jan', 76], ['Feb', 58], ['Mar', 68], ['Apr', 76], ['May', 76]
-                                            ].map(([month, value]) => (
-                                                <div className="chart-col" key={month}>
-                                                    <div className="chart-track">
-                                                        <div className="chart-bar" style={{ height: `${value}%` }} />
+                                        <button className="see-all-btn" onClick={() => setActiveTab('analytics')}>See all</button>
+                                    </div>
+                                    {classProgressData.length === 0 ? (
+                                        <div className="overview-empty">No enrolled students found yet.</div>
+                                    ) : (
+                                        <div className="class-progress-list">
+                                            {classProgressData.map((c) => (
+                                                <div key={c.className} className="progress-row">
+                                                    <div className="progress-row-info">
+                                                        <strong>{c.className}</strong>
+                                                        <span>{c.count} Students</span>
                                                     </div>
-                                                    <span>{month}</span>
+                                                    <div className="progress-bar-track">
+                                                        <div
+                                                            className={`progress-bar-fill ${c.rate < 75 ? 'low' : ''}`}
+                                                            style={{ width: `${c.rate}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="progress-rate">{c.rate}%</span>
                                                 </div>
                                             ))}
                                         </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <aside className="overview-right-rail">
+                                <div className="dash-card schedule-widget">
+                                    <div className="card-header compact">
+                                        <div><h3>Schedule</h3></div>
+                                        <span className="schedule-month-label">{calendarMonthLabel}</span>
+                                    </div>
+                                    <div className="calendar-week-nav">
+                                        <button className="calendar-nav-btn" onClick={() => setCalendarWeekOffset(calendarWeekOffset - 1)}>
+                                            <ChevronLeft size={15} />
+                                        </button>
+                                        <span>Weekly</span>
+                                        <button className="calendar-nav-btn" onClick={() => setCalendarWeekOffset(calendarWeekOffset + 1)}>
+                                            <ChevronRight size={15} />
+                                        </button>
+                                    </div>
+                                    <div className="calendar-days-row">
+                                        {calendarWeekDays.map((d) => (
+                                            <button
+                                                key={d.toDateString()}
+                                                className={`calendar-day-pill ${selectedCalendarDate === d.toDateString() ? 'selected' : ''} ${d.toDateString() === todayRef.toDateString() ? 'is-today' : ''}`}
+                                                onClick={() => setSelectedCalendarDate(d.toDateString())}
+                                            >
+                                                <span className="cal-dow">{dayLabels[d.getDay()]}</span>
+                                                <span className="cal-date">{d.getDate()}</span>
+                                            </button>
+                                        ))}
                                     </div>
 
-                                    <div className="dash-card notice-card">
-                                        <div className="card-header compact">
-                                            <div>
-                                                <h3>Notice Board</h3>
-                                                <p className="subtitle">Latest school updates</p>
-                                            </div>
-                                            <button className="see-all-btn" onClick={() => setShowNotifications(true)}>See All</button>
+                                    <div className="schedule-day-panel">
+                                        <div className="schedule-day-panel-header">
+                                            <span className="schedule-day-panel-date">
+                                                {new Date(selectedCalendarDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            </span>
+                                            <button
+                                                className="schedule-add-btn"
+                                                onClick={() => setShowAddEventForm(!showAddEventForm)}
+                                            >
+                                                <PlusCircle size={14} /> Add New
+                                            </button>
                                         </div>
-                                        <div className="announcement-list">
-                                            {announcements.slice(0, 3).map((item) => (
-                                                <div key={item.id} className={`announcement-item type-${item.type}`}>
-                                                    <div className="announcement-dot" />
-                                                    <div>
-                                                        <h4>{item.title}</h4>
-                                                        <span>{item.date}</span>
-                                                    </div>
+
+                                        {showAddEventForm && (
+                                            <div className="schedule-add-form">
+                                                <input
+                                                    type="text"
+                                                    className="table-input full-width-input"
+                                                    placeholder="What's scheduled?"
+                                                    value={newEventForm.title}
+                                                    onChange={(e) => setNewEventForm({ ...newEventForm, title: e.target.value })}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddScheduleEvent()}
+                                                    autoFocus
+                                                />
+                                                <input
+                                                    type="time"
+                                                    className="table-input"
+                                                    value={newEventForm.time}
+                                                    onChange={(e) => setNewEventForm({ ...newEventForm, time: e.target.value })}
+                                                />
+                                                <div className="schedule-add-form-actions">
+                                                    <button className="btn-primary" onClick={handleAddScheduleEvent}>Save</button>
+                                                    <button
+                                                        className="btn-secondary"
+                                                        onClick={() => { setShowAddEventForm(false); setNewEventForm({ title: '', time: '' }); }}
+                                                    >
+                                                        Cancel
+                                                    </button>
                                                 </div>
-                                            ))}
+                                            </div>
+                                        )}
+
+                                        {selectedDayEvents.length === 0 ? (
+                                            <div className="overview-empty">Nothing added for this day yet.</div>
+                                        ) : (
+                                            <div className="schedule-day-events">
+                                                {selectedDayEvents
+                                                    .slice()
+                                                    .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                                                    .map((ev) => (
+                                                        <div key={ev.id} className="schedule-day-event-row">
+                                                            <div className="schedule-day-event-info">
+                                                                <strong>{ev.title}</strong>
+                                                                {ev.time && <span>{ev.time}</span>}
+                                                            </div>
+                                                            <button
+                                                                className="schedule-day-event-delete"
+                                                                onClick={() => handleDeleteScheduleEvent(selectedCalendarDate, ev.id)}
+                                                                title="Remove"
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="dash-card">
+                                    <div className="card-header compact">
+                                        <div><h3>Upcoming Activities</h3></div>
+                                        <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>See all</button>
+                                    </div>
+                                    {upcomingActivities.length === 0 ? (
+                                        <div className="overview-empty">Nothing scheduled right now.</div>
+                                    ) : (
+                                        <div className="activity-list">
+                                            {upcomingActivities.map((a) => {
+                                                const AIcon = a.icon;
+                                                return (
+                                                    <div key={a.id} className="activity-row">
+                                                        <div className="activity-icon"><AIcon size={17} /></div>
+                                                        <div className="activity-info">
+                                                            <strong>{a.title}</strong>
+                                                            <span>{a.meta}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="dash-card">
+                                    <div className="card-header compact">
+                                        <div><h3>Notifications</h3></div>
+                                        <span className="see-all-btn" style={{ cursor: 'default' }}>
+                                            <ChevronDown size={15} />
+                                        </span>
+                                    </div>
+                                    <div className="rail-notify-list">
+                                        <div className="rail-notify-item accent-rose">
+                                            <div className="rail-notify-head">
+                                                <strong>Leave Approval</strong>
+                                                <MoreVertical size={14} />
+                                            </div>
+                                            <span>{pendingLeaveCount} pending leave request{pendingLeaveCount === 1 ? '' : 's'}</span>
+                                        </div>
+                                        <div className="rail-notify-item accent-blue">
+                                            <div className="rail-notify-head">
+                                                <strong>Homework</strong>
+                                                <MoreVertical size={14} />
+                                            </div>
+                                            <span>{dueSoonAssignmentsCount} task{dueSoonAssignmentsCount === 1 ? '' : 's'} due soon</span>
+                                        </div>
+                                        <div className="rail-notify-item accent-amber">
+                                            <div className="rail-notify-head">
+                                                <strong>Class Assessment</strong>
+                                                <MoreVertical size={14} />
+                                            </div>
+                                            <span>{ungradedSubmissionsCount} submission{ungradedSubmissionsCount === 1 ? '' : 's'} awaiting grading</span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </>
+                            </aside>
+                        </div>
                     )}
 
                     {/* STUDENT ROSTER TAB */}
@@ -2087,6 +2545,113 @@ export default function StaffDashboard() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* DEPARTMENTS TAB */}
+                    {activeTab === 'departments' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Departments</h3>
+                                    <p className="subtitle">Faculty grouped by subject department.</p>
+                                </div>
+                            </div>
+                            <div className="class-cards-grid">
+                                {subjectList.map((dept) => (
+                                    <div key={dept} className="class-card">
+                                        <div className="class-card-icon">
+                                            <Building2 size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 style={{ margin: 0 }}>{dept}</h4>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Department</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CHATS / STAFF ROOM / EVENTS / LIBRARY / DOWNLOADS - lightweight placeholders */}
+                    {['chats', 'staffroom', 'library', 'events'].includes(activeTab) && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>
+                                        {activeTab === 'chats' && 'Chats'}
+                                        {activeTab === 'staffroom' && 'Staff Room'}
+                                        {activeTab === 'library' && 'Library'}
+                                        {activeTab === 'events' && 'Events'}
+                                    </h3>
+                                    <p className="subtitle">This workspace is coming soon.</p>
+                                </div>
+                            </div>
+                            <div className="empty-sub-card">
+                                {activeTab === 'chats' && <MessageCircle size={28} />}
+                                {activeTab === 'staffroom' && <Users size={28} />}
+                                {activeTab === 'library' && <Library size={28} />}
+                                {activeTab === 'events' && <PartyPopper size={28} />}
+                                <p>Nothing here yet — check back soon.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SCHOOL NEWS TAB - reuses live announcements data */}
+                    {activeTab === 'schoolnews' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>School News</h3>
+                                    <p className="subtitle">All notices and announcements.</p>
+                                </div>
+                            </div>
+                            <div className="announcement-list">
+                                {announcements.map((item) => (
+                                    <div key={item.id} className={`announcement-item type-${item.type}`}>
+                                        <div className="announcement-dot" />
+                                        <div>
+                                            <h4>{item.title}</h4>
+                                            <span>{item.date}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* DOWNLOADS TAB - reuses live submissions data */}
+                    {activeTab === 'downloads' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Downloads</h3>
+                                    <p className="subtitle">Files submitted by students, ready to download.</p>
+                                </div>
+                            </div>
+                            {submissionsList.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <Download size={28} />
+                                    <p>No files available yet.</p>
+                                </div>
+                            ) : (
+                                <div className="documents-list">
+                                    {submissionsList.slice(0, 12).map((doc) => (
+                                        <div key={doc.id} className="document-row">
+                                            <div className="document-icon"><FileText size={16} /></div>
+                                            <div className="document-info">
+                                                <strong>{doc.fileName || doc.taskTitle || 'Document.pdf'}</strong>
+                                                <span>{doc.submittedAt?.toDate ? doc.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
+                                            </div>
+                                            {doc.fileUrl && (
+                                                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="document-download">
+                                                    <Download size={15} />
+                                                </a>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
