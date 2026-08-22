@@ -755,16 +755,19 @@ export default function StaffDashboard() {
             {/* Main Workspace */}
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
-                    <div className="search-bar">
-                        <Search size={18} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Search records or students..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <div className="topbar-actions">
+                    <h1 className="dashboard-page-title">Dashboard</h1>
+
+                    <div className="topbar-right">
+                        <div className="search-bar">
+                            <Search size={18} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search for student and teacher"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="topbar-actions">
                         <div className="notification-wrapper" style={{ position: 'relative' }}>
                             <button className="icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
                                 <Bell size={18} />
@@ -787,6 +790,16 @@ export default function StaffDashboard() {
                                 </div>
                             )}
                         </div>
+                        </div>
+
+                        <div className="topbar-profile">
+                            <div className="topbar-avatar">{staffData.name.charAt(0)}</div>
+                            <div className="topbar-profile-copy">
+                                <strong>{staffData.name}</strong>
+                                <span>{staffData.department || 'Staff User'}</span>
+                            </div>
+                            <ChevronDown size={17} />
+                        </div>
                     </div>
                 </header>
 
@@ -795,68 +808,132 @@ export default function StaffDashboard() {
                     {activeTab === 'overview' && (
                         <>
                             <div className="welcome-banner">
-                                <h2>Welcome back, {staffData.name}! 👋</h2>
-                                <p>You have {submissionsList.length} student PDF submissions pending review across all classes.</p>
+                                <div className="welcome-copy">
+                                    <h2>Hello {staffData.name.split(' ')[0]},</h2>
+                                    <p>
+                                        Navigate the future of <strong>Education</strong> with
+                                        intuitive <strong>School Management Software.</strong>
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="welcome-action"
+                                        onClick={() => setActiveTab('students')}
+                                    >
+                                        Learn More
+                                    </button>
+                                </div>
+                                <div className="welcome-visual" aria-hidden="true">
+                                    <div className="welcome-check"><Check size={22} /></div>
+                                    <div className="welcome-laptop"><div className="laptop-dot" /></div>
+                                    <div className="welcome-person">
+                                        <div className="person-head" />
+                                        <div className="person-body" />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="stats-grid">
                                 {stats.map((stat, idx) => {
                                     const IconComponent = stat.icon;
                                     return (
-                                        <div key={idx} className="stat-card">
-                                            <div className={`stat-icon bg-${stat.color}`}>
-                                                <IconComponent size={22} />
-                                            </div>
+                                        <div key={idx} className={`stat-card stat-card-${idx + 1}`}>
                                             <div className="stat-details">
                                                 <span className="stat-title">{stat.title}</span>
                                                 <div className="stat-value">{stat.value}</div>
+                                            </div>
+                                            <div className={`stat-icon bg-${stat.color}`}>
+                                                <IconComponent size={22} />
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div className="content-grid">
-                                <div className="dash-card">
+                            <div className="content-grid overview-grid">
+                                <div className="dash-card overview-main-card">
                                     <div className="card-header">
                                         <div>
-                                            <h3>Assigned Schedule Slots</h3>
-                                            <p className="subtitle">Live database timetable entries</p>
+                                            <h3>Class & Student Info.</h3>
+                                            <p className="subtitle">Your latest assigned classes and timetable</p>
                                         </div>
-                                        <Clock size={18} />
+                                        <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>
+                                            See All <span>→</span>
+                                        </button>
                                     </div>
-                                    <div className="schedule-list">
+
+                                    <div className="overview-schedule-table">
+                                        <div className="overview-table-head">
+                                            <span>Class / Subject</span>
+                                            <span>Day</span>
+                                            <span>Time</span>
+                                            <span>Room</span>
+                                        </div>
+
                                         {mySchedule.length === 0 ? (
-                                            <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No timetable slots mapped to your staff profile yet.</p>
+                                            <div className="overview-empty">
+                                                No timetable slots mapped to your staff profile yet.
+                                            </div>
                                         ) : (
-                                            mySchedule.map((item, idx) => (
-                                                <div key={item.id || idx} className="schedule-item">
-                                                    <div className="time-pill">{item.day} — {item.timeSlot}</div>
-                                                    <div className="class-details">
-                                                        <strong>{item.className || 'General Class'} — {item.subject}</strong>
-                                                        <span>Room: {item.roomNo || 'N/A'}</span>
+                                            mySchedule.slice(0, 5).map((item, idx) => (
+                                                <div key={item.id || idx} className={`overview-table-row ${idx === 1 ? 'featured-row' : ''}`}>
+                                                    <div className="overview-class-cell">
+                                                        <div className="row-avatar">{(item.subject || 'S').charAt(0)}</div>
+                                                        <div>
+                                                            <strong>{item.className || 'General Class'}</strong>
+                                                            <span>{item.subject || 'Subject'}</span>
+                                                        </div>
                                                     </div>
+                                                    <span>{item.day || '—'}</span>
+                                                    <span>{item.timeSlot || '—'}</span>
+                                                    <span>{item.roomNo || 'N/A'}</span>
                                                 </div>
                                             ))
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="dash-card">
-                                    <div className="card-header">
-                                        <div>
-                                            <h3>Notice Board</h3>
-                                            <p className="subtitle">Latest announcements & updates</p>
-                                        </div>
-                                        <Bell size={18} />
-                                    </div>
-                                    <div className="announcement-list">
-                                        {announcements.map((item) => (
-                                            <div key={item.id} className={`announcement-item type-${item.type}`}>
-                                                <h4>{item.title}</h4>
-                                                <span>{item.date}</span>
+                                <div className="overview-side">
+                                    <div className="dash-card attendance-card">
+                                        <div className="card-header compact">
+                                            <div><h3>Class Attendance</h3></div>
+                                            <div className="chart-legend">
+                                                <span><i className="legend-present" />Present</span>
+                                                <span><i className="legend-absent" />Absent</span>
                                             </div>
-                                        ))}
+                                        </div>
+                                        <div className="attendance-chart">
+                                            {[
+                                                ['Jan', 76], ['Feb', 58], ['Mar', 68], ['Apr', 76], ['May', 76]
+                                            ].map(([month, value]) => (
+                                                <div className="chart-col" key={month}>
+                                                    <div className="chart-track">
+                                                        <div className="chart-bar" style={{ height: `${value}%` }} />
+                                                    </div>
+                                                    <span>{month}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="dash-card notice-card">
+                                        <div className="card-header compact">
+                                            <div>
+                                                <h3>Notice Board</h3>
+                                                <p className="subtitle">Latest school updates</p>
+                                            </div>
+                                            <button className="see-all-btn" onClick={() => setShowNotifications(true)}>See All</button>
+                                        </div>
+                                        <div className="announcement-list">
+                                            {announcements.slice(0, 3).map((item) => (
+                                                <div key={item.id} className={`announcement-item type-${item.type}`}>
+                                                    <div className="announcement-dot" />
+                                                    <div>
+                                                        <h4>{item.title}</h4>
+                                                        <span>{item.date}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
