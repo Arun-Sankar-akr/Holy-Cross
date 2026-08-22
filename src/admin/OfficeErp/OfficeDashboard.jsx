@@ -41,6 +41,17 @@ export default function OfficeDashboard() {
     const [hallForm, setHallForm] = useState({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' });
     const [staffHallForm, setStaffHallForm] = useState({ hallNo: '', examName: '', staffName: '', dutyTime: '' });
 
+    // Exam Hall Allocation - Student/Staff workflow
+    const [examStudentClass, setExamStudentClass] = useState('');
+    const [examStudentSection, setExamStudentSection] = useState('');
+    const [selectedExamStudents, setSelectedExamStudents] = useState([]);
+    const [examHallNo, setExamHallNo] = useState('');
+    const [examName, setExamName] = useState('');
+    const [examCapacity, setExamCapacity] = useState('');
+    const [selectedExamStaff, setSelectedExamStaff] = useState('');
+    const [selectedStaffHall, setSelectedStaffHall] = useState('');
+    const [staffDutyTime, setStaffDutyTime] = useState('');
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -84,6 +95,116 @@ export default function OfficeDashboard() {
     // Extract unique classes dynamically from students list
     const uniqueClasses = Array.from(new Set(studentsList.map(s => s.className || s.grade).filter(Boolean)));
 
+    const examSections = Array.from(new Set(
+        studentsList
+            .filter(s => (s.className || s.grade) === examStudentClass)
+            .map(s => s.sectionName || s.section)
+            .filter(Boolean)
+    ));
+
+    const examClassStudents = studentsList.filter(s => {
+        const cls = s.className || s.grade;
+        const sec = s.sectionName || s.section;
+        return cls === examStudentClass && (!examStudentSection || sec === examStudentSection);
+    });
+
+    const selectedExamStudentRecords = examClassStudents.filter(s => selectedExamStudents.includes(s.id));
+
+    const selectedStaffHallRecord = examHalls.find(h => h.id === selectedStaffHall);
+    const staffHallStudents = selectedStaffHallRecord?.studentList || [];
+
+    const toggleExamStudent = (studentId) => {
+        setSelectedExamStudents(prev =>
+            prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+        );
+    };
+
+    const toggleAllExamStudents = () => {
+        const ids = examClassStudents.map(s => s.id);
+        const allSelected = ids.length > 0 && ids.every(id => selectedExamStudents.includes(id));
+        setSelectedExamStudents(prev => allSelected
+            ? prev.filter(id => !ids.includes(id))
+            : Array.from(new Set([...prev, ...ids]))
+        );
+    };
+
+    const handleStudentHallAllocation = async (e) => {
+        e.preventDefault();
+        if (!examStudentClass || !examStudentSection || selectedExamStudentRecords.length === 0 || !examHallNo.trim()) {
+            alert('Please select class, section, at least one student and enter a hall number.');
+            return;
+        }
+
+        try {
+            // Assign seat numbers in the same order the students are selected.
+            // Seat numbers are scoped to this hall allocation and start from 1.
+            const studentList = selectedExamStudentRecords.map((s, index) => ({
+                id: s.id,
+                name: s.name || 'Student',
+                admissionNo: s.admissionNo || '',
+                className: s.className || s.grade || examStudentClass,
+                sectionName: s.sectionName || s.section || examStudentSection,
+                seatNo: index + 1
+            }));
+
+            await addDoc(collection(db, 'exam_hall_allocations'), {
+                hallNo: examHallNo.trim(),
+                examName: examName.trim() || 'Examination',
+                targetClass: examStudentClass,
+                targetSection: examStudentSection,
+                studentCount: studentList.length,
+                capacity: Number(examCapacity) || studentList.length,
+                studentIds: studentList.map(s => s.id),
+                studentList,
+                createdAt: serverTimestamp()
+            });
+
+            setSelectedExamStudents([]);
+            setExamHallNo('');
+            setExamCapacity('');
+            alert('Students assigned to the exam hall successfully.');
+        } catch (error) {
+            console.error('Error assigning students to hall:', error);
+            alert('Failed to assign students to the examination hall.');
+        }
+    };
+
+    const handleStaffHallAssignment = async (e) => {
+        e.preventDefault();
+        if (!selectedExamStaff || !selectedStaffHall) {
+            alert('Please select a staff member and an allocated hall.');
+            return;
+        }
+
+        const staff = staffList.find(s => s.id === selectedExamStaff);
+        if (!staff) return;
+
+        try {
+            await addDoc(collection(db, 'staff_exam_halls'), {
+                hallNo: selectedStaffHallRecord.hallNo,
+                examName: selectedStaffHallRecord.examName || examName || 'Examination',
+                staffId: staff.id,
+                staffName: staff.name || staff.staffName || 'Staff',
+                dutyTime: staffDutyTime || 'Exam Duty',
+                studentCount: staffHallStudents.length || selectedStaffHallRecord.studentCount || 0,
+                studentIds: selectedStaffHallRecord.studentIds || [],
+                studentList: staffHallStudents,
+                targetClass: selectedStaffHallRecord.targetClass || '',
+                targetSection: selectedStaffHallRecord.targetSection || '',
+                hallAllocationId: selectedStaffHall,
+                createdAt: serverTimestamp()
+            });
+
+            setSelectedExamStaff('');
+            setSelectedStaffHall('');
+            setStaffDutyTime('');
+            alert('Staff invigilation duty assigned successfully.');
+        } catch (error) {
+            console.error('Error assigning staff duty:', error);
+            alert('Failed to assign staff duty.');
+        }
+    };
+
     const handlePublish = async (collectionName, data, resetFn) => {
         try {
             await addDoc(collection(db, collectionName), {
@@ -122,6 +243,29 @@ export default function OfficeDashboard() {
 
     return (
         <div className="dashboard-containers">
+            {/* Mobile Navigation Bar */}
+            <div className="mobile-topbar">
+                <div className="mobile-brand">
+                    <img src={logo} alt="School logo" />
+                    <span>Front-Office Desk</span>
+                </div>
+                <button
+                    className="menu-toggle-btn"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-label="Toggle navigation"
+                >
+                    {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                </button>
+            </div>
+
+            {isMobileMenuOpen && (
+                <button
+                    className="mobile-overlay"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="Close navigation"
+                />
+            )}
+
             {/* Sidebar Navigation */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
@@ -498,146 +642,230 @@ export default function OfficeDashboard() {
                         </div>
                     )}
 
-                    {/* EXAM HALLS MODULE - STUDENTS */}
+                    {/* EXAM HALL ALLOCATION MODULE */}
                     {activeTab === 'exam-halls' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Exam Hall Allocation - Students</h3>
-                                    <p className="subtitle">Assign students to specific examination seating arrangements</p>
+                        <div className="exam-allocation-page">
+                            <div className="dash-card full-width exam-allocation-hero">
+                                <div className="card-header">
+                                    <div>
+                                        <span className="exam-module-kicker">EXAMINATION MANAGEMENT</span>
+                                        <h3>Exam Hall Allocation</h3>
+                                        <p className="subtitle">First allocate students to a hall, then assign the invigilating staff to the same hall. All allocations are synchronized in Firestore.</p>
+                                    </div>
+                                    <div className="exam-live-badge"><CheckCircle size={15} /> Live Sync</div>
                                 </div>
                             </div>
 
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('exam_hall_allocations', hallForm, () =>
-                                    setHallForm({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' })
-                                );
-                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall No / Room</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101" value={hallForm.hallNo} onChange={e => setHallForm({ ...hallForm, hallNo: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Name</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid Term Exam" value={hallForm.examName} onChange={e => setHallForm({ ...hallForm, examName: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Target Class</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 10th Std" value={hallForm.targetClass} onChange={e => setHallForm({ ...hallForm, targetClass: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Capacity</label>
-                                    <input type="number" className="table-input full-width-input" placeholder="e.g. 30" value={hallForm.capacity} onChange={e => setHallForm({ ...hallForm, capacity: e.target.value })} required />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Invigilator Assigned</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="Faculty Name" value={hallForm.invigilator} onChange={e => setHallForm({ ...hallForm, invigilator: e.target.value })} required />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Save Student Hall Allocation
-                                    </button>
-                                </div>
-                            </form>
+                            <div className="exam-allocation-grid">
+                                {/* STUDENT ALLOCATION */}
+                                <div className="dash-card exam-allocation-card">
+                                    <div className="exam-card-title">
+                                        <div className="exam-title-icon students"><GraduationCap size={19} /></div>
+                                        <div>
+                                            <h3>Students</h3>
+                                            <p>Select Class → Section → Students → Hall No</p>
+                                        </div>
+                                    </div>
 
-                            <h4>Allocated Examination Rooms ({examHalls.length})</h4>
-                            <div className="table-responsive">
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Hall No</th>
-                                            <th>Exam Name</th>
-                                            <th>Class</th>
-                                            <th>Capacity</th>
-                                            <th>Invigilator</th>
-                                            <th style={{ textAlign: 'right' }}>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {examHalls.map(item => (
-                                            <tr key={item.id}>
-                                                <td><strong>{item.hallNo}</strong></td>
-                                                <td>{item.examName}</td>
-                                                <td><span className="task-target-tag">{item.targetClass}</span></td>
-                                                <td>{item.capacity} Seats</td>
-                                                <td>{item.invigilator}</td>
-                                                <td style={{ textAlign: 'right' }}>
-                                                    <button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', item.id)} title="Delete"><X size={14} /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
+                                    <form onSubmit={handleStudentHallAllocation}>
+                                        <div className="exam-form-grid">
+                                            <div className="exam-field">
+                                                <label>Select Class</label>
+                                                <select value={examStudentClass} onChange={e => {
+                                                    setExamStudentClass(e.target.value);
+                                                    setExamStudentSection('');
+                                                    setSelectedExamStudents([]);
+                                                }} required>
+                                                    <option value="">Select Class</option>
+                                                    {uniqueClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                                                </select>
+                                            </div>
 
-                    {/* EXAM HALLS MODULE - STAFF */}
-                    {activeTab === 'exam-staff' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Exam Hall Allocation - Staff Duties</h3>
-                                    <p className="subtitle">Assign faculty invigilation duties across exam halls</p>
-                                </div>
-                            </div>
+                                            <div className="exam-field">
+                                                <label>Select Section</label>
+                                                <select value={examStudentSection} onChange={e => {
+                                                    setExamStudentSection(e.target.value);
+                                                    setSelectedExamStudents([]);
+                                                }} disabled={!examStudentClass} required>
+                                                    <option value="">Select Section</option>
+                                                    {examSections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                                                </select>
+                                            </div>
 
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('staff_exam_halls', staffHallForm, () =>
-                                    setStaffHallForm({ hallNo: '', examName: '', staffName: '', dutyTime: '' })
-                                );
-                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Hall No / Room</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Hall 101" value={staffHallForm.hallNo} onChange={e => setStaffHallForm({ ...staffHallForm, hallNo: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Name</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mid Term Exam" value={staffHallForm.examName} onChange={e => setStaffHallForm({ ...staffHallForm, examName: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Staff Member</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="Faculty Name" value={staffHallForm.staffName} onChange={e => setStaffHallForm({ ...staffHallForm, staffName: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Duty Time / Slot</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 09:30 AM - 12:30 PM" value={staffHallForm.dutyTime} onChange={e => setStaffHallForm({ ...staffHallForm, dutyTime: e.target.value })} required />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Assign Staff Duty
-                                    </button>
-                                </div>
-                            </form>
+                                            <div className="exam-field">
+                                                <label>Exam Name</label>
+                                                <input value={examName} onChange={e => setExamName(e.target.value)} placeholder="e.g. 1st Mid-Term Exam" />
+                                            </div>
 
-                            <h4>Assigned Staff Invigilation Duties ({staffExamHalls.length})</h4>
-                            <div className="table-responsive">
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Hall No</th>
-                                            <th>Exam Name</th>
-                                            <th>Staff Member</th>
-                                            <th>Duty Time</th>
-                                            <th style={{ textAlign: 'right' }}>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {staffExamHalls.map(item => (
-                                            <tr key={item.id}>
-                                                <td><strong>{item.hallNo}</strong></td>
-                                                <td>{item.examName}</td>
-                                                <td>{item.staffName}</td>
-                                                <td><span className="task-target-tag">{item.dutyTime}</span></td>
-                                                <td style={{ textAlign: 'right' }}>
-                                                    <button className="delete-task-btn" onClick={() => handleDelete('staff_exam_halls', item.id)} title="Delete"><X size={14} /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                            <div className="exam-field">
+                                                <label>Hall No</label>
+                                                <input value={examHallNo} onChange={e => setExamHallNo(e.target.value)} placeholder="e.g. Hall 101" required />
+                                            </div>
+
+                                            <div className="exam-field">
+                                                <label>Hall Capacity</label>
+                                                <input type="number" min="1" value={examCapacity} onChange={e => setExamCapacity(e.target.value)} placeholder="Optional" />
+                                            </div>
+                                        </div>
+
+                                        <div className="exam-student-selector">
+                                            <div className="exam-selector-head">
+                                                <div>
+                                                    <strong>Select Students</strong>
+                                                    <span>{examClassStudents.length} available</span>
+                                                </div>
+                                                <div className="exam-selected-count">{selectedExamStudents.length} Selected</div>
+                                            </div>
+
+                                            {!examStudentClass || !examStudentSection ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>Select a class and section to load students.</span></div>
+                                            ) : examClassStudents.length === 0 ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>No students found for this class and section.</span></div>
+                                            ) : (
+                                                <>
+                                                    <label className="exam-select-all">
+                                                        <input type="checkbox" checked={examClassStudents.length > 0 && examClassStudents.every(s => selectedExamStudents.includes(s.id))} onChange={toggleAllExamStudents} />
+                                                        Select All Students
+                                                    </label>
+                                                    <div className="exam-student-list">
+                                                        {examClassStudents.map(student => (
+                                                            <label className={`exam-student-row ${selectedExamStudents.includes(student.id) ? 'selected' : ''}`} key={student.id}>
+                                                                <input type="checkbox" checked={selectedExamStudents.includes(student.id)} onChange={() => toggleExamStudent(student.id)} />
+                                                                <span className="exam-student-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</span>
+                                                                <span className="exam-student-info">
+                                                                    <strong>{student.name || 'Student'}</strong>
+                                                                    <small>#{student.admissionNo || student.id.slice(0, 7)}</small>
+                                                                </span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <div className="exam-allocation-summary">
+                                            <div><span>No. of Students</span><strong>{selectedExamStudents.length}</strong></div>
+                                            <div><span>Class / Section</span><strong>{examStudentClass || '—'} / {examStudentSection || '—'}</strong></div>
+                                            <div><span>Hall No</span><strong>{examHallNo || '—'}</strong></div>
+                                        </div>
+
+                                        <button type="submit" className="exam-primary-btn" disabled={!selectedExamStudents.length}>
+                                            <CheckSquare size={16} /> Assign Students to Hall
+                                        </button>
+                                    </form>
+
+                                    <div className="exam-existing-section">
+                                        <div className="exam-section-heading"><strong>Allocated Halls</strong><span>{examHalls.length}</span></div>
+                                        <div className="exam-allocation-table-wrap">
+                                            <table className="custom-table exam-allocation-table">
+                                                <thead><tr><th>Hall</th><th>Class / Section</th><th>Students</th><th>Seat Nos.</th><th>Exam</th><th></th></tr></thead>
+                                                <tbody>
+                                                    {examHalls.length === 0 ? <tr><td colSpan="6" className="exam-table-empty">No student hall allocations yet.</td></tr> : examHalls.map(item => (
+                                                        <tr key={item.id}>
+                                                            <td><strong>{item.hallNo}</strong></td>
+                                                            <td><span className="task-target-tag">{item.targetClass || '—'} / {item.targetSection || '—'}</span></td>
+                                                            <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
+                                                            <td><span className="exam-seat-range">{Array.isArray(item.studentList) && item.studentList.length ? `1–${item.studentList.length}` : '—'}</span></td>
+                                                            <td>{item.examName || 'Examination'}</td>
+                                                            <td><button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', item.id)} title="Delete"><X size={14} /></button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* STAFF ALLOCATION */}
+                                <div className="dash-card exam-allocation-card">
+                                    <div className="exam-card-title">
+                                        <div className="exam-title-icon staff"><UserCheck size={19} /></div>
+                                        <div>
+                                            <h3>Staff</h3>
+                                            <p>Select Staff → Hall → Student List → Assign</p>
+                                        </div>
+                                    </div>
+
+                                    <form onSubmit={handleStaffHallAssignment}>
+                                        <div className="exam-form-grid">
+                                            <div className="exam-field exam-field-wide">
+                                                <label>Select Staff</label>
+                                                <select value={selectedExamStaff} onChange={e => setSelectedExamStaff(e.target.value)} required>
+                                                    <option value="">Select Staff Member</option>
+                                                    {staffList.map(staff => <option key={staff.id} value={staff.id}>{staff.name || staff.staffName || 'Staff'}{staff.department ? ` — ${staff.department}` : ''}</option>)}
+                                                </select>
+                                            </div>
+
+                                            <div className="exam-field exam-field-wide">
+                                                <label>Hall No</label>
+                                                <select value={selectedStaffHall} onChange={e => setSelectedStaffHall(e.target.value)} required>
+                                                    <option value="">Select Allocated Hall</option>
+                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''} {hall.targetSection ? `/ ${hall.targetSection}` : ''} — {hall.studentCount || hall.studentIds?.length || 0} Students</option>)}
+                                                </select>
+                                            </div>
+
+                                            <div className="exam-field exam-field-wide">
+                                                <label>Duty Time / Slot</label>
+                                                <input value={staffDutyTime} onChange={e => setStaffDutyTime(e.target.value)} placeholder="e.g. 09:30 AM - 12:30 PM" />
+                                            </div>
+                                        </div>
+
+                                        <div className="exam-staff-preview">
+                                            <div className="exam-selector-head">
+                                                <div>
+                                                    <strong>List Students</strong>
+                                                    <span>{selectedStaffHallRecord ? `${selectedStaffHallRecord.targetClass || ''} ${selectedStaffHallRecord.targetSection ? `/ ${selectedStaffHallRecord.targetSection}` : ''}` : 'Select a hall'}</span>
+                                                </div>
+                                                <div className="exam-selected-count">{staffHallStudents.length || selectedStaffHallRecord?.studentCount || 0} Students</div>
+                                            </div>
+
+                                            {!selectedStaffHallRecord ? (
+                                                <div className="exam-empty-state"><LayoutGrid size={22} /><span>Select an allocated hall to see its student list.</span></div>
+                                            ) : staffHallStudents.length === 0 ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>This hall has no student list stored.</span></div>
+                                            ) : (
+                                                <div className="exam-staff-student-list">
+                                                    {staffHallStudents.map((student, idx) => (
+                                                        <div className="exam-staff-student-row" key={student.id || idx}>
+                                                            <span className="exam-student-number">{idx + 1}</span>
+                                                            <span><strong>{student.name}</strong><small>#{student.admissionNo || 'N/A'}</small></span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="exam-allocation-summary staff-summary">
+                                            <div><span>Staff</span><strong>{staffList.find(s => s.id === selectedExamStaff)?.name || '—'}</strong></div>
+                                            <div><span>No. of Students</span><strong>{staffHallStudents.length || selectedStaffHallRecord?.studentCount || 0}</strong></div>
+                                            <div><span>Hall No</span><strong>{selectedStaffHallRecord?.hallNo || '—'}</strong></div>
+                                        </div>
+
+                                        <button type="submit" className="exam-primary-btn staff-btn" disabled={!selectedExamStaff || !selectedStaffHall}>
+                                            <UserCheck size={16} /> Assign Invigilation Duty
+                                        </button>
+                                    </form>
+
+                                    <div className="exam-existing-section">
+                                        <div className="exam-section-heading"><strong>Assigned Staff Duties</strong><span>{staffExamHalls.length}</span></div>
+                                        <div className="exam-allocation-table-wrap">
+                                            <table className="custom-table exam-allocation-table">
+                                                <thead><tr><th>Staff</th><th>Hall</th><th>Students</th><th>Duty Time</th><th></th></tr></thead>
+                                                <tbody>
+                                                    {staffExamHalls.length === 0 ? <tr><td colSpan="5" className="exam-table-empty">No staff duties assigned yet.</td></tr> : staffExamHalls.map(item => (
+                                                        <tr key={item.id}>
+                                                            <td><strong>{item.staffName}</strong></td>
+                                                            <td>{item.hallNo}</td>
+                                                            <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
+                                                            <td><span className="task-target-tag">{item.dutyTime || 'Exam Duty'}</span></td>
+                                                            <td><button className="delete-task-btn" onClick={() => handleDelete('staff_exam_halls', item.id)} title="Delete"><X size={14} /></button></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

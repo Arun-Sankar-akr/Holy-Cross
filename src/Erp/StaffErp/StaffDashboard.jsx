@@ -6,7 +6,7 @@ import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where
 } from 'firebase/firestore';
 import {
-    Users, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
+    Users, User, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
     LogOut, Search, Menu, X, Check, GraduationCap, ArrowLeft,
     Folder, KeyRound, Sparkles, ChevronDown, ChevronRight, ChevronLeft, PlusCircle, Trash2, Layers,
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
@@ -23,6 +23,7 @@ export default function StaffDashboard() {
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
+    const [examHallMenuOpen, setExamHallMenuOpen] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [showAiHint, setShowAiHint] = useState(false);
     const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
@@ -32,7 +33,7 @@ export default function StaffDashboard() {
     const [newEventForm, setNewEventForm] = useState({ title: '', time: '' });
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
-    
+
     // Leave Request States
     const [staffLeaveList, setStaffLeaveList] = useState([]);
     const [leaveForm, setLeaveForm] = useState({
@@ -81,6 +82,7 @@ export default function StaffDashboard() {
     const [staffTimetableList, setStaffTimetableList] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
+    const [staffExamHallAllocations, setStaffExamHallAllocations] = useState([]);
 
     const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
     const [studentMarks, setStudentMarks] = useState({});
@@ -203,6 +205,11 @@ export default function StaffDashboard() {
             setSubmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        // Live synchronized Exam Hall Staff Duties published by the Office Dashboard
+        const unsubStaffExamHalls = onSnapshot(collection(db, 'staff_exam_halls'), (snap) => {
+            setStaffExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         // Fetch Staff Leave Requests
         const unsubLeaves = onSnapshot(collection(db, 'staff_leaves'), (snap) => {
             const leaves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -216,6 +223,7 @@ export default function StaffDashboard() {
             unsubStaffTT();
             unsubAssignments();
             unsubSubmissions();
+            unsubStaffExamHalls();
             unsubLeaves();
         };
     }, []);
@@ -242,6 +250,13 @@ export default function StaffDashboard() {
         (staffData.staffId && item.staffId === staffData.staffId) ||
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
+
+    const myExamHallDuties = staffExamHallAllocations.filter(item => {
+        const assigned = cleanString(item.staffName);
+        const current = cleanString(staffData.name);
+        const idMatch = item.staffId && staffData.staffId ? item.staffId === staffData.staffId : false;
+        return idMatch || !assigned || !current || assigned === current || assigned.includes(current) || current.includes(assigned);
+    });
 
     const myLeaveRequests = staffLeaveList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
@@ -719,7 +734,7 @@ export default function StaffDashboard() {
             {/* Mobile Topbar */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">
-                    <img src={logo} alt="" id='logog'/>
+                    <img src={logo} alt="" id='logog' />
                     <span>HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
                 </div>
                 <button
@@ -738,7 +753,7 @@ export default function StaffDashboard() {
             {/* Sidebar */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon"><img src={logo} alt="" id='logog'/></div>
+                    <div className="brand-icon"><img src={logo} alt="" id='logog' /></div>
                     <span className="brand-titles">HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
                 </div>
 
@@ -882,6 +897,35 @@ export default function StaffDashboard() {
                                         }}
                                     >
                                         Attendance Analytics
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* GROUP: EXAM HALL ALLOCATION */}
+                    <div className="sidebar-group">
+                        <span className="sidebar-group-label">Examinations</span>
+                        <div className="nav-group">
+                            <button
+                                type="button"
+                                className={`nav-links ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active-parent' : ''}`}
+                                onClick={() => setExamHallMenuOpen(prev => !prev)}
+                            >
+                                <div className="nav-links-content">
+                                    <Calendar size={18} />
+                                    <span>Exam Hall Allocation</span>
+                                </div>
+                                <ChevronDown size={15} className={`chevron ${examHallMenuOpen ? 'open' : ''}`} />
+                            </button>
+                            {examHallMenuOpen && (
+                                <div className="sub-menu">
+                                    <button
+                                        type="button"
+                                        className={`sub-link ${activeTab === 'exam-halls' ? 'active' : ''}`}
+                                        onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
+                                    >
+                                        <CheckCircle size={13} /> My Invigilation Duty
                                     </button>
                                 </div>
                             )}
@@ -1546,7 +1590,7 @@ export default function StaffDashboard() {
                                             Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
                                         </p>
                                     </div>
-                                    
+
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                         <input
                                             type="date"
@@ -2598,6 +2642,53 @@ export default function StaffDashboard() {
                     )}
 
                     {/* SCHOOL NEWS TAB - reuses live announcements data */}
+                    {activeTab === 'exam-halls' && (
+                        <div className="dash-card full-width exam-hall-staff-card">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Exam Hall Allocation — My Invigilation Duty</h3>
+                                    <p className="subtitle">Live duty assignments published by the Office Dashboard.</p>
+                                </div>
+                                <span className="exam-sync-pill"><CheckCircle size={13} /> Live Synced</span>
+                            </div>
+
+                            {myExamHallDuties.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <Calendar size={30} />
+                                    <h4>No Exam Hall Duty Assigned</h4>
+                                    <p>Your office has not assigned an invigilation duty yet.</p>
+                                </div>
+                            ) : (
+                                <div className="exam-hall-grid">
+                                    {myExamHallDuties.map(item => (
+                                        <div className="exam-hall-card" key={item.id}>
+                                            <div className="exam-hall-card-top">
+                                                <span className="exam-hall-room">{item.hallNo || 'Hall —'}</span>
+                                                <span className="exam-hall-class">Invigilator</span>
+                                            </div>
+                                            <h4>{item.examName || 'Examination'}</h4>
+                                            <div className="exam-hall-meta">
+                                                <span><User size={14} /> {item.staffName || staffData.name}</span>
+                                                <span><Clock size={14} /> {item.dutyTime || 'Time not specified'}</span>
+                                                <span><Users size={14} /> {item.studentCount || item.studentIds?.length || 0} Students</span>
+                                            </div>
+                                            {Array.isArray(item.studentList) && item.studentList.length > 0 && (
+                                                <div className="exam-hall-student-list">
+                                                    {item.studentList.map((student, idx) => (
+                                                        <div key={student.id || idx} className="exam-hall-student-item">
+                                                            <span>{idx + 1}. {student.name || 'Student'}</span>
+                                                            <small>#{student.admissionNo || 'N/A'}</small>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {activeTab === 'schoolnews' && (
                         <div className="dash-card full-width">
                             <div className="card-header">

@@ -4,10 +4,10 @@ import { db } from '../../service/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
-    Menu, X, Clock, FileText, User, AlertCircle, Layers, Check, XCircle,
+    Menu, X, Clock, FileText, User, Users, Ticket, AlertCircle, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
     ChevronRight, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
-    Download, Sparkles, Eye
+    Download, Sparkles, Eye, ChevronDown
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
@@ -15,6 +15,7 @@ import logo from "../../assets/logo.png"
 export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [examHallMenuOpen, setExamHallMenuOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [studentData, setStudentData] = useState({ name: 'Student', grade: '', section: '', rollNo: '', id: '' });
 
@@ -25,6 +26,7 @@ export default function StudentDashboard() {
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
+    const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
     const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
 
     // Selected Receipt state for printing the official fee receipt view
@@ -420,12 +422,18 @@ export default function StudentDashboard() {
             }
         });
 
+        // Live synchronized Exam Hall Allocation published by the Office Dashboard
+        const unsubExamHalls = onSnapshot(collection(db, 'exam_hall_allocations'), (snap) => {
+            setStudentExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         return () => {
             unsubStudents();
             unsubAnnounce();
             unsubAssignments();
             unsubSubmissions();
             unsubFees();
+            unsubExamHalls();
         };
     }, [studentData]);
 
@@ -439,6 +447,32 @@ export default function StudentDashboard() {
         const isSecMatch = !itemSec || !studentSec || itemSec === studentSec || itemSec.includes(studentSec) || studentSec.includes(itemSec);
 
         return isClassMatch && isSecMatch;
+    });
+
+    const getMySeatNo = (item) => {
+        if (!Array.isArray(item.studentList)) return null;
+        const mine = item.studentList.find(st =>
+            (st.id && st.id === studentData.id) ||
+            (st.admissionNo && cleanString(st.admissionNo) === cleanString(studentData.rollNo)) ||
+            (st.name && cleanString(st.name) === cleanString(studentData.name))
+        );
+        return mine?.seatNo || null;
+    };
+
+    const myExamHallAllocations = studentExamHallAllocations.filter(item => {
+        const itemClass = cleanString(item.targetClass || item.className || item.grade);
+        const studentClass = cleanString(studentData.grade);
+        const itemSection = cleanString(item.targetSection || item.sectionName || item.section);
+        const studentSection = cleanString(studentData.section);
+        const classMatch = !itemClass || !studentClass || itemClass === studentClass || itemClass.includes(studentClass) || studentClass.includes(itemClass);
+        const sectionMatch = !itemSection || !studentSection || itemSection === studentSection || itemSection.includes(studentSection) || studentSection.includes(itemSection);
+        const studentMatch = Array.isArray(item.studentIds) && studentData.id
+            ? item.studentIds.includes(studentData.id)
+            : Array.isArray(item.studentList) && item.studentList.some(st =>
+                (st.id && st.id === studentData.id) ||
+                (st.admissionNo && cleanString(st.admissionNo) === cleanString(studentData.rollNo))
+            );
+        return classMatch && sectionMatch && (studentMatch || (!item.studentIds && !item.studentList));
     });
 
     const studentAssignments = assignmentsList.filter(item => {
@@ -868,6 +902,28 @@ export default function StudentDashboard() {
                         >
                             <FileCheck size={16} /><span>Submission History</span>
                         </button>
+                        <div className="staff-nav-group">
+                            <button
+                                type="button"
+                                className={`staff-nav-item ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active' : ''}`}
+                                onClick={() => setExamHallMenuOpen(prev => !prev)}
+                            >
+                                <Calendar size={16} />
+                                <span>Exam Hall Allocation</span>
+                                <ChevronDown size={14} className={`staff-nav-chevron ${examHallMenuOpen ? 'open' : ''}`} />
+                            </button>
+                            {examHallMenuOpen && (
+                                <div className="staff-submenu">
+                                    <button
+                                        type="button"
+                                        className={`staff-submenu-item ${activeTab === 'exam-halls' ? 'active' : ''}`}
+                                        onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
+                                    >
+                                        <CheckCircle size={13} /> My Hall Allocation
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button
                             className={`staff-nav-item ${activeTab === 'notices' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('notices'); setIsMobileMenuOpen(false); }}
@@ -1781,6 +1837,45 @@ export default function StudentDashboard() {
                                                 ))}
                                             </tbody>
                                         </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'exam-halls' && (
+                            <div className="staff-card full exam-hall-student-card">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Exam Hall Allocation</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Live exam seating information published by the Office. Updates appear automatically.
+                                        </p>
+                                    </div>
+                                    <span className="exam-sync-pill"><CheckCircle size={13} /> Live Synced</span>
+                                </div>
+
+                                {myExamHallAllocations.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Calendar size={30} />
+                                        <h4>No Exam Hall Allocation Yet</h4>
+                                        <p>The office has not published an exam hall allocation for your class.</p>
+                                    </div>
+                                ) : (
+                                    <div className="exam-hall-grid">
+                                        {myExamHallAllocations.map(item => (
+                                            <div className="exam-hall-card" key={item.id}>
+                                                <div className="exam-hall-card-top">
+                                                    <span className="exam-hall-room">{item.hallNo || 'Hall —'}</span>
+                                                    <span className="exam-hall-class">{item.targetClass || studentData.grade}{item.targetSection ? ` / ${item.targetSection}` : ''}</span>
+                                                </div>
+                                                <h4>{item.examName || 'Examination'}</h4>
+                                                <div className="exam-hall-meta">
+                                                    <span><Users size={14} /> {item.studentCount || item.studentIds?.length || item.capacity || '—'} students</span>
+                                                    <span><User size={14} /> {item.invigilator || 'Not assigned'}</span>
+                                                    <span className="student-seat-badge"><Ticket size={14} /> Seat {getMySeatNo(item) || '—'}</span>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

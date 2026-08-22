@@ -48,6 +48,7 @@ button {
 }
 
 .dashboard-containers {
+    top: 70px;
     width: min(1240px, calc(100% - 48px));
     min-height: calc(100vh - 64px);
     margin: 32px auto;
@@ -1199,7 +1200,9 @@ textarea:focus {
     }
 
     .stats-grid {
-        grid-template-columns: 1fr
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 9px !important;
+        margin: 20px;
     }
 
     .dashboard-topbar {
@@ -1823,7 +1826,8 @@ body,
     }
 
     .stats-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 9px !important;
     }
 
     .card-header {
@@ -2915,7 +2919,8 @@ input[type="date"],
     }
 
     .stats-grid {
-        grid-template-columns: 1fr !important
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 9px !important;
     }
 
     .overview-table-head {
@@ -3739,7 +3744,8 @@ input[type="date"]:hover {
     }
 
     .stats-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 9px !important;
     }
 
     .stat-card {
@@ -4256,6 +4262,7 @@ body {
         background: #fff !important;
     }
 }
+
 /* =========================================================================
    FULL EDUCONNECT-STYLE REDESIGN — expanded sidebar, right rail, widgets
    (This block intentionally sits last so it wins the cascade.)
@@ -4364,6 +4371,7 @@ body {
 }
 
 @media (max-width: 760px) {
+
     .brand-titles,
     .user-info,
     .nav-links-content span,
@@ -5042,20 +5050,34 @@ body {
     box-shadow: 0 7px 22px rgba(42, 51, 87, .06);
     transition: transform .18s ease, box-shadow .18s ease;
 }
+
 .analytics-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 28px rgba(42, 51, 87, .09);
 }
+
 .analytics-card::before {
     content: '';
     position: absolute;
-    left: 0; top: 0; bottom: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
     width: 4px;
     background: #4f6bfb;
 }
-.analytics-card.present::before { background: #10b981; }
-.analytics-card.absent::before { background: #f59e0b; }
-.analytics-card.alert::before { background: #ef476f; }
+
+.analytics-card.present::before {
+    background: #10b981;
+}
+
+.analytics-card.absent::before {
+    background: #f59e0b;
+}
+
+.analytics-card.alert::before {
+    background: #ef476f;
+}
+
 .analytics-label {
     display: block;
     color: var(--muted, #8890a6);
@@ -5064,19 +5086,30 @@ body {
     text-transform: uppercase;
     letter-spacing: .04em;
 }
+
 .analytics-card h3 {
     margin: 8px 0 5px;
     color: var(--text, #1c2238);
     font-size: 1.55rem;
     line-height: 1.1;
 }
+
 .analytics-sub {
     color: var(--muted, #8890a6);
     font-size: .72rem;
 }
-.analytics-card.present h3 { color: #079669; }
-.analytics-card.absent h3 { color: #d97706; }
-.analytics-card.alert h3 { color: #dc3158; }
+
+.analytics-card.present h3 {
+    color: #079669;
+}
+
+.analytics-card.absent h3 {
+    color: #d97706;
+}
+
+.analytics-card.alert h3 {
+    color: #dc3158;
+}
 
 .defaulter-rate-badge {
     display: inline-flex;
@@ -5088,6 +5121,7 @@ body {
     font-weight: 800;
     font-size: .72rem;
 }
+
 .call-parent-btn {
     display: inline-flex;
     align-items: center;
@@ -5101,6 +5135,7 @@ body {
     font-weight: 700;
     transition: .18s ease;
 }
+
 .call-parent-btn:hover {
     background: #4058d7;
     color: #fff;
@@ -5113,6 +5148,7 @@ body {
     gap: 13px;
     margin: 16px 0 20px;
 }
+
 .sub-status-card {
     display: flex;
     align-items: center;
@@ -5123,19 +5159,33 @@ body {
     border-radius: 14px;
     background: var(--surface, #fff);
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(42,51,87,.05);
+    box-shadow: 0 6px 20px rgba(42, 51, 87, .05);
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+
 .sub-status-card:hover,
 .sub-status-card.active {
     transform: translateY(-2px);
     border-color: #bfc9ff;
-    box-shadow: 0 10px 25px rgba(79,107,251,.12);
+    box-shadow: 0 10px 25px rgba(79, 107, 251, .12);
 }
-.sub-status-card.active.total { border-color: #8495ff; }
-.sub-status-card.active.pending { border-color: #f2c36d; }
-.sub-status-card.active.completed { border-color: #72d7b5; }
-.sub-status-card.active.unsubmitted { border-color: #ef9aae; }
+
+.sub-status-card.active.total {
+    border-color: #8495ff;
+}
+
+.sub-status-card.active.pending {
+    border-color: #f2c36d;
+}
+
+.sub-status-card.active.completed {
+    border-color: #72d7b5;
+}
+
+.sub-status-card.active.unsubmitted {
+    border-color: #ef9aae;
+}
+
 .sub-status-icon {
     width: 42px;
     height: 42px;
@@ -5145,21 +5195,40 @@ body {
     align-items: center;
     justify-content: center;
 }
-.bg-indigo { background: #eef1ff; color: #4f6bfb; }
-.bg-amber { background: #fff5df; color: #d88a00; }
-.bg-emerald { background: #e7faf3; color: #0a9b70; }
-.bg-rose { background: #fff0f3; color: #df4164; }
+
+.bg-indigo {
+    background: #eef1ff;
+    color: #4f6bfb;
+}
+
+.bg-amber {
+    background: #fff5df;
+    color: #d88a00;
+}
+
+.bg-emerald {
+    background: #e7faf3;
+    color: #0a9b70;
+}
+
+.bg-rose {
+    background: #fff0f3;
+    color: #df4164;
+}
+
 .sub-status-info span {
     display: block;
     color: var(--muted, #8890a6);
     font-size: .68rem;
     font-weight: 700;
 }
+
 .sub-status-info h4 {
     margin: 4px 0 0;
     color: var(--text, #1c2238);
     font-size: 1.35rem;
 }
+
 .topic-badge {
     display: inline-flex;
     max-width: 220px;
@@ -5170,6 +5239,7 @@ body {
     font-size: .69rem;
     font-weight: 700;
 }
+
 .pdf-preview-link {
     display: inline-flex;
     align-items: center;
@@ -5181,12 +5251,17 @@ body {
     font-weight: 700;
     word-break: break-word;
 }
-.pdf-preview-link:hover { text-decoration: underline; }
+
+.pdf-preview-link:hover {
+    text-decoration: underline;
+}
+
 .grade-input {
     width: 82px !important;
     min-width: 82px;
     text-align: center;
 }
+
 .btn-save-grade {
     display: inline-flex;
     align-items: center;
@@ -5202,8 +5277,15 @@ body {
     font-weight: 800;
     cursor: pointer;
 }
-.btn-save-grade:hover { background: #3b52d9; }
-.btn-save-grade:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-save-grade:hover {
+    background: #3b52d9;
+}
+
+.btn-save-grade:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
 
 /* Section header / back navigation */
 .back-btn {
@@ -5219,16 +5301,176 @@ body {
     font-weight: 700;
     cursor: pointer;
 }
-.back-btn:hover { border-color: #aebaff; color: #4f6bfb; background: #f7f8ff; }
+
+.back-btn:hover {
+    border-color: #aebaff;
+    color: #4f6bfb;
+    background: #f7f8ff;
+}
 
 /* Keep large academic tabs contained on desktop */
 @media (max-width: 1100px) {
+
     .analytics-summary-grid,
-    .sub-status-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sub-status-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
+
 @media (max-width: 700px) {
+
     .analytics-summary-grid,
-    .sub-status-cards-grid { grid-template-columns: 1fr; }
-    .analytics-card { min-height: 100px; }
-    .sub-status-card { min-height: 72px; }
+    .sub-status-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analytics-card {
+        min-height: 100px;
+    }
+
+    .sub-status-card {
+        min-height: 72px;
+    }
+}
+
+/* ============================================================
+   EXAM HALL ALLOCATION - LIVE OFFICE SYNC
+   ============================================================ */
+.nav-links.active-parent {
+    background: rgba(16, 185, 129, .10);
+}
+
+.nav-links .chevron.open {
+    transform: rotate(180deg);
+    transition: transform .2s ease;
+}
+
+.sub-menu .sub-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.exam-hall-staff-card {
+    overflow: hidden;
+}
+
+.exam-sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--accent-emerald-bg);
+    color: var(--accent-emerald);
+    border: 1px solid rgba(16, 185, 129, .22);
+    font-size: .68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.exam-hall-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.exam-hall-card {
+    background: var(--dash-surface);
+    border: 1px solid var(--dash-border);
+    border-radius: 14px;
+    padding: 15px;
+    box-shadow: var(--dash-shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.exam-hall-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--dash-shadow);
+    border-color: var(--dash-primary-border);
+}
+
+.exam-hall-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 11px;
+}
+
+.exam-hall-room {
+    font-size: .76rem;
+    font-weight: 850;
+    color: var(--dash-primary);
+    background: var(--dash-primary-light);
+    border-radius: 8px;
+    padding: 5px 8px;
+}
+
+.exam-hall-class {
+    font-size: .65rem;
+    font-weight: 750;
+    color: var(--dash-text-muted);
+}
+
+.exam-hall-card h4 {
+    margin: 0 0 12px;
+    color: var(--dash-text-main);
+    font-size: .92rem;
+}
+
+.exam-hall-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: var(--dash-text-muted);
+    font-size: .72rem;
+}
+
+.exam-hall-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+@media (max-width: 640px) {
+    .exam-sync-pill {
+        font-size: .62rem;
+        padding: 5px 8px;
+    }
+
+    .exam-hall-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.exam-hall-student-list {
+    margin-top: 12px;
+    border-top: 1px solid var(--staff-border);
+    padding-top: 9px;
+    max-height: 180px;
+    overflow: auto;
+}
+
+.exam-hall-student-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--staff-border);
+    font-size: .68rem;
+}
+
+.exam-hall-student-item:last-child {
+    border-bottom: 0;
+}
+
+.exam-hall-student-item small {
+    color: var(--staff-text-muted);
+}
+
+/* Exam Hall seat number */
+.exam-student-number {
+    min-width: 58px;
 }
