@@ -1554,3 +1554,959 @@ h4,
         gap: 8px;
     }
 }
+
+
+/* ================================================================
+   HOME PAGE — NEW SCHOOL THEME COLOR SYSTEM
+   ---------------------------------------------------------------
+   IMPORTANT:
+   - Fonts are intentionally NOT changed.
+   - No font-family declarations are added in this theme layer.
+   - Layout, spacing, content and component structure are preserved.
+   - This block only refreshes colors, gradients, borders, shadows,
+     badges and visual accents.
+   ================================================================ */
+
+:root {
+    /* Modern School Blue + Teal + Violet palette */
+    --primary: #2563EB;
+    --primary-dark: #1D4ED8;
+    --primary-gradient: linear-gradient(135deg, #2563EB 0%, #4F46E5 52%, #7C3AED 100%);
+    --primary-glow: rgba(37, 99, 235, 0.22);
+
+    --secondary: #7C3AED;
+    --accent-pink: #EC4899;
+    --accent-amber: #F59E0B;
+    --accent-emerald: #059669;
+    --accent-cyan: #0891B2;
+    --accent-blue: #2563EB;
+    --accent-blue-deep: #1E40AF;
+    --accent-green: #10B981;
+
+    --bg-body: #F4F7FC;
+    --bg-cream-soft: #F8FAFF;
+    --bg-surface: #FFFFFF;
+    --text-dark: #172033;
+    --text-muted: #667085;
+    --border: #E3E8F2;
+
+    --shadow-sm: 0 2px 8px rgba(30, 64, 175, 0.055);
+    --shadow-card: 0 10px 28px rgba(30, 64, 175, 0.09);
+    --shadow-hover: 0 16px 34px -8px rgba(37, 99, 235, 0.24);
+}
+
+/* ---------------------------------------------------------------
+   Global home background
+--------------------------------------------------------------- */
+.home-wrapper {
+    background:
+        radial-gradient(circle at 5% 0%, rgba(37, 99, 235, 0.055), transparent 28%),
+        radial-gradient(circle at 95% 12%, rgba(124, 58, 237, 0.045), transparent 25%),
+        var(--bg-body);
+    color: var(--text-dark);
+}
+
+/* ---------------------------------------------------------------
+   1. Live ticker
+--------------------------------------------------------------- */
+.news-ticker-bar {
+    background: #172554;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.ticker-label {
+    background: linear-gradient(135deg, #2563EB, #7C3AED);
+}
+
+.ticker-content p {
+    color: #EAF1FF;
+}
+
+.ticker-bullet {
+    color: #FBBF24;
+}
+
+/* ---------------------------------------------------------------
+   2. Hero section
+--------------------------------------------------------------- */
+.hero-section {
+    background:
+        linear-gradient(180deg, rgba(244,247,252,.25), rgba(244,247,252,.7)),
+        var(--bg-body);
+}
+
+.hero-bg-tint {
+    background:
+        radial-gradient(circle at 8% 18%, rgba(37, 99, 235, 0.24) 0%, rgba(37, 99, 235, 0) 48%),
+        radial-gradient(circle at 92% 78%, rgba(124, 58, 237, 0.18) 0%, rgba(124, 58, 237, 0) 48%),
+        linear-gradient(
+            100deg,
+            rgba(239, 246, 255, 0.78) 0%,
+            rgba(239, 246, 255, 0.46) 34%,
+            rgba(255, 255, 255, 0.18) 62%,
+            rgba(248, 250, 252, 0.38) 100%
+        );
+}
+
+/* Decorative hero shapes */
+.hero-deco-triangle svg path {
+    stroke: #059669 !important;
+}
+
+.hero-deco-calc svg rect,
+.hero-deco-calc svg circle {
+    stroke: #2563EB !important;
+}
+
+.hero-deco-calc svg circle {
+    fill: #2563EB !important;
+}
+
+/* Hero text accents */
+.hero-eyebrow {
+    color: #1D4ED8;
+    background: #E8F0FF;
+    border-color: #CFE0FF;
+}
+
+.hero-heading .line-dark {
+    color: #172033;
+}
+
+.hero-heading .line-accent {
+    color: #2563EB;
+}
+
+.hero-heading .line-pink {
+    color: #7C3AED;
+}
+
+.hero-text-col > p {
+    color: #5F6B7D;
+}
+
+/* Hero CTA buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #2563EB, #4F46E5);
+    box-shadow: 0 8px 20px rgba(37,99,235,.22);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1D4ED8, #4338CA);
+    box-shadow: 0 12px 26px rgba(37,99,235,.28);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,.92);
+    border-color: #CBD5E1;
+    color: #1E40AF;
+}
+
+.btn-secondary:hover {
+    border-color: #93C5FD;
+    background: #EFF6FF;
+    color: #1D4ED8;
+}
+
+/* Hero statistic cards */
+.hero-stat-box {
+    border-color: rgba(203,213,225,.85);
+    box-shadow: 0 8px 22px rgba(30,64,175,.07);
+}
+
+.hero-stat-box.box-blue {
+    background: #EAF2FF;
+    border-color: #CFE0FF;
+}
+
+.hero-stat-box.box-cream {
+    background: #F5F3FF;
+    border-color: #DDD6FE;
+}
+
+.hero-stat-box.box-amber {
+    background: #FFF7E6;
+    border-color: #FDE3A7;
+}
+
+.hero-stat-box.box-peach {
+    background: #ECFDF5;
+    border-color: #BBF7D0;
+}
+
+.hero-stat-box .hs-num {
+    color: #1D4ED8;
+}
+
+/* ---------------------------------------------------------------
+   3. Shared information cards / quick portals
+--------------------------------------------------------------- */
+.info-card,
+.portal-card,
+.club-card,
+.faq-card {
+    background: rgba(255,255,255,.96);
+    border-color: #E2E8F0;
+    box-shadow: var(--shadow-sm);
+}
+
+.info-card:hover,
+.portal-card:hover,
+.club-card:hover {
+    border-color: #93C5FD;
+    box-shadow: var(--shadow-hover);
+}
+
+.info-card.featured {
+    background: linear-gradient(135deg, #2563EB 0%, #4F46E5 58%, #7C3AED 100%);
+    box-shadow: 0 12px 28px rgba(79,70,229,.22);
+}
+
+.info-card.featured p {
+    color: #E8EDFF;
+}
+
+.card-tag.tag-purple {
+    background: #EDE9FE;
+    color: #6D28D9;
+}
+
+.card-tag.tag-amber {
+    background: #E0F2FE;
+    color: #0369A1;
+}
+
+/* ---------------------------------------------------------------
+   4. Institutional section
+--------------------------------------------------------------- */
+.section-badge {
+    background: #E8F0FF;
+    color: #1D4ED8;
+}
+
+.institution-main h2,
+.map-header h2,
+.events-section-header h2 {
+    color: #172033;
+}
+
+.lead-para {
+    border-left-color: #2563EB;
+    color: #334155;
+}
+
+.timeline-milestones {
+    border-top-color: #D9E2F0;
+}
+
+.milestone-item {
+    background: #F8FAFF;
+    border-color: #E2E8F0;
+}
+
+.milestone-year {
+    color: #2563EB;
+}
+
+.milestone-desc {
+    color: #64748B;
+}
+
+/* Mission panel */
+.mission-sidebar {
+    background: linear-gradient(145deg, #1E40AF 0%, #2563EB 48%, #4F46E5 100%);
+    box-shadow: 0 12px 28px rgba(30,64,175,.18);
+}
+
+.widget-header {
+    border-bottom-color: rgba(255,255,255,.20);
+}
+
+.mission-text-body {
+    color: rgba(255,255,255,.86);
+}
+
+.mission-bullets {
+    border-top-color: rgba(255,255,255,.20);
+}
+
+.m-bullet svg {
+    color: #FBBF24;
+}
+
+/* ---------------------------------------------------------------
+   5. Map / location band
+--------------------------------------------------------------- */
+.map-section-container {
+    background:
+        linear-gradient(135deg, #E8F3FF 0%, #EEF2FF 52%, #ECFEF8 100%);
+}
+
+.map-directions-btn {
+    background: linear-gradient(135deg, #2563EB, #4F46E5);
+}
+
+.map-directions-btn:hover {
+    box-shadow: 0 8px 20px rgba(37,99,235,.24);
+}
+
+.map-info-card {
+    border: 1px solid #E2E8F0;
+    box-shadow: var(--shadow-card);
+}
+
+.map-contact-details {
+    border-top-color: #D9E2F0;
+}
+
+/* ---------------------------------------------------------------
+   6. Scroll top
+--------------------------------------------------------------- */
+.scroll-to-top {
+    background: linear-gradient(135deg, #2563EB, #7C3AED);
+    box-shadow: 0 8px 20px rgba(37,99,235,.24);
+}
+
+.scroll-to-top:hover {
+    box-shadow: 0 12px 26px rgba(37,99,235,.30);
+}
+
+/* ---------------------------------------------------------------
+   7. Principal's desk
+--------------------------------------------------------------- */
+.principal-desk-wrapper {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%);
+    border-color: #E1E8F2;
+    box-shadow: var(--shadow-card);
+}
+
+.principal-card-img {
+    border-color: #E8F0FF;
+    box-shadow: 0 10px 24px rgba(37,99,235,.12);
+}
+
+.principal-title-sub {
+    color: #2563EB;
+}
+
+.principal-quote {
+    color: #667085;
+}
+
+.principal-signature {
+    color: #172033;
+}
+
+/* ---------------------------------------------------------------
+   8. Upcoming events
+--------------------------------------------------------------- */
+.event-card {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+}
+
+.event-card:hover {
+    border-color: #93C5FD;
+    box-shadow: var(--shadow-hover);
+}
+
+.event-card:nth-child(3n+1) .event-date-badge {
+    background: #E8F0FF;
+    border-color: #CFE0FF;
+}
+
+.event-card:nth-child(3n+1) .event-month {
+    color: #1D4ED8;
+}
+
+.event-card:nth-child(3n+2) .event-date-badge {
+    background: #EDE9FE;
+    border-color: #DDD6FE;
+}
+
+.event-card:nth-child(3n+2) .event-month {
+    color: #6D28D9;
+}
+
+.event-card:nth-child(3n) .event-date-badge {
+    background: #ECFDF5;
+    border-color: #BBF7D0;
+}
+
+.event-card:nth-child(3n) .event-month {
+    color: #047857;
+}
+
+.event-day {
+    color: #172033;
+}
+
+.event-meta {
+    color: #475569;
+}
+
+.events-view-all {
+    border-color: #CBD5E1;
+    color: #1E40AF;
+}
+
+.events-view-all:hover {
+    background: #EFF6FF;
+    border-color: #93C5FD;
+    color: #1D4ED8;
+}
+
+/* ---------------------------------------------------------------
+   9. Achievers
+--------------------------------------------------------------- */
+.achievement-card:nth-child(4n+1) .achievement-avatar {
+    background: linear-gradient(135deg, #2563EB, #4F46E5);
+}
+
+.achievement-card:nth-child(4n+2) .achievement-avatar {
+    background: linear-gradient(135deg, #7C3AED, #A855F7);
+}
+
+.achievement-card:nth-child(4n+3) .achievement-avatar {
+    background: linear-gradient(135deg, #F59E0B, #F97316);
+    color: #FFFFFF;
+}
+
+.achievement-card:nth-child(4n+4) .achievement-avatar {
+    background: linear-gradient(135deg, #059669, #10B981);
+    color: #FFFFFF;
+}
+
+.achievement-card h3 {
+    color: #172033;
+}
+
+.achievement-score {
+    background: #E8F0FF;
+    color: #1D4ED8;
+}
+
+/* ---------------------------------------------------------------
+   10. Gallery
+--------------------------------------------------------------- */
+.gallery-band {
+    background:
+        linear-gradient(135deg, #E8F0FF 0%, #EEF2FF 50%, #F5F3FF 100%);
+    border-top: 1px solid #E0E7FF;
+    border-bottom: 1px solid #E0E7FF;
+}
+
+.gallery-thumb {
+    background: #172033;
+    box-shadow: 0 8px 20px rgba(15,23,42,.12);
+}
+
+.gallery-overlay-caption {
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(15,23,42,.88) 100%
+    );
+}
+
+/* ---------------------------------------------------------------
+   11. Clubs / co-curricular
+--------------------------------------------------------------- */
+.club-icon {
+    background: #E8F0FF;
+    color: #2563EB;
+}
+
+.club-card:hover {
+    border-color: #93C5FD;
+}
+
+/* Alternate club accents */
+.club-card:nth-child(3n+2) .club-icon {
+    background: #EDE9FE;
+    color: #7C3AED;
+}
+
+.club-card:nth-child(3n) .club-icon {
+    background: #ECFDF5;
+    color: #059669;
+}
+
+/* ---------------------------------------------------------------
+   12. FAQ
+--------------------------------------------------------------- */
+.faq-card {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+}
+
+.faq-card h3 span {
+    color: #2563EB;
+}
+
+.faq-card:hover {
+    border-color: #C7D2FE;
+    box-shadow: var(--shadow-card);
+}
+
+/* ---------------------------------------------------------------
+   13. Scroll-state accents
+--------------------------------------------------------------- */
+.home-wrapper.scroll-down .info-card,
+.home-wrapper.scroll-down .portal-card {
+    border-color: rgba(37, 99, 235, .28);
+}
+
+.home-wrapper.scroll-up .info-card,
+.home-wrapper.scroll-up .portal-card {
+    border-color: rgba(124, 58, 237, .25);
+}
+
+/* ---------------------------------------------------------------
+   14. Common headings / separators
+--------------------------------------------------------------- */
+.home-wrapper hr {
+    border-color: #E2E8F0;
+}
+
+.home-wrapper .text-primary,
+.home-wrapper .accent-text {
+    color: #2563EB;
+}
+
+/* ---------------------------------------------------------------
+   15. Selection / focus colors
+--------------------------------------------------------------- */
+.home-wrapper ::selection {
+    background: #C7D2FE;
+    color: #172033;
+}
+
+.home-wrapper button:focus-visible,
+.home-wrapper a:focus-visible {
+    outline: 3px solid rgba(37,99,235,.25);
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------
+   16. Keep the new palette clean on small screens
+--------------------------------------------------------------- */
+@media (max-width: 900px) {
+    .hero-bg-tint {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(239,246,255,.72) 0%,
+                rgba(248,250,252,.48) 55%,
+                rgba(238,242,255,.78) 100%
+            );
+    }
+
+    .mission-sidebar {
+        background: linear-gradient(145deg, #1E40AF, #4F46E5);
+    }
+}
+
+@media (max-width: 600px) {
+    .news-ticker-bar {
+        background: #172554;
+    }
+
+    .ticker-label {
+        background: #2563EB;
+    }
+
+    .gallery-band {
+        background: linear-gradient(135deg, #E8F0FF, #F5F3FF);
+    }
+}
+
+
+/* ================================================================
+   HERO CAROUSEL — FULL THEME RESTYLE
+   ---------------------------------------------------------------
+   Purpose:
+   • Make all hero text readable over changing carousel images.
+   • Use a dark cinematic overlay instead of a light image wash.
+   • Give the hero a premium school/education visual identity.
+   • Keep the existing carousel, animations, layout and fonts.
+   • NO font-family changes are made here.
+   ================================================================ */
+
+/* Main hero canvas */
+.hero-section {
+    position: relative;
+    isolation: isolate;
+    min-height: 620px;
+    padding: 76px 24px 48px;
+    color: #FFFFFF;
+    background: #0B1630;
+}
+
+/* Carousel images remain visible and colorful */
+.hero-bg-carousel {
+    z-index: -3;
+    background: #0B1630;
+}
+
+.hero-bg-slide {
+    filter: saturate(1.08) contrast(1.04);
+}
+
+/* ---------------------------------------------------------------
+   Cinematic readability overlay
+   --------------------------------------------------------------- */
+.hero-bg-tint {
+    z-index: -2;
+    background:
+        /* subtle blue/purple atmosphere */
+        radial-gradient(
+            circle at 12% 20%,
+            rgba(37, 99, 235, .42) 0%,
+            rgba(37, 99, 235, 0) 38%
+        ),
+        radial-gradient(
+            circle at 90% 82%,
+            rgba(124, 58, 237, .34) 0%,
+            rgba(124, 58, 237, 0) 40%
+        ),
+        /* dark left-to-right readability layer */
+        linear-gradient(
+            90deg,
+            rgba(7, 18, 42, .90) 0%,
+            rgba(8, 23, 51, .80) 35%,
+            rgba(8, 23, 51, .55) 62%,
+            rgba(8, 23, 51, .62) 100%
+        ),
+        /* overall image darkening */
+        linear-gradient(
+            180deg,
+            rgba(5, 15, 35, .28) 0%,
+            rgba(5, 15, 35, .52) 100%
+        );
+}
+
+/* A subtle lower fade makes the transition into the next section cleaner */
+.hero-section::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 90px;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        rgba(11, 22, 48, 0),
+        rgba(11, 22, 48, .72)
+    );
+}
+
+/* Keep content above decorative layer */
+.hero-grid {
+    position: relative;
+    z-index: 3;
+}
+
+/* ---------------------------------------------------------------
+   Hero eyebrow
+   --------------------------------------------------------------- */
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 7px 13px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(125, 211, 252, .42);
+    border-radius: 999px;
+    background: rgba(8, 47, 73, .58);
+    color: #BAE6FD;
+    text-shadow: 0 1px 8px rgba(0,0,0,.25);
+    box-shadow:
+        0 6px 20px rgba(0,0,0,.12),
+        inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* ---------------------------------------------------------------
+   Main hero heading
+   --------------------------------------------------------------- */
+.hero-heading {
+    color: #FFFFFF !important;
+    text-shadow:
+        0 3px 18px rgba(0,0,0,.48),
+        0 1px 3px rgba(0,0,0,.30);
+}
+
+.hero-heading .line-dark {
+    color: #FFFFFF !important;
+}
+
+.hero-heading .line-accent {
+    color: #67E8F9 !important;
+    text-shadow:
+        0 2px 18px rgba(34,211,238,.30),
+        0 1px 3px rgba(0,0,0,.35);
+}
+
+.hero-heading .line-pink {
+    color: #FDE68A !important;
+    text-shadow:
+        0 2px 18px rgba(251,191,36,.24),
+        0 1px 3px rgba(0,0,0,.35);
+}
+
+/* ---------------------------------------------------------------
+   Hero description
+   --------------------------------------------------------------- */
+.hero-text-col > p {
+    color: #E5EDF9 !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,.40);
+}
+
+/* ---------------------------------------------------------------
+   CTA buttons
+   --------------------------------------------------------------- */
+.hero-cta-row {
+    position: relative;
+    z-index: 4;
+}
+
+.hero-text-col .btn-primary {
+    color: #FFFFFF;
+    background: linear-gradient(
+        135deg,
+        #2563EB 0%,
+        #4F46E5 52%,
+        #7C3AED 100%
+    );
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow:
+        0 10px 26px rgba(0,0,0,.24),
+        0 0 0 1px rgba(255,255,255,.04) inset;
+}
+
+.hero-text-col .btn-primary:hover {
+    background: linear-gradient(
+        135deg,
+        #3B82F6 0%,
+        #6366F1 52%,
+        #8B5CF6 100%
+    );
+    box-shadow:
+        0 14px 32px rgba(0,0,0,.28),
+        0 0 24px rgba(99,102,241,.22);
+}
+
+.hero-text-col .btn-secondary {
+    color: #F8FAFC;
+    background: rgba(15, 23, 42, .48);
+    border: 1px solid rgba(255,255,255,.38);
+    box-shadow:
+        0 8px 22px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.hero-text-col .btn-secondary:hover {
+    color: #FFFFFF;
+    background: rgba(37, 99, 235, .62);
+    border-color: rgba(147,197,253,.72);
+    box-shadow:
+        0 10px 26px rgba(0,0,0,.22),
+        0 0 18px rgba(59,130,246,.18);
+}
+
+/* ---------------------------------------------------------------
+   Reviews / trust row
+   --------------------------------------------------------------- */
+.hero-reviews {
+    color: #FFFFFF;
+}
+
+.hr-avatar {
+    border-color: rgba(255,255,255,.78);
+    box-shadow:
+        0 4px 12px rgba(0,0,0,.25),
+        0 0 0 1px rgba(255,255,255,.08);
+}
+
+.hero-reviews-text strong {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,.40);
+}
+
+.hero-reviews-text span {
+    color: #D7E2F1 !important;
+    text-shadow: 0 1px 6px rgba(0,0,0,.35);
+}
+
+/* ---------------------------------------------------------------
+   Statistic cards — glass style for carousel readability
+   --------------------------------------------------------------- */
+.hero-stats-row {
+    position: relative;
+    z-index: 4;
+}
+
+.hero-stat-box {
+    border: 1px solid rgba(255,255,255,.20);
+    background: rgba(15, 23, 42, .56) !important;
+    box-shadow:
+        0 8px 22px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.09);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.hero-stat-box:hover {
+    background: rgba(15, 23, 42, .68) !important;
+    border-color: rgba(125,211,252,.38);
+    box-shadow:
+        0 12px 28px rgba(0,0,0,.24),
+        0 0 20px rgba(37,99,235,.10);
+}
+
+.hero-stat-box .hs-num {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 9px rgba(0,0,0,.35);
+}
+
+.hero-stat-box .hs-label {
+    color: #D9E5F3 !important;
+}
+
+/* Small colored accent underneath each statistic */
+.hero-stat-box::after {
+    content: "";
+    display: block;
+    width: 24px;
+    height: 3px;
+    margin: 8px auto 0;
+    border-radius: 999px;
+    background: #67E8F9;
+}
+
+.hero-stat-box:nth-child(2)::after {
+    background: #A78BFA;
+}
+
+.hero-stat-box:nth-child(3)::after {
+    background: #FCD34D;
+}
+
+.hero-stat-box:nth-child(4)::after {
+    background: #6EE7B7;
+}
+
+/* ---------------------------------------------------------------
+   Floating decorative elements
+   --------------------------------------------------------------- */
+.hero-deco {
+    z-index: 2;
+    opacity: .76;
+    filter: drop-shadow(0 7px 15px rgba(0,0,0,.22));
+}
+
+.hero-deco-triangle {
+    opacity: .65;
+}
+
+.hero-deco-calc {
+    opacity: .58;
+}
+
+/* ---------------------------------------------------------------
+   Image-transition readability
+   --------------------------------------------------------------- */
+.hero-bg-slide.active {
+    will-change: opacity, transform, filter;
+}
+
+/* Slightly stronger overlay while the image changes */
+.hero-bg-carousel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: rgba(3, 10, 25, .05);
+}
+
+/* ---------------------------------------------------------------
+   Tablet
+   --------------------------------------------------------------- */
+@media (max-width: 900px) {
+    .hero-section {
+        min-height: 600px;
+        padding: 64px 20px 42px;
+    }
+
+    .hero-bg-tint {
+        background:
+            radial-gradient(
+                circle at 50% 15%,
+                rgba(37,99,235,.34) 0%,
+                rgba(37,99,235,0) 42%
+            ),
+            linear-gradient(
+                180deg,
+                rgba(7,18,42,.82) 0%,
+                rgba(8,23,51,.72) 48%,
+                rgba(8,23,51,.84) 100%
+            );
+    }
+
+    .hero-heading {
+        text-shadow:
+            0 3px 16px rgba(0,0,0,.56),
+            0 1px 3px rgba(0,0,0,.40);
+    }
+}
+
+/* ---------------------------------------------------------------
+   Mobile
+   --------------------------------------------------------------- */
+@media (max-width: 600px) {
+    .hero-section {
+        min-height: 650px;
+        padding: 56px 16px 34px;
+    }
+
+    .hero-bg-tint {
+        background:
+            linear-gradient(
+                180deg,
+                rgba(6,16,37,.84) 0%,
+                rgba(7,20,43,.76) 45%,
+                rgba(7,20,43,.90) 100%
+            );
+    }
+
+    .hero-eyebrow {
+        font-size: .70rem;
+        padding: 6px 10px;
+    }
+
+    .hero-heading {
+        text-shadow: 0 3px 14px rgba(0,0,0,.58);
+    }
+
+    .hero-heading .line-accent {
+        color: #67E8F9 !important;
+    }
+
+    .hero-heading .line-pink {
+        color: #FDE68A !important;
+    }
+
+    .hero-text-col > p {
+        color: #E8F0FA !important;
+    }
+
+    .hero-stat-box {
+        background: rgba(8,18,38,.68) !important;
+    }
+}

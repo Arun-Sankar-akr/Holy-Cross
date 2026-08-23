@@ -916,7 +916,7 @@ export default function AdminDashboard() {
 
                     {/* UPCOMING EVENTS & ACTIVITIES SUBMENU PANEL */}
                     {activeTab === 'upcoming_events' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-events-section">
                             <h3>Publish Upcoming Event & Activity</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -948,7 +948,7 @@ export default function AdminDashboard() {
 
                     {/* BOARD EXAM TOPPERS & ACHIEVERS SUBMENU PANEL */}
                     {activeTab === 'toppers' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-toppers-section">
                             <h3>Publish Board Exam Topper & Achiever</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -1084,9 +1084,11 @@ export default function AdminDashboard() {
                                         </div>
                                         <div className="modal-docs">
                                             <h4>Uploaded Files:</h4>
-                                            {selectedApp.aadharFileUrl && <a href={selectedApp.aadharFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Identity Document</a>}
-                                            {selectedApp.communityFileUrl && <a href={selectedApp.communityFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Community Certificate</a>}
-                                            {selectedApp.tcFileUrl && <a href={selectedApp.tcFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Transfer Certificate</a>}
+                                            <div className="file">
+                                                {selectedApp.aadharFileUrl && <a href={selectedApp.aadharFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Identity Document</a>}
+                                                {selectedApp.communityFileUrl && <a href={selectedApp.communityFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Community Certificate</a>}
+                                                {selectedApp.tcFileUrl && <a href={selectedApp.tcFileUrl} target="_blank" rel="noreferrer"><FileText size={14} /> Transfer Certificate</a>}
+                                            </div>
                                         </div>
                                         <button className="close-modal-btn" onClick={() => setSelectedApp(null)}>Close Window</button>
                                     </div>
@@ -1394,7 +1396,7 @@ export default function AdminDashboard() {
 
                     {/* ACADEMIC CALENDAR */}
                     {activeTab === 'calendar' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-calendar-section">
                             <h3>Publish Academic Calendar Event</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -1402,19 +1404,82 @@ export default function AdminDashboard() {
                                     setCalendarForm({ month: '', date: '', day: '', title: '', category: 'General' })
                                 );
                             }}>
-                                <div><input type="text" placeholder="Month (e.g., June 2026)" value={calendarForm.month} onChange={e => setCalendarForm({ ...calendarForm, month: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Date (e.g., 02)" value={calendarForm.date} onChange={e => setCalendarForm({ ...calendarForm, date: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Day (e.g., Mon)" value={calendarForm.day} onChange={e => setCalendarForm({ ...calendarForm, day: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Event Title" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required /></div>
+                                <div className="academic-calendar-date-field">
+                                    <label>Event Date</label>
+                                    <input
+                                        type="date"
+                                        value={calendarForm.date || ''}
+                                        onChange={e => {
+                                            const value = e.target.value;
+                                            if (!value) {
+                                                setCalendarForm({ ...calendarForm, month: '', date: '', day: '' });
+                                                return;
+                                            }
+
+                                            const selectedDate = new Date(`${value}T00:00:00`);
+                                            const month = selectedDate.toLocaleDateString('en-IN', {
+                                                month: 'long',
+                                                year: 'numeric'
+                                            });
+                                            const day = selectedDate.toLocaleDateString('en-IN', {
+                                                weekday: 'short'
+                                            });
+
+                                            setCalendarForm({
+                                                ...calendarForm,
+                                                month,
+                                                date: value,
+                                                day
+                                            });
+                                        }}
+                                        required
+                                    />
+                                </div>
+
                                 <div>
-                                    <select value={calendarForm.category} onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}>
+                                    <input
+                                        type="text"
+                                        placeholder="Event Title"
+                                        value={calendarForm.title}
+                                        onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <select
+                                        value={calendarForm.category}
+                                        onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}
+                                    >
                                         <option value="General">General</option>
                                         <option value="Exam">Exam</option>
                                         <option value="Meeting">Meeting</option>
                                         <option value="Event">Event</option>
                                     </select>
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Event</button>
+
+                                <div className="academic-calendar-helper">
+                                    <Calendar size={13} />
+                                    <span>Select a date from the calendar. Month and day are filled automatically.</span>
+                                </div>
+
+                                {calendarForm.date && (
+                                    <div className="academic-calendar-preview">
+                                        <div className="preview-date">
+                                            {calendarForm.date.slice(8, 10)}
+                                        </div>
+                                        <div className="preview-text">
+                                            <strong>{calendarForm.title || 'New calendar event'}</strong>
+                                            <br />
+                                            {calendarForm.month} • {calendarForm.day}
+                                            {calendarForm.category ? ` • ${calendarForm.category}` : ''}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button type="submit" className="add-notice-btn">
+                                    <PlusCircle size={15} /> Publish Event
+                                </button>
                             </form>
 
                             <h4>Published Calendar Events <span className="count-badge">{calendarEvents.length}</span></h4>
@@ -1433,7 +1498,7 @@ export default function AdminDashboard() {
 
                     {/* ADMINISTRATORS */}
                     {activeTab === 'admins' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-admin-section">
                             <h3>Publish Administrator Profile</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -1466,7 +1531,7 @@ export default function AdminDashboard() {
 
                     {/* GALLERY */}
                     {activeTab === 'gallery' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-gallery-section">
                             <h3>Publish Gallery Photo</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -1529,7 +1594,7 @@ export default function AdminDashboard() {
 
                     {/* HOLIDAYS */}
                     {activeTab === 'holidays' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-holiday-section">
                             <h3>Publish Holiday</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -1565,7 +1630,7 @@ export default function AdminDashboard() {
 
                     {/* ANNOUNCEMENTS */}
                     {activeTab === 'announcements' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card publish-management-card publish-announcement-section">
                             <h3>Publish Announcement</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();

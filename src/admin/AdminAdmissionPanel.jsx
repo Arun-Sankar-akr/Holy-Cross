@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig'; // Adjust your firebase import path as needed
+import { db } from '../firebaseConfig'; // Adjust your firebase import path as needed[cite: 2]
 import { 
   collection, 
   getDocs, 
@@ -8,12 +8,14 @@ import {
   setDoc, 
   getDoc,
   serverTimestamp 
-} from 'firebase/firestore';
+} from 'firebase/firestore'; //[cite: 2]
+import './AdmissionPanel.css'; // Make sure to save the CSS rules into this file
 
 export default function AdmissionPanel() {
-  const [applications, setApplications] = useState([]);
-  const [approvalSections, setApprovalSections] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [applications, setApplications] = useState([]); //[cite: 2]
+  const [approvalSections, setApprovalSections] = useState({}); //[cite: 2]
+  const [loading, setLoading] = useState(true); //[cite: 2]
+  const [selectedApp, setSelectedApp] = useState(null);
 
   useEffect(() => {
     fetchApplications();
@@ -21,17 +23,17 @@ export default function AdmissionPanel() {
 
   const fetchApplications = async () => {
     try {
-      setLoading(true);
-      const querySnapshot = await getDocs(collection(db, 'admissions'));
+      setLoading(true); //[cite: 2]
+      const querySnapshot = await getDocs(collection(db, 'admissions')); //[cite: 2]
       const appsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
-      setApplications(appsList);
+      })); //[cite: 2]
+      setApplications(appsList); //[cite: 2]
     } catch (error) {
-      console.error("Error fetching admissions: ", error);
+      console.error("Error fetching admissions: ", error); //[cite: 2]
     } finally {
-      setLoading(false);
+      setLoading(false); //[cite: 2]
     }
   };
 
@@ -39,38 +41,38 @@ export default function AdmissionPanel() {
     setApprovalSections(prev => ({
       ...prev,
       [appId]: sectionName
-    }));
+    })); //[cite: 2]
   };
 
   const generateStudentCredentials = (studentName) => {
-    const cleanName = studentName.replace(/\s+/g, '').toLowerCase();
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const loginId = `${cleanName}.${randomNum}`;
-    const tempPassword = `Pass@${Math.floor(100000 + Math.random() * 900000)}`;
+    const cleanName = studentName.replace(/\s+/g, '').toLowerCase(); //[cite: 2]
+    const randomNum = Math.floor(1000 + Math.random() * 9000); //[cite: 2]
+    const loginId = `${cleanName}.${randomNum}`; //[cite: 2]
+    const tempPassword = `Pass@${Math.floor(100000 + Math.random() * 900000)}`; //[cite: 2]
     
-    return { loginId, tempPassword };
+    return { loginId, tempPassword }; //[cite: 2]
   };
 
   const handleApproveAdmission = async (app) => {
-    const selectedSection = approvalSections[app.id];
+    const selectedSection = approvalSections[app.id]; //[cite: 2]
     if (!selectedSection) {
-      alert("Please select a section before approving the admission.");
+      alert("Please select a section before approving the admission."); //[cite: 2]
       return;
     }
 
     try {
-      const { loginId, tempPassword } = generateStudentCredentials(app.fullName || app.name);
+      const { loginId, tempPassword } = generateStudentCredentials(app.fullName || app.name); //[cite: 2]
 
-      const sectionQueryId = `${app.grade}_${selectedSection}`;
-      const sectionDocRef = doc(db, 'class_sections', sectionQueryId);
-      const sectionSnap = await getDoc(sectionDocRef);
+      const sectionQueryId = `${app.grade}_${selectedSection}`; //[cite: 2]
+      const sectionDocRef = doc(db, 'class_sections', sectionQueryId); //[cite: 2]
+      const sectionSnap = await getDoc(sectionDocRef); //[cite: 2]
 
       if (!sectionSnap.exists()) {
         await setDoc(sectionDocRef, {
           grade: app.grade,
           sectionName: selectedSection,
           createdAt: serverTimestamp()
-        });
+        }); //[cite: 2]
       }
 
       const studentErpData = {
@@ -90,93 +92,116 @@ export default function AdmissionPanel() {
         },
         status: 'Active',
         enrolledAt: serverTimestamp()
-      };
+      }; //[cite: 2]
 
-      const appRef = doc(db, 'admissions', app.id);
+      const appRef = doc(db, 'admissions', app.id); //[cite: 2]
       await updateDoc(appRef, { 
         status: 'Approved',
         assignedSection: selectedSection,
         approvedAt: serverTimestamp()
-      });
+      }); //[cite: 2]
 
-      await setDoc(doc(db, 'students_erp', app.id), studentErpData);
-      await setDoc(doc(db, 'students_records', app.id), studentErpData);
+      await setDoc(doc(db, 'students_erp', app.id), studentErpData); //[cite: 2]
+      await setDoc(doc(db, 'students_records', app.id), studentErpData); //[cite: 2]
 
-      alert(`Admission Approved & Synced to ERP Successfully!\n\nGenerated Student Login ID: ${loginId}\nTemporary Password: ${tempPassword}`);
+      alert(`Admission Approved & Synced to ERP Successfully!\n\nGenerated Student Login ID: ${loginId}\nTemporary Password: ${tempPassword}`); //[cite: 2]
       
-      fetchApplications();
+      fetchApplications(); //[cite: 2]
 
     } catch (error) {
-      console.error("Error processing approval and syncing ERP: ", error);
-      alert("Failed to approve application.");
+      console.error("Error processing approval and syncing ERP: ", error); //[cite: 2]
+      alert("Failed to approve application."); //[cite: 2]
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-center">Loading admissions data...</div>;
+    return <div className="admin-loading">Loading admissions data...</div>; //
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Admissions Administration Panel</h2>
+    <div className="admin-panel-container">
+      <div className="admin-header">
+        <h3>Admissions Administration Panel</h3>
+        <p>Manage pending applications and sync approved students with ERP</p>
+      </div>
       
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="table-responsive-wrapper">
+        <table className="admin-data-table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade / Class</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assign Section</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th>Student Name</th>
+              <th>Grade / Class</th>
+              <th>Assign Section</th>
+              <th>Status</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {applications.map((app) => (
-              <tr key={app.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {app.fullName || app.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {app.grade}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <select 
-                    value={approvalSections[app.id] || ''}
-                    onChange={(e) => handleSectionChange(app.id, e.target.value)}
-                    disabled={app.status === 'Approved'}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Section</option>
-                    <option value="Section A">Section A</option>
-                    <option value="Section B">Section B</option>
-                    <option value="Section C">Section C</option>
-                  </select>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    app.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {app.status || 'Pending'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                  {app.status !== 'Approved' ? (
-                    <button
-                      onClick={() => handleApproveAdmission(app)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-semibold shadow transition-colors"
+          <tbody>
+            {applications.map((app) => {
+              const statusClass = (app.status || 'pending').toLowerCase();
+              return (
+                <tr key={app.id}>
+                  <td className="ack-cell">
+                    <strong>{app.fullName || app.name}</strong>
+                  </td>
+                  <td>
+                    <span className="grade-badge">{app.grade}</span>
+                  </td>
+                  <td>
+                    <select 
+                      value={approvalSections[app.id] || app.assignedSection || ''}
+                      onChange={(e) => handleSectionChange(app.id, e.target.value)}
+                      disabled={app.status === 'Approved'}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.82rem'
+                      }}
                     >
-                      Approve & Send to ERP
-                    </button>
-                  ) : (
-                    <span className="text-gray-400 text-xs italic">Synced</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                      <option value="">Select Section</option>
+                      <option value="Section A">Section A</option>
+                      <option value="Section B">Section B</option>
+                      <option value="Section C">Section C</option>
+                    </select>
+                  </td>
+                  <td>
+                    <span className={`status-pill ${statusClass}`}>
+                      {app.status || 'Pending'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="actions-cell" style={{ justifyContent: 'center' }}>
+                      <button 
+                        className="icon-btn view-btn"
+                        title="View Details"
+                        onClick={() => setSelectedApp(app)}
+                      >
+                        👁
+                      </button>
+
+                      {app.status !== 'Approved' ? (
+                        <button
+                          onClick={() => handleApproveAdmission(app)}
+                          className="icon-btn approve-btn"
+                          title="Approve & Send to ERP"
+                          style={{ width: 'auto', padding: '0 12px', fontSize: '0.78rem', fontWeight: 600 }}
+                        >
+                          Approve & Sync
+                        </button>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                          Synced
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {applications.length === 0 && (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="5" className="no-data-cell">
                   No admission applications found.
                 </td>
               </tr>
@@ -184,6 +209,39 @@ export default function AdmissionPanel() {
           </tbody>
         </table>
       </div>
+
+      {/* Detail Modal Integration */}
+      {selectedApp && (
+        <div className="admin-modal-backdrop" onClick={() => setSelectedApp(null)}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>Application Details</h3>
+            
+            <div className="modal-grid">
+              <p><strong>Name:</strong> {selectedApp.fullName || selectedApp.name}</p>
+              <p><strong>Grade:</strong> {selectedApp.grade}</p>
+              <p><strong>Email:</strong> {selectedApp.email || 'N/A'}</p>
+              <p><strong>Phone:</strong> {selectedApp.phone || 'N/A'}</p>
+              <p><strong>Status:</strong> {selectedApp.status || 'Pending'}</p>
+              <p><strong>Assigned Section:</strong> {selectedApp.assignedSection || approvalSections[selectedApp.id] || 'Not Assigned'}</p>
+            </div>
+
+            {selectedApp.documents && selectedApp.documents.length > 0 && (
+              <div className="modal-docs">
+                <h4>Submitted Documents</h4>
+                {selectedApp.documents.map((docUrl, idx) => (
+                  <a key={idx} href={docUrl} target="_blank" rel="noopener noreferrer">
+                    📄 Document {idx + 1}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <button className="close-modal-btn" onClick={() => setSelectedApp(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

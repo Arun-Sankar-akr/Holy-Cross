@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { GraduationCap, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
-import './ErpPages.css';
+import './ErpPage.css';
 
 export default function StudentErp() {
     const navigate = useNavigate();

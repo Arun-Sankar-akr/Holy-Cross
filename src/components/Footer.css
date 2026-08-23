@@ -216,3 +216,69 @@
     color: #077bd4;
     font-weight: 700;
 }
+
+/* ===== SST FOOTER THEME ===== */
+.site-footer {
+    background: #F8FAFD;
+    color: #172033;
+    border-top-color: #DCE5F0;
+}
+
+.footer-top-accent {
+    background: linear-gradient(90deg, #155EEF 0%, #4F46E5 48%, #06B6D4 76%, #F59E0B 100%);
+}
+
+.icon-badge {
+    background: #EAF2FF;
+    border: 1px solid #D6E5FF;
+}
+
+.col-icon {
+    color: #155EEF;
+}
+
+.col-header {
+    border-bottom-color: #DCE7F5;
+}
+
+.footer-col h4 {
+    color: #123A70;
+}
+
+.footer-col p {
+    color: #64748B;
+}
+
+.footer-link {
+    color: #334155;
+}
+
+.footer-link:hover {
+    color: #155EEF;
+}
+
+.social-link {
+    background: #FFFFFF;
+    border-color: #DCE5F0;
+    color: #475569;
+}
+
+.social-link:hover {
+    background: #EAF2FF;
+    border-color: #B9D2FF;
+    color: #155EEF;
+}
+
+.footer-bottom-bar {
+    background: #0B1F3A;
+    border-top-color: rgba(255,255,255,.08);
+    color: #CBD5E1;
+}
+
+.footer-bottom-bar a {
+    color: #93C5FD;
+}
+
+.footer-bottom-bar a:hover {
+    color: #FFFFFF;
+}

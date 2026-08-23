@@ -1,4 +1,3 @@
-/* Full-screen Dark Overlay */
 .preloader-overlay {
     position: fixed;
     top: 0;
@@ -119,4 +118,48 @@
     100% {
         left: 100%;
     }
+}
+
+/* ===== SST PRELOADER THEME ===== */
+.preloader-overlay {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(7,20,42,.94),
+            rgba(11,31,58,.90)
+        ),
+        url('../assets/rm347-porpla-02-a-01.jpg') no-repeat center center fixed;
+    background-size: cover;
+    background-color: #07142A;
+}
+
+.logo-ring-container {
+    filter: drop-shadow(0 12px 30px rgba(0,0,0,.30));
+}
+
+.glowing-ring {
+    background: rgba(255,255,255,.07);
+    border-color: rgba(96,165,250,.62);
+    box-shadow:
+        0 0 22px rgba(37,99,235,.30),
+        0 0 45px rgba(6,182,212,.14),
+        inset 0 0 18px rgba(255,255,255,.05);
+}
+
+.college-title {
+    color: #FFFFFF;
+    text-shadow: 0 3px 16px rgba(0,0,0,.35);
+}
+
+.college-subtitle {
+    color: #BFD7F4;
+}
+
+.loading-bar-container {
+    background: rgba(255,255,255,.12);
+}
+
+.loading-bar {
+    background: linear-gradient(90deg, #2563EB, #06B6D4, #F59E0B);
+    box-shadow: 0 0 12px rgba(37,99,235,.35);
 }

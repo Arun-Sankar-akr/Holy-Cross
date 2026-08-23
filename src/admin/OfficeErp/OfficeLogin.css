@@ -1,71 +1,221 @@
-/* --- ERP Login Page Styling (Fully Responsive) --- */
-.erp-page-container {
+:root {
+    --office-erp-navy: #071A33;
+    --office-erp-navy-2: #0B2A52;
+    --office-erp-blue: #155EEF;
+    --office-erp-blue-2: #2563EB;
+    --office-erp-indigo: #4F46E5;
+    --office-erp-cyan: #06B6D4;
+    --office-erp-teal: #0F766E;
+    --office-erp-green: #059669;
+    --office-erp-gold: #F59E0B;
+    --office-erp-bg: #F4F7FB;
+    --office-erp-card: rgba(255,255,255,.96);
+    --office-erp-border: #DCE5F1;
+    --office-erp-text: #142033;
+    --office-erp-muted: #64748B;
+}
+
+/* ================================================================
+   PAGE BACKDROP
+   ================================================================ */
+
+.office-erp-page-container {
+    position: relative;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    font-family: 'Inter', sans-serif;
-    padding: 1rem;
-    box-sizing: border-box;
-}
-
-.erp-card {
-    width: 100%;
-    max-width: 420px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    padding: 34px 20px;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
+    isolation: isolate;
+    background:
+        radial-gradient(circle at 12% 12%, rgba(37,99,235,.18), transparent 30%),
+        radial-gradient(circle at 88% 18%, rgba(124,58,237,.15), transparent 28%),
+        radial-gradient(circle at 78% 88%, rgba(6,182,212,.13), transparent 28%),
+        linear-gradient(145deg, #EEF4FC 0%, #F8FAFD 48%, #EEF5FF 100%);
 }
 
-.erp-header {
-    padding: 2rem 1.5rem;
+/* Decorative background lights */
+.office-erp-page-container::before,
+.office-erp-page-container::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(4px);
+}
+
+.office-erp-page-container::before {
+    width: 360px;
+    height: 360px;
+    left: -180px;
+    bottom: -150px;
+    background: rgba(37,99,235,.12);
+}
+
+.office-erp-page-container::after {
+    width: 300px;
+    height: 300px;
+    right: -130px;
+    top: -120px;
+    background: rgba(124,58,237,.10);
+}
+
+/* ================================================================
+   PREMIUM CARD
+   ================================================================ */
+
+.office-erp-card {
+    position: relative;
+    width: 100%;
+    max-width: 455px;
+    background: var(--office-erp-card);
+    border: 1px solid rgba(255,255,255,.78);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow:
+        0 28px 70px rgba(15,35,65,.16),
+        0 10px 25px rgba(15,35,65,.08),
+        0 0 0 1px rgba(21,94,239,.035);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    animation: office-erpCardIn .55s ease both;
+}
+
+.office-erp-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+@keyframes office-erpCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ================================================================
+   HEADER
+   ================================================================ */
+
+.office-erp-header{
+    position: relative;
+    padding: 31px 32px 27px;
     text-align: left;
+    color: #FFFFFF;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 90% 10%, rgba(13, 211, 238, 0.24), transparent 32%),
+        linear-gradient(135deg, #071A33 0%, #0B2A52 46%, #155EEF 100%);
 }
 
-.erp-badge {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.office-erp-header::before {
+    content: "";
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -75px;
+    top: -95px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.10);
 }
 
-.erp-header h2 {
-    font-size: 1.4rem;
+.office-erp-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #38BDF8, #4F46E5, #FBBF24);
+}
+
+.office-erp-header.staff-theme {
+    background:
+        radial-gradient(circle at 90% 10%, rgba(147,197,253,.22), transparent 32%),
+        linear-gradient(135deg, #071A33 0%, #123A70 48%, #2563EB 100%);
+}
+
+.office-erp-header.student-theme {
+    background:
+        radial-gradient(circle at 90% 10%, rgba(110,231,183,.20), transparent 32%),
+        linear-gradient(135deg, #071A33 0%, #0B2A52 48%, #0F766E 100%);
+}
+
+.office-erp-badge {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: 29px;
+    padding: 5px 11px;
+    margin-bottom: 13px;
+    border: 1px solid rgba(255,255,255,.23);
+    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    color: #E8F5FF;
+    font-size: .70rem;
     font-weight: 700;
-    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: .075em;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+    backdrop-filter: blur(8px);
 }
 
-.erp-header p {
-    font-size: 0.85rem;
-    opacity: 0.9;
-    line-height: 1.4;
+.office-erp-header h2 {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 1.55rem;
+    font-weight: 750;
+    letter-spacing: -.015em;
+    line-height: 1.22;
+    text-shadow: 0 3px 14px rgba(0,0,0,.20);
 }
 
-.erp-form {
-    padding: 1.5rem;
+.office-erp-header p {
+    position: relative;
+    z-index: 1;
+    max-width: 390px;
+    margin: 9px 0 0;
+    color: #DCEBFA;
+    font-size: .86rem;
+    line-height: 1.55;
+}
+
+/* ================================================================
+   FORM
+   ================================================================ */
+
+.office-erp-form {
+    padding: 28px 32px 26px;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 20px;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 8px;
 }
 
 .input-group label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #374151;
+    color: #26364D;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .01em;
 }
 
 .input-wrapper {
@@ -76,94 +226,274 @@
 
 .input-icon {
     position: absolute;
-    left: 0.85rem;
-    color: #9ca3af;
+    left: 14px;
+    z-index: 2;
+    color: #7B8CA4;
     pointer-events: none;
+    transition: color .2s ease, transform .2s ease;
 }
 
 .input-wrapper input {
     width: 100%;
-    padding: 0.75rem 0.75rem 0.75rem 2.6rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    color: #1f2937;
-    outline: none;
-    transition: all 0.2s ease;
+    min-height: 49px;
     box-sizing: border-box;
+    padding: 12px 14px 12px 44px;
+    border: 1px solid #D4DEEA;
+    border-radius: 12px;
+    outline: none;
+    background: #FBFCFE;
+    color: #172033;
+    font-size: .90rem;
+    box-shadow:
+        inset 0 1px 2px rgba(15,35,65,.025),
+        0 1px 0 rgba(255,255,255,.8);
+    transition:
+        border-color .2s ease,
+        background .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+.input-wrapper input::placeholder {
+    color: #9AA8BA;
+}
+
+.input-wrapper input:hover {
+    border-color: #B9C9DC;
+    background: #FFFFFF;
 }
 
 .input-wrapper input:focus {
-    border-color: #059669;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    border-color: #3B82F6;
+    background: #FFFFFF;
+    box-shadow:
+        0 0 0 4px rgba(37,99,235,.10),
+        0 7px 18px rgba(21,94,239,.06);
 }
 
-.erp-btn {
+.input-wrapper:focus-within .input-icon {
+    color: #155EEF;
+    transform: scale(1.04);
+}
+
+/* Student theme focus */
+.office-erp-card:has(.student-theme) .input-wrapper input:focus {
+    border-color: #0F9F83;
+    box-shadow:
+        0 0 0 4px rgba(15,118,110,.10),
+        0 7px 18px rgba(15,118,110,.06);
+}
+
+.office-erp-card:has(.student-theme) .input-wrapper:focus-within .input-icon {
+    color: #0F766E;
+}
+
+/* ================================================================
+   FORGOT LINK / ACTIONS
+   ================================================================ */
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -6px;
+}
+
+.forgot-link {
+    color: #155EEF;
+    font-size: .78rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: color .18s ease;
+}
+
+.forgot-link:hover {
+    color: #4F46E5;
+    text-decoration: none;
+}
+
+/* ================================================================
+   LOGIN BUTTON
+   ================================================================ */
+
+.office-erp-btn {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 9px;
     width: 100%;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 8px;
-    color: #ffffff;
-    font-size: 0.9rem;
-    font-weight: 600;
+    min-height: 50px;
+    margin-top: 2px;
+    padding: 12px 18px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 12px;
+    color: #FFFFFF !important;
+    background: linear-gradient(135deg, #155EEF 0%, #4F46E5 100%) !important;
+    box-shadow:
+        0 10px 24px rgba(21,94,239,.22),
+        inset 0 1px 0 rgba(255,255,255,.15);
+    font-size: .91rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.1s ease;
-    margin-top: 0.5rem;
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease,
+        filter .2s ease;
 }
 
-.erp-btn:hover:not(:disabled) {
-    opacity: 0.92;
+.office-erp-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -80%;
+    width: 45%;
+    height: 100%;
+    transform: skewX(-20deg);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.24),
+        transparent
+    );
+    transition: left .55s ease;
 }
 
-.erp-btn:active:not(:disabled) {
-    transform: scale(0.98);
+.office-erp-btn:hover:not(:disabled) {
+    opacity: 1;
+    transform: translateY(-2px);
+    box-shadow:
+        0 14px 30px rgba(21,94,239,.28),
+        inset 0 1px 0 rgba(255,255,255,.18);
+    filter: saturate(1.06);
 }
 
-.erp-btn:disabled {
-    opacity: 0.7;
+.office-erp-btn:hover:not(:disabled)::before {
+    left: 135%;
+}
+
+.office-erp-btn:active:not(:disabled) {
+    transform: translateY(0) scale(.985);
+}
+
+.office-erp-btn:disabled {
+    opacity: .68;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
-.erp-footer {
+/* Student button gets teal/blue premium gradient */
+.student-btn {
+    background: linear-gradient(135deg, #0F766E 0%, #059669 52%, #155EEF 100%) !important;
+}
+
+/* Office inline background is overridden intentionally */
+.office-erp-card .office-erp-btn[style] {
+    background: linear-gradient(135deg, #155EEF 0%, #4F46E5 100%) !important;
+}
+
+/* ================================================================
+   ERROR MESSAGE
+   ================================================================ */
+
+.office-erp-form > div[style],
+.office-erp-card > div[style] {
+    border-radius: 12px !important;
+    border: 1px solid #FECACA !important;
+    background: linear-gradient(135deg, #e74444, #930b14) !important;
+    color: #991B1B !important;
+    box-shadow: 0 5px 16px rgba(153,27,27,.06);
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+
+.office-erp-footer {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 1rem;
-    background: #f8fafc;
-    border-top: 1px solid #f1f5f9;
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 500;
+    gap: 8px;
+    min-height: 52px;
+    padding: 13px 24px;
+    border-top: 1px solid #E6EDF5;
+    background: linear-gradient(180deg, #F8FAFD, #F2F6FA);
+    color: #718198;
+    font-size: .73rem;
+    font-weight: 550;
     text-align: center;
 }
 
-/* --- Responsive Adaptations for Smaller Screens --- */
-@media (max-width: 480px) {
-    .erp-page-container {
-        padding: 0.75rem;
-        align-items: flex-start; /* Prevent awkward clipping on mobile keyboards */
-        padding-top: 2rem;
+.office-erp-footer svg {
+    flex: 0 0 auto;
+    color: #155EEF;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 600px) {
+    .office-erp-page-container {
+        min-height: 100dvh;
+        align-items: flex-start;
+        padding: 28px 14px;
     }
 
-    .erp-card {
+    .office-erp-card {
         max-width: 100%;
-        border-radius: 10px;
+        border-radius: 20px;
     }
 
-    .erp-header {
-        padding: 1.5rem 1.25rem;
+    .office-erp-header,
+    .office-erp-header.student-theme {
+        padding: 27px 23px 24px;
     }
 
-    .erp-header h2 {
-        font-size: 1.2rem;
+    .office-erp-header h2 {
+        font-size: 1.35rem;
     }
 
-    .erp-form {
-        padding: 1.25rem;
+    .office-erp-form {
+        padding: 23px 20px 22px;
+        gap: 18px;
+    }
+
+    .input-wrapper input {
+        min-height: 48px;
+    }
+
+    .office-erp-footer {
+        padding: 12px 16px;
+        font-size: .70rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .office-erp-page-container {
+        padding: 18px 10px;
+    }
+
+    .office-erp-card {
+        border-radius: 17px;
+    }
+
+    .office-erp-header,
+    .office-erp-header.student-theme {
+        padding: 23px 18px 21px;
+    }
+
+    .office-erp-form {
+        padding: 20px 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .office-erp-card,
+    .office-erp-btn,
+    .input-wrapper input,
+    .input-icon {
+        animation: none !important;
+        transition: none !important;
     }
 }

@@ -34,11 +34,11 @@ export default function OfficeLogin() {
     };
 
     return (
-        <div className="erp-page-container">
-            <div className="erp-card">
-                <div className="erp-header" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#ffffff' }}>
-                    <div className="erp-badge">Office Portal</div>
-                    <h2>Front-Office & Admin ERP</h2>
+        <div className="office-erp-page-container">
+            <div className="office-erp-card">
+                <div className="office-erp-header">
+                    <div className="office-erp-badge">Office Portal</div>
+                    <h2>Front-Office & Admin office-erp</h2>
                     <p>Access fee collection desks, visitor enquiries, and internal operations.</p>
                 </div>
 
@@ -60,7 +60,7 @@ export default function OfficeLogin() {
                     </div>
                 )}
 
-                <form className="erp-form" onSubmit={handleSubmit}>
+                <form className="office-erp-form" onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label htmlFor="email">Office Email ID</label>
                         <div className="input-wrapper">
@@ -93,13 +93,13 @@ export default function OfficeLogin() {
                         </div>
                     </div>
 
-                    <button type="submit" className="erp-btn" style={{ backgroundColor: '#059669' }} disabled={loading}>
+                    <button type="submit" className="office-erp-btn" style={{ backgroundColor: '#059669' }} disabled={loading}>
                         <span>{loading ? 'Authenticating...' : 'Login to Office Portal'}</span>
                         <ArrowRight size={18} />
                     </button>
                 </form>
 
-                <div className="erp-footer">
+                <div className="office-erp-footer">
                     <ShieldCheck size={16} />
                     <span>Secured Front-Desk Management Module</span>
                 </div>

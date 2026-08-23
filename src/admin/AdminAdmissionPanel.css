@@ -120,7 +120,6 @@
 .icon-btn {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    width: 32px;
     height: 32px;
     border-radius: 8px;
     display: inline-flex;
@@ -133,6 +132,10 @@
 
 .icon-btn:hover {
     transform: translateY(-1px);
+}
+
+.view-btn {
+    width: 32px;
 }
 
 .view-btn:hover {
