@@ -536,12 +536,13 @@
         margin: 14px 15px 0;
         padding: 21px 19px;
 
-        grid-template-columns: 63px 1fr;
+        grid-template-columns: 150px 1fr;
         gap: 13px;
     }
 
     .admins-badge {
         width: 61px;
+        display: none;
         min-height: 50px;
         font-size: .61rem;
     }
@@ -746,7 +747,7 @@
         min-height: 108px !important;
         margin: 10px 11px 0 !important;
         padding: 15px 14px !important;
-        grid-template-columns: 52px 1fr !important;
+        grid-template-columns: 150px 1fr !important;
         gap: 9px !important;
     }
 

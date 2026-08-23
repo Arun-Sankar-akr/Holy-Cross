@@ -115,8 +115,8 @@
     color: #FFFFFF;
     overflow: hidden;
     background:
-        radial-gradient(circle at 90% 10%, rgba(103,232,249,.24), transparent 32%),
-        linear-gradient(135deg, #071A33 0%, #0B2A52 46%, #155EEF 100%);
+        radial-gradient(circle at 90% 10%, #67e8f93d, transparent 32%),
+        linear-gradient(135deg, #071A33 0%, #67e8f984 46%, #67e8f9ed 100%);
 }
 
 .erp-header::before {

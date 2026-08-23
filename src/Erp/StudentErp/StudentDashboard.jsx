@@ -525,13 +525,19 @@ export default function StudentDashboard() {
     const presentDaysCount = hasStaffSubmittedAttendance ? Math.round((rawAttendanceRate / 100) * totalWorkingDays) : 0;
     const absentDaysCount = hasStaffSubmittedAttendance ? totalWorkingDays - presentDaysCount : 0;
 
+    // Tagged back to the exact class-schedule slot the staff member took this
+    // attendance against (see lastAttendanceTimetableId/-Subject/-Room written
+    // by the Staff Dashboard), falling back gracefully if no schedule slot
+    // matched at submission time.
     const attendanceLogs = hasStaffSubmittedAttendance ? [
         {
             id: 1,
             date: liveStudentRecord?.lastAttendanceDate || 'Today',
             period: liveStudentRecord?.lastAttendancePeriod || 'Period 1 (09:00 - 09:45 AM)',
-            subject: 'General / Class Roll Call',
-            teacherName: 'Faculty Advisor',
+            subject: liveStudentRecord?.lastAttendanceSubject || 'General / Class Roll Call',
+            teacherName: liveStudentRecord?.lastAttendanceTeacher || 'Faculty Advisor',
+            roomNo: liveStudentRecord?.lastAttendanceRoom || null,
+            timetableId: liveStudentRecord?.lastAttendanceTimetableId || null,
             status: liveStudentRecord?.status || 'present'
         }
     ] : [];

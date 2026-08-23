@@ -126,6 +126,19 @@ export default function StaffDashboard() {
         'Period 9 (03:30 - 04:10 PM)'
     ];
 
+    const timeSlotOrder = [
+        '09:00 - 09:45 AM',
+        '09:45 - 10:20 AM',
+        '10:20 - 11:00 AM',
+        '11:15 - 11:50 AM',
+        '11:50 AM - 12:30 PM',
+        '01:00 - 01:45 PM',
+        '01:45 - 02:20 PM',
+        '02:20 - 02:40 PM',
+        '02:50 - 03:30 PM',
+        '03:30 - 04:10 PM'
+    ];
+
     const examList = [
         '1st Mid-Term exam',
         'Quarterly Exam',
@@ -246,10 +259,64 @@ export default function StaffDashboard() {
         return trimmed.toLowerCase().startsWith('section') ? trimmed : `Section ${trimmed}`;
     };
 
+    // Pulls the raw time range out of a period label, e.g.
+    // 'Period 1 (09:00 - 09:45 AM)' -> '09:00 - 09:45 AM'.
+    // Timetables (admin-managed) store the bare time range as their timeSlot,
+    // while the attendance period dropdown here uses the "Period N (...)" label,
+    // so this lets the two be compared on equal footing.
+    const extractTimeRange = (periodLabel) => {
+        if (!periodLabel) return '';
+        const match = periodLabel.match(/\(([^)]+)\)/);
+        return match ? match[1].trim() : periodLabel.trim();
+    };
+
     const mySchedule = staffTimetableList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
+
+    // ---------- Mark Attendance <-> Weekly Timetable sync ----------
+    // The period selector on the Mark Attendance screen pulls its options
+    // straight from this staff member's own Weekly Timetable instead of a
+    // generic period list, scoped to the selected date's weekday (and the
+    // class/section currently chosen for attendance, if any). Falls back to
+    // the static periodList when nothing is scheduled, so the dropdown never
+    // ends up empty.
+    const attendanceWeekday = attendanceDate
+        ? new Date(`${attendanceDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
+        : '';
+
+    const scheduledPeriodsForAttendance = mySchedule
+        .filter(slot => {
+            const dayMatch = slot.day === attendanceWeekday;
+            const classMatch = !selectedClass || cleanString(slot.className) === cleanString(selectedClass);
+            const sectionMatch = !selectedSection || !selectedSection.name || !slot.sectionName ||
+                cleanString(slot.sectionName) === cleanString(selectedSection.name);
+            return dayMatch && classMatch && sectionMatch;
+        })
+        .sort((a, b) => {
+            const ai = timeSlotOrder.indexOf(a.timeSlot);
+            const bi = timeSlotOrder.indexOf(b.timeSlot);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+
+    const scheduledPeriodKey = scheduledPeriodsForAttendance.map(s => s.id).join(',');
+
+    // Keep the selected attendancePeriod value valid as the timetable-derived
+    // options change (new date/class/section picked, or the schedule loads) —
+    // snap to the first scheduled slot when one exists, otherwise fall back to
+    // the static period list.
+    useEffect(() => {
+        if (scheduledPeriodsForAttendance.length > 0) {
+            const stillValid = scheduledPeriodsForAttendance.some(slot => slot.timeSlot === attendancePeriod);
+            if (!stillValid) {
+                setAttendancePeriod(scheduledPeriodsForAttendance[0].timeSlot);
+            }
+        } else if (!periodList.includes(attendancePeriod)) {
+            setAttendancePeriod(periodList[0]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attendanceWeekday, selectedClass, selectedSection, scheduledPeriodKey]);
 
     const myExamHallDuties = staffExamHallAllocations.filter(item => {
         const assigned = cleanString(item.staffName);
@@ -299,6 +366,26 @@ export default function StaffDashboard() {
         navigate('/');
     };
 
+    // Resolves the exact timetable slot (from this staff member's own published
+    // schedule) that the currently-selected class/section/date/period corresponds
+    // to, so an attendance submission can be tied back to the class schedule it
+    // was actually taken against — without changing anything about how the staff
+    // member picks the class/period on screen.
+    const getMatchedTimetableSlot = () => {
+        if (!attendanceDate) return null;
+        const weekdayName = new Date(`${attendanceDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+        const targetTimeRange = cleanString(extractTimeRange(attendancePeriod));
+
+        return mySchedule.find(slot => {
+            const dayMatch = slot.day === weekdayName;
+            const classMatch = cleanString(slot.className) === cleanString(selectedClass);
+            const sectionMatch = !selectedSection || !selectedSection.name || !slot.sectionName ||
+                cleanString(slot.sectionName) === cleanString(selectedSection.name);
+            const timeMatch = cleanString(slot.timeSlot) === targetTimeRange;
+            return dayMatch && classMatch && sectionMatch && timeMatch;
+        }) || null;
+    };
+
     const toggleAttendance = async (studentDocId, currentStatus) => {
         const newStatus = currentStatus === 'present' ? 'absent' : 'present';
         setAllStudents(prev => prev.map(student =>
@@ -318,13 +405,22 @@ export default function StaffDashboard() {
     const handleSubmitAttendance = async () => {
         setIsSubmitting(true);
         try {
+            // Link this submission to the matching class-schedule slot (if the
+            // staff member's timetable has one for this class/day/period) so
+            // attendance stays traceable back to the actual scheduled session.
+            const matchedSlot = getMatchedTimetableSlot();
+
             const batch = writeBatch(db);
             activeStudents.forEach(student => {
                 const studentRef = doc(db, 'students_records', student.id);
                 batch.update(studentRef, {
                     status: student.status || 'present',
                     lastAttendanceDate: attendanceDate,
-                    lastAttendancePeriod: attendancePeriod
+                    lastAttendancePeriod: attendancePeriod,
+                    lastAttendanceTimetableId: matchedSlot?.id || null,
+                    lastAttendanceSubject: matchedSlot?.subject || null,
+                    lastAttendanceRoom: matchedSlot?.roomNo || null,
+                    lastAttendanceTeacher: staffData.name || null
                 });
             });
             await batch.commit();
@@ -1033,7 +1129,7 @@ export default function StaffDashboard() {
             {/* Main Workspace */}
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
-                    <h1 className="dashboard-page-title">Dashboard</h1>
+                    <h1 className="dashboard-page-title">Staff Dashboard</h1>
 
                     <div className="topbar-right">
                         <div className="search-bar">
@@ -1589,6 +1685,18 @@ export default function StaffDashboard() {
                                         <p className="subtitle">
                                             Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
                                         </p>
+                                        <p className="subtitle" style={{ marginTop: '2px', fontSize: '0.72rem' }}>
+                                            {scheduledPeriodsForAttendance.length > 0 ? (
+                                                <span style={{ color: 'var(--primary)' }}>
+                                                    <CalendarClock size={12} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                                                    Periods synced from your {attendanceWeekday} Weekly Timetable
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--text-muted)' }}>
+                                                    No {attendanceWeekday} timetable slot found for this class — showing default periods
+                                                </span>
+                                            )}
+                                        </p>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1604,11 +1712,21 @@ export default function StaffDashboard() {
                                             className="custom-select"
                                             value={attendancePeriod}
                                             onChange={(e) => setAttendancePeriod(e.target.value)}
-                                            title="Period / Class Hour"
+                                            title={scheduledPeriodsForAttendance.length > 0
+                                                ? `Period / Class Hour — from your ${attendanceWeekday} Weekly Timetable`
+                                                : 'Period / Class Hour'}
                                         >
-                                            {periodList.map(per => (
-                                                <option key={per} value={per}>{per}</option>
-                                            ))}
+                                            {scheduledPeriodsForAttendance.length > 0 ? (
+                                                scheduledPeriodsForAttendance.map(slot => (
+                                                    <option key={slot.id} value={slot.timeSlot}>
+                                                        {slot.timeSlot} — {slot.subject}{slot.className ? ` (${slot.className})` : ''}
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                periodList.map(per => (
+                                                    <option key={per} value={per}>{per}</option>
+                                                ))
+                                            )}
                                         </select>
 
                                         <select

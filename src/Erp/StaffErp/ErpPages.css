@@ -438,7 +438,8 @@
     .erp-page-container {
         min-height: 100dvh;
         align-items: flex-start;
-        padding: 28px 14px;
+        margin-top: 70px;
+        padding: 58px 14px;
     }
 
     .erp-card {

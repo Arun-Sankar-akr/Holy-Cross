@@ -22,7 +22,7 @@ export default function AdmissionForm() {
         religion: '',
         caste: '',
         subCaste: '',
-        idNumber: '', 
+        idNumber: '',
         communityCertNo: '',
         physicalAbility: 'Normal',
         disabilityDetails: '',
@@ -31,25 +31,92 @@ export default function AdmissionForm() {
         tcFile: null
     });
 
-    // Modified file upload handler to convert files locally into Base64 strings (No Storage Bucket Needed)
+    /**
+     * Helper to compress images via HTML5 Canvas to keep Base64 strings small enough for Firestore limit (1MB total).
+     */
+    const compressImage = (file, maxWidth = 600, quality = 0.35) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    // Fill white background for transparent PNGs converted to JPEG
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Export heavily compressed JPEG string
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedBase64);
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
+        });
+    };
+
+    /**
+     * File Upload Handler with Automatic Compression for Images & Validation for PDFs
+     */
     const handleFileUpload = async (e, fieldName) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
-            setCompressionStatus('Encoding file locally...');
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                setFormData(prev => ({ ...prev, [fieldName]: reader.result }));
-                setCompressionStatus(`File attached successfully (${(file.size / 1024).toFixed(1)} KB).`);
-            };
-            reader.onerror = (error) => {
-                console.error("File reading error:", error);
-                setCompressionStatus('Failed to read file.');
-            };
-        } else {
-            alert('Please upload only JPG, PNG, or PDF files.');
+        setCompressionStatus('Compressing file...');
+
+        try {
+            if (file.type.startsWith('image/')) {
+                const compressedBase64 = await compressImage(file, 600, 0.35);
+
+                // Hard check against Firestore limit (1,000,000 chars safety margin)
+                if (compressedBase64.length > 900000) {
+                    alert('Image is too complex/large even after compression. Please upload a smaller image file.');
+                    setCompressionStatus('Compression limit reached.');
+                    e.target.value = '';
+                    return;
+                }
+
+                const approxSizeKB = Math.round((compressedBase64.length * 0.75) / 1024);
+                setFormData(prev => ({ ...prev, [fieldName]: compressedBase64 }));
+                setCompressionStatus(`Image compressed & attached (~${approxSizeKB} KB).`);
+
+            } else if (file.type === 'application/pdf') {
+                // Firestore hard limit for PDFs: Max 200 KB
+                if (file.size > 200 * 1024) {
+                    alert('PDF file is too large! Please upload a PDF under 200 KB, or take a photo/screenshot of the document and upload as JPG/PNG.');
+                    setCompressionStatus('PDF exceeded 200 KB size limit.');
+                    e.target.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    setFormData(prev => ({ ...prev, [fieldName]: reader.result }));
+                    setCompressionStatus(`PDF attached (${(file.size / 1024).toFixed(1)} KB).`);
+                };
+            } else {
+                alert('Please upload only JPG, PNG, or PDF files.');
+                setCompressionStatus('');
+            }
+        } catch (error) {
+            console.error("Error processing file:", error);
+            setCompressionStatus('Failed to process file.');
         }
     };
 
@@ -68,7 +135,7 @@ export default function AdmissionForm() {
         try {
             const q = query(collection(db, "admissions"), orderBy("createdAt", "desc"), limit(1));
             const querySnapshot = await getDocs(q);
-            
+
             let nextSeq = 1;
             if (!querySnapshot.empty) {
                 const lastDoc = querySnapshot.docs[0].data();
@@ -97,7 +164,7 @@ export default function AdmissionForm() {
             const generatedAck = await generateAcknowledgementNumber();
             setAckNumber(generatedAck);
 
-            // Directly save form data along with Base64 strings into Firestore
+            // Directly save form data along with compressed Base64 strings into Firestore[cite: 2]
             await addDoc(collection(db, "admissions"), {
                 firstName: formData.firstName,
                 middleName: formData.middleName,
@@ -113,9 +180,9 @@ export default function AdmissionForm() {
                 communityCertNo: formData.communityCertNo,
                 physicalAbility: formData.physicalAbility,
                 disabilityDetails: formData.disabilityDetails,
-                aadharFileUrl: formData.aadharFile,        // Base64 string representation
-                communityFileUrl: formData.communityFile, // Base64 string representation
-                tcFileUrl: formData.tcFile,               // Base64 string representation
+                aadharFileUrl: formData.aadharFile,        // Compressed Base64 string representation[cite: 2]
+                communityFileUrl: formData.communityFile, // Compressed Base64 string representation[cite: 2]
+                tcFileUrl: formData.tcFile,               // Compressed Base64 string representation[cite: 2]
                 acknowledgementNumber: generatedAck,
                 status: 'Pending',
                 createdAt: serverTimestamp()
@@ -124,7 +191,7 @@ export default function AdmissionForm() {
             setSubmitted(true);
         } catch (error) {
             console.error("Error submitting application: ", error);
-            alert("Submission failed. Please check your database connection rules.");
+            alert("Submission failed. The combined document size may still be exceeding Firestore limits or network rules.");
         } finally {
             setLoading(false);
         }
@@ -228,7 +295,7 @@ export default function AdmissionForm() {
                                 <input type="file" accept=".pdf,.jpg,.jpeg,.png" required={!formData.aadharFile} onChange={(e) => handleFileUpload(e, 'aadharFile')} />
                                 <div className="drop-zone-text">
                                     <span>{formData.aadharFile ? 'File attached successfully' : 'Click to browse or drop file here'}</span>
-                                    <small>Supports JPG, PNG, PDF</small>
+                                    <small>Supports JPG, PNG (Auto-compressed), PDF (&lt;300KB)</small>
                                 </div>
                             </div>
                         </div>
@@ -239,7 +306,7 @@ export default function AdmissionForm() {
                                 <input type="file" accept=".pdf,.jpg,.jpeg,.png" required={!formData.communityFile} onChange={(e) => handleFileUpload(e, 'communityFile')} />
                                 <div className="drop-zone-text">
                                     <span>{formData.communityFile ? 'File attached successfully' : 'Click to browse or drop file here'}</span>
-                                    <small>Supports JPG, PNG, PDF</small>
+                                    <small>Supports JPG, PNG (Auto-compressed), PDF (&lt;300KB)</small>
                                 </div>
                             </div>
                         </div>
@@ -251,7 +318,7 @@ export default function AdmissionForm() {
                                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" required={!formData.tcFile} onChange={(e) => handleFileUpload(e, 'tcFile')} />
                                     <div className="drop-zone-text">
                                         <span>{formData.tcFile ? 'File attached successfully' : 'Click to browse or drop file here'}</span>
-                                        <small>Previous institution Transfer Certificate is mandatory</small>
+                                        <small>Supports JPG, PNG (Auto-compressed), PDF (&lt;300KB)</small>
                                     </div>
                                 </div>
                             </div>
@@ -263,7 +330,7 @@ export default function AdmissionForm() {
                     <div className="form-summary-review fade-in-section">
                         <h4>Review Application Details</h4>
                         <p className="summary-subtitle">Please verify your details before final submission.</p>
-                        
+
                         <div className="summary-card-grid">
                             <div className="summary-item"><span className="sum-label">Full Name</span><span className="sum-val">{formData.firstName} {formData.middleName} {formData.lastName}</span></div>
                             <div className="summary-item"><span className="sum-label">Grade Applied</span><span className="sum-val">{formData.grade}</span></div>
