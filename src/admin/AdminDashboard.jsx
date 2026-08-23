@@ -10,7 +10,7 @@ import {
     Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu,
     PanelLeftClose, PanelLeftOpen, User, RefreshCw, BarChart3, Settings,
     Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send,
-    FileText, CheckCircle, XCircle, Eye
+    FileText, CheckCircle, XCircle, Eye, Mail, MessageSquare
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -44,6 +44,8 @@ export default function AdminDashboard() {
     const [holidays, setHolidays] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [staffList, setStaffList] = useState([]);
+    const [feeRecords, setFeeRecords] = useState([]);
+    const [idCards, setIdCards] = useState([]);
 
     // Admissions Administration Panel States
     const [admissionApplications, setAdmissionApplications] = useState([]);
@@ -103,8 +105,34 @@ export default function AdminDashboard() {
     const [editingSectionId, setEditingSectionId] = useState(null);
     const [editSectionForm, setEditSectionForm] = useState({ name: '', roomNo: '' });
 
+    // Fee Management Form State
+    const initialFeeForm = { studentId: '', studentName: '', className: '', totalFee: '', paid: '' };
+    const [feeForm, setFeeForm] = useState(initialFeeForm);
+
     const sidebarRef = useRef(null);
     const studentFormRef = useRef(null);
+
+    // Topbar title/subtitle per tab (mirrors the section headers in the reference design)
+    const tabMeta = {
+        analytics: { title: 'Dashboard', subtitle: "Welcome back! Here's what's happening today." },
+        admission_panel: { title: 'Admission Panel', subtitle: 'Review and manage incoming admission applications.' },
+        upcoming_events: { title: 'Upcoming Events', subtitle: 'Manage school events and activities.' },
+        toppers: { title: 'Toppers & Achievers', subtitle: 'Manage board exam toppers and achievers.' },
+        calendar: { title: 'Academic Calendar', subtitle: 'Manage holidays and important dates.' },
+        admins: { title: 'Administrators', subtitle: 'Manage admin accounts and access.' },
+        gallery: { title: 'Gallery Management', subtitle: 'Manage school gallery photos.' },
+        holidays: { title: 'School Holidays', subtitle: 'Manage the holiday calendar.' },
+        announcements: { title: 'Announcements', subtitle: 'Create and manage announcements.' },
+        staff: { title: 'Teachers', subtitle: 'Manage staff directory and details.' },
+        students: { title: 'Students', subtitle: 'Manage all student details and information.' },
+        results: { title: 'Results Management', subtitle: 'Publish and manage exam results.' },
+        fees: { title: 'Fee Management', subtitle: 'Manage student fee details.' },
+        student_timetable: { title: 'Timetable', subtitle: 'Manage class schedules.' },
+        staff_timetable: { title: 'Staff Timetable', subtitle: 'Manage staff work schedules.' },
+        settings: { title: 'System Settings', subtitle: 'Manage system configuration and settings.' },
+        idcards: { title: 'ID Card Management', subtitle: 'Generate and manage ID cards.' },
+    };
+    const currentTabMeta = tabMeta[activeTab] || { title: 'Dashboard', subtitle: '' };
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -118,7 +146,8 @@ export default function AdminDashboard() {
 
     // Extended Student CRUD States
     const initialStudentForm = {
-        admissionNo: '', admissionDate: '', name: '', dob: '', photo: '', bloodGroup: '', guardianName: '', phone: '', address: ''
+        admissionNo: '', admissionDate: '', name: '', dob: '', photo: '', bloodGroup: '', guardianName: '', phone: '', address: '',
+        gender: '', rollNumber: '', email: '', parentPhone: '', relationship: '', status: 'Active'
     };
     const [studentForm, setStudentForm] = useState(initialStudentForm);
     const [editingStudentId, setEditingStudentId] = useState(null);
@@ -209,6 +238,7 @@ export default function AdminDashboard() {
         setActiveTab(tabKey);
         setIsMobileMenuOpen(false);
         if (extraCallback) extraCallback();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const fetchAdmissionApplications = async () => {
@@ -348,6 +378,12 @@ export default function AdminDashboard() {
         const unsubStudentTT = onSnapshot(collection(db, 'student_timetables'), snap =>
             setStudentTimetables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubFees = onSnapshot(collection(db, 'fee_records'), snap =>
+            setFeeRecords(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
+        const unsubIdCards = onSnapshot(collection(db, 'id_cards'), snap =>
+            setIdCards(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
 
         return () => {
             unsubCalendar();
@@ -362,6 +398,8 @@ export default function AdminDashboard() {
             unsubStudents();
             unsubStaffTT();
             unsubStudentTT();
+            unsubFees();
+            unsubIdCards();
         };
     }, [user]);
 
@@ -395,6 +433,37 @@ export default function AdminDashboard() {
             name: sectionForm.name.trim(),
             roomNo: sectionForm.roomNo.trim()
         }, () => setSectionForm({ name: '', roomNo: '' }));
+    };
+
+    const handleAddFeeRecord = async (e) => {
+        e.preventDefault();
+        if (!feeForm.studentId) return;
+        const total = parseFloat(feeForm.totalFee) || 0;
+        const paid = parseFloat(feeForm.paid) || 0;
+        const due = Math.max(total - paid, 0);
+        const status = due === 0 ? 'Paid' : (paid === 0 ? 'Pending' : 'Partial');
+        await handlePublish('fee_records', {
+            studentId: feeForm.studentId,
+            studentName: feeForm.studentName,
+            className: feeForm.className,
+            totalFee: total,
+            paid,
+            due,
+            status
+        }, () => setFeeForm(initialFeeForm));
+    };
+
+    const handleGenerateIdCard = async (type, ref) => {
+        const already = idCards.find(c => c.refId === ref.id && c.type === type);
+        if (already) return;
+        await handlePublish('id_cards', {
+            type,
+            refId: ref.id,
+            name: ref.name,
+            code: type === 'student' ? ref.admissionNo : ref.staffId,
+            className: ref.className || '',
+            department: ref.department || ''
+        });
     };
 
     const handleUpdateSection = async (id) => {
@@ -435,7 +504,13 @@ export default function AdminDashboard() {
             bloodGroup: studentForm.bloodGroup.trim(),
             guardianName: studentForm.guardianName.trim(),
             phone: studentForm.phone.trim(),
-            address: studentForm.address.trim()
+            address: studentForm.address.trim(),
+            gender: studentForm.gender,
+            rollNumber: studentForm.rollNumber.trim(),
+            email: studentForm.email.trim(),
+            parentPhone: studentForm.parentPhone.trim(),
+            relationship: studentForm.relationship,
+            status: studentForm.status || 'Active'
         }, () => setStudentForm(initialStudentForm));
     };
 
@@ -453,7 +528,13 @@ export default function AdminDashboard() {
                 bloodGroup: studentForm.bloodGroup.trim(),
                 guardianName: studentForm.guardianName.trim(),
                 phone: studentForm.phone.trim(),
-                address: studentForm.address.trim()
+                address: studentForm.address.trim(),
+                gender: studentForm.gender,
+                rollNumber: studentForm.rollNumber.trim(),
+                email: studentForm.email.trim(),
+                parentPhone: studentForm.parentPhone.trim(),
+                relationship: studentForm.relationship,
+                status: studentForm.status || 'Active'
             });
             setEditingStudentId(null);
             setStudentForm(initialStudentForm);
@@ -473,7 +554,13 @@ export default function AdminDashboard() {
             bloodGroup: student.bloodGroup || '',
             guardianName: student.guardianName || '',
             phone: student.phone || '',
-            address: student.address || ''
+            address: student.address || '',
+            gender: student.gender || '',
+            rollNumber: student.rollNumber || '',
+            email: student.email || '',
+            parentPhone: student.parentPhone || '',
+            relationship: student.relationship || '',
+            status: student.status || 'Active'
         });
 
         if (studentFormRef.current) {
@@ -743,6 +830,9 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
                                         <Award size={15} /> Results & Publish
                                     </button>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => handleTabClick('fees')}>
+                                        <FileText size={15} /> Fee Management
+                                    </button>
                                 </div>
                             )}
 
@@ -770,6 +860,9 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleTabClick('settings')}>
                                         <Settings size={15} /> System Controls
                                     </button>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'idcards' ? 'active' : ''}`} onClick={() => handleTabClick('idcards')}>
+                                        <ShieldCheck size={15} /> ID Card Management
+                                    </button>
                                 </div>
                             )}
                         </nav>
@@ -787,10 +880,39 @@ export default function AdminDashboard() {
                 </aside>
 
                 <main className="admin-main-content">
-                    <button className="sidebar-toggle-btn" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
-                        {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-                        <span>{isSidebarCollapsed ? 'Show' : 'Hide'}</span>
-                    </button>
+                    <div className="admin-topbar">
+                        <div className="admin-topbar-left">
+                            <button className="sidebar-toggle-btn" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} title={isSidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}>
+                                {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+                            </button>
+                            <div className="admin-topbar-titles">
+                                <h2>{currentTabMeta.title}</h2>
+                                <p>{currentTabMeta.subtitle}</p>
+                            </div>
+                        </div>
+                        <div className="admin-topbar-search">
+                            <Search size={15} />
+                            <input
+                                type="text"
+                                placeholder="Search anything..."
+                                value={globalSearch}
+                                onChange={(e) => setGlobalSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="admin-topbar-right">
+                            <button className="topbar-icon-btn" title="Notifications"><Bell size={17} /><span className="topbar-icon-dot" /></button>
+                            <button className="topbar-icon-btn" title="Messages"><Mail size={17} /></button>
+                            <button className="topbar-icon-btn" title="Chat"><MessageSquare size={17} /></button>
+                            <div className="topbar-profile">
+                                <div className="topbar-avatar"><User size={16} /></div>
+                                <div className="topbar-profile-info">
+                                    <strong>Admin</strong>
+                                    <span>Super Admin</span>
+                                </div>
+                                <ChevronDown size={14} className="topbar-profile-caret" />
+                            </div>
+                        </div>
+                    </div>
 
                     {/* UPCOMING EVENTS & ACTIVITIES SUBMENU PANEL */}
                     {activeTab === 'upcoming_events' && (
@@ -976,6 +1098,17 @@ export default function AdminDashboard() {
                     {/* INSTITUTION ANALYTICS & GLOBAL SEARCH */}
                     {activeTab === 'analytics' && (
                         <div className="applications-management-card">
+                            <div className="welcome-banner">
+                                <div>
+                                    <h3 className="welcome-title">Welcome back, Admin <span role="img" aria-label="wave">👋</span></h3>
+                                    <p className="welcome-sub">Here's what's happening with your institution today.</p>
+                                </div>
+                                <div className="welcome-actions">
+                                    <span className="welcome-date">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                    <button type="button" className="add-notice-btn" onClick={() => window.print()}><FileText size={15} /> Download Report</button>
+                                </div>
+                            </div>
+
                             <h3><Activity size={18} color="var(--primary)" /> Institution Overview & Live Analytics</h3>
 
                             <div className="admin-kpi-grid">
@@ -1014,6 +1147,16 @@ export default function AdminDashboard() {
                                         <small>{calendarEvents.length} Events on Record</small>
                                     </div>
                                 </div>
+                            </div>
+
+                            <h4 style={{ marginTop: '4px' }}>Quick Links</h4>
+                            <div className="quick-links-grid">
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('students', () => { setSelectedClass('10th Std'); setSelectedSection(null); })}><UserCheck size={15} /> Add Student</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('staff')}><Users size={15} /> Add Staff</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('students')}><GraduationCap size={15} /> Add Class</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('announcements')}><Bell size={15} /> Add Announcement</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('upcoming_events')}><Calendar size={15} /> Create Event</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('results')}><Award size={15} /> Collect Fees</button>
                             </div>
 
                             <h4 style={{ marginTop: '24px' }}>Quick Directory Search</h4>
@@ -1077,6 +1220,14 @@ export default function AdminDashboard() {
                     {activeTab === 'settings' && (
                         <div className="applications-management-card">
                             <h3><Sliders size={18} color="var(--primary)" /> System Configuration & Emergency Dispatch</h3>
+
+                            <div className="settings-category-grid">
+                                <div className="settings-category-card"><div className="settings-category-icon blue"><Settings size={18} /></div><span>General Settings</span></div>
+                                <div className="settings-category-card"><div className="settings-category-icon purple"><GraduationCap size={18} /></div><span>Academic Settings</span></div>
+                                <div className="settings-category-card" onClick={() => handleTabClick('fees')}><div className="settings-category-icon orange"><FileText size={18} /></div><span>Fee Settings</span></div>
+                                <div className="settings-category-card"><div className="settings-category-icon green"><Bell size={18} /></div><span>Notification Settings</span></div>
+                                <div className="settings-category-card"><div className="settings-category-icon rose"><Database size={18} /></div><span>Backup Settings</span></div>
+                            </div>
 
                             <form onSubmit={handleBroadcastEmergency} className="emergency-form">
                                 <div className="emergency-header">
@@ -1147,6 +1298,99 @@ export default function AdminDashboard() {
                             </form>
                         </div>
                     )}
+
+                    {/* ID CARD MANAGEMENT TAB */}
+                    {activeTab === 'idcards' && (() => {
+                        const generatedThisMonth = idCards.filter(c => {
+                            if (!c.createdAt?.toDate) return false;
+                            const d = c.createdAt.toDate();
+                            const now = new Date();
+                            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                        }).length;
+                        return (
+                            <div className="applications-management-card">
+                                <h3><ShieldCheck size={18} color="var(--primary)" /> ID Card Management</h3>
+
+                                <div className="admin-kpi-grid kpi-cols-3">
+                                    <div className="admin-kpi-card indigo">
+                                        <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Students</span>
+                                            <h4>{studentsList.length}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="admin-kpi-card emerald">
+                                        <div className="kpi-icon-wrapper"><Users size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Staff</span>
+                                            <h4>{staffList.length}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="admin-kpi-card amber">
+                                        <div className="kpi-icon-wrapper"><KeyRound size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Generated This Month</span>
+                                            <h4>{generatedThisMonth}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4 style={{ marginTop: '24px' }}>Students <span className="count-badge">{studentsList.length}</span></h4>
+                                <div className="table-responsive-wrapper">
+                                    <table className="custom-table">
+                                        <thead>
+                                            <tr><th>Name</th><th>Admission No</th><th>Class</th><th>Status</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {studentsList.length === 0 ? (
+                                                <tr><td colSpan="5" className="no-data-cell">No students enrolled yet.</td></tr>
+                                            ) : studentsList.map(st => {
+                                                const generated = idCards.some(c => c.type === 'student' && c.refId === st.id);
+                                                return (
+                                                    <tr key={st.id}>
+                                                        <td>{st.name}</td>
+                                                        <td>{st.admissionNo}</td>
+                                                        <td>{st.className}</td>
+                                                        <td><span className={`status-pill ${generated ? 'status-present' : 'pending'}`}>{generated ? 'Generated' : 'Not Generated'}</span></td>
+                                                        <td className="actions-cell">
+                                                            <button className="icon-btn" disabled={generated} onClick={() => handleGenerateIdCard('student', st)} title="Generate ID Card"><FileText size={14} /></button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <h4 style={{ marginTop: '24px' }}>Staff <span className="count-badge">{staffList.length}</span></h4>
+                                <div className="table-responsive-wrapper">
+                                    <table className="custom-table">
+                                        <thead>
+                                            <tr><th>Name</th><th>Staff ID</th><th>Department</th><th>Status</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {staffList.length === 0 ? (
+                                                <tr><td colSpan="5" className="no-data-cell">No staff members added yet.</td></tr>
+                                            ) : staffList.map(stf => {
+                                                const generated = idCards.some(c => c.type === 'staff' && c.refId === stf.id);
+                                                return (
+                                                    <tr key={stf.id}>
+                                                        <td>{stf.name}</td>
+                                                        <td>{stf.staffId}</td>
+                                                        <td>{stf.department}</td>
+                                                        <td><span className={`status-pill ${generated ? 'status-present' : 'pending'}`}>{generated ? 'Generated' : 'Not Generated'}</span></td>
+                                                        <td className="actions-cell">
+                                                            <button className="icon-btn" disabled={generated} onClick={() => handleGenerateIdCard('staff', stf)} title="Generate ID Card"><FileText size={14} /></button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* ACADEMIC CALENDAR */}
                     {activeTab === 'calendar' && (
@@ -1261,17 +1505,24 @@ export default function AdminDashboard() {
 
                             <h4>Published Gallery Photos <span className="count-badge">{galleryItems.length}</span></h4>
                             {galleryItems.length === 0 ? <div className="empty-state">No gallery photos published yet.</div> : (
-                                <ul>
+                                <div className="gallery-grid">
                                     {galleryItems.map(item => (
-                                        <li key={item.id}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                {item.image && <img src={item.image} alt={item.title} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }} />}
-                                                <span><strong>{item.title}</strong> ({item.category})</span>
+                                        <div key={item.id} className="gallery-tile">
+                                            {item.image ? (
+                                                <img src={item.image} alt={item.title} className="gallery-tile-img" />
+                                            ) : (
+                                                <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>
+                                            )}
+                                            <div className="gallery-tile-overlay">
+                                                <div>
+                                                    <strong>{item.title}</strong>
+                                                    <span className="gallery-tile-category">{item.category}</span>
+                                                </div>
+                                                <button onClick={() => handleDelete('gallery', item.id)} title="Delete Photo"><Trash2 size={14} /></button>
                                             </div>
-                                            <button onClick={() => handleDelete('gallery', item.id)}><Trash2 size={14} /></button>
-                                        </li>
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             )}
                         </div>
                     )}
@@ -1664,6 +1915,30 @@ export default function AdminDashboard() {
                                                 </select>
                                             </div>
                                             <div>
+                                                <label>Gender</label>
+                                                <select value={studentForm.gender} onChange={e => setStudentForm({ ...studentForm, gender: e.target.value })}>
+                                                    <option value="">Select Gender</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label>Roll Number</label>
+                                                <input type="text" placeholder="Enter roll number" value={studentForm.rollNumber} onChange={e => setStudentForm({ ...studentForm, rollNumber: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label>Email Address</label>
+                                                <input type="email" placeholder="Enter email address" value={studentForm.email} onChange={e => setStudentForm({ ...studentForm, email: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label>Status</label>
+                                                <select value={studentForm.status} onChange={e => setStudentForm({ ...studentForm, status: e.target.value })}>
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
+                                                </select>
+                                            </div>
+                                            <div>
                                                 <label>Student Photo</label>
                                                 <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))} />
                                                 {studentForm.photo && (
@@ -1674,21 +1949,34 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
 
-                                        <div className="form-section-title">Parent & Contact</div>
+                                        <div className="form-section-title">Parent / Guardian Information</div>
                                         <div className="student-form-grid">
                                             <div>
-                                                <label>Guardian Name</label>
+                                                <label>Parent / Guardian Name</label>
                                                 <input type="text" placeholder="Parent's Name" value={studentForm.guardianName} onChange={e => setStudentForm({ ...studentForm, guardianName: e.target.value })} required />
                                             </div>
                                             <div>
                                                 <label>Phone Number</label>
-                                                <input type="text" placeholder="Contact Number" value={studentForm.phone} onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })} required />
+                                                <input type="text" placeholder="Student Contact Number" value={studentForm.phone} onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })} required />
+                                            </div>
+                                            <div>
+                                                <label>Parent Phone</label>
+                                                <input type="text" placeholder="Enter parent phone" value={studentForm.parentPhone} onChange={e => setStudentForm({ ...studentForm, parentPhone: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label>Relationship</label>
+                                                <select value={studentForm.relationship} onChange={e => setStudentForm({ ...studentForm, relationship: e.target.value })}>
+                                                    <option value="">Select Relationship</option>
+                                                    <option value="Father">Father</option>
+                                                    <option value="Mother">Mother</option>
+                                                    <option value="Guardian">Guardian</option>
+                                                </select>
                                             </div>
                                         </div>
 
                                         <div style={{ marginTop: '4px', width: '100%' }}>
                                             <label>Address</label>
-                                            <textarea rows="2" placeholder="Home Address..." value={studentForm.address} onChange={e => setStudentForm({ ...studentForm, address: e.target.value })} />
+                                            <textarea rows="2" placeholder="Enter full address" value={studentForm.address} onChange={e => setStudentForm({ ...studentForm, address: e.target.value })} />
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -1717,9 +2005,12 @@ export default function AdminDashboard() {
                                                             <div className="student-header-row">
                                                                 <h5>{st.name}</h5>
                                                                 {st.bloodGroup && <span className="blood-badge">{st.bloodGroup}</span>}
+                                                                <span className={`status-pill ${(st.status || 'Active').toLowerCase() === 'active' ? 'status-present' : 'status-absent'}`}>{st.status || 'Active'}</span>
                                                             </div>
-                                                            <p className="student-meta"><strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Adm Date:</strong> {st.admissionDate || 'N/A'}</p>
-                                                            <p className="student-meta"><strong>DOB:</strong> {st.dob || 'N/A'} | <strong>Parent:</strong> {st.guardianName} ({st.phone})</p>
+                                                            <p className="student-meta"><strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Roll No:</strong> {st.rollNumber || 'N/A'} | <strong>Gender:</strong> {st.gender || 'N/A'}</p>
+                                                            <p className="student-meta"><strong>Adm Date:</strong> {st.admissionDate || 'N/A'} | <strong>DOB:</strong> {st.dob || 'N/A'}</p>
+                                                            <p className="student-meta"><strong>Parent:</strong> {st.guardianName} ({st.relationship || 'Guardian'}) | <strong>Phone:</strong> {st.phone}{st.parentPhone ? ` / ${st.parentPhone}` : ''}</p>
+                                                            {st.email && <p className="student-meta"><strong>Email:</strong> {st.email}</p>}
                                                             {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
 
                                                             <div className="student-credentials-box">
@@ -1992,6 +2283,102 @@ export default function AdminDashboard() {
                             )}
                         </div>
                     )}
+
+                    {/* FEE MANAGEMENT TAB */}
+                    {activeTab === 'fees' && (() => {
+                        const totalCollected = feeRecords.reduce((sum, f) => sum + (parseFloat(f.paid) || 0), 0);
+                        const totalPending = feeRecords.reduce((sum, f) => sum + (parseFloat(f.due) || 0), 0);
+                        return (
+                            <div className="applications-management-card">
+                                <h3><FileText size={18} color="var(--primary)" /> Fee Management</h3>
+
+                                <div className="admin-kpi-grid kpi-cols-3">
+                                    <div className="admin-kpi-card indigo">
+                                        <div className="kpi-icon-wrapper"><Save size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Total Collected</span>
+                                            <h4>₹{totalCollected.toLocaleString('en-IN')}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="admin-kpi-card rose">
+                                        <div className="kpi-icon-wrapper"><AlertTriangle size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Total Pending</span>
+                                            <h4>₹{totalPending.toLocaleString('en-IN')}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="admin-kpi-card amber">
+                                        <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
+                                        <div className="kpi-info">
+                                            <span>Total Students Billed</span>
+                                            <h4>{feeRecords.length}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4 style={{ marginTop: '24px' }}>Add Fee Record</h4>
+                                <form onSubmit={handleAddFeeRecord}>
+                                    <div>
+                                        <label>Student</label>
+                                        <select
+                                            value={feeForm.studentId}
+                                            onChange={e => {
+                                                const s = studentsList.find(st => st.id === e.target.value);
+                                                setFeeForm({ ...feeForm, studentId: e.target.value, studentName: s ? s.name : '', className: s ? s.className : '' });
+                                            }}
+                                            required
+                                        >
+                                            <option value="">Select Student</option>
+                                            {studentsList.map(s => (<option key={s.id} value={s.id}>{s.name} ({s.className} - {s.sectionName})</option>))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Total Fee (₹)</label>
+                                        <input type="number" min="0" placeholder="e.g. 15000" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
+                                    </div>
+                                    <div>
+                                        <label>Amount Paid (₹)</label>
+                                        <input type="number" min="0" placeholder="e.g. 10000" value={feeForm.paid} onChange={e => setFeeForm({ ...feeForm, paid: e.target.value })} required />
+                                    </div>
+                                    <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Fee Record</button>
+                                </form>
+
+                                <h4 style={{ marginTop: '24px' }}>Fee Records <span className="count-badge">{feeRecords.length}</span></h4>
+                                <div className="table-responsive-wrapper">
+                                    <table className="custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Student Name</th>
+                                                <th>Class</th>
+                                                <th>Total Fee</th>
+                                                <th>Paid</th>
+                                                <th>Due</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {feeRecords.length === 0 ? (
+                                                <tr><td colSpan="7" className="no-data-cell">No fee records added yet.</td></tr>
+                                            ) : feeRecords.map(f => (
+                                                <tr key={f.id}>
+                                                    <td>{f.studentName}</td>
+                                                    <td>{f.className}</td>
+                                                    <td>₹{Number(f.totalFee).toLocaleString('en-IN')}</td>
+                                                    <td>₹{Number(f.paid).toLocaleString('en-IN')}</td>
+                                                    <td>₹{Number(f.due).toLocaleString('en-IN')}</td>
+                                                    <td><span className={`status-pill ${f.status === 'Paid' ? 'status-present' : f.status === 'Partial' ? 'pending' : 'status-absent'}`}>{f.status}</span></td>
+                                                    <td className="actions-cell">
+                                                        <button className="icon-btn delete-btn" onClick={() => handleDelete('fee_records', f.id)} title="Delete Record"><Trash2 size={14} /></button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* STUDENT TIMETABLE TAB */}
                     {activeTab === 'student_timetable' && (

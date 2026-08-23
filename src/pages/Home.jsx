@@ -5,7 +5,7 @@ import {
     HeartHandshake, BookOpen, Users, ArrowRight,
     Compass, CheckCircle2, Target, Globe2,
     GraduationCap, Trophy, Megaphone, MapPin,
-    Navigation, Phone, ArrowUp, Sparkles, Clock
+    Navigation, Phone, ArrowUp, Sparkles, Clock, Quote
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -147,33 +147,79 @@ export default function Home({ setActivePage }) {
                 </div>
             </div>
 
-            {/* 2. Hero Section Carousel */}
+            {/* 2. Hero Section — Playful Split Layout */}
             <section className="hero-section">
-                {heroImages.map((img, index) => (
-                    <div
-                        key={index}
-                        className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
-                        style={{ backgroundImage: `url(${img})` }}
-                    />
-                ))}
-                <div className="hero-overlay"></div>
-                <div className="hero-content">
-                    <div className="hero-tag">
-                        {/* <Sparkles size={13} className="hero-sparkle" /> */}
-                        <span>ESTD 2002 • TRICHY, TAMIL NADU</span>
-                    </div>
-                    <h2>Holy Cross Matric. Hr. Sec. School</h2>
-                    <p>
-                        Managed by the <strong>Holy Cross Fathers</strong> (Province of Tamil Nadu). Dedicated to value-based holistic education and empowering future leaders.
-                    </p>
-                    <div className="hero-buttons">
-                        <button className="btn-primary" onClick={() => setActivePage('admissions')}>
-                            <span>Admission Portal</span>
-                            <ArrowRight size={14} />
-                        </button>
+                <div className="hero-bg-carousel">
+                    {heroImages.map((img, index) => (
+                        <div
+                            key={index}
+                            className={`hero-bg-slide ${index === currentSlide ? 'active' : ''}`}
+                            style={{ backgroundImage: `url(${img})` }}
+                        />
+                    ))}
+                    <div className="hero-bg-tint"></div>
+                </div>
+
+                <span className="hero-deco hero-deco-triangle">
+                    <svg viewBox="0 0 40 40" width="28" height="28" fill="none"><path d="M20 4 L36 34 H4 Z" stroke="#22A06B" strokeWidth="3" strokeLinejoin="round" /></svg>
+                </span>
+                <span className="hero-deco hero-deco-calc">
+                    <svg viewBox="0 0 40 40" width="30" height="30" fill="none"><rect x="6" y="4" width="28" height="32" rx="4" stroke="#F4823C" strokeWidth="3" /><circle cx="14" cy="14" r="2.4" fill="#F4823C" /><circle cx="22" cy="14" r="2.4" fill="#F4823C" /><circle cx="30" cy="14" r="2.4" fill="#F4823C" /><circle cx="14" cy="22" r="2.4" fill="#F4823C" /><circle cx="22" cy="22" r="2.4" fill="#F4823C" /></svg>
+                </span>
+
+                <div className="hero-grid">
+                    <div className="hero-text-col">
+                        <span className="hero-eyebrow">BEST QUALITY EDUCATION</span>
+
+                        <h2 className="hero-heading">
+                            <h2 className="hero-heading"> <span className="line-pink">Welcome to </span> <span className="line-dark">Holy Cross Matriculation Higher Secondary</span> <span className="line-dark">&nbsp;School</span><br /> <span className="line-accent">Somarasampettai</span> </h2>
+                        </h2>
+
+                        <div className="hero-cta-row">
+                            <button className="btn-primary" onClick={() => setActivePage('admissions')}>
+                                <span>Admission Portal</span>
+                                <ArrowRight size={14} />
+                            </button>
+
+                            <div className="hero-reviews">
+                                <div className="hero-reviews-avatars">
+                                    <span className="hr-avatar av-1"><GraduationCap size={13} /></span>
+                                    <span className="hr-avatar av-2"><BookOpen size={13} /></span>
+                                    <span className="hr-avatar av-3"><Trophy size={13} /></span>
+                                </div>
+                                <div className="hero-reviews-text">
+                                    <strong>3400+</strong>
+                                    <span>Happy Students</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p>
+                            Managed by the <strong>Holy Cross Fathers</strong> (Province of Tamil Nadu). Dedicated to value-based holistic education and empowering future leaders.
+                        </p>
+
                         <button className="btn-secondary" onClick={() => setActivePage('calendar')}>
                             <span>Academic Calendar</span>
                         </button>
+
+                        <div className="hero-stats-row">
+                            <div className="hero-stat-box box-blue">
+                                <span className="hs-num">2002</span>
+                                <span className="hs-label">Established Year</span>
+                            </div>
+                            <div className="hero-stat-box box-cream">
+                                <span className="hs-num">100%</span>
+                                <span className="hs-label">Board Exam Focus</span>
+                            </div>
+                            <div className="hero-stat-box box-amber">
+                                <span className="hs-num">15+</span>
+                                <span className="hs-label">Acres Campus</span>
+                            </div>
+                            <div className="hero-stat-box box-peach">
+                                <span className="hs-num">24+</span>
+                                <span className="hs-label">Expert Faculty</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -276,6 +322,7 @@ export default function Home({ setActivePage }) {
                         <span className="section-badge">LEADERSHIP MESSAGE</span>
                         <h3>From the Principal's Desk</h3>
                         <span className="principal-title-sub">Holy Cross Fathers, Province of Tamilnadu</span>
+                        <Quote size={26} style={{ color: 'var(--primary)', opacity: 0.35, marginBottom: '4px' }} />
                         <p className="principal-quote">
                             "Education is not merely about preparing for a living, but building a foundation for life. At Holy Cross, we strive to cultivate intellectual curiosity, emotional strength, and spiritual grounding in every child. We invite you to partner with us as we guide your children toward soaring into a bright, purposeful future."
                         </p>
@@ -411,53 +458,33 @@ export default function Home({ setActivePage }) {
                 </div>
             </section>
 
-            {/* Campus Photo Gallery Preview (Slide Left Animation) */}
-            <section className="section-container scroll-animate anim-slide-left">
-                <div className="events-section-header">
-                    <div>
-                        <span className="section-badge">LIFE AT HOLY CROSS</span>
-                        <h2>Campus Gallery Highlights</h2>
+            {/* Campus Photo Gallery Preview (Slide Left Animation) — Peach Band */}
+            <section className="gallery-band scroll-animate anim-slide-left">
+                <div className="section-container">
+                    <div className="events-section-header">
+                        <div>
+                            <span className="section-badge">LIFE AT HOLY CROSS</span>
+                            <h2>Campus Gallery Highlights</h2>
+                        </div>
                     </div>
-                </div>
 
-                <div className="gallery-grid">
-                    <div className="gallery-thumb">
-                        <img src={campusBg5} alt="Campus Infrastructure" />
-                        <div className="gallery-overlay-caption">Main Gate</div>
-                    </div>
-                    <div className="gallery-thumb">
-                        <img src={campusBg1} alt="Science Laboratories" />
-                        <div className="gallery-overlay-caption">Andre Block</div>
-                    </div>
-                    <div className="gallery-thumb">
-                        <img src={campusBg2} alt="Sports Ground" />
-                        <div className="gallery-overlay-caption">Moreau Block</div>
-                    </div>
-                    <div className="gallery-thumb">
-                        <img src={campusBg3} alt="Cultural Events" />
-                        <div className="gallery-overlay-caption">The Giving Hands</div>
-                    </div>
-                </div>
-            </section>
-
-            {/* School Statistics (Fade Up Animation) */}
-            <section className="section-container scroll-animate anim-fade-up">
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-number">2002</div>
-                        <div className="stat-label">Established Year</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-number">100%</div>
-                        <div className="stat-label">Board Exam Focus</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-number">15+</div>
-                        <div className="stat-label">Acres Green Campus</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-number">24+</div>
-                        <div className="stat-label">Expert Faculty</div>
+                    <div className="gallery-grid">
+                        <div className="gallery-thumb">
+                            <img src={campusBg5} alt="Campus Infrastructure" />
+                            <div className="gallery-overlay-caption">Main Gate</div>
+                        </div>
+                        <div className="gallery-thumb">
+                            <img src={campusBg1} alt="Science Laboratories" />
+                            <div className="gallery-overlay-caption">Andre Block</div>
+                        </div>
+                        <div className="gallery-thumb">
+                            <img src={campusBg2} alt="Sports Ground" />
+                            <div className="gallery-overlay-caption">Moreau Block</div>
+                        </div>
+                        <div className="gallery-thumb">
+                            <img src={campusBg3} alt="Cultural Events" />
+                            <div className="gallery-overlay-caption">The Giving Hands</div>
+                        </div>
                     </div>
                 </div>
             </section>
