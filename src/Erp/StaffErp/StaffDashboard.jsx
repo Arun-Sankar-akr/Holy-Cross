@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import logo from "../../assets/logo.png"
 import {
-    collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where
+    collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where,
+    setDoc, orderBy, limit
 } from 'firebase/firestore';
 import {
     Users, User, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
@@ -12,7 +13,7 @@ import {
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
     TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
-    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical
+    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical, Mail
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -32,6 +33,7 @@ export default function StaffDashboard() {
     const [showAddEventForm, setShowAddEventForm] = useState(false);
     const [newEventForm, setNewEventForm] = useState({ title: '', time: '' });
 
+
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
 
     // Leave Request States
@@ -44,6 +46,29 @@ export default function StaffDashboard() {
     });
     const [isLeaveSubmitting, setIsLeaveSubmitting] = useState(false);
     const [leaveActionStatus, setLeaveActionStatus] = useState('');
+
+    // --- Departments (synced from Admin Dashboard) & Staff Directory ---
+    const [allStaffMembers, setAllStaffMembers] = useState([]);
+    const [selectedDepartment, setSelectedDepartment] = useState(null);
+
+    // --- Communication: Chats (1-to-1) ---
+    const [myChats, setMyChats] = useState([]);
+    const [activeChatId, setActiveChatId] = useState(null);
+    const [activeChatInfo, setActiveChatInfo] = useState(null);
+    const [activeChatMessages, setActiveChatMessages] = useState([]);
+    const [chatMessageInput, setChatMessageInput] = useState('');
+    const [showNewChatPicker, setShowNewChatPicker] = useState(false);
+    const [chatDirectorySearch, setChatDirectorySearch] = useState('');
+
+    // --- Communication: Request modal (from Departments -> Staff) ---
+    const [showRequestModal, setShowRequestModal] = useState(false);
+    const [requestTargetStaff, setRequestTargetStaff] = useState(null);
+    const [requestForm, setRequestForm] = useState({ subject: '', message: '' });
+    const [isRequestSubmitting, setIsRequestSubmitting] = useState(false);
+
+    // --- Communication: Staff Room (shared group chat) ---
+    const [staffRoomMessages, setStaffRoomMessages] = useState([]);
+    const [staffRoomInput, setStaffRoomInput] = useState('');
 
     const clearOldMarks = async (studentDocId) => {
         const studentRef = doc(db, 'students_records', studentDocId);
@@ -70,7 +95,8 @@ export default function StaffDashboard() {
 
     // Attendance Date & Period States
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-    const [attendancePeriod, setAttendancePeriod] = useState('Period 1 (09:00 - 09:45 AM)');
+    const [attendancePeriod, setAttendancePeriod] = useState('');
+    const [attendanceSlotId, setAttendanceSlotId] = useState('');
 
     // Submissions Review State
     const [subClassFilter, setSubClassFilter] = useState(null);
@@ -230,6 +256,19 @@ export default function StaffDashboard() {
             setStaffLeaveList(leaves);
         });
 
+        // Staff Directory — synced live from Admin Dashboard (used to build Departments)
+        const unsubStaffMembers = onSnapshot(collection(db, 'staff_members'), (snap) => {
+            setAllStaffMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        // Staff Room — single shared group chat, most recent 200 messages
+        const unsubStaffRoom = onSnapshot(
+            query(collection(db, 'staffroom_messages'), orderBy('createdAt', 'asc'), limit(200)),
+            (snap) => {
+                setStaffRoomMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            }
+        );
+
         return () => {
             unsubStudents();
             unsubSections();
@@ -238,8 +277,51 @@ export default function StaffDashboard() {
             unsubSubmissions();
             unsubStaffExamHalls();
             unsubLeaves();
+            unsubStaffMembers();
+            unsubStaffRoom();
         };
     }, []);
+
+    // Communication: my 1-to-1 conversations (live), ordered by most recent activity
+    useEffect(() => {
+        if (!staffData.staffId) return;
+
+        const chatsQuery = query(
+            collection(db, 'staff_chats'),
+            where('participants', 'array-contains', staffData.staffId)
+        );
+
+        const unsubChats = onSnapshot(chatsQuery, (snap) => {
+            const chats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            chats.sort((a, b) => {
+                const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
+                const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+                return bTime - aTime;
+            });
+            setMyChats(chats);
+        });
+
+        return () => unsubChats();
+    }, [staffData.staffId]);
+
+    // Communication: live messages for the currently open conversation
+    useEffect(() => {
+        if (!activeChatId) {
+            setActiveChatMessages([]);
+            return;
+        }
+
+        const messagesQuery = query(
+            collection(db, 'staff_chats', activeChatId, 'messages'),
+            orderBy('createdAt', 'asc')
+        );
+
+        const unsubMessages = onSnapshot(messagesQuery, (snap) => {
+            setActiveChatMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        return () => unsubMessages();
+    }, [activeChatId]);
 
     const cleanString = (str) => {
         if (!str) return '';
@@ -275,49 +357,170 @@ export default function StaffDashboard() {
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
-    // ---------- Mark Attendance <-> Weekly Timetable sync ----------
-    // The period selector on the Mark Attendance screen pulls its options
-    // straight from this staff member's own Weekly Timetable instead of a
-    // generic period list, scoped to the selected date's weekday (and the
-    // class/section currently chosen for attendance, if any). Falls back to
-    // the static periodList when nothing is scheduled, so the dropdown never
-    // ends up empty.
+    // ---------- STRICT Mark Attendance <-> Weekly Timetable sync ----------
+    // Normalize timetable field names first. This prevents a timetable using
+    // `class`, `grade`, or `section` from accidentally showing all students.
     const attendanceWeekday = attendanceDate
-        ? new Date(`${attendanceDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
+        ? new Date(`${attendanceDate}T00:00:00`)
+            .toLocaleDateString('en-US', {
+                weekday: 'long'
+            })
         : '';
 
+
+    // Normalize timetable fields
+    const normalizeTimetableSlot = (slot) => ({
+        ...slot,
+
+        timetableClass:
+            slot.className ||
+            slot.class ||
+            '',
+
+        timetableSection:
+            slot.sectionName ||
+            slot.section ||
+            '',
+
+        timetableTime:
+            slot.timeSlot ||
+            slot.period ||
+            slot.time ||
+            '',
+
+        timetableDay:
+            slot.day ||
+            slot.weekday ||
+            ''
+    });
+    // ONLY this staff member's timetable entries for the selected weekday.
     const scheduledPeriodsForAttendance = mySchedule
-        .filter(slot => {
-            const dayMatch = slot.day === attendanceWeekday;
-            const classMatch = !selectedClass || cleanString(slot.className) === cleanString(selectedClass);
-            const sectionMatch = !selectedSection || !selectedSection.name || !slot.sectionName ||
-                cleanString(slot.sectionName) === cleanString(selectedSection.name);
-            return dayMatch && classMatch && sectionMatch;
+        .map(normalizeTimetableSlot)
+
+        // Selected day only
+        .filter((slot) => {
+
+            const sameDay =
+                cleanString(slot.timetableDay) ===
+                cleanString(attendanceWeekday);
+
+            // IMPORTANT:
+            // Attendance is allowed only if admin selected
+            // BOTH class and section.
+
+            const hasClass =
+                Boolean(slot.timetableClass);
+
+            const hasSection =
+                Boolean(slot.timetableSection);
+
+            return sameDay && hasClass && hasSection;
         })
+
         .sort((a, b) => {
-            const ai = timeSlotOrder.indexOf(a.timeSlot);
-            const bi = timeSlotOrder.indexOf(b.timeSlot);
-            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+
+            const ai =
+                timeSlotOrder.indexOf(
+                    a.timetableTime
+                );
+
+            const bi =
+                timeSlotOrder.indexOf(
+                    b.timetableTime
+                );
+
+            return (
+                (ai === -1 ? 999 : ai) -
+                (bi === -1 ? 999 : bi)
+            );
         });
 
-    const scheduledPeriodKey = scheduledPeriodsForAttendance.map(s => s.id).join(',');
 
-    // Keep the selected attendancePeriod value valid as the timetable-derived
-    // options change (new date/class/section picked, or the schedule loads) —
-    // snap to the first scheduled slot when one exists, otherwise fall back to
-    // the static period list.
+    // Used to detect timetable changes
+    const scheduledPeriodKey =
+        scheduledPeriodsForAttendance
+            .map((slot) =>
+                `${slot.id}-${slot.timetableTime}`
+            )
+            .join(',');
+
+
+    // Check if staff has schedule
+    const hasAttendanceSchedule =
+        scheduledPeriodsForAttendance.length > 0;
+
+
+    // Exact selected timetable document
+    const selectedAttendanceSlot =
+        scheduledPeriodsForAttendance.find(
+            (slot) =>
+                String(slot.id) ===
+                String(attendanceSlotId)
+        ) || null;
+
+
+    // Automatically select first available timetable slot
     useEffect(() => {
-        if (scheduledPeriodsForAttendance.length > 0) {
-            const stillValid = scheduledPeriodsForAttendance.some(slot => slot.timeSlot === attendancePeriod);
-            if (!stillValid) {
-                setAttendancePeriod(scheduledPeriodsForAttendance[0].timeSlot);
-            }
-        } else if (!periodList.includes(attendancePeriod)) {
-            setAttendancePeriod(periodList[0]);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [attendanceWeekday, selectedClass, selectedSection, scheduledPeriodKey]);
 
+        if (
+            scheduledPeriodsForAttendance.length === 0
+        ) {
+
+            setAttendanceSlotId('');
+            setAttendancePeriod('');
+            setAttendanceSubmitted(false);
+
+            return;
+        }
+
+
+        const slotStillExists =
+            scheduledPeriodsForAttendance.some(
+                (slot) =>
+                    String(slot.id) ===
+                    String(attendanceSlotId)
+            );
+
+
+        if (!slotStillExists) {
+
+            const firstSlot =
+                scheduledPeriodsForAttendance[0];
+
+            setAttendanceSlotId(
+                String(firstSlot.id)
+            );
+
+            setAttendancePeriod(
+                firstSlot.timetableTime
+            );
+
+            setAttendanceSubmitted(false);
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    }, [
+        attendanceWeekday,
+        scheduledPeriodKey
+    ]);
+
+
+    // When timetable period changes
+    useEffect(() => {
+
+        if (!selectedAttendanceSlot) return;
+
+        setAttendancePeriod(
+            selectedAttendanceSlot.timetableTime
+        );
+
+        setAttendanceSubmitted(false);
+
+    }, [
+        attendanceSlotId,
+        scheduledPeriodKey
+    ]);
     const myExamHallDuties = staffExamHallAllocations.filter(item => {
         const assigned = cleanString(item.staffName);
         const current = cleanString(staffData.name);
@@ -334,20 +537,105 @@ export default function StaffDashboard() {
     const getActiveStudents = () => {
         return allStudents.filter(student => {
             if (!selectedClass) return false;
-            const matchesClass = student.className &&
-                cleanString(student.className) === cleanString(selectedClass);
 
-            if (selectedSection && (selectedSection.id || selectedSection.name)) {
+            const matchesClass =
+                student.className &&
+                cleanString(student.className) ===
+                cleanString(selectedClass);
+
+            if (
+                selectedSection &&
+                (
+                    selectedSection.id ||
+                    selectedSection.name
+                )
+            ) {
+
                 return matchesClass && (
-                    student.sectionId === selectedSection.id ||
-                    cleanString(student.sectionName) === cleanString(selectedSection.name)
+                    student.sectionId ===
+                    selectedSection.id ||
+
+                    cleanString(student.sectionName) ===
+                    cleanString(selectedSection.name)
                 );
             }
+
             return matchesClass;
         });
     };
 
     const activeStudents = getActiveStudents();
+
+    // ---------- EXACT TIMETABLE -> STUDENT ROSTER MATCHING ----------
+    // Admin/student records do not always use identical text formats:
+    // "10th Std", "10", "10th" and "Sec A", "Section A", "A" can refer
+    // to the same class/section. Convert them to stable comparison keys.
+    const normalizeClassKey = (value) => {
+        const raw = String(value ?? '').trim().toLowerCase();
+        if (!raw) return '';
+        const number = raw.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+        if (number) return `std-${number[1]}`;
+        if (raw.includes('lkg')) return 'lkg';
+        if (raw.includes('ukg')) return 'ukg';
+        return raw.replace(/[^a-z0-9]/g, '');
+    };
+
+    const normalizeSectionKey = (value) => {
+        const raw = String(value ?? '').trim().toLowerCase();
+        if (!raw || raw === 'n/a' || raw === 'na' || raw === 'null' || raw === 'undefined') return '';
+        const withoutPrefix = raw
+            .replace(/^section\s*/i, '')
+            .replace(/^sec\.?\s*/i, '')
+            .trim();
+        // Handles A, Sec A, Section A and section IDs ending in A.
+        const letter = withoutPrefix.match(/\b([a-z])\b/i);
+        return letter ? letter[1].toLowerCase() : withoutPrefix.replace(/[^a-z0-9]/g, '');
+    };
+
+    const getStudentClassValue = (student) =>
+        student.className || student.class || student.grade || student.standard || student.classId || '';
+
+    const getStudentSectionValue = (student) => {
+        if (student.sectionName || student.section || student.sectionCode) {
+            return student.sectionName || student.section || student.sectionCode;
+        }
+
+        if (student.sectionId) {
+            const sectionDoc = sectionsList.find(sec =>
+                String(sec.id) === String(student.sectionId)
+            );
+
+            return sectionDoc?.name ||
+                sectionDoc?.sectionName ||
+                sectionDoc?.section ||
+                '';
+        }
+
+        return '';
+    };
+
+    // EXACT scheduled timetable class + section only.
+    // No fallback to another section and no fallback to all students.
+    const attendanceStudents = selectedAttendanceSlot &&
+        selectedAttendanceSlot.timetableClass &&
+        selectedAttendanceSlot.timetableSection
+        ? allStudents.filter(student => {
+            const classMatches =
+                normalizeClassKey(getStudentClassValue(student)) ===
+                normalizeClassKey(selectedAttendanceSlot.timetableClass);
+
+            const sectionMatches =
+                normalizeSectionKey(getStudentSectionValue(student)) ===
+                normalizeSectionKey(selectedAttendanceSlot.timetableSection);
+
+            return classMatches && sectionMatches;
+        })
+        : [];
+
+    const filteredAttendanceStudents = attendanceStudents.filter(student =>
+        student.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     // Attendance Analytics Computations
     const presentStudentsCount = activeStudents.filter(s => s.status === 'present').length;
@@ -366,24 +654,11 @@ export default function StaffDashboard() {
         navigate('/');
     };
 
-    // Resolves the exact timetable slot (from this staff member's own published
-    // schedule) that the currently-selected class/section/date/period corresponds
-    // to, so an attendance submission can be tied back to the class schedule it
-    // was actually taken against — without changing anything about how the staff
-    // member picks the class/period on screen.
+    // The selected timetable row itself is the exact attendance authorization.
     const getMatchedTimetableSlot = () => {
-        if (!attendanceDate) return null;
-        const weekdayName = new Date(`${attendanceDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
-        const targetTimeRange = cleanString(extractTimeRange(attendancePeriod));
-
-        return mySchedule.find(slot => {
-            const dayMatch = slot.day === weekdayName;
-            const classMatch = cleanString(slot.className) === cleanString(selectedClass);
-            const sectionMatch = !selectedSection || !selectedSection.name || !slot.sectionName ||
-                cleanString(slot.sectionName) === cleanString(selectedSection.name);
-            const timeMatch = cleanString(slot.timeSlot) === targetTimeRange;
-            return dayMatch && classMatch && sectionMatch && timeMatch;
-        }) || null;
+        if (!selectedAttendanceSlot) return null;
+        if (!selectedAttendanceSlot.timetableClass || !selectedAttendanceSlot.timetableSection) return null;
+        return selectedAttendanceSlot;
     };
 
     const toggleAttendance = async (studentDocId, currentStatus) => {
@@ -403,31 +678,139 @@ export default function StaffDashboard() {
     };
 
     const handleSubmitAttendance = async () => {
-        setIsSubmitting(true);
-        try {
-            // Link this submission to the matching class-schedule slot (if the
-            // staff member's timetable has one for this class/day/period) so
-            // attendance stays traceable back to the actual scheduled session.
-            const matchedSlot = getMatchedTimetableSlot();
+        const matchedSlot = getMatchedTimetableSlot();
 
+        if (!matchedSlot) {
+            alert('Attendance is locked because no exact timetable slot is selected.');
+            return;
+        }
+
+        if (attendanceStudents.length === 0) {
+            alert(
+                `No students found for ${matchedSlot.timetableClass} - ${matchedSlot.timetableSection}. ` +
+                'Please verify the student class and section records.'
+            );
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
             const batch = writeBatch(db);
-            activeStudents.forEach(student => {
-                const studentRef = doc(db, 'students_records', student.id);
+
+            attendanceStudents.forEach((student) => {
+                const attendanceStatus =
+                    student.status || 'present';
+
+                const studentRef = doc(
+                    db,
+                    'students_records',
+                    student.id
+                );
+
+                /*
+                 * 1. Update the student's latest attendance.
+                 * This keeps your existing dashboard logic working.
+                 */
                 batch.update(studentRef, {
-                    status: student.status || 'present',
+                    status: attendanceStatus,
                     lastAttendanceDate: attendanceDate,
                     lastAttendancePeriod: attendancePeriod,
-                    lastAttendanceTimetableId: matchedSlot?.id || null,
-                    lastAttendanceSubject: matchedSlot?.subject || null,
-                    lastAttendanceRoom: matchedSlot?.roomNo || null,
-                    lastAttendanceTeacher: staffData.name || null
+                    lastAttendanceTimetableId:
+                        matchedSlot?.id || null,
+                    lastAttendanceSubject:
+                        matchedSlot?.subject ||
+                        selectedSubject ||
+                        'General',
+                    lastAttendanceRoom:
+                        matchedSlot?.roomNo || null,
+                    lastAttendanceTeacher:
+                        staffData.name || null,
+                    lastAttendanceClass:
+                        matchedSlot.timetableClass,
+                    lastAttendanceSection:
+                        matchedSlot.timetableSection
+                });
+
+                /*
+                 * 2. IMPORTANT:
+                 * Create a NEW permanent attendance history record.
+                 *
+                 * Every period gets its own document.
+                 * Old attendance will NOT be overwritten.
+                 */
+                const attendanceHistoryRef = doc(
+                    collection(db, 'attendance_records')
+                );
+
+                batch.set(attendanceHistoryRef, {
+                    studentId: student.id,
+
+                    studentName:
+                        student.name || '',
+
+                    admissionNo:
+                        student.admissionNo ||
+                        student.rollNo ||
+                        '',
+
+                    className:
+                        matchedSlot.timetableClass,
+
+                    sectionName:
+                        matchedSlot.timetableSection,
+
+                    date: attendanceDate,
+
+                    period:
+                        attendancePeriod,
+
+                    subject:
+                        matchedSlot?.subject ||
+                        selectedSubject ||
+                        'General',
+
+                    teacherId:
+                        staffData.staffId || '',
+
+                    teacherName:
+                        staffData.name || '',
+
+                    timetableId:
+                        matchedSlot?.id || null,
+
+                    roomNo:
+                        matchedSlot?.roomNo || '',
+
+                    status:
+                        attendanceStatus,
+
+                    createdAt:
+                        serverTimestamp()
                 });
             });
+
             await batch.commit();
+
             setAttendanceSubmitted(true);
+
+            alert(
+                `Attendance submitted successfully for ${attendanceStudents.length} student(s).`
+            );
+
         } catch (error) {
-            console.error("Batch attendance submission error:", error);
+
+            console.error(
+                'Attendance submission error:',
+                error
+            );
+
+            alert(
+                'Failed to submit attendance. Please try again.'
+            );
+
         } finally {
+
             setIsSubmitting(false);
         }
     };
@@ -467,6 +850,150 @@ export default function StaffDashboard() {
             alert("Failed to submit leave request.");
         } finally {
             setIsLeaveSubmitting(false);
+        }
+    };
+
+    // --- Communication: open (or create) a 1-to-1 conversation with a staff member ---
+    const openChatWithStaff = async (member) => {
+        if (!member?.staffId || !staffData.staffId) return;
+        const chatId = getChatId(staffData.staffId, member.staffId);
+
+        try {
+            await setDoc(doc(db, 'staff_chats', chatId), {
+                participants: [staffData.staffId, member.staffId],
+                participantNames: {
+                    [staffData.staffId]: staffData.name,
+                    [member.staffId]: member.name
+                },
+                participantDepartments: {
+                    [staffData.staffId]: staffData.department,
+                    [member.staffId]: member.department || 'General'
+                },
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            setActiveChatId(chatId);
+            setActiveChatInfo({ staffId: member.staffId, name: member.name, department: member.department || 'General' });
+            setShowNewChatPicker(false);
+            setChatDirectorySearch('');
+            setActiveTab('chats');
+        } catch (error) {
+            console.error("Error opening chat:", error);
+            alert("Could not open the chat. Please try again.");
+        }
+    };
+
+    const handleSelectChat = (chat) => {
+        const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
+        setActiveChatId(chat.id);
+        setActiveChatInfo({
+            staffId: otherId,
+            name: chat.participantNames?.[otherId] || 'Staff Member',
+            department: chat.participantDepartments?.[otherId] || 'General'
+        });
+    };
+
+    const sendChatMessage = async () => {
+        const text = chatMessageInput.trim();
+        if (!text || !activeChatId) return;
+
+        setChatMessageInput('');
+        try {
+            await addDoc(collection(db, 'staff_chats', activeChatId, 'messages'), {
+                senderId: staffData.staffId,
+                senderName: staffData.name,
+                text,
+                type: 'message',
+                createdAt: serverTimestamp()
+            });
+            await setDoc(doc(db, 'staff_chats', activeChatId), {
+                lastMessage: text,
+                lastMessageBy: staffData.staffId,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        } catch (error) {
+            console.error("Error sending message:", error);
+            alert("Message could not be sent. Please try again.");
+        }
+    };
+
+    // --- Communication: quick "Request" from a Department staff card ---
+    const openRequestModal = (member) => {
+        setRequestTargetStaff(member);
+        setRequestForm({ subject: '', message: '' });
+        setShowRequestModal(true);
+    };
+
+    const handleSubmitRequest = async (e) => {
+        e.preventDefault();
+        if (!requestTargetStaff || !requestForm.subject.trim() || !requestForm.message.trim()) {
+            alert('Please enter both a subject and a message for the request.');
+            return;
+        }
+
+        setIsRequestSubmitting(true);
+        const member = requestTargetStaff;
+        const chatId = getChatId(staffData.staffId, member.staffId);
+
+        try {
+            await setDoc(doc(db, 'staff_chats', chatId), {
+                participants: [staffData.staffId, member.staffId],
+                participantNames: {
+                    [staffData.staffId]: staffData.name,
+                    [member.staffId]: member.name
+                },
+                participantDepartments: {
+                    [staffData.staffId]: staffData.department,
+                    [member.staffId]: member.department || 'General'
+                },
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            const text = `${requestForm.subject.trim()}: ${requestForm.message.trim()}`;
+            await addDoc(collection(db, 'staff_chats', chatId, 'messages'), {
+                senderId: staffData.staffId,
+                senderName: staffData.name,
+                text,
+                type: 'request',
+                requestSubject: requestForm.subject.trim(),
+                createdAt: serverTimestamp()
+            });
+            await setDoc(doc(db, 'staff_chats', chatId), {
+                lastMessage: `Request: ${requestForm.subject.trim()}`,
+                lastMessageBy: staffData.staffId,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            setShowRequestModal(false);
+            setRequestTargetStaff(null);
+            setActiveChatId(chatId);
+            setActiveChatInfo({ staffId: member.staffId, name: member.name, department: member.department || 'General' });
+            setActiveTab('chats');
+        } catch (error) {
+            console.error("Error sending request:", error);
+            alert("Could not send the request. Please try again.");
+        } finally {
+            setIsRequestSubmitting(false);
+        }
+    };
+
+    // --- Communication: Staff Room (shared group chat) ---
+    const sendStaffRoomMessage = async () => {
+        const text = staffRoomInput.trim();
+        if (!text) return;
+
+        setStaffRoomInput('');
+        try {
+            await addDoc(collection(db, 'staffroom_messages'), {
+                senderId: staffData.staffId,
+                senderName: staffData.name,
+                department: staffData.department,
+                text,
+                createdAt: serverTimestamp()
+            });
+        } catch (error) {
+            console.error("Error posting to staff room:", error);
+            alert("Message could not be posted. Please try again.");
         }
     };
 
@@ -825,6 +1352,36 @@ export default function StaffDashboard() {
         return true;
     });
 
+    // --- Departments: synced live from the staff directory published by Admin ---
+    // Canonical subject order first, then any extra department names Admin has
+    // added on staff records that aren't in the canonical list.
+    const extraDepartments = [...new Set(
+        allStaffMembers
+            .map(s => (s.department || '').trim())
+            .filter(d => d && !subjectList.some(sub => cleanString(sub) === cleanString(d)))
+    )];
+    const departmentNames = [...subjectList, ...extraDepartments];
+
+    const departmentGroups = departmentNames.reduce((acc, dept) => {
+        acc[dept] = allStaffMembers.filter(s => cleanString(s.department) === cleanString(dept));
+        return acc;
+    }, {});
+
+    const activeDepartmentStaff = selectedDepartment ? (departmentGroups[selectedDepartment] || []) : [];
+
+    // --- Communication: staff directory search (for starting a new chat) ---
+    const chatDirectoryResults = allStaffMembers.filter(s => {
+        if (s.staffId === staffData.staffId) return false;
+        const q = chatDirectorySearch.trim().toLowerCase();
+        if (!q) return true;
+        return (
+            (s.name || '').toLowerCase().includes(q) ||
+            (s.department || '').toLowerCase().includes(q)
+        );
+    });
+
+    const getChatId = (idA, idB) => [idA, idB].sort().join('_');
+
     return (
         <div className="dashboard-containers">
             {/* Mobile Topbar */}
@@ -920,7 +1477,7 @@ export default function StaffDashboard() {
                         >
                             <div className="nav-links-content">
                                 <Award size={18} />
-                                <span>Gradebook</span>
+                                <span>Marks Entry</span>
                             </div>
                             <ChevronRight size={15} className="nav-arrow" />
                         </button>
@@ -1260,7 +1817,7 @@ export default function StaffDashboard() {
                                         </button>
                                         <button className="quick-link-item" onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}>
                                             <div className="quick-link-icon bg-indigo"><Award size={20} /></div>
-                                            <span>Gradebook</span>
+                                            <span>Marks Entry</span>
                                         </button>
                                         <button className="quick-link-item" onClick={() => setActiveTab('library')}>
                                             <div className="quick-link-icon bg-emerald"><Library size={20} /></div>
@@ -1683,17 +2240,19 @@ export default function StaffDashboard() {
                                     <div>
                                         <h3>Mark Attendance</h3>
                                         <p className="subtitle">
-                                            Synchronized live status for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'}
+                                            {hasAttendanceSchedule && selectedAttendanceSlot
+                                                ? `${selectedAttendanceSlot.subject || 'Scheduled Class'} • ${selectedAttendanceSlot.timetableClass || 'Class'} ${selectedAttendanceSlot.timetableSection ? `(${formatSectionTitle(selectedAttendanceSlot.timetableSection)})` : ''}`
+                                                : `No class scheduled for you on ${attendanceWeekday || 'this date'}`}
                                         </p>
                                         <p className="subtitle" style={{ marginTop: '2px', fontSize: '0.72rem' }}>
-                                            {scheduledPeriodsForAttendance.length > 0 ? (
+                                            {hasAttendanceSchedule ? (
                                                 <span style={{ color: 'var(--primary)' }}>
                                                     <CalendarClock size={12} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                                                    Periods synced from your {attendanceWeekday} Weekly Timetable
+                                                    Attendance is locked to your {attendanceWeekday} Weekly Timetable
                                                 </span>
                                             ) : (
-                                                <span style={{ color: 'var(--text-muted)' }}>
-                                                    No {attendanceWeekday} timetable slot found for this class — showing default periods
+                                                <span style={{ color: '#b42318', fontWeight: 600 }}>
+                                                    Attendance locked — no timetable class is assigned to you.
                                                 </span>
                                             )}
                                         </p>
@@ -1708,58 +2267,51 @@ export default function StaffDashboard() {
                                             title="Attendance Date"
                                         />
 
-                                        <select
-                                            className="custom-select"
-                                            value={attendancePeriod}
-                                            onChange={(e) => setAttendancePeriod(e.target.value)}
-                                            title={scheduledPeriodsForAttendance.length > 0
-                                                ? `Period / Class Hour — from your ${attendanceWeekday} Weekly Timetable`
-                                                : 'Period / Class Hour'}
-                                        >
-                                            {scheduledPeriodsForAttendance.length > 0 ? (
-                                                scheduledPeriodsForAttendance.map(slot => (
-                                                    <option key={slot.id} value={slot.timeSlot}>
-                                                        {slot.timeSlot} — {slot.subject}{slot.className ? ` (${slot.className})` : ''}
-                                                    </option>
-                                                ))
-                                            ) : (
-                                                periodList.map(per => (
-                                                    <option key={per} value={per}>{per}</option>
-                                                ))
-                                            )}
-                                        </select>
+                                        {hasAttendanceSchedule ? (
+                                            <>
+                                                <select
+                                                    className="custom-select"
+                                                    value={attendanceSlotId}
+                                                    onChange={(e) => {
+                                                        const slot = scheduledPeriodsForAttendance.find(item => String(item.id) === e.target.value);
+                                                        setAttendanceSlotId(e.target.value);
+                                                        setAttendancePeriod(slot?.timetableTime || '');
+                                                    }}
+                                                    title={`Only periods assigned to you on ${attendanceWeekday}`}
+                                                >
+                                                    {scheduledPeriodsForAttendance.map(slot => (
+                                                        <option key={slot.id} value={String(slot.id)}>
+                                                            {slot.timetableTime} — {slot.subject} ({slot.timetableClass}{slot.timetableSection ? ` • ${formatSectionTitle(slot.timetableSection)}` : ''})
+                                                        </option>
+                                                    ))}
+                                                </select>
 
-                                        <select
-                                            className="custom-select"
-                                            value={selectedClass || ''}
-                                            onChange={(e) => {
-                                                setSelectedClass(e.target.value);
-                                                setSelectedSection(null);
-                                                setAttendanceSubmitted(false);
-                                            }}
-                                            title="Select Class"
-                                        >
-                                            {classList.map(cls => (
-                                                <option key={cls} value={cls}>{cls}</option>
-                                            ))}
-                                        </select>
+                                                <div
+                                                    className="custom-select"
+                                                    style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
+                                                    title="Class is automatically taken from your timetable"
+                                                >
+                                                    {selectedAttendanceSlot?.timetableClass || 'Scheduled Class'}
+                                                </div>
 
-                                        <select
-                                            className="custom-select"
-                                            value={selectedSection ? selectedSection.name : ''}
-                                            onChange={(e) => {
-                                                const sec = sectionsList.find(s => s.className === selectedClass && s.name === e.target.value);
-                                                setSelectedSection(sec || (e.target.value ? { name: e.target.value } : null));
-                                                setAttendanceSubmitted(false);
-                                            }}
-                                            disabled={!selectedClass}
-                                            title="Select Section"
-                                        >
-                                            <option value="">All Sections</option>
-                                            {sectionsList.filter(s => s.className === selectedClass).map(s => (
-                                                <option key={s.id} value={s.name}>{formatSectionTitle(s.name)}</option>
-                                            ))}
-                                        </select>
+                                                <div
+                                                    className="custom-select"
+                                                    style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
+                                                    title="Section is automatically taken from your timetable"
+                                                >
+                                                    {selectedAttendanceSlot?.timetableSection
+                                                        ? formatSectionTitle(selectedAttendanceSlot.timetableSection)
+                                                        : 'Scheduled Section'}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div
+                                                className="custom-select"
+                                                style={{ display: 'flex', alignItems: 'center', opacity: 0.65 }}
+                                            >
+                                                Attendance unavailable
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1770,54 +2322,70 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            <div className="table-responsive">
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Admission No</th>
-                                            <th>Student Name</th>
-                                            <th>Section</th>
-                                            <th>Status</th>
-                                            <th style={{ textAlign: 'right' }}>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredStudents.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No student records found in this section.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredStudents.map((student) => (
-                                                <tr key={student.id}>
-                                                    <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
-                                                    <td>{student.name}</td>
-                                                    <td><span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span></td>
-                                                    <td>
-                                                        <span className={`status-badge status-${student.status || 'present'}`}>
-                                                            {(student.status || 'present').toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button
-                                                            className={`toggle-btn ${student.status || 'present'}`}
-                                                            onClick={() => toggleAttendance(student.id, student.status || 'present')}
-                                                        >
-                                                            Mark {student.status === 'present' ? 'Absent' : 'Present'}
-                                                        </button>
-                                                    </td>
+                            {hasAttendanceSchedule && selectedAttendanceSlot ? (
+                                <>
+                                    <div className="table-responsive">
+                                        <table className="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Admission No</th>
+                                                    <th>Student Name</th>
+                                                    <th>Section</th>
+                                                    <th>Status</th>
+                                                    <th style={{ textAlign: 'right' }}>Action</th>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="card-footer">
-                                <button className="btn-primary" onClick={handleSubmitAttendance} disabled={isSubmitting || filteredStudents.length === 0}>
-                                    {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
-                                </button>
-                            </div>
+                                            </thead>
+                                            <tbody>
+                                                {filteredAttendanceStudents.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                            No student records found in this section.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    filteredAttendanceStudents.map((student) => (
+                                                        <tr key={student.id}>
+                                                            <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
+                                                            <td>{student.name}</td>
+                                                            <td><span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span></td>
+                                                            <td>
+                                                                <span className={`status-badge status-${student.status || 'present'}`}>
+                                                                    {(student.status || 'present').toUpperCase()}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ textAlign: 'right' }}>
+                                                                <button
+                                                                    className={`toggle-btn ${student.status || 'present'}`}
+                                                                    onClick={() => toggleAttendance(student.id, student.status || 'present')}
+                                                                >
+                                                                    Mark {student.status === 'present' ? 'Absent' : 'Present'}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="card-footer">
+                                        <button
+                                            className="btn-primary"
+                                            onClick={handleSubmitAttendance}
+                                            disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedAttendanceSlot}
+                                        >
+                                            {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <h4 style={{ marginBottom: '0.5rem' }}>Attendance is locked</h4>
+                                    <p style={{ margin: 0 }}>
+                                        You do not have any class scheduled on {attendanceWeekday || 'the selected date'}.
+                                        Attendance will become available only when an admin timetable is assigned to you.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -2710,39 +3278,265 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* DEPARTMENTS TAB */}
+                    {/* DEPARTMENTS TAB — synced live from the Admin Dashboard staff directory */}
                     {activeTab === 'departments' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
-                                    <h3>Departments</h3>
-                                    <p className="subtitle">Faculty grouped by subject department.</p>
+                                    {selectedDepartment ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className="back-btn"
+                                                onClick={() => setSelectedDepartment(null)}
+                                                style={{ marginBottom: '10px' }}
+                                            >
+                                                <ArrowLeft size={14} /> All Departments
+                                            </button>
+                                            <h3>{selectedDepartment}</h3>
+                                            <p className="subtitle">
+                                                {activeDepartmentStaff.length} staff member{activeDepartmentStaff.length === 1 ? '' : 's'} in this department.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h3>Departments</h3>
+                                            <p className="subtitle">Faculty grouped by subject department, synced live from Admin.</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                            <div className="class-cards-grid">
-                                {subjectList.map((dept) => (
-                                    <div key={dept} className="class-card">
-                                        <div className="class-card-icon">
-                                            <Building2 size={24} />
+
+                            {!selectedDepartment ? (
+                                <div className="class-cards-grid">
+                                    {departmentNames.map((dept) => (
+                                        <div
+                                            key={dept}
+                                            className="class-card"
+                                            role="button"
+                                            tabIndex={0}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => setSelectedDepartment(dept)}
+                                        >
+                                            <div className="class-card-icon">
+                                                <Building2 size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 style={{ margin: 0 }}>{dept}</h4>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    {departmentGroups[dept]?.length || 0} Staff
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 style={{ margin: 0 }}>{dept}</h4>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Department</span>
+                                    ))}
+                                </div>
+                            ) : activeDepartmentStaff.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <Building2 size={28} />
+                                    <p>No staff assigned to this department yet.</p>
+                                </div>
+                            ) : (
+                                <div className="dept-staff-list">
+                                    {activeDepartmentStaff.map((member) => {
+                                        const isMe = member.staffId === staffData.staffId;
+                                        return (
+                                            <div key={member.id} className="dept-staff-row">
+                                                <div className="dept-staff-identity">
+                                                    <div className="student-avatar">
+                                                        {(member.name || '?').trim().charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <strong>{member.name}{isMe ? ' (You)' : ''}</strong>
+                                                        <span className="dept-staff-subtext">
+                                                            {member.staffId ? `ID: ${member.staffId}` : ''}{member.email ? ` • ${member.email}` : ''}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {!isMe && (
+                                                    <div className="dept-staff-actions">
+                                                        <button type="button" className="action-btn" onClick={() => openChatWithStaff(member)}>
+                                                            <MessageCircle size={14} /> Chat
+                                                        </button>
+                                                        <button type="button" className="btn-primary" onClick={() => openRequestModal(member)}>
+                                                            <Send size={14} /> Request
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* CHATS TAB — 1-to-1 direct messages, synced live via Firestore */}
+                    {activeTab === 'chats' && (
+                        <div className="dash-card full-width chats-workspace">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Chats</h3>
+                                    <p className="subtitle">Direct messages with your colleagues.</p>
+                                </div>
+                                <button type="button" className="btn-primary" onClick={() => setShowNewChatPicker(true)}>
+                                    <PlusCircle size={15} /> New Chat
+                                </button>
+                            </div>
+
+                            <div className="chats-layout">
+                                <div className="chats-list-pane">
+                                    {myChats.length === 0 ? (
+                                        <div className="empty-sub-card">
+                                            <MessageCircle size={26} />
+                                            <p>No conversations yet. Start one from Departments or "New Chat".</p>
                                         </div>
-                                    </div>
-                                ))}
+                                    ) : (
+                                        myChats.map((chat) => {
+                                            const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
+                                            const otherName = chat.participantNames?.[otherId] || 'Staff Member';
+                                            const otherDept = chat.participantDepartments?.[otherId] || 'General';
+                                            return (
+                                                <button
+                                                    key={chat.id}
+                                                    type="button"
+                                                    className={`chat-list-item ${activeChatId === chat.id ? 'active' : ''}`}
+                                                    onClick={() => handleSelectChat(chat)}
+                                                >
+                                                    <div className="student-avatar">{otherName.charAt(0).toUpperCase()}</div>
+                                                    <div className="chat-list-item-info">
+                                                        <strong>{otherName}</strong>
+                                                        <span>{chat.lastMessage || `${otherDept} Department`}</span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                                <div className="chat-thread-pane">
+                                    {!activeChatId ? (
+                                        <div className="empty-sub-card chat-thread-empty">
+                                            <MessageCircle size={28} />
+                                            <p>Select a conversation, or start a new chat.</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="chat-thread-header">
+                                                <div className="student-avatar">
+                                                    {(activeChatInfo?.name || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <strong>{activeChatInfo?.name}</strong>
+                                                    <span className="dept-staff-subtext">{activeChatInfo?.department}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="chat-thread-messages">
+                                                {activeChatMessages.length === 0 ? (
+                                                    <div className="empty-sub-card">
+                                                        <MessageCircle size={22} />
+                                                        <p>No messages yet. Say hello!</p>
+                                                    </div>
+                                                ) : (
+                                                    activeChatMessages.map((msg) => (
+                                                        <div
+                                                            key={msg.id}
+                                                            className={`chat-bubble-row ${msg.senderId === staffData.staffId ? 'mine' : ''}`}
+                                                        >
+                                                            <div className={`chat-bubble ${msg.type === 'request' ? 'is-request' : ''}`}>
+                                                                {msg.type === 'request' && <span className="request-tag">Request</span>}
+                                                                <p>{msg.text}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+
+                                            <div className="chat-thread-input-row">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Type a message..."
+                                                    value={chatMessageInput}
+                                                    onChange={(e) => setChatMessageInput(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') sendChatMessage(); }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn-primary"
+                                                    onClick={sendChatMessage}
+                                                    disabled={!chatMessageInput.trim()}
+                                                >
+                                                    <Send size={15} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* CHATS / STAFF ROOM / EVENTS / LIBRARY / DOWNLOADS - lightweight placeholders */}
-                    {['chats', 'staffroom', 'library', 'events'].includes(activeTab) && (
+                    {/* STAFF ROOM TAB — shared group chat for all faculty */}
+                    {activeTab === 'staffroom' && (
+                        <div className="dash-card full-width staffroom-workspace">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Staff Room</h3>
+                                    <p className="subtitle">A shared space for all faculty to chat together.</p>
+                                </div>
+                            </div>
+
+                            <div className="staffroom-feed">
+                                {staffRoomMessages.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Users size={28} />
+                                        <p>No messages yet. Be the first to say hello!</p>
+                                    </div>
+                                ) : (
+                                    staffRoomMessages.map((msg) => (
+                                        <div
+                                            key={msg.id}
+                                            className={`staffroom-message-row ${msg.senderId === staffData.staffId ? 'mine' : ''}`}
+                                        >
+                                            <div className="student-avatar">{(msg.senderName || '?').charAt(0).toUpperCase()}</div>
+                                            <div className="staffroom-message-body">
+                                                <div className="staffroom-message-meta">
+                                                    <strong>{msg.senderName}</strong>
+                                                    <span className="topic-badge">{msg.department || 'General'}</span>
+                                                </div>
+                                                <p>{msg.text}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="chat-thread-input-row">
+                                <input
+                                    type="text"
+                                    placeholder="Message the staff room..."
+                                    value={staffRoomInput}
+                                    onChange={(e) => setStaffRoomInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') sendStaffRoomMessage(); }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={sendStaffRoomMessage}
+                                    disabled={!staffRoomInput.trim()}
+                                >
+                                    <Send size={15} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* LIBRARY / EVENTS - lightweight placeholders */}
+                    {['library', 'events'].includes(activeTab) && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
                                     <h3>
-                                        {activeTab === 'chats' && 'Chats'}
-                                        {activeTab === 'staffroom' && 'Staff Room'}
                                         {activeTab === 'library' && 'Library'}
                                         {activeTab === 'events' && 'Events'}
                                     </h3>
@@ -2750,11 +3544,96 @@ export default function StaffDashboard() {
                                 </div>
                             </div>
                             <div className="empty-sub-card">
-                                {activeTab === 'chats' && <MessageCircle size={28} />}
-                                {activeTab === 'staffroom' && <Users size={28} />}
                                 {activeTab === 'library' && <Library size={28} />}
                                 {activeTab === 'events' && <PartyPopper size={28} />}
                                 <p>Nothing here yet — check back soon.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* NEW CHAT PICKER MODAL */}
+                    {showNewChatPicker && (
+                        <div className="modal-overlay" onClick={() => setShowNewChatPicker(false)}>
+                            <div className="modal-content" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{ marginTop: 0 }}>Start a New Chat</h3>
+                                <div className="search-bar" style={{ width: '100%', marginBottom: '14px' }}>
+                                    <Search size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search staff by name or department..."
+                                        value={chatDirectorySearch}
+                                        onChange={(e) => setChatDirectorySearch(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="chat-directory-list">
+                                    {chatDirectoryResults.length === 0 ? (
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '14px 0' }}>
+                                            No staff found.
+                                        </p>
+                                    ) : (
+                                        chatDirectoryResults.map((member) => (
+                                            <button
+                                                key={member.id}
+                                                type="button"
+                                                className="chat-directory-item"
+                                                onClick={() => openChatWithStaff(member)}
+                                            >
+                                                <div className="student-avatar">{(member.name || '?').charAt(0).toUpperCase()}</div>
+                                                <div>
+                                                    <strong>{member.name}</strong>
+                                                    <span>{member.department || 'General'}</span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" className="btn-secondary" onClick={() => setShowNewChatPicker(false)}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* DEPARTMENT "REQUEST" MODAL */}
+                    {showRequestModal && requestTargetStaff && (
+                        <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
+                            <div className="modal-content" style={{ maxWidth: '460px' }} onClick={(e) => e.stopPropagation()}>
+                                <h3 style={{ marginTop: 0 }}>Send a Request to {requestTargetStaff.name}</h3>
+                                <form onSubmit={handleSubmitRequest}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label>Subject</label>
+                                        <input
+                                            type="text"
+                                            className="table-input full-width"
+                                            placeholder="e.g. Substitute Class Request"
+                                            value={requestForm.subject}
+                                            onChange={(e) => setRequestForm({ ...requestForm, subject: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label>Message</label>
+                                        <textarea
+                                            rows="4"
+                                            className="custom-textarea"
+                                            placeholder="Describe your request..."
+                                            value={requestForm.message}
+                                            onChange={(e) => setRequestForm({ ...requestForm, message: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="modal-actions">
+                                        <button type="button" className="btn-secondary" onClick={() => setShowRequestModal(false)}>
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="btn-primary" disabled={isRequestSubmitting}>
+                                            <Send size={14} /> {isRequestSubmitting ? 'Sending...' : 'Send Request'}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     )}

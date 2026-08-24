@@ -26,6 +26,7 @@ export default function StudentDashboard() {
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
+    const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
     const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
 
@@ -49,6 +50,16 @@ export default function StudentDashboard() {
 
     // --- FEATURE 2: Header Notification Drawer Dropdown State ---
     const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+
+    // --- Unread tracking for the Notification Bell & Exam Result badge ---
+    // A badge dot/count shows only for NEW items since the user last opened
+    // that section. Once opened, the badge hides until fresh data arrives.
+    const [lastSeenAnnouncementsCount, setLastSeenAnnouncementsCount] = useState(
+        () => Number(localStorage.getItem('lastSeenAnnouncementsCount')) || 0
+    );
+    const [lastSeenMarksCount, setLastSeenMarksCount] = useState(
+        () => Number(localStorage.getItem('lastSeenMarksCount')) || 0
+    );
 
     // --- FEATURE 5: Interactive Quick Detail View Modal State ---
     const [detailModalContent, setDetailModalContent] = useState(null);
@@ -393,6 +404,47 @@ export default function StudentDashboard() {
             }
         });
 
+        const unsubAttendance = onSnapshot(
+            collection(db, 'attendance_records'),
+            (snap) => {
+
+                const allAttendance = snap.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                const myAttendance = allAttendance.filter((record) => {
+
+                    const studentIdMatch =
+                        record.studentId &&
+                        liveStudentRecord?.id &&
+                        record.studentId === liveStudentRecord.id;
+
+                    const sessionIdMatch =
+                        record.studentId &&
+                        studentData.id &&
+                        record.studentId === studentData.id;
+
+                    const admissionMatch =
+                        cleanString(record.admissionNo) ===
+                        cleanString(studentData.rollNo);
+
+                    const nameMatch =
+                        cleanString(record.studentName) ===
+                        cleanString(studentData.name);
+
+                    return (
+                        studentIdMatch ||
+                        sessionIdMatch ||
+                        admissionMatch ||
+                        nameMatch
+                    );
+                });
+
+                setAttendanceRecords(myAttendance);
+            }
+        );
+
         const unsubAnnounce = onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snap) => {
             setAnnouncementsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -429,6 +481,7 @@ export default function StudentDashboard() {
 
         return () => {
             unsubStudents();
+            unsubAttendance();
             unsubAnnounce();
             unsubAssignments();
             unsubSubmissions();
@@ -513,40 +566,136 @@ export default function StudentDashboard() {
     const totalScore = marksEntries.reduce((acc, curr) => acc + curr.score, 0);
     const averageScore = marksEntries.length > 0 ? (totalScore / marksEntries.length).toFixed(1) : 'N/A';
 
-    // Attendance Calculations
-    const hasStaffSubmittedAttendance = Boolean(liveStudentRecord?.lastAttendanceDate || liveStudentRecord?.status);
-    const currentAttendanceStatus = hasStaffSubmittedAttendance ? (liveStudentRecord?.status || 'present') : 'pending';
-    const rawAttendanceRate = hasStaffSubmittedAttendance ? (liveStudentRecord?.attendanceRate ? parseInt(liveStudentRecord.attendanceRate) : (currentAttendanceStatus === 'present' ? 94 : 68)) : 0;
-    const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
+    // Marks Summary (Total / Percentage / Rank) for the currently filtered exam view
+    const marksTotalObtained = filteredMarksEntries.reduce((acc, curr) => acc + curr.score, 0);
+    const marksTotalMax = filteredMarksEntries.length * 100;
+    const marksPercentage = marksTotalMax > 0 ? ((marksTotalObtained / marksTotalMax) * 100).toFixed(1) : '0.0';
+    const studentRank = liveStudentRecord?.rank || liveStudentRecord?.classRank || liveStudentRecord?.examRank || null;
 
-    // Attendance graph figures — derived from rawAttendanceRate so the ring chart,
-    // percentage label, and Present/Absent mini-cards always stay in sync with each other.
-    const totalWorkingDays = studentSchedule.length > 0 ? studentSchedule.length * 4 : 28;
-    const presentDaysCount = hasStaffSubmittedAttendance ? Math.round((rawAttendanceRate / 100) * totalWorkingDays) : 0;
-    const absentDaysCount = hasStaffSubmittedAttendance ? totalWorkingDays - presentDaysCount : 0;
+    const hasNewMarks = marksEntries.length > lastSeenMarksCount;
+    const unseenAnnouncementsCount = Math.max(announcementsList.length - lastSeenAnnouncementsCount, 0);
 
-    // Tagged back to the exact class-schedule slot the staff member took this
-    // attendance against (see lastAttendanceTimetableId/-Subject/-Room written
-    // by the Staff Dashboard), falling back gracefully if no schedule slot
-    // matched at submission time.
-    const attendanceLogs = hasStaffSubmittedAttendance ? [
-        {
-            id: 1,
-            date: liveStudentRecord?.lastAttendanceDate || 'Today',
-            period: liveStudentRecord?.lastAttendancePeriod || 'Period 1 (09:00 - 09:45 AM)',
-            subject: liveStudentRecord?.lastAttendanceSubject || 'General / Class Roll Call',
-            teacherName: liveStudentRecord?.lastAttendanceTeacher || 'Faculty Advisor',
-            roomNo: liveStudentRecord?.lastAttendanceRoom || null,
-            timetableId: liveStudentRecord?.lastAttendanceTimetableId || null,
-            status: liveStudentRecord?.status || 'present'
+    // Auto-hide the "Exam Result" notify dot once the Marks tab is opened
+    useEffect(() => {
+        if (activeTab === 'marks' && marksEntries.length > lastSeenMarksCount) {
+            setLastSeenMarksCount(marksEntries.length);
+            localStorage.setItem('lastSeenMarksCount', String(marksEntries.length));
         }
-    ] : [];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, marksEntries.length]);
 
-    const filteredAttendanceLogs = attendanceLogs.filter(log => {
-        const matchesStatus = attendanceStatusFilter === 'all' || log.status === attendanceStatusFilter;
-        const matchesDate = !attendanceDateFilter || log.date === attendanceDateFilter;
-        return matchesStatus && matchesDate;
+    // Auto-hide the notification bell badge once the drawer or the Bulletins tab is opened
+    useEffect(() => {
+        if ((showNotifDrawer || activeTab === 'notices') && announcementsList.length > lastSeenAnnouncementsCount) {
+            setLastSeenAnnouncementsCount(announcementsList.length);
+            localStorage.setItem('lastSeenAnnouncementsCount', String(announcementsList.length));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showNotifDrawer, activeTab, announcementsList.length]);
+
+    // Attendance Calculations
+ 
+    // =====================================================
+    // ATTENDANCE CALCULATIONS - FULL HISTORY
+    // =====================================================
+
+    // Sort all attendance records: newest first
+    const attendanceLogs = [...attendanceRecords].sort((a, b) => {
+        const dateA = new Date(
+            `${a.date || "1970-01-01"}T00:00:00`
+        );
+
+        const dateB = new Date(
+            `${b.date || "1970-01-01"}T00:00:00`
+        );
+
+        return dateB - dateA;
     });
+
+
+    // True when at least one attendance record exists
+    const hasStaffSubmittedAttendance =
+        attendanceLogs.length > 0;
+
+
+    // Latest attendance record
+    const latestAttendance =
+        attendanceLogs.length > 0
+            ? attendanceLogs[0]
+            : null;
+
+
+    // Current/latest attendance status
+    const currentAttendanceStatus =
+        latestAttendance?.status || "pending";
+
+
+    // Total attendance periods
+    const totalWorkingDays =
+        attendanceLogs.length;
+
+
+    // Present periods
+    const presentDaysCount =
+        attendanceLogs.filter(
+            (record) =>
+                String(record.status || "")
+                    .toLowerCase() === "present"
+        ).length;
+
+
+    // Absent periods
+    const absentDaysCount =
+        attendanceLogs.filter(
+            (record) =>
+                String(record.status || "")
+                    .toLowerCase() === "absent"
+        ).length;
+
+
+    // Attendance percentage
+    const rawAttendanceRate =
+        totalWorkingDays > 0
+            ? Math.round(
+                (presentDaysCount / totalWorkingDays) * 100
+            )
+            : 0;
+
+
+    // Attendance defaulter status
+    const isDefaulter =
+        hasStaffSubmittedAttendance &&
+        rawAttendanceRate < 75;
+
+
+    // =====================================================
+    // FILTER ALL ATTENDANCE HISTORY
+    // =====================================================
+
+    const filteredAttendanceLogs =
+        attendanceLogs.filter((log) => {
+
+            const logStatus =
+                String(log.status || "")
+                    .toLowerCase();
+
+            const selectedStatus =
+                String(attendanceStatusFilter || "all")
+                    .toLowerCase();
+
+            const matchesStatus =
+                selectedStatus === "all" ||
+                logStatus === selectedStatus;
+
+            const matchesDate =
+                !attendanceDateFilter ||
+                log.date === attendanceDateFilter;
+
+            return (
+                matchesStatus &&
+                matchesDate
+            );
+        });
 
     const pendingFeesList = feeRecords.filter(f => f.status !== 'Paid');
     const paidFeesList = feeRecords.filter(f => f.status === 'Paid');
@@ -658,24 +807,30 @@ export default function StudentDashboard() {
                 }
             `}</style>
 
-            {/* FEATURE 5: INTERACTIVE QUICK DETAIL VIEW MODAL */}
+            {/* FEATURE 5: INTERACTIVE QUICK DETAIL VIEW MODAL (Notification Preview) */}
             {detailModalContent && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                    background: 'rgba(0,0,0,0.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10005, padding: '20px'
-                }}>
-                    <div style={{ background: 'var(--staff-bg-surface)', width: '100%', maxWidth: '480px', padding: '20px', borderRadius: '12px', border: '1px solid var(--staff-border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--staff-border)', paddingBottom: '8px' }}>
-                            <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Sparkles size={16} color="var(--staff-primary)" /> Quick View Detail</h3>
-                            <button onClick={() => setDetailModalContent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--staff-text-main)' }}><X size={18} /></button>
+                <div className="quick-preview-overlay">
+                    <div className="quick-preview-modal">
+                        <div className="quick-preview-header">
+                            <h3><Sparkles size={16} /> Quick View Detail</h3>
+                            <button
+                                type="button"
+                                className="quick-preview-close"
+                                onClick={() => setDetailModalContent(null)}
+                                aria-label="Close"
+                            >
+                                <X size={18} />
+                            </button>
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--staff-text-main)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <p style={{ margin: 0 }}><strong>Title:</strong> {detailModalContent.title || detailModalContent.message || detailModalContent.content}</p>
-                            {detailModalContent.subject && <p style={{ margin: 0 }}><strong>Subject:</strong> {detailModalContent.subject}</p>}
-                            {detailModalContent.dueDate && <p style={{ margin: 0 }}><strong>Due Date:</strong> {detailModalContent.dueDate}</p>}
-                            {detailModalContent.description && <p style={{ margin: 0, background: 'var(--staff-bg-app)', padding: '8px', borderRadius: '6px' }}>{detailModalContent.description}</p>}
+                        <div className="quick-preview-body">
+                            <p><strong>Title:</strong> {detailModalContent.title || detailModalContent.message || detailModalContent.content}</p>
+                            {detailModalContent.subject && <p><strong>Subject:</strong> {detailModalContent.subject}</p>}
+                            {detailModalContent.dueDate && <p><strong>Due Date:</strong> {detailModalContent.dueDate}</p>}
+                            {detailModalContent.description && <p className="quick-preview-desc">{detailModalContent.description}</p>}
                         </div>
-                        <button onClick={() => setDetailModalContent(null)} style={{ marginTop: '16px', width: '100%', background: 'var(--staff-primary)', color: '#fff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Close Preview</button>
+                        <button type="button" className="quick-preview-close-btn" onClick={() => setDetailModalContent(null)}>
+                            Close Preview
+                        </button>
                     </div>
                 </div>
             )}
@@ -792,37 +947,38 @@ export default function StudentDashboard() {
                 </div>
             )}
 
-            {/* POPUP ALERT FOR PENDING FEE DUES */}
+            {/* POPUP ALERT FOR PENDING FEE DUES (Fees Preview) */}
             {showFeeAlertModal && pendingFeesList.length > 0 && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                    background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999
-                }}>
-                    <div style={{ background: 'var(--staff-bg-surface)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h3 style={{ margin: 0, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <DollarSign size={22} /> Fee Dues Alert!
-                            </h3>
-                            <button onClick={() => setShowFeeAlertModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--staff-text-main)' }}>
+                <div className="fee-alert-overlay">
+                    <div className="fee-alert-modal">
+                        <div className="fee-alert-modal-header">
+                            <h3><DollarSign size={20} /> Fee Dues Alert!</h3>
+                            <button
+                                type="button"
+                                className="fee-alert-close-btn"
+                                onClick={() => setShowFeeAlertModal(false)}
+                                aria-label="Close"
+                            >
                                 <X size={18} />
                             </button>
                         </div>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--staff-text-muted)' }}>
+                        <p className="fee-alert-desc">
                             Dear <strong>{studentData.name}</strong>, you have pending fee balances assigned by the front office desk. Please clear them at the office counter.
                         </p>
-                        <div style={{ background: 'var(--staff-bg-app)', padding: '10px', borderRadius: '8px', margin: '1rem 0' }}>
+                        <div className="fee-alert-list">
                             {pendingFeesList.map(fee => (
-                                <div key={fee.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                    <span>{fee.term}:</span>
-                                    <strong style={{ color: '#dc2626' }}>₹{fee.balance} Pending</strong>
+                                <div className="fee-alert-row" key={fee.id}>
+                                    <span>{fee.term}</span>
+                                    <strong>₹{fee.balance} Pending</strong>
                                 </div>
                             ))}
                         </div>
                         <button
+                            type="button"
+                            className="fee-alert-cta"
                             onClick={() => { setShowFeeAlertModal(false); setActiveTab('fees-history'); }}
-                            style={{ width: '100%', background: '#059669', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
                         >
-                            View Fee History & Receipts
+                            <Receipt size={15} /> View Fee History & Receipts
                         </button>
                     </div>
                 </div>
@@ -974,8 +1130,8 @@ export default function StudentDashboard() {
                                 title="Notifications"
                             >
                                 <Bell size={15} />
-                                {announcementsList.length > 0 && (
-                                    <span className="notif-badge-count">{announcementsList.length}</span>
+                                {unseenAnnouncementsCount > 0 && (
+                                    <span className="notif-badge-count">{unseenAnnouncementsCount}</span>
                                 )}
                             </button>
 
@@ -1017,6 +1173,7 @@ export default function StudentDashboard() {
 
                             <button className="ps-header-btn ghost" onClick={() => setActiveTab('marks')}>
                                 <Award size={14} /> Exam Result
+                                {hasNewMarks && <span className="header-btn-notify-dot" title="New results available" />}
                             </button>
                             <button className="ps-header-btn solid" onClick={() => setActiveTab('fees-history')}>
                                 <Receipt size={14} /> Fees Details
@@ -1694,6 +1851,23 @@ export default function StudentDashboard() {
                                                 })}
                                             </tbody>
                                         </table>
+                                    </div>
+                                )}
+
+                                {filteredMarksEntries.length > 0 && (
+                                    <div className="marks-summary-strip">
+                                        <div className="marks-summary-box">
+                                            <span className="marks-summary-label">Total Score</span>
+                                            <strong className="marks-summary-value">{marksTotalObtained} / {marksTotalMax}</strong>
+                                        </div>
+                                        <div className="marks-summary-box">
+                                            <span className="marks-summary-label">Percentage</span>
+                                            <strong className="marks-summary-value">{marksPercentage}%</strong>
+                                        </div>
+                                        <div className="marks-summary-box">
+                                            <span className="marks-summary-label">Class Rank</span>
+                                            <strong className="marks-summary-value">{studentRank ? `#${studentRank}` : 'N/A'}</strong>
+                                        </div>
                                     </div>
                                 )}
                             </div>

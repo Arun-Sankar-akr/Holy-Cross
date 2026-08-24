@@ -64,6 +64,28 @@ export default function AdminDashboard() {
 
     // Students ERP State
     const [sectionsList, setSectionsList] = useState([]);
+    const getSectionsForClass = (className) => {
+        if (!className) return [];
+
+        const normalize = (value = '') =>
+            String(value)
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '');
+
+        const normalizedClass = normalize(className);
+
+        return sectionsList.filter((item) => {
+            const itemClass =
+                item.className ||
+                item.class ||
+                item.standard ||
+                item.grade ||
+                '';
+
+            return normalize(itemClass) === normalizedClass;
+        });
+    };
+
     const [studentsList, setStudentsList] = useState([]);
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
@@ -161,8 +183,16 @@ export default function AdminDashboard() {
     const [editStudentTTForm, setEditStudentTTForm] = useState(initialStudentTimetableForm);
 
     const initialStaffTimetableForm = {
-        staffId: '', staffName: '', day: 'Monday', timeSlot: '', subject: '', className: '', roomNo: ''
+        staffId: '',
+        staffName: '',
+        day: 'Monday',
+        timeSlot: '',
+        subject: '',
+        className: '',
+        sectionName: '',
+        roomNo: ''
     };
+
     const [staffTimetableForm, setStaffTimetableForm] = useState(initialStaffTimetableForm);
     const [editingStaffTTId, setEditingStaffTTId] = useState(null);
     const [editStaffTTForm, setEditStaffTTForm] = useState(initialStaffTimetableForm);
@@ -616,43 +646,95 @@ export default function AdminDashboard() {
 
     const handleAddStaffTimetable = async (e) => {
         e.preventDefault();
-        if (!staffTimetableForm.staffId || !staffTimetableForm.subject || !staffTimetableForm.timeSlot) return;
 
-        const selectedStaff = staffList.find(s => s.staffId === staffTimetableForm.staffId);
-        const resolvedStaffName = selectedStaff ? selectedStaff.name : staffTimetableForm.staffName;
+        if (
+            !staffTimetableForm.staffId ||
+            !staffTimetableForm.subject ||
+            !staffTimetableForm.timeSlot ||
+            !staffTimetableForm.className ||
+            !staffTimetableForm.sectionName
+        ) {
+            alert('Please select Staff, Time Slot, Subject, Class and Section.');
+            return;
+        }
 
-        await handlePublish('staff_timetables', {
-            staffId: staffTimetableForm.staffId,
-            staffName: resolvedStaffName,
-            day: staffTimetableForm.day,
-            timeSlot: staffTimetableForm.timeSlot.trim(),
-            subject: staffTimetableForm.subject.trim(),
-            className: staffTimetableForm.className.trim(),
-            roomNo: staffTimetableForm.roomNo.trim()
-        }, () => setStaffTimetableForm(initialStaffTimetableForm));
+        const selectedStaff = staffList.find(
+            (s) => s.staffId === staffTimetableForm.staffId
+        );
+
+        const resolvedStaffName = selectedStaff
+            ? selectedStaff.name
+            : staffTimetableForm.staffName;
+
+        await handlePublish(
+            'staff_timetables',
+            {
+                staffId: staffTimetableForm.staffId,
+                staffName: resolvedStaffName,
+                day: staffTimetableForm.day,
+                timeSlot: staffTimetableForm.timeSlot.trim(),
+                subject: staffTimetableForm.subject.trim(),
+
+                // IMPORTANT:
+                // These are now stored separately for StaffDashboard attendance sync
+                className: staffTimetableForm.className.trim(),
+                sectionName: staffTimetableForm.sectionName.trim(),
+
+                roomNo: staffTimetableForm.roomNo.trim()
+            },
+            () => setStaffTimetableForm(initialStaffTimetableForm)
+        );
     };
-
     const handleUpdateStaffTimetable = async (e) => {
         e.preventDefault();
+
         if (!editingStaffTTId) return;
 
-        const selectedStaff = staffList.find(s => s.staffId === editStaffTTForm.staffId);
-        const resolvedStaffName = selectedStaff ? selectedStaff.name : editStaffTTForm.staffName;
+        if (
+            !editStaffTTForm.staffId ||
+            !editStaffTTForm.subject ||
+            !editStaffTTForm.timeSlot ||
+            !editStaffTTForm.className ||
+            !editStaffTTForm.sectionName
+        ) {
+            alert('Please select Staff, Time Slot, Subject, Class and Section.');
+            return;
+        }
+
+        const selectedStaff = staffList.find(
+            (s) => s.staffId === editStaffTTForm.staffId
+        );
+
+        const resolvedStaffName = selectedStaff
+            ? selectedStaff.name
+            : editStaffTTForm.staffName;
 
         try {
-            await updateDoc(doc(db, 'staff_timetables', editingStaffTTId), {
-                staffId: editStaffTTForm.staffId,
-                staffName: resolvedStaffName,
-                day: editStaffTTForm.day,
-                timeSlot: editStaffTTForm.timeSlot.trim(),
-                subject: editStaffTTForm.subject.trim(),
-                className: editStaffTTForm.className.trim(),
-                roomNo: editStaffTTForm.roomNo.trim()
-            });
+            await updateDoc(
+                doc(db, 'staff_timetables', editingStaffTTId),
+                {
+                    staffId: editStaffTTForm.staffId,
+                    staffName: resolvedStaffName,
+                    day: editStaffTTForm.day,
+                    timeSlot: editStaffTTForm.timeSlot.trim(),
+                    subject: editStaffTTForm.subject.trim(),
+
+                    // Exact timetable class and section
+                    className: editStaffTTForm.className.trim(),
+                    sectionName: editStaffTTForm.sectionName.trim(),
+
+                    roomNo: editStaffTTForm.roomNo.trim()
+                }
+            );
+
             setEditingStaffTTId(null);
             setEditStaffTTForm(initialStaffTimetableForm);
+
         } catch (error) {
-            console.error("Error updating staff timetable slot:", error);
+            console.error(
+                'Error updating staff timetable slot:',
+                error
+            );
         }
     };
 
@@ -2885,18 +2967,118 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <label>Class Assigned</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. 10th Std - Sec A"
-                                        value={editingStaffTTId ? editStaffTTForm.className : staffTimetableForm.className}
-                                        onChange={e => {
+
+                                    <select
+                                        value={
+                                            editingStaffTTId
+                                                ? editStaffTTForm.className
+                                                : staffTimetableForm.className
+                                        }
+                                        onChange={(e) => {
+
+                                            const selectedValue = e.target.value;
+
                                             if (editingStaffTTId) {
-                                                setEditStaffTTForm({ ...editStaffTTForm, className: e.target.value });
+
+                                                setEditStaffTTForm({
+                                                    ...editStaffTTForm,
+                                                    className: selectedValue,
+
+                                                    // Reset section when class changes
+                                                    sectionName: ''
+                                                });
+
                                             } else {
-                                                setStaffTimetableForm({ ...staffTimetableForm, className: e.target.value });
+
+                                                setStaffTimetableForm({
+                                                    ...staffTimetableForm,
+                                                    className: selectedValue,
+
+                                                    // Reset section when class changes
+                                                    sectionName: ''
+                                                });
                                             }
                                         }}
-                                    />
+                                        required
+                                    >
+                                        <option value="">
+                                            Select Class
+                                        </option>
+
+                                        {classList.map((className) => (
+                                            <option
+                                                key={className}
+                                                value={className}
+                                            >
+                                                {className}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Section Assigned</label>
+
+                                    <select
+                                        value={
+                                            editingStaffTTId
+                                                ? editStaffTTForm.sectionName
+                                                : staffTimetableForm.sectionName
+                                        }
+                                        onChange={(e) => {
+
+                                            const selectedValue = e.target.value;
+
+                                            if (editingStaffTTId) {
+
+                                                setEditStaffTTForm({
+                                                    ...editStaffTTForm,
+                                                    sectionName: selectedValue
+                                                });
+
+                                            } else {
+
+                                                setStaffTimetableForm({
+                                                    ...staffTimetableForm,
+                                                    sectionName: selectedValue
+                                                });
+                                            }
+                                        }}
+                                        required
+                                        disabled={
+                                            !(
+                                                editingStaffTTId
+                                                    ? editStaffTTForm.className
+                                                    : staffTimetableForm.className
+                                            )
+                                        }
+                                    >
+                                        <option value="">
+                                            Select Section
+                                        </option>
+
+                                        {getSectionsForClass(
+                                            editingStaffTTId
+                                                ? editStaffTTForm.className
+                                                : staffTimetableForm.className
+                                        ).map((section) => {
+
+                                            const sectionValue =
+                                                section.sectionName ||
+                                                section.section ||
+                                                section.name ||
+                                                section.label ||
+                                                '';
+
+                                            return (
+                                                <option
+                                                    key={section.id}
+                                                    value={sectionValue}
+                                                >
+                                                    {sectionValue}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
                                 <div>
                                     <label>Room No</label>

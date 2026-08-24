@@ -5474,3 +5474,324 @@ body {
 .exam-student-number {
     min-width: 58px;
 }
+
+/* ============================================================
+   DEPARTMENTS + COMMUNICATION (Chats / Staff Room)
+   ============================================================ */
+.dept-staff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px
+}
+
+.dept-staff-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--border-color, #e3e8f0);
+    border-radius: 16px;
+    background: var(--card-bg, #fff);
+    transition: .2s ease
+}
+
+.dept-staff-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(25, 45, 85, .08)
+}
+
+.dept-staff-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0
+}
+
+.dept-staff-identity>div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 3px
+}
+
+.dept-staff-subtext {
+    font-size: .78rem;
+    color: var(--text-muted, #738096);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.dept-staff-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-shrink: 0
+}
+
+.dept-staff-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px
+}
+
+.chats-workspace {
+    min-height: 620px
+}
+
+.chat-layout {
+    display: grid;
+    grid-template-columns: 310px minmax(0, 1fr);
+    min-height: 560px;
+    border: 1px solid var(--border-color, #e3e8f0);
+    border-radius: 18px;
+    overflow: hidden
+}
+
+.chat-sidebar {
+    border-right: 1px solid var(--border-color, #e3e8f0);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    overflow: auto
+}
+
+.chat-list-item {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    cursor: pointer
+}
+
+.chat-list-item:hover,
+.chat-list-item.active {
+    background: rgba(67, 97, 238, .08);
+    border-color: rgba(67, 97, 238, .12)
+}
+
+.chat-list-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px
+}
+
+.chat-list-copy strong,
+.chat-list-copy span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.chat-list-copy span {
+    font-size: .76rem;
+    color: var(--text-muted, #738096)
+}
+
+.chat-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0
+}
+
+.chat-main-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border-color, #e3e8f0)
+}
+
+.chat-message-feed,
+.staffroom-feed {
+    flex: 1;
+    min-height: 360px;
+    max-height: 520px;
+    overflow: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px
+}
+
+.chat-message-row,
+.staffroom-message-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 78%
+}
+
+.chat-message-row.mine,
+.staffroom-message-row.mine {
+    align-self: flex-end;
+    flex-direction: row-reverse
+}
+
+.chat-message-body,
+.staffroom-message-body {
+    padding: 10px 13px;
+    border-radius: 14px;
+    background: #f4f6fa
+}
+
+.chat-message-row.mine .chat-message-body,
+.staffroom-message-row.mine .staffroom-message-body {
+    background: #4361ee;
+    color: #fff
+}
+
+.chat-message-body p,
+.staffroom-message-body p {
+    margin: 5px 0 0;
+    font-size: .88rem;
+    white-space: pre-wrap;
+    word-break: break-word
+}
+
+.staffroom-message-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.topic-badge {
+    font-size: .68rem;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(67, 97, 238, .1);
+    color: #4361ee
+}
+
+.chat-thread-input-row {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    border-top: 1px solid var(--border-color, #e3e8f0)
+}
+
+.chat-thread-input-row input {
+    flex: 1;
+    min-width: 0
+}
+
+.chat-directory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: 360px;
+    overflow: auto
+}
+
+.chat-directory-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid var(--border-color, #e3e8f0);
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer
+}
+
+.chat-directory-item:hover {
+    background: rgba(67, 97, 238, .06)
+}
+
+.chat-directory-item div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px
+}
+
+.chat-directory-item span {
+    font-size: .76rem;
+    color: var(--text-muted, #738096)
+}
+
+.staffroom-workspace {
+    min-height: 600px;
+    display: flex;
+    flex-direction: column
+}
+
+.staffroom-workspace .staffroom-feed {
+    border: 1px solid var(--border-color, #e3e8f0);
+    border-radius: 16px;
+    margin: 0 2px
+}
+
+.empty-chat-state {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted, #738096)
+}
+
+@media(max-width:850px) {
+    .chat-layout {
+        grid-template-columns: 1fr
+    }
+
+    .chat-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border-color, #e3e8f0);
+        max-height: 260px
+    }
+
+    .dept-staff-row {
+        align-items: flex-start;
+        flex-direction: column
+    }
+
+    .dept-staff-actions {
+        width: 100%
+    }
+
+    .dept-staff-actions button {
+        flex: 1
+    }
+
+    .chat-message-row,
+    .staffroom-message-row {
+        max-width: 92%
+    }
+}
+
+@media(max-width:520px) {
+    .dept-staff-row {
+        padding: 13px
+    }
+
+    .dept-staff-subtext {
+        max-width: 240px
+    }
+
+    .chat-thread-input-row {
+        padding: 10px
+    }
+
+    .chat-message-feed,
+    .staffroom-feed {
+        padding: 12px
+    }
+
+    .class-cards-grid {
+        grid-template-columns: 1fr !important
+    }
+}

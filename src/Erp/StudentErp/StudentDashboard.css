@@ -2015,3 +2015,719 @@ td {
   color: var(--staff-primary, #4f46e5);
   font-weight: 800;
 }
+
+/* =================================================================
+   NEW STYLES — Notification Preview, Fees Preview, Academic Progress
+   (Total/Percentage/Rank), Coursework & Submissions, Submission
+   History, Campus Bulletins, and the Exam Result / Bell notify dots.
+================================================================= */
+
+/* --- Theme variable aliases -------------------------------------
+   Large parts of the dashboard reference --staff-* variables inline
+   that were never defined, so that text/borders rendered invisible
+   or unstyled. Mapping them onto the existing --dash-* palette fixes
+   every one of those spots at once, across every tab. */
+:root {
+  --staff-primary: var(--dash-primary);
+  --staff-primary-light: var(--dash-primary-light);
+  --staff-text-main: var(--dash-text-main);
+  --staff-text-muted: var(--dash-text-muted);
+  --staff-border: var(--dash-border);
+  --staff-bg-surface: var(--dash-surface);
+  --staff-bg-app: var(--dash-bg);
+  --staff-radius: var(--dash-radius);
+}
+
+.card-header {
+  flex-wrap: wrap;
+  row-gap: 0.6rem;
+}
+
+.exam-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.custom-select {
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  color: var(--dash-text-main);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.custom-select:hover,
+.custom-select:focus {
+  border-color: var(--dash-primary-border);
+  background: var(--dash-primary-light);
+}
+
+/* --- Shared tables (Marks / Fees / Submissions / Attendance) --- */
+.table-responsive,
+.marks-table-wrapper {
+  overflow-x: auto;
+  margin-top: 0.85rem;
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+}
+
+.custom-table,
+.custom-marks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.custom-table thead tr,
+.custom-marks-table thead tr {
+  background: var(--dash-primary-light);
+}
+
+.custom-table th,
+.custom-marks-table th {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dash-primary);
+  border-bottom: 1px solid var(--dash-border);
+  white-space: nowrap;
+}
+
+.custom-table td,
+.custom-marks-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--dash-border);
+  color: var(--dash-text-main);
+  vertical-align: middle;
+}
+
+.custom-table tbody tr:last-child td,
+.custom-marks-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.custom-table tbody tr:hover,
+.custom-marks-table tbody tr:hover {
+  background: var(--dash-bg);
+}
+
+/* --- Badges used across tables ----------------------------------- */
+.topic-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--accent-cyan-bg);
+  color: var(--accent-cyan);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.table-score-badge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.grade-badge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.grade-a-plus {
+  background: var(--accent-emerald-bg);
+  color: var(--accent-emerald);
+}
+
+.grade-a {
+  background: var(--accent-cyan-bg);
+  color: var(--accent-cyan);
+}
+
+.grade-b {
+  background: var(--accent-amber-bg);
+  color: var(--accent-amber);
+}
+
+.grade-fail {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+}
+
+/* --- Academic Progress & Assessment Marks: summary strip --------- */
+.marks-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.marks-summary-box {
+  background: var(--dash-primary-light);
+  border: 1.5px solid var(--dash-primary-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.marks-summary-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--dash-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.marks-summary-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dash-primary);
+}
+
+/* --- Empty states (shared across Marks / Coursework / Submissions
+       / Bulletins) --------------------------------------------- */
+.empty-sub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding: 2.5rem 1rem;
+  color: var(--dash-text-muted);
+}
+
+.empty-sub-card h4 {
+  margin: 0.3rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.empty-sub-card p {
+  margin: 0;
+  font-size: 0.76rem;
+  max-width: 320px;
+}
+
+/* --- Campus Circulars & Bulletins --------------------------------- */
+.full-notices-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.bulletin-card {
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border);
+  border-left: 3px solid var(--dash-primary);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bulletin-card:hover {
+  transform: translateX(3px);
+  background: var(--dash-primary-light);
+  box-shadow: var(--dash-shadow-sm);
+}
+
+.bulletin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  gap: 0.5rem;
+}
+
+.bulletin-tag {
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dash-primary);
+  background: var(--dash-surface);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.bulletin-date {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--dash-text-muted);
+  white-space: nowrap;
+}
+
+.bulletin-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--dash-text-main);
+  line-height: 1.45;
+}
+
+/* --- Coursework & PDF Document Submissions ------------------------ */
+.assignment-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.task-badge {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: var(--accent-purple-bg);
+  color: var(--accent-purple);
+  white-space: nowrap;
+}
+
+.badge-homework {
+  background: var(--accent-cyan-bg);
+  color: var(--accent-cyan);
+}
+
+.badge-project {
+  background: var(--accent-amber-bg);
+  color: var(--accent-amber);
+}
+
+.badge-test,
+.badge-exam,
+.badge-unittest {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+}
+
+.badge-assignment {
+  background: var(--accent-emerald-bg);
+  color: var(--accent-emerald);
+}
+
+.due-date-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--dash-text-muted);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  padding: 2px 8px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.assignment-meta-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.72rem;
+  color: var(--dash-text-muted);
+}
+
+.assignment-meta-details strong {
+  color: var(--dash-text-main);
+  font-weight: 700;
+}
+
+.assignment-body-desc {
+  font-size: 0.74rem;
+  color: var(--dash-text-muted);
+  line-height: 1.4;
+  margin: 0;
+  background: var(--dash-surface);
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--dash-border);
+}
+
+.pdf-upload-wrapper {
+  margin-top: 0.2rem;
+}
+
+.submission-completed-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--accent-emerald-bg);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  flex-wrap: wrap;
+}
+
+.submission-file-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+}
+
+.submission-file-meta strong {
+  font-size: 0.76rem;
+  color: var(--dash-text-main);
+}
+
+.upload-action-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pdf-file-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1.5px dashed var(--dash-primary-border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dash-primary);
+  cursor: pointer;
+  background: var(--dash-surface);
+  transition: all 0.2s ease;
+}
+
+.pdf-file-label:hover {
+  background: var(--dash-primary-light);
+}
+
+.compressing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+  background: var(--accent-amber-bg);
+  padding: 4px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.spin-icon {
+  animation: spin-rotate 1s linear infinite;
+}
+
+@keyframes spin-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pdf-ready-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pdf-ready-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--dash-primary);
+}
+
+/* --- Turned-In PDF Submissions History ---------------------------- */
+.pdf-preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dash-primary);
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+
+.pdf-preview-link:hover {
+  text-decoration: underline;
+}
+
+/* --- Notify dot on the "Exam Result" header button ---------------- */
+.ps-header-btn {
+  position: relative;
+}
+
+.header-btn-notify-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-rose);
+  border: 2px solid var(--dash-surface);
+  box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25);
+}
+
+/* --- Notification Preview (Quick View Detail modal) --------------- */
+.quick-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10005;
+  padding: 20px;
+}
+
+.quick-preview-modal {
+  background: var(--dash-surface);
+  width: 100%;
+  max-width: 480px;
+  padding: 1.25rem;
+  border-radius: var(--dash-radius);
+  border: 1px solid var(--dash-border);
+  box-shadow: var(--dash-shadow-lg);
+}
+
+.quick-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--dash-border);
+  padding-bottom: 0.6rem;
+}
+
+.quick-preview-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-preview-header h3 svg {
+  color: var(--dash-primary);
+}
+
+.quick-preview-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dash-text-muted);
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.quick-preview-close:hover {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+}
+
+.quick-preview-body {
+  font-size: 0.85rem;
+  color: var(--dash-text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-preview-body p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.quick-preview-desc {
+  background: var(--dash-bg);
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--dash-border);
+}
+
+.quick-preview-close-btn {
+  margin-top: 1rem;
+  width: 100%;
+  background: var(--dash-primary-grad);
+  color: #fff;
+  border: none;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.quick-preview-close-btn:hover {
+  filter: brightness(1.05);
+}
+
+/* --- Fees Preview (Pending Fee Dues alert modal) ------------------- */
+.fee-alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.fee-alert-modal {
+  background: var(--dash-surface);
+  padding: 1.5rem;
+  border-radius: var(--dash-radius);
+  width: 100%;
+  max-width: 450px;
+  box-shadow: var(--dash-shadow-lg);
+  border: 1px solid var(--dash-border);
+}
+
+.fee-alert-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.fee-alert-modal-header h3 {
+  margin: 0;
+  color: var(--accent-rose);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.fee-alert-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dash-text-main);
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fee-alert-close-btn:hover {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+}
+
+.fee-alert-desc {
+  font-size: 0.85rem;
+  color: var(--dash-text-muted);
+  margin: 0 0 0.85rem;
+  line-height: 1.5;
+}
+
+.fee-alert-desc strong {
+  color: var(--dash-text-main);
+}
+
+.fee-alert-list {
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border);
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fee-alert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--dash-text-main);
+}
+
+.fee-alert-row strong {
+  color: var(--accent-rose);
+  font-weight: 800;
+}
+
+.fee-alert-cta {
+  width: 100%;
+  background: var(--dash-primary-grad);
+  color: #fff;
+  border: none;
+  padding: 0.7rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.fee-alert-cta:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* --- Dark theme touch-ups for the new pieces ----------------------- */
+[data-theme='dark'] .custom-table th,
+[data-theme='dark'] .custom-marks-table th,
+[data-theme='dark'] .marks-summary-box,
+[data-theme='dark'] .bulletin-card,
+[data-theme='dark'] .assignment-body-desc,
+[data-theme='dark'] .pdf-file-label,
+[data-theme='dark'] .due-date-pill,
+[data-theme='dark'] .fee-alert-list {
+  background-color: #12352b !important;
+  color: #f0fdf4 !important;
+  border-color: #1a4237 !important;
+}
+
+[data-theme='dark'] .quick-preview-modal,
+[data-theme='dark'] .fee-alert-modal {
+  background-color: #0e2a22 !important;
+  border-color: #1a4237 !important;
+}
+
+@media (max-width: 640px) {
+  .marks-summary-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+} 
