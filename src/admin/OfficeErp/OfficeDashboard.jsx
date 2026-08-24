@@ -306,10 +306,7 @@ export default function OfficeDashboard() {
                         {isExamMenuOpen && (
                             <div className="submenu-children" style={{ display: 'flex', flexDirection: 'column', paddingLeft: '1.25rem', gap: '4px', marginTop: '6px' }}>
                                 <button className={`nav-links ${activeTab === 'exam-halls' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}>
-                                    <div className="nav-links-content"><Users size={16} /><span>Students</span></div>
-                                </button>
-                                <button className={`nav-links ${activeTab === 'exam-staff' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-staff'); setIsMobileMenuOpen(false); }}>
-                                    <div className="nav-links-content"><UserCheck size={16} /><span>Staff</span></div>
+                                    <div className="nav-links-content"><Users size={16} /><span>Aloocate</span></div>
                                 </button>
                             </div>
                         )}
