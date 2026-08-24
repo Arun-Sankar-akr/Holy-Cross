@@ -172,7 +172,7 @@ export default function Home({ setActivePage }) {
                         <span className="hero-eyebrow">BEST QUALITY EDUCATION</span>
 
                         <h2 className="hero-heading">
-                            <h2 className="hero-heading"> <span className="line-pink">Welcome to </span> <span className="line-dark">Holy Cross Matriculation Higher Secondary</span> <span className="line-dark">&nbsp;School</span><br /> <span className="line-accent">Somarasampettai</span> </h2>
+                            <h2 className="hero-heading"> <span className="line-pink">Welcome to </span> <span className="line-dark"><br />Holy Cross Matriculation Higher Secondary</span> <span className="line-dark">&nbsp;School</span><br /> <span className="line-accent">Somarasampettai</span> </h2>
                         </h2>
 
                         <div className="hero-cta-row">
