@@ -5795,3 +5795,525 @@ body {
         grid-template-columns: 1fr !important
     }
 }
+
+/* =========================================================
+   PREMIUM COMMUNICATION UI — Chats + Staff Room
+   Exact class names used by StaffDashboard JSX
+   ========================================================= */
+
+.chats-workspace {
+    min-height: 650px;
+    padding: 0 !important;
+    overflow: hidden;
+    border: 1px solid rgba(69, 92, 146, .16) !important;
+    border-radius: 24px !important;
+    background: rgba(255, 255, 255, .86) !important;
+    box-shadow: 0 22px 55px rgba(27, 47, 91, .08);
+}
+
+.chats-workspace>.card-header {
+    min-height: 92px;
+    margin: 0 !important;
+    padding: 22px 28px !important;
+    border-bottom: 1px solid rgba(68, 87, 132, .12) !important;
+    background: linear-gradient(135deg, rgba(247, 249, 255, .96), rgba(255, 255, 255, .92));
+}
+
+.chats-workspace>.card-header h3 {
+    font-size: 1.28rem !important;
+    letter-spacing: -.02em;
+}
+
+.chats-workspace>.card-header .subtitle {
+    margin-top: 4px;
+}
+
+.chats-workspace .btn-primary {
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 0;
+    background: linear-gradient(135deg, #3158c8, #4f67df) !important;
+    box-shadow: 0 10px 24px rgba(56, 86, 205, .24);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.chats-workspace .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(56, 86, 205, .32);
+}
+
+.chats-layout {
+    display: grid;
+    grid-template-columns: minmax(290px, 330px) minmax(0, 1fr);
+    min-height: 555px;
+    background: linear-gradient(135deg, #f7f9ff 0%, #ffffff 52%, #fafbff 100%);
+}
+
+.chats-list-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 16px;
+    min-height: 555px;
+    max-height: 555px;
+    overflow-y: auto;
+    border-right: 1px solid rgba(68, 87, 132, .13);
+    background: rgba(246, 248, 255, .78);
+}
+
+.chats-list-pane::before {
+    content: 'CONVERSATIONS';
+    display: block;
+    padding: 4px 8px 10px;
+    color: #8993a8;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+.chat-list-item {
+    width: 100%;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: 17px !important;
+    background: transparent !important;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: all .22s ease;
+}
+
+.chat-list-item:hover {
+    background: rgba(255, 255, 255, .92) !important;
+    border-color: rgba(70, 94, 159, .12) !important;
+    box-shadow: 0 8px 22px rgba(38, 56, 101, .06);
+    transform: translateX(2px);
+}
+
+.chat-list-item.active {
+    background: linear-gradient(135deg, rgba(56, 86, 205, .13), rgba(103, 126, 229, .09)) !important;
+    border-color: rgba(55, 85, 201, .18) !important;
+    box-shadow: inset 3px 0 0 #4564d8, 0 10px 24px rgba(51, 76, 172, .08);
+}
+
+.chat-list-item .student-avatar,
+.chat-thread-header .student-avatar {
+    flex: 0 0 44px;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 15px !important;
+    background: linear-gradient(135deg, #e9eeff, #d8e1ff) !important;
+    color: #3656c8 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.chat-list-item.active .student-avatar {
+    background: linear-gradient(135deg, #4c64d8, #7888ed) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 18px rgba(65, 91, 209, .25);
+}
+
+.chat-list-item-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-list-item-info strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .94rem;
+    color: #26334b;
+}
+
+.chat-list-item-info span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .76rem;
+    color: #8790a3;
+}
+
+.chat-thread-pane {
+    min-width: 0;
+    min-height: 555px;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(circle at top right, rgba(98, 119, 229, .07), transparent 34%), #fff;
+}
+
+.chat-thread-header {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-height: 78px;
+    padding: 15px 22px;
+    border-bottom: 1px solid rgba(68, 87, 132, .12);
+    background: rgba(255, 255, 255, .86);
+}
+
+.chat-thread-header>div:last-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-thread-header strong {
+    font-size: 1rem;
+    color: #26334b;
+}
+
+.chat-thread-header .dept-staff-subtext {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    max-width: 100%;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #5670cc;
+    font-size: .68rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-thread-messages {
+    flex: 1;
+    min-height: 0;
+    max-height: 408px;
+    overflow-y: auto;
+    padding: 24px clamp(18px, 3vw, 34px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-image: radial-gradient(rgba(75, 99, 190, .06) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.chat-thread-empty {
+    flex: 1;
+    min-height: 408px;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    border: 0 !important;
+    background: transparent !important;
+    color: #8c95a8;
+}
+
+.chat-bubble-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.chat-bubble-row.mine {
+    justify-content: flex-end;
+}
+
+.chat-bubble {
+    max-width: min(72%, 620px);
+    padding: 11px 14px;
+    border: 1px solid rgba(66, 83, 125, .09);
+    border-radius: 18px 18px 18px 5px;
+    background: #f3f6fb;
+    color: #354158;
+    box-shadow: 0 6px 16px rgba(36, 53, 89, .045);
+}
+
+.chat-bubble-row.mine .chat-bubble {
+    border: 0;
+    border-radius: 18px 18px 5px 18px;
+    background: linear-gradient(135deg, #3858ca, #5970dd);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(58, 83, 194, .18);
+}
+
+.chat-bubble p {
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.chat-bubble.is-request {
+    border-color: rgba(236, 164, 45, .32);
+    background: linear-gradient(135deg, #fff9ec, #fffdf7);
+}
+
+.request-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    margin-bottom: 6px;
+    border-radius: 999px;
+    background: #fff0c9;
+    color: #9a6500;
+    font-size: .66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.chat-thread-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px !important;
+    border-top: 1px solid rgba(68, 87, 132, .12) !important;
+    background: rgba(250, 251, 255, .95);
+}
+
+.chat-thread-input-row input {
+    flex: 1;
+    min-width: 0;
+    height: 48px !important;
+    padding: 0 16px !important;
+    border: 1px solid #dce3f1 !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    color: #29364d;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.chat-thread-input-row input:focus {
+    border-color: #6981e4 !important;
+    box-shadow: 0 0 0 4px rgba(85, 110, 220, .11);
+}
+
+.chat-thread-input-row .btn-primary {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 14px;
+}
+
+/* Staff room uses the same polished visual language */
+.staffroom-workspace {
+    min-height: 650px !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 24px !important;
+}
+
+.staffroom-workspace>.card-header {
+    padding: 22px 28px !important;
+    border-bottom: 1px solid rgba(68, 87, 132, .12) !important;
+}
+
+.staffroom-feed {
+    flex: 1;
+    min-height: 470px !important;
+    max-height: 520px !important;
+    margin: 0 !important;
+    padding: 24px clamp(18px, 3vw, 34px) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: radial-gradient(circle at 10% 0%, rgba(87, 112, 221, .07), transparent 28%), #fbfcff;
+}
+
+.staffroom-message-row {
+    max-width: 78%;
+}
+
+.staffroom-message-body {
+    border-radius: 17px !important;
+    box-shadow: 0 6px 16px rgba(36, 53, 89, .045);
+}
+
+.staffroom-message-row.mine .staffroom-message-body {
+    background: linear-gradient(135deg, #3858ca, #5970dd) !important;
+}
+
+.staffroom-workspace .chat-thread-input-row {
+    border-top: 1px solid rgba(68, 87, 132, .12) !important;
+}
+
+@media (max-width: 900px) {
+    .chats-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .chats-list-pane {
+        min-height: auto;
+        max-height: 250px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(68, 87, 132, .13);
+    }
+
+    .chat-thread-pane {
+        min-height: 500px;
+    }
+}
+
+@media (max-width: 560px) {
+
+    .chats-workspace>.card-header,
+    .staffroom-workspace>.card-header {
+        padding: 18px !important;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 14px;
+    }
+
+    .chats-workspace>.card-header .btn-primary {
+        width: 100%;
+    }
+
+    .chats-list-pane {
+        padding: 11px;
+    }
+
+    .chat-thread-header {
+        padding: 14px;
+    }
+
+    .chat-thread-messages {
+        padding: 16px 12px;
+    }
+
+    .chat-bubble {
+        max-width: 88%;
+    }
+
+    .chat-thread-input-row {
+        padding: 12px !important;
+    }
+
+    .staffroom-feed {
+        padding: 16px 12px !important;
+    }
+
+    .staffroom-message-row {
+        max-width: 92%;
+    }
+}
+
+
+/* =========================================================
+   COMMUNICATION DELETE CONTROLS — PREMIUM
+   ========================================================= */
+.communication-delete-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid rgba(220, 38, 38, 0.18);
+    border-radius: 12px;
+    background: rgba(220, 38, 38, 0.07);
+    color: #c62828;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.communication-delete-btn:hover {
+    background: rgba(220, 38, 38, 0.13);
+    border-color: rgba(220, 38, 38, 0.32);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.10);
+}
+
+.communication-delete-btn:active {
+    transform: translateY(0);
+}
+
+.chat-thread-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chat-thread-header>div:nth-child(2) {
+    min-width: 0;
+}
+
+.staffroom-clear-btn {
+    white-space: nowrap;
+}
+
+.chat-bubble {
+    position: relative;
+    padding-right: 38px;
+}
+
+.message-delete-btn,
+.staffroom-message-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(220, 38, 38, 0.08);
+    color: #c62828;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity .18s ease, transform .18s ease, background .18s ease;
+}
+
+.chat-bubble:hover .message-delete-btn,
+.staffroom-message-body:hover .staffroom-message-delete-btn,
+.message-delete-btn:focus-visible,
+.staffroom-message-delete-btn:focus-visible {
+    opacity: 1;
+}
+
+.message-delete-btn:hover,
+.staffroom-message-delete-btn:hover {
+    background: rgba(220, 38, 38, 0.16);
+    transform: scale(1.05);
+}
+
+.staffroom-message-body {
+    position: relative;
+    padding-right: 34px;
+}
+
+@media (max-width: 700px) {
+    .communication-delete-btn span {
+        display: none;
+    }
+
+    .communication-delete-btn {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+        border-radius: 11px;
+    }
+
+    .chat-thread-header,
+    .staffroom-workspace .card-header {
+        align-items: center;
+    }
+
+    .staffroom-clear-btn {
+        margin-left: auto;
+    }
+
+    .message-delete-btn,
+    .staffroom-message-delete-btn {
+        opacity: 1;
+    }
+}
+

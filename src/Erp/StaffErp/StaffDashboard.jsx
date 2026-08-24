@@ -4,7 +4,7 @@ import { db } from '../../service/firebase';
 import logo from "../../assets/logo.png"
 import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where,
-    setDoc, orderBy, limit
+    setDoc, orderBy, limit, arrayUnion, arrayRemove
 } from 'firebase/firestore';
 import {
     Users, User, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
@@ -292,7 +292,9 @@ export default function StaffDashboard() {
         );
 
         const unsubChats = onSnapshot(chatsQuery, (snap) => {
-            const chats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const chats = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(chat => !(chat.deletedFor || []).includes(staffData.staffId));
             chats.sort((a, b) => {
                 const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
                 const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
@@ -869,7 +871,8 @@ export default function StaffDashboard() {
                     [staffData.staffId]: staffData.department,
                     [member.staffId]: member.department || 'General'
                 },
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                deletedFor: arrayRemove(staffData.staffId)
             }, { merge: true });
 
             setActiveChatId(chatId);
@@ -893,6 +896,70 @@ export default function StaffDashboard() {
         });
     };
 
+    const deleteConversationForMe = async () => {
+        if (!activeChatId || !staffData.staffId) return;
+
+        const confirmed = window.confirm(
+            'Delete this chat from your chat list? The other staff member will keep their conversation and messages.'
+        );
+        if (!confirmed) return;
+
+        try {
+            await updateDoc(doc(db, 'staff_chats', activeChatId), {
+                deletedFor: arrayUnion(staffData.staffId)
+            });
+            setActiveChatId(null);
+            setActiveChatInfo(null);
+            setActiveChatMessages([]);
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+            alert('Could not delete this chat. Please try again.');
+        }
+    };
+
+    const deleteChatMessage = async (messageId) => {
+        if (!activeChatId || !messageId) return;
+        if (!window.confirm('Delete this message permanently?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'staff_chats', activeChatId, 'messages', messageId));
+        } catch (error) {
+            console.error('Error deleting chat message:', error);
+            alert('Could not delete the message.');
+        }
+    };
+
+    const deleteStaffRoomMessage = async (messageId) => {
+        if (!messageId) return;
+        if (!window.confirm('Delete this Staff Room message permanently?')) return;
+
+        try {
+            await deleteDoc(doc(db, 'staffroom_messages', messageId));
+        } catch (error) {
+            console.error('Error deleting Staff Room message:', error);
+            alert('Could not delete the message.');
+        }
+    };
+
+    const clearMyStaffRoomMessages = async () => {
+        const mine = staffRoomMessages.filter(msg => msg.senderId === staffData.staffId);
+        if (!mine.length) {
+            alert('You do not have any Staff Room messages to delete.');
+            return;
+        }
+
+        if (!window.confirm(`Delete your ${mine.length} visible Staff Room message(s)? This cannot be undone.`)) return;
+
+        try {
+            const batch = writeBatch(db);
+            mine.forEach((msg) => batch.delete(doc(db, 'staffroom_messages', msg.id)));
+            await batch.commit();
+        } catch (error) {
+            console.error('Error clearing Staff Room messages:', error);
+            alert('Could not delete your Staff Room messages.');
+        }
+    };
+
     const sendChatMessage = async () => {
         const text = chatMessageInput.trim();
         if (!text || !activeChatId) return;
@@ -909,7 +976,8 @@ export default function StaffDashboard() {
             await setDoc(doc(db, 'staff_chats', activeChatId), {
                 lastMessage: text,
                 lastMessageBy: staffData.staffId,
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                deletedFor: arrayRemove(staffData.staffId)
             }, { merge: true });
         } catch (error) {
             console.error("Error sending message:", error);
@@ -3429,6 +3497,15 @@ export default function StaffDashboard() {
                                                     <strong>{activeChatInfo?.name}</strong>
                                                     <span className="dept-staff-subtext">{activeChatInfo?.department}</span>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    className="communication-delete-btn"
+                                                    onClick={deleteConversationForMe}
+                                                    title="Delete chat"
+                                                >
+                                                    <Trash2 size={16} />
+                                                    <span>Delete Chat</span>
+                                                </button>
                                             </div>
 
                                             <div className="chat-thread-messages">
@@ -3446,6 +3523,16 @@ export default function StaffDashboard() {
                                                             <div className={`chat-bubble ${msg.type === 'request' ? 'is-request' : ''}`}>
                                                                 {msg.type === 'request' && <span className="request-tag">Request</span>}
                                                                 <p>{msg.text}</p>
+                                                                {msg.senderId === staffData.staffId && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="message-delete-btn"
+                                                                        onClick={() => deleteChatMessage(msg.id)}
+                                                                        title="Delete message"
+                                                                    >
+                                                                        <Trash2 size={13} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))
@@ -3484,6 +3571,15 @@ export default function StaffDashboard() {
                                     <h3>Staff Room</h3>
                                     <p className="subtitle">A shared space for all faculty to chat together.</p>
                                 </div>
+                                <button
+                                    type="button"
+                                    className="communication-delete-btn staffroom-clear-btn"
+                                    onClick={clearMyStaffRoomMessages}
+                                    title="Delete my Staff Room messages"
+                                >
+                                    <Trash2 size={16} />
+                                    <span>Clear My Messages</span>
+                                </button>
                             </div>
 
                             <div className="staffroom-feed">
@@ -3505,6 +3601,16 @@ export default function StaffDashboard() {
                                                     <span className="topic-badge">{msg.department || 'General'}</span>
                                                 </div>
                                                 <p>{msg.text}</p>
+                                                {msg.senderId === staffData.staffId && (
+                                                    <button
+                                                        type="button"
+                                                        className="staffroom-message-delete-btn"
+                                                        onClick={() => deleteStaffRoomMessage(msg.id)}
+                                                        title="Delete message"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))
