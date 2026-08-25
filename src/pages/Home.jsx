@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../service/firebase';
+import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import {
     HeartHandshake, BookOpen, Users, ArrowRight,
@@ -34,7 +35,7 @@ import photo from '../assets/photo1.png';
 import HomeNoticeBoard from './HomeNoticeBoard';
 import './Home.css';
 
-const schoolCoordinates = [10.8124016, 78.6360993]; // Somarasampettai location
+const schoolCoordinates = [10.8124016, 78.6360993];
 
 const heroImages = [
     campusBg1,
@@ -50,6 +51,9 @@ const heroImages = [
 ];
 
 export default function Home({ setActivePage }) {
+
+    const navigate = useNavigate();
+
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -176,7 +180,7 @@ export default function Home({ setActivePage }) {
                         </h2>
 
                         <div className="hero-cta-row">
-                            <button className="btn-primary" onClick={() => setActivePage('admissions')}>
+                            <button className="btn-primary" onClick={() => { navigate("/admissions"); }}>
                                 <span>Admission Portal</span>
                                 <ArrowRight size={14} />
                             </button>
@@ -198,8 +202,8 @@ export default function Home({ setActivePage }) {
                             Managed by the <strong>Holy Cross Fathers</strong> (Province of Tamil Nadu). Dedicated to value-based holistic education and empowering future leaders.
                         </p>
 
-                        <button className="btn-secondary" onClick={() => setActivePage('calendar')}>
-                            <span>Academic Calendar</span>
+                        <button className="btn-secondary" >
+                            <span onClick={() => { navigate("school/calendar"); }}>Academic Calendar</span>
                         </button>
 
                         <div className="hero-stats-row">
