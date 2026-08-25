@@ -12,7 +12,6 @@
 }
 
 .adm-dashboard-wrapper{
-    width:min(1180px, calc(100% - 32px));
     margin:36px auto 70px;
     padding:0;
     font-family:'Outfit',sans-serif;
@@ -101,7 +100,7 @@
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:10px;
-    margin-bottom:22px;
+    margin:100px;
     padding:8px;
     border:1px solid rgba(126,3,221,.10);
     border-radius:20px;
@@ -144,6 +143,7 @@
 }
 
 .adm-tab-content-area{
+    margin: 80px;
     animation:admFadeIn .38s ease both;
 }
 
@@ -233,6 +233,7 @@
         gap:6px;
         padding:6px;
         border-radius:16px;
+        margin: 30px;
     }
     .adm-tab-pill{
         min-height:52px;
@@ -245,5 +246,8 @@
     .adm-premium-card{
         padding:22px 16px;
         border-radius:20px;
+    }
+    .adm-tab-content-area{
+        margin: 40px;
     }
 }

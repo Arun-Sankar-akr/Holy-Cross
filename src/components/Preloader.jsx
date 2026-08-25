@@ -12,14 +12,14 @@ export default function Preloader({ fadeOut }) {
                     <div className="glowing-ring"></div>
                     <img
                         src={logo}
-                        alt="College Logo"
+                        alt="School Logo"
                         className="preloader-logo"
                     />
                 </div>
 
                 {/* Title & Subtitle */}
-                <h1 className="college-title">HOLY CROSS MATRIC. HR. SEC. SCHOOL</h1>
-                <p className="college-subtitle">SOMARASAMPETTAI • TIRUCHIRAPPALLI
+                <h1 className="school-title">Holy Cross Matric. Hr. Sec. School</h1>
+                <p className="school-subtitle">Somarasampettai • Tiruchirappalli
                 </p>
 
                 {/* Animated Progress / Loading Bar */}

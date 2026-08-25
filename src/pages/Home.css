@@ -1410,6 +1410,7 @@ p {
     .principal-card-img {
         max-width: 320px;
         margin: 0 auto;
+        margin-left: -30px;
     }
 
     .institution-grid {
