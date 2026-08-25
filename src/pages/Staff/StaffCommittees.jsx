@@ -1,4 +1,3 @@
-// StaffCommittees.jsx
 import React from 'react';
 import { HeartHandshake, Shield, BookOpen, Sparkles } from 'lucide-react';
 import './StaffCommittees.css';
@@ -33,14 +32,14 @@ export default function StaffCommittees() {
 
     return (
         <div className="staff-container">
-            <div className="page-header">
+            <div className="page-header premium-page-header committee-page-header">
                 <h2><HeartHandshake size={28} /> Committees & Staff Welfare</h2>
                 <p>Staff governing bodies promoting faculty growth, welfare, and operational harmony</p>
             </div>
 
-            <div className="committee-grid">
+            <div className="committee-grid premium-committee-grid">
                 {committees.map((item, idx) => (
-                    <div key={idx} className="committee-card">
+                    <div key={idx} className="committee-card premium-committee-card">
                         <div className="committee-header">
                             <div className="committee-icon">{item.icon}</div>
                             <h3>{item.title}</h3>

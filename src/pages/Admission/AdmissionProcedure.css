@@ -8,7 +8,7 @@
 }
 
 .proc-header h3 {
-    color: #2c0344;
+    color: #123A70 ;
     font-size: 1.5rem;
     font-weight: 700;
     display: flex;
@@ -51,7 +51,7 @@
 
 .proc-icon-wrap {
     background: #faf5ff;
-    color: #8004c7;
+    color: #123A70 ;
     width: 48px;
     height: 48px;
     border-radius: 12px;
@@ -62,7 +62,7 @@
 
 .proc-text-content h4 {
     margin: 0 0 8px 0;
-    color: #2c0344;
+    color: #155EEF;
     font-size: 1.05rem;
     font-weight: 700;
 }

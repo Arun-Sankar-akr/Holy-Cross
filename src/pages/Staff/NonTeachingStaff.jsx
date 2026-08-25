@@ -1,4 +1,3 @@
-// NonTeachingStaff.jsx
 import React from 'react';
 import { Users, Phone, ShieldCheck, Wrench, HardDrive } from 'lucide-react';
 import './NonTeachingStaff.css';
@@ -15,13 +14,13 @@ export default function NonTeachingStaff() {
 
     return (
         <div className="staff-container">
-            <div className="page-header">
+            <div className="page-header premium-page-header support-page-header">
                 <h2><Users size={28} /> Administrative & Support Staff</h2>
                 <p>Ensuring smooth daily operations, administrative efficiency, and campus safety</p>
             </div>
 
-            <div className="support-card">
-                <table className="support-table">
+            <div className="support-card premium-support-card">
+                <div className="support-table-shell"><table className="support-table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -44,6 +43,7 @@ export default function NonTeachingStaff() {
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     );

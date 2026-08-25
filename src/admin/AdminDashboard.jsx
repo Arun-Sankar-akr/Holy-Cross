@@ -1753,8 +1753,17 @@ export default function AdminDashboard() {
                         });
 
                         return (
-                            <div className="applications-management-card">
-                                <h3><Users size={18} color="var(--primary)" /> Staff Directory Management</h3>
+                            <div className="applications-management-card premium-section staff-directory-premium">
+                                <div className="premium-section-heading">
+                                    <div className="premium-section-title-wrap">
+                                        <div className="premium-section-icon"><Users size={19} /></div>
+                                        <div>
+                                            <h3>Staff Directory Management</h3>
+                                            <p>Manage staff profiles, credentials, departments and contact details.</p>
+                                        </div>
+                                    </div>
+                                    <span className="premium-section-count">{staffList.length} Staff</span>
+                                </div>
 
                                 {/* CREATE FORM */}
                                 <form onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
@@ -1925,10 +1934,19 @@ export default function AdminDashboard() {
 
                     {/* STUDENTS ERP */}
                     {activeTab === 'students' && (
-                        <div className="applications-management-card">
+                        <div className="applications-management-card premium-section students-directory-premium">
                             {!selectedClass && (
                                 <>
-                                    <h3>Students Directory — Classes</h3>
+                                    <div className="premium-section-heading">
+                                        <div className="premium-section-title-wrap">
+                                            <div className="premium-section-icon"><GraduationCap size={19} /></div>
+                                            <div>
+                                                <h3>Students Directory — Classes</h3>
+                                                <p>Choose a class to manage sections, enrollment and student records.</p>
+                                            </div>
+                                        </div>
+                                        <span className="premium-section-count">{studentsList.length} Students</span>
+                                    </div>
                                     <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.8rem' }}>
                                         Select a class to manage its sections and student records.
                                     </p>
@@ -2182,8 +2200,8 @@ export default function AdminDashboard() {
 
                     {/* RESULTS & MASTER PUBLISHING TAB */}
                     {activeTab === 'results' && (
-                        <div className="applications-management-card">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                        <div className="applications-management-card premium-section results-premium">
+                            <div className="premium-results-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
                                     <h3><Award size={18} color="var(--primary)" /> Examination Results & Master Publishing</h3>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>

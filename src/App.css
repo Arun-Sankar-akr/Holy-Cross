@@ -4,7 +4,6 @@
   --font-family: 'Outfit', sans-serif;
 }
 
-/* Apply globally */
 * {
   font-family: var(--font-family);
 }

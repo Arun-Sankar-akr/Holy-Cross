@@ -45,7 +45,7 @@
 }
 
 .fee-table th {
-    background: linear-gradient(135deg, #8004c7 0%, #6703a1 100%);
+    background: linear-gradient(135deg, #123A70 0%, #155EEF 100%);
     color: #ffffff;
     font-weight: 600;
     font-size: 0.95rem;
@@ -63,7 +63,7 @@
 
 .annual-cell {
     font-weight: 700;
-    color: #8004c7;
+    color: #123A70;
 }
 
 .fee-notice-box {

@@ -71,11 +71,16 @@ function AppContent({ loading, fadeOut }) {
   // Initialize Lenis Smooth Scrolling
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.0,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      // Increased duration for a slower, more luxurious scroll glide
+      duration: 1.8,
+      // Smooth custom cubic ease-out for ultra-fluid momentum deceleration
+      easing: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
+      // Multipliers to make wheel scrolling feel weightier and less aggressive
+      wheelMultiplier: 0.8,
+      touchMultiplier: 1.5,
     });
 
     lenisRef.current = lenis;
@@ -85,9 +90,10 @@ function AppContent({ loading, fadeOut }) {
       requestAnimationFrame(raf);
     }
 
-    requestAnimationFrame(raf);
+    const animationFrameId = requestAnimationFrame(raf);
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       lenis.destroy();
     };
   }, []);

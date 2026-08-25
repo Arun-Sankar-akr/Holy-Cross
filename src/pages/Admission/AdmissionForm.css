@@ -19,7 +19,7 @@
     position:absolute;
     inset:0 0 auto;
     height:4px;
-    background:linear-gradient(90deg,#7e03dd,#b66cff,#7e03dd);
+    background:linear-gradient(90deg,#123A70,#063593,#155EEF);
 }
 
 .form-header-area{
@@ -46,13 +46,14 @@
     font-size:.88rem;
 }
 
+
 .step-indicator-pill{
     flex:none;
     padding:8px 13px;
     border:1px solid rgba(126,3,221,.14);
     border-radius:999px;
     background:#f7efff;
-    color:#7e03dd;
+    color:#123A70;
     font-size:.76rem;
     font-weight:800;
 }
@@ -65,12 +66,13 @@
     position:relative;
 }
 
+
 .wizard-step-item{
     position:relative;
     display:flex;
     align-items:center;
     gap:9px;
-    color:#a39aaa;
+    color:#155EEF;
     font-size:.78rem;
     font-weight:700;
     transition:.25s ease;
@@ -104,9 +106,9 @@
     transition:.25s ease;
 }
 
-.wizard-step-item.active{color:#7e03dd}
+.wizard-step-item.active{color:#123A70}
 .wizard-step-item.active .wizard-step-bubble{
-    background:linear-gradient(135deg,#7e03dd,#5700a8);
+    background:linear-gradient(135deg,#123A70,#155EEF);
     color:#fff;
     box-shadow:0 8px 20px rgba(126,3,221,.25);
 }
@@ -167,7 +169,7 @@
 
 .form-group input:focus,
 .form-group select:focus{
-    border-color:#7e03dd;
+    border-color:#123A70;
     background:#fff;
     box-shadow:0 0 0 4px rgba(126,3,221,.08);
 }
@@ -193,7 +195,7 @@
 }
 
 .file-drop-zone:hover{
-    border-color:#7e03dd;
+    border-color:#123A70;
     background:#fbf7ff;
     transform:translateY(-1px);
 }
@@ -275,7 +277,7 @@
 .submit-action-btn{
     border:0;
     color:#fff;
-    background:linear-gradient(135deg,#7e03dd,#5700a8);
+    background:linear-gradient(90deg,#123A70,#063593,#155EEF);
     box-shadow:0 10px 24px rgba(126,3,221,.23);
 }
 
@@ -299,7 +301,7 @@
 .secondary-nav-btn:hover{
     border-color:#c8b4d5;
     background:#faf7fc;
-    color:#7e03dd;
+    color:#063593;
 }
 
 .form-summary-review h4{
@@ -337,7 +339,7 @@
 .summary-item.full-span{grid-column:1/-1}
 
 .sum-label{
-    color:#8a00c8;
+    color:#063593;
     font-size:.68rem;
     font-weight:800;
     text-transform:uppercase;
@@ -368,6 +370,7 @@
     align-items:center;
     justify-content:center;
     margin-bottom:18px;
+    color: #087b59;
     border:1px solid #dec9ec;
     border-radius:25px;
     background:linear-gradient(145deg,#faf4ff,#f1e3fc);
@@ -393,11 +396,12 @@
     border:1px dashed #b78bcf;
     border-radius:15px;
     background:#faf5ff;
-    color:#7e03dd;
+    color:#123A70;
     font-size:1.25rem;
     font-weight:800;
     letter-spacing:1.2px;
 }
+
 
 .sub-text{
     max-width:500px;
@@ -408,7 +412,7 @@
 .reset-form-btn{
     border:1px solid #dfcbed;
     background:#faf5ff;
-    color:#7e03dd;
+    color:#123A70;
 }
 
 .reset-form-btn:hover{
