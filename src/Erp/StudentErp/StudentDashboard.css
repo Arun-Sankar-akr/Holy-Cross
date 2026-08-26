@@ -1612,7 +1612,7 @@ td {
     background: #fff !important;
   }
 
-  .hall-ticket-print-paper {
+  .ht-card {
     margin: 0 !important;
     box-shadow: none !important;
     page-break-inside: avoid;
@@ -2991,28 +2991,386 @@ td {
   }
 }
 
-/* Hall Ticket replica — mobile */
+/* =====================================================================
+   Hall Ticket — redesigned printable card (.ht-*)
+   ===================================================================== */
+.ht-card {
+  position: relative;
+  margin: 20px;
+  background: #fff;
+  color: #0f172a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  line-height: 1.45;
+  border: 3px double #0f172a;
+  overflow: hidden;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, .14);
+}
+
+.ht-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ht-watermark img {
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  opacity: .05;
+  filter: grayscale(1);
+}
+
+.ht-content {
+  position: relative;
+  z-index: 1;
+}
+
+.ht-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 2px solid #0f172a;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.ht-header-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.ht-header-text {
+  flex: 1;
+  text-align: center;
+}
+
+.ht-header-text h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1a3b8a;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+.ht-header-text p {
+  margin: 4px 0 0;
+  font-size: .72rem;
+  font-style: italic;
+  color: #475569;
+}
+
+.ht-header-spacer {
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.ht-band {
+  display: flex;
+  background: linear-gradient(135deg, #10233f, #1e3a5f 55%, #10233f);
+  color: #fff;
+}
+
+.ht-band>div {
+  flex: 1;
+  padding: 11px 14px;
+  text-align: center;
+  font-weight: 800;
+  font-size: .8rem;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(255, 255, 255, .22);
+}
+
+.ht-band>div:last-child {
+  border-right: 0;
+}
+
+.ht-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  flex-wrap: wrap;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.ht-info-fields {
+  flex: 1;
+  min-width: 220px;
+}
+
+.ht-info-item {
+  display: flex;
+  margin-bottom: 9px;
+  font-size: .85rem;
+}
+
+.ht-info-item .label {
+  width: 110px;
+  font-weight: 700;
+  color: #1e293b;
+  flex-shrink: 0;
+}
+
+.ht-info-item .colon {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.ht-info-item .value {
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.ht-side {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ht-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ht-qr-box img {
+  width: 96px;
+  height: 96px;
+  border: 1px solid #cbd5e1;
+  padding: 3px;
+  background: #fff;
+}
+
+.ht-qr-box span {
+  font-size: .6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.ht-photo-box {
+  width: 90px;
+  height: 108px;
+  border: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.ht-photo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ht-meta-strip {
+  display: flex;
+  border-top: 1px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+}
+
+.ht-meta-cell {
+  flex: 1;
+  padding: 10px 18px;
+  border-right: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ht-meta-cell:last-child {
+  border-right: 0;
+}
+
+.ht-meta-cell .m-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: .3px;
+}
+
+.ht-meta-cell .m-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ht-table-wrap {
+  padding: 18px 22px 0;
+}
+
+.ht-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+}
+
+.ht-table thead th {
+  background: #eef2f7;
+  color: #0f172a;
+  text-align: left;
+  padding: 9px 14px;
+  border: 1px solid #cbd5e1;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.ht-table tbody td {
+  padding: 9px 14px;
+  border: 1px solid #cbd5e1;
+}
+
+.ht-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.ht-sign-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 60px 22px 0;
+}
+
+.ht-sign-line {
+  width: 190px;
+  border-top: 1px solid #0f172a;
+  padding-top: 5px;
+  font-size: .74rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ht-notes {
+  padding: 20px 22px 24px;
+}
+
+.ht-notes h4 {
+  margin: 0 0 8px;
+  font-size: .86rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ht-notes ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: .73rem;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.ht-disclaimer {
+  margin: 6px 0 0;
+  font-size: .67rem;
+  color: #64748b;
+}
+
+.ht-principal-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+
+.ht-principal-block {
+  text-align: center;
+}
+
+.ht-principal-block img {
+  width: 130px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 2px;
+}
+
+.ht-principal-block .p-name {
+  margin: 0;
+  font-size: .76rem;
+  font-weight: 800;
+  border-top: 1px solid #0f172a;
+  padding-top: 4px;
+  width: 190px;
+}
+
+.ht-principal-block .p-role {
+  font-size: .66rem;
+  color: #64748b;
+}
+
 @media (max-width: 640px) {
-  .hall-ticket-print-paper {
-    margin: 12px !important;
-    font-size: 12px !important;
+  .ht-card {
+    margin: 12px;
+    font-size: 12px;
   }
 
-  .hall-ticket-header-row {
+  .ht-header {
     flex-direction: column;
     text-align: center;
   }
 
-  .hall-ticket-header-row>div:last-child {
+  .ht-header-spacer {
     display: none;
   }
 
-  .hall-ticket-details-row {
+  .ht-band {
     flex-direction: column;
-    align-items: center;
   }
 
-  .hall-ticket-details-row>div:first-child {
-    width: 100%;
+  .ht-band>div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .22);
+  }
+
+  .ht-band>div:last-child {
+    border-bottom: 0;
+  }
+
+  .ht-info-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ht-side {
+    justify-content: center;
+  }
+
+  .ht-meta-strip {
+    flex-direction: column;
+  }
+
+  .ht-meta-cell {
+    border-right: 0;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .ht-meta-cell:last-child {
+    border-bottom: 0;
+  }
+
+  .ht-sign-row,
+  .ht-principal-row {
+    justify-content: center;
+  }
+}
+
+@media print {
+  .ht-table thead th,
+  .ht-band {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

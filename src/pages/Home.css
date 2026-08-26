@@ -1,30 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 :root {
     /* ---- Brand palette ---- */
-    --ink: #172033;
-    --indigo: #3730A9;
-    --indigo-deep: #1E1B4B;
-    --violet: #6D5DF5;
+      --ink: #1E293B;                 /* Deep slate for highly readable headers */
+    --indigo: #3B82F6;              /* Energetic blue for primary UI elements */
+    --indigo-deep: #1E3A8A;         /* Traditional academic Navy Blue */
+    --violet: #6366F1;              /* Modern friendly indigo for secondary highlights */
 
-    --primary: #12946F;
-    /* Emerald — signature accent */
-    --primary-dark: #0B6B52;
-    --primary-gradient: linear-gradient(135deg, #2FBF95 0%, #12946F 55%, #0B6B52 100%);
-    --primary-glow: rgba(18, 148, 111, 0.32);
+    /* ---- Primary Brand Color ---- */
+    --primary: #F59E0B;             /* Warm Gold/Amber — signature school accent */
+    --primary-dark: #D97706;        /* Deep gold for hover states and text readability */
+    --primary-gradient: linear-gradient(135deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%);
+    --primary-glow: rgba(245, 158, 11, 0.25);
 
-    --rose: #E1477A;
-    --rose-dark: #C22F63;
-    --sky: #2F80C7;
-    --sky-dark: #23629C;
-    --violet-accent: #7C3AED;
+    /* ---- Secondary Accents & Statuses ---- */
+    --rose: #EF4444;                /* Clean red for important alerts or urgent deadlines */
+    --rose-dark: #DC2626;
+    --sky: #0EA5E9;                 /* Bright sky blue for informational badges or events */
+    --sky-dark: #0284C7;
+    --violet-accent: #8B5CF6;       /* Creative violet for arts, clubs, or extracurriculars */
 
-    /* ---- Surfaces & text ---- */
-    --bg-body: #F4F6FB;
-    --bg-cream-soft: #EEF1F8;
-    --bg-surface: #FFFFFF;
+    /* ---- Surfaces & Text ---- */
+    --bg-body: #F8FAFC;             /* Bright, clean slate-white background */
+    --bg-cream-soft: #F1F5F9;       /* Soft gray-blue container backgrounds */
+    --bg-surface: #FFFFFF;          /* Pure white for cards, panels, and content rows */
     --text-dark: var(--ink);
-    --text-muted: #5C6478;
-    --border: #E1E5F0;
+    --text-muted: #64748B;          /* Highly legible muted gray for descriptions/dates */
+    --border: #E2E8F0;       
 
     /* ---- Shape & elevation ---- */
     --radius-sm: 10px;

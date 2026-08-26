@@ -226,6 +226,68 @@ export default function StudentDashboard() {
             .trim();
     };
 
+    // Hall-ticket date helpers:
+    // Display dates consistently as DD-MM-YYYY and sort the timetable chronologically.
+    const parseHallTicketDate = (value) => {
+        if (!value) return null;
+
+        // Firestore Timestamp / JS Date
+        if (value?.toDate && typeof value.toDate === 'function') {
+            const d = value.toDate();
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+
+        const raw = String(value).trim();
+        if (!raw) return null;
+
+        // YYYY-MM-DD / YYYY/MM/DD
+        let match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+        if (match) {
+            const [, y, m, d] = match;
+            const date = new Date(Number(y), Number(m) - 1, Number(d));
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        // DD-MM-YYYY / DD/MM/YYYY
+        match = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+        if (match) {
+            const [, d, m, y] = match;
+            const date = new Date(Number(y), Number(m) - 1, Number(d));
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        const parsed = new Date(raw);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const formatHallTicketDate = (value) => {
+        const date = parseHallTicketDate(value);
+        if (!date) return value || '—';
+
+        return [
+            String(date.getDate()).padStart(2, '0'),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            date.getFullYear()
+        ].join('-');
+    };
+
+    const sortHallTicketSubjectRows = (rows) => {
+        return [...rows].sort((a, b) => {
+            const dateA = parseHallTicketDate(a.date || a.examDate);
+            const dateB = parseHallTicketDate(b.date || b.examDate);
+
+            // Valid dates first, then undated rows.
+            if (dateA && dateB) return dateA.getTime() - dateB.getTime();
+            if (dateA) return -1;
+            if (dateB) return 1;
+            return 0;
+        });
+    };
+
     const cleanTime = (str) => {
         if (!str) return '';
         return str.toString().toLowerCase().replace(/\s*(am|pm)\s*/g, '').replace(/[^0-9]/g, '');
@@ -2011,15 +2073,19 @@ export default function StudentDashboard() {
                                     const examYearValue = myHallTicketPublication.year || '';
                                     const classValue = studentData.grade || 'Senior Secondary';
                                     const examCenterCode = myHallTicketPublication.examCenterCode || selectedHallTicket.hallNo || myHallTicketPublication.hallNo || '—';
+                                    const seatNoValue = getMySeatNo(selectedHallTicket) || myHallTicketPublication.seatNo || '—';
                                     const matchedExamTimetable = examTimetableList.filter(t =>
                                         cleanString(t.className) === cleanString(classValue) &&
                                         cleanString(t.examName) === cleanString(examNameValue)
                                     );
-                                    const subjectRows = matchedExamTimetable.length
+                                    const rawSubjectRows = matchedExamTimetable.length
                                         ? matchedExamTimetable.map(t => ({ code: t.subjectCode, name: t.subject, date: t.examDate }))
                                         : (Array.isArray(myHallTicketPublication.subjects) && myHallTicketPublication.subjects.length
                                             ? myHallTicketPublication.subjects
                                             : (Array.isArray(selectedHallTicket.subjects) ? selectedHallTicket.subjects : []));
+
+                                    // Always show the hall-ticket timetable in date order: 1 -> 31.
+                                    const subjectRows = sortHallTicketSubjectRows(rawSubjectRows);
                                     const qrData = encodeURIComponent(`Roll No: ${rollNoValue} | Name: ${studentData.name} | Exam: ${examNameValue}`);
                                     const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=${qrData}`;
 
@@ -2040,127 +2106,120 @@ export default function StudentDashboard() {
                                                 </div>
                                             </div>
 
-                                            <div
-                                                className="hall-ticket-print-paper"
-                                                style={{
-                                                    margin: '20px', border: '2px solid #0f172a', background: '#fff', color: '#0f172a',
-                                                    fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '13px', lineHeight: 1.4
-                                                }}
-                                            >
-                                                <div className="hall-ticket-header-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: '2px solid #0f172a' }}>
-                                                    <img src={logo} alt="School Logo" style={{ width: 58, height: 58, objectFit: 'contain', flexShrink: 0 }} />
-                                                    <div style={{ flex: 1, textAlign: 'center' }}>
-                                                        <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#1a3b8a', letterSpacing: '.2px' }}>
-                                                            {HALL_TICKET_SCHOOL_NAME}
-                                                        </h1>
-                                                        <p style={{ margin: '3px 0 0', fontSize: '.72rem', fontStyle: 'italic', color: '#334155' }}>
-                                                            {HALL_TICKET_SCHOOL_TAGLINE}
-                                                        </p>
-                                                    </div>
-                                                    <div style={{ width: 58, flexShrink: 0 }} />
+                                            <div className="ht-card">
+                                                <div className="ht-watermark">
+                                                    <img src={logo} alt="" />
                                                 </div>
 
-                                                <div style={{ display: 'flex', background: 'linear-gradient(135deg,#1e3a5f,#0f2942)', color: '#fff' }}>
-                                                    <div style={{ flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,.25)', fontWeight: 800, fontSize: '.82rem' }}>
-                                                        Hall Ticket - Theory
+                                                <div className="ht-content">
+                                                    <div className="ht-header">
+                                                        <img src={logo} alt="School Logo" className="ht-header-logo" />
+                                                        <div className="ht-header-text">
+                                                            <h1>{HALL_TICKET_SCHOOL_NAME}</h1>
+                                                            <p>{HALL_TICKET_SCHOOL_TAGLINE}</p>
+                                                        </div>
+                                                        <div className="ht-header-spacer" />
                                                     </div>
-                                                    <div style={{ flex: 1.6, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,.25)', fontWeight: 800, fontSize: '.82rem' }}>
-                                                        {examNameValue}{examYearValue ? ` ${examYearValue}` : ''} Examination
-                                                    </div>
-                                                    <div style={{ flex: 1, padding: '10px 12px', textAlign: 'center', fontWeight: 800, fontSize: '.82rem' }}>
-                                                        {classValue}
-                                                    </div>
-                                                </div>
 
-                                                <div className="hall-ticket-details-row" style={{ display: 'flex', justifyContent: 'space-between', gap: 18, padding: '18px', flexWrap: 'wrap' }}>
-                                                    <div style={{ flex: 1 }}>
-                                                        {[
-                                                            ['Roll No', rollNoValue],
-                                                            ['Name', studentData.name],
-                                                        ].map(([label, value]) => (
-                                                            <div key={label} style={{ display: 'flex', marginBottom: 8, fontSize: '.85rem' }}>
-                                                                <span style={{ width: 130, fontWeight: 700, flexShrink: 0 }}>{label}</span>
-                                                                <span style={{ width: 14, flexShrink: 0 }}>:</span>
-                                                                <span style={{ fontWeight: 700, textTransform: 'uppercase' }}>{value}</span>
+                                                    <div className="ht-band">
+                                                        <div>Hall Ticket – Theory</div>
+                                                        <div>{examNameValue}{examYearValue ? ` ${examYearValue}` : ''} Examination</div>
+                                                        <div>{classValue}</div>
+                                                    </div>
+
+                                                    <div className="ht-info-row">
+                                                        <div className="ht-info-fields">
+                                                            {[
+                                                                ['Roll No', rollNoValue],
+                                                                ['Name', studentData.name],
+                                                            ].map(([label, value]) => (
+                                                                <div key={label} className="ht-info-item">
+                                                                    <span className="label">{label}</span>
+                                                                    <span className="colon">:</span>
+                                                                    <span className="value">{value}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="ht-side">
+                                                            <div className="ht-qr-box">
+                                                                <img src={qrSrc} alt="QR Code" />
+                                                                <span>Scan to verify</span>
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                                                        <img src={qrSrc} alt="QR Code" style={{ width: 100, height: 100, border: '1px solid #cbd5e1' }} />
-                                                        <div style={{ width: 90, height: 108, border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f8fafc' }}>
-                                                            {studentPhoto ? (
-                                                                <img src={studentPhoto} alt={studentData.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            ) : (
-                                                                <User size={34} color="#94a3b8" />
-                                                            )}
+                                                            <div className="ht-photo-box">
+                                                                {studentPhoto ? (
+                                                                    <img src={studentPhoto} alt={studentData.name} />
+                                                                ) : (
+                                                                    <User size={34} color="#94a3b8" />
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderTop: 0, fontSize: '.78rem' }}>
-                                                    <div style={{ width: 150, flexShrink: 0, padding: '10px 14px', borderRight: '1px solid #cbd5e1', fontWeight: 700, background: '#f8fafc' }}>
-                                                        Hall Number<br />
-                                                    </div>
-                                                    <div style={{ flex: 1, padding: '10px 14px' }}>
-                                                        <div style={{ fontWeight: 800, marginBottom: 3 }}>{examCenterCode}</div>
-                                                    </div>
-                                                </div>
-
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', margin: '18px 0 0', fontSize: '.78rem' }}>
-                                                    <thead>
-                                                        <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
-                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Subject Code</th>
-                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Subject Name</th>
-                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Date of Exam</th>
-                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Invigilator Signature</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {subjectRows.length > 0 ? subjectRows.map((sub, idx) => (
-                                                            <tr key={idx}>
-                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.code || sub.subjectCode || '—'}</td>
-                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.name || sub.subjectName || '—'}</td>
-                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.date || sub.examDate || '—'}</td>
-                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>&nbsp;</td>
-                                                            </tr>
-                                                        )) : (
-                                                            <tr>
-                                                                <td colSpan={4} style={{ padding: '10px 14px', border: '1px solid #cbd5e1', color: '#64748b', textAlign: 'center' }}>
-                                                                    Subject-wise schedule will be updated by the office shortly.
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-
-                                                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '18px 18px 0' }}>
-                                                    <div style={{ textAlign: 'center' }}>
-                                                        <div style={{ width: 180, borderTop: '1px solid #0f172a', paddingTop: 4, fontSize: '.74rem', fontWeight: 700 }}>
-                                                            Student Signature
+                                                    <div className="ht-meta-strip">
+                                                        <div className="ht-meta-cell">
+                                                            <span className="m-label">Hall Number</span>
+                                                            <span className="m-value">{examCenterCode}</span>
+                                                        </div>
+                                                        <div className="ht-meta-cell">
+                                                            <span className="m-label">Seat Number</span>
+                                                            <span className="m-value">{seatNoValue}</span>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div style={{ padding: '18px' }}>
-                                                    <h4 style={{ margin: '0 0 8px', fontSize: '.88rem', fontWeight: 800 }}>Important Instructions</h4>
-                                                    <ol style={{ margin: 0, paddingLeft: 18, fontSize: '.74rem', color: '#334155', lineHeight: 1.7 }}>
-                                                        <li>For getting entry into the examination hall, candidate must bring the original Identity Card issued by the school along with the examination hall ticket and a valid photo identity proof.</li>
-                                                        <li>Carrying Mobile Phones, Cameras, bags, calculators and any other electronic gadgets etc. are not allowed in the Examination Center.</li>
-                                                        <li>Theory Examination timings and reporting time will be as communicated by the office. The candidates must report minimum one hour before the commencement of the exam.</li>
-                                                        <li>Candidate will not be allowed to appear in the exam if he/she reports after commencement of the exam.</li>
-                                                    </ol>
+                                                    <div className="ht-table-wrap">
+                                                        <table className="ht-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Subject Code</th>
+                                                                    <th>Subject Name</th>
+                                                                    <th>Date of Exam</th>
+                                                                    <th>Invigilator Signature</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {subjectRows.length > 0 ? subjectRows.map((sub, idx) => (
+                                                                    <tr key={idx}>
+                                                                        <td>{sub.code || sub.subjectCode || '—'}</td>
+                                                                        <td>{sub.name || sub.subjectName || '—'}</td>
+                                                                        <td>{formatHallTicketDate(sub.date || sub.examDate)}</td>
+                                                                        <td>&nbsp;</td>
+                                                                    </tr>
+                                                                )) : (
+                                                                    <tr>
+                                                                        <td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>
+                                                                            Subject-wise schedule will be updated by the office shortly.
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
 
-                                                    <h4 style={{ margin: '16px 0 4px', fontSize: '.82rem', fontWeight: 800 }}>Disclaimer</h4>
-                                                    <p style={{ margin: 0, fontSize: '.68rem', color: '#64748b' }}>
-                                                        {HALL_TICKET_SCHOOL_NAME} is not responsible for any inadvertent error that may have crept in the Hall Ticket.
-                                                    </p>
+                                                    <div className="ht-sign-row">
+                                                        <div className="ht-sign-block">
+                                                            <div className="ht-sign-line">Student Signature</div>
+                                                        </div>
+                                                    </div>
 
-                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 32 }}>
-                                                        <div style={{ textAlign: 'center' }}>
-                                                            <img src={principalSignature} alt="Principal Signature" style={{ width: 140, height: 50, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
-                                                            <div style={{ width: 180, borderTop: '1px solid #0f172a', paddingTop: 4, fontSize: '.74rem', fontWeight: 700 }}>
-                                                                <p>Fr. A. AROKIA SAHAYARAJ </p>
-                                                                <span>Principal Signature</span>
+                                                    <div className="ht-notes">
+                                                        <h4>Important Instructions</h4>
+                                                        <ol>
+                                                            <li>For getting entry into the examination hall, candidate must bring the original Identity Card issued by the school along with the examination hall ticket and a valid photo identity proof.</li>
+                                                            <li>Carrying Mobile Phones, Cameras, bags, calculators and any other electronic gadgets etc. are not allowed in the Examination Center.</li>
+                                                            <li>Theory Examination timings and reporting time will be as communicated by the office. The candidates must report minimum one hour before the commencement of the exam.</li>
+                                                            <li>Candidate will not be allowed to appear in the exam if he/she reports after commencement of the exam.</li>
+                                                        </ol>
+
+                                                        <h4 style={{ marginTop: 16 }}>Disclaimer</h4>
+                                                        <p className="ht-disclaimer">
+                                                            {HALL_TICKET_SCHOOL_NAME} is not responsible for any inadvertent error that may have crept in the Hall Ticket.
+                                                        </p>
+
+                                                        <div className="ht-principal-row">
+                                                            <div className="ht-principal-block">
+                                                                <img src={principalSignature} alt="Principal Signature" />
+                                                                <p className="p-name">Fr. A. AROKIA SAHAYARAJ</p>
+                                                                <span className="p-role">Principal Signature</span>
                                                             </div>
                                                         </div>
                                                     </div>

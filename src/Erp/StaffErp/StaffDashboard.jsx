@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
+import { Html5Qrcode } from 'html5-qrcode';
 import logo from "../../assets/logo.png"
 import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where,
@@ -109,6 +110,13 @@ export default function StaffDashboard() {
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
     const [staffExamHallAllocations, setStaffExamHallAllocations] = useState([]);
+
+    // Hall-ticket QR verification
+    const [showHallTicketScanner, setShowHallTicketScanner] = useState(false);
+    const [activeExamDuty, setActiveExamDuty] = useState(null);
+    const [scannerStatus, setScannerStatus] = useState('');
+    const [scannerResult, setScannerResult] = useState(null);
+    const hallTicketScannerRef = useRef(null);
 
     const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
     const [studentMarks, setStudentMarks] = useState({});
@@ -529,6 +537,71 @@ export default function StaffDashboard() {
         const idMatch = item.staffId && staffData.staffId ? item.staffId === staffData.staffId : false;
         return idMatch || !assigned || !current || assigned === current || assigned.includes(current) || current.includes(assigned);
     });
+
+    const parseHallTicketQr = (rawValue) => {
+        const raw = String(rawValue || '').trim();
+        if (!raw) return null;
+        const rollMatch = raw.match(/Roll\s*No\s*:\s*([^|]+)/i);
+        const nameMatch = raw.match(/Name\s*:\s*([^|]+)/i);
+        const examMatch = raw.match(/Exam\s*:\s*([^|]+)/i);
+        if (rollMatch || nameMatch || examMatch) return { rollNo: rollMatch?.[1]?.trim() || '', name: nameMatch?.[1]?.trim() || '', exam: examMatch?.[1]?.trim() || '', raw };
+        try { const parsed = JSON.parse(decodeURIComponent(raw)); return { rollNo: parsed.rollNo || parsed.admissionNo || '', name: parsed.name || '', exam: parsed.exam || parsed.examName || '', raw }; } catch { return { rollNo: raw, name: '', exam: '', raw }; }
+    };
+
+    const openHallTicketScanner = (duty) => { setActiveExamDuty(duty); setScannerResult(null); setScannerStatus('Starting camera...'); setShowHallTicketScanner(true); };
+    const closeHallTicketScanner = () => { setShowHallTicketScanner(false); setScannerStatus(''); setScannerResult(null); };
+
+    const verifyHallTicketFromQr = async (decodedText) => {
+        const qr = parseHallTicketQr(decodedText);
+        if (!qr || !activeExamDuty) return;
+        const duty = activeExamDuty;
+        const allocatedList = Array.isArray(duty.studentList) ? duty.studentList : [];
+        const allocatedIds = Array.isArray(duty.studentIds) ? duty.studentIds.map(String) : [];
+        const normalizedRoll = cleanString(qr.rollNo);
+        const normalizedName = cleanString(qr.name);
+        let matchedStudent = allocatedList.find(student => {
+            const id = String(student.id || student.studentId || '');
+            const admissionNo = cleanString(student.admissionNo || student.admissionNumber);
+            const rollNo = cleanString(student.rollNo || student.rollNumber);
+            const name = cleanString(student.name);
+            return (normalizedRoll && (normalizedRoll === admissionNo || normalizedRoll === rollNo || normalizedRoll === cleanString(id))) || (!normalizedRoll && normalizedName && normalizedName === name);
+        });
+        if (!matchedStudent && allocatedIds.length) matchedStudent = allStudents.find(st => {
+            const id = String(st.id || ''); if (!allocatedIds.includes(id)) return false;
+            const admissionNo = cleanString(st.admissionNo || st.admissionNumber); const rollNo = cleanString(st.rollNo || st.rollNumber);
+            return normalizedRoll && (normalizedRoll === admissionNo || normalizedRoll === rollNo || normalizedRoll === cleanString(id));
+        });
+        if (!matchedStudent) { setScannerResult({ ok: false, message: 'Student is NOT allocated to this exam hall.', qr }); setScannerStatus('Verification failed'); return false; }
+        const studentId = String(matchedStudent.id || matchedStudent.studentId || '');
+        const studentRecord = allStudents.find(st => String(st.id) === studentId) || matchedStudent;
+        const now = new Date().toISOString();
+        const verification = { status: 'Present', verificationStatus: 'Verified', verified: true, verifiedAt: now, verifiedBy: staffData.staffId || staffData.name, staffName: staffData.name, hallNo: duty.hallNo || '', examName: duty.examName || qr.exam || '', dutyTime: duty.dutyTime || '', allocationId: duty.id, studentId };
+        try {
+            if (Array.isArray(duty.studentList)) {
+                const updatedStudentList = allocatedList.map(student => String(student.id || student.studentId || '') === studentId ? { ...student, ...verification } : student);
+                await updateDoc(doc(db, 'staff_exam_halls', duty.id), { studentList: updatedStudentList, lastScanAt: serverTimestamp(), lastScannedStudentId: studentId, lastScannedBy: staffData.staffId || staffData.name });
+            } else await updateDoc(doc(db, 'staff_exam_halls', duty.id), { lastScanAt: serverTimestamp(), lastScannedStudentId: studentId, lastScannedBy: staffData.staffId || staffData.name });
+            await updateDoc(doc(db, 'students_records', studentId), { hallTicketVerification: verification, examHallStatus: 'Present', examHallVerified: true, examHallVerifiedAt: now, examHallVerifiedBy: staffData.staffId || staffData.name });
+            await setDoc(doc(db, 'exam_hall_attendance', `${duty.id}_${studentId}`), { ...verification, admissionNo: studentRecord.admissionNo || studentRecord.rollNo || matchedStudent.admissionNo || '', studentName: studentRecord.name || matchedStudent.name || '', scannedQr: qr.raw, createdAt: serverTimestamp() }, { merge: true });
+            setScannerResult({ ok: true, message: `${studentRecord.name || matchedStudent.name || 'Student'} — Present & Verified`, student: { ...matchedStudent, ...verification } });
+            setScannerStatus('Student verified successfully');
+            return true;
+        } catch (error) { console.error('Hall-ticket QR verification error:', error); setScannerResult({ ok: false, message: 'Verification could not be saved. Please try again.', qr }); setScannerStatus('Save failed'); return false; }
+    };
+
+    useEffect(() => {
+        if (!showHallTicketScanner) return undefined;
+        let cancelled = false; const scanner = new Html5Qrcode('hall-ticket-qr-reader'); hallTicketScannerRef.current = scanner;
+        const startScanner = async () => {
+            try { const cameras = await Html5Qrcode.getCameras(); if (!cameras?.length) throw new Error('No camera found'); const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0]; if (cancelled) return;
+                await scanner.start(preferred.id, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, async (decodedText) => { const verified = await verifyHallTicketFromQr(decodedText); try { if (verified && scanner.isScanning) await scanner.stop(); } catch {} }, () => {});
+                if (!cancelled) setScannerStatus('Point the camera at the student hall-ticket QR code');
+            } catch (error) { console.error('Unable to start hall-ticket QR scanner:', error); if (!cancelled) setScannerStatus('Camera unavailable. Please allow camera permission and try again.'); }
+        };
+        const timer = setTimeout(startScanner, 100);
+        return () => { cancelled = true; clearTimeout(timer); const activeScanner = hallTicketScannerRef.current; hallTicketScannerRef.current = null; if (activeScanner) activeScanner.stop().catch(() => {}).finally(() => activeScanner.clear()); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showHallTicketScanner]);
 
     const myLeaveRequests = staffLeaveList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
@@ -3775,12 +3848,15 @@ export default function StaffDashboard() {
                                                 <span><Clock size={14} /> {item.dutyTime || 'Time not specified'}</span>
                                                 <span><Users size={14} /> {item.studentCount || item.studentIds?.length || 0} Students</span>
                                             </div>
-                                            {Array.isArray(item.studentList) && item.studentList.length > 0 && (
+                                            <button type="button" className="btn-primary" style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px' }} onClick={() => openHallTicketScanner(item)}>
+                                                 <Search size={16} /> Scan Hall Ticket QR
+                                             </button>
+                                             {Array.isArray(item.studentList) && item.studentList.length > 0 && (
                                                 <div className="exam-hall-student-list">
                                                     {item.studentList.map((student, idx) => (
                                                         <div key={student.id || idx} className="exam-hall-student-item">
                                                             <span>{idx + 1}. {student.name || 'Student'}</span>
-                                                            <small>#{student.admissionNo || 'N/A'}</small>
+                                                            <small>#{student.admissionNo || 'N/A'} · {student.verificationStatus === 'Verified' ? 'Present · Verified' : 'Not Verified'}</small>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -3789,6 +3865,21 @@ export default function StaffDashboard() {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {showHallTicketScanner && (
+                        <div className="modal-overlay" onClick={closeHallTicketScanner}>
+                            <div className="modal-content" style={{ maxWidth: '560px', width: '95%', padding: '20px' }} onClick={(e) => e.stopPropagation()}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                    <div><h3 style={{ margin: 0 }}>Scan Student Hall Ticket</h3><p style={{ margin: '5px 0 0', color: 'var(--text-muted)' }}>{activeExamDuty?.examName || 'Examination'} · {activeExamDuty?.hallNo || 'Hall'}</p></div>
+                                    <button type="button" className="btn-secondary" onClick={closeHallTicketScanner}><X size={16} /> Close</button>
+                                </div>
+                                <div id="hall-ticket-qr-reader" style={{ width: '100%', minHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#0f172a' }} />
+                                <p style={{ textAlign: 'center', margin: '12px 0', fontSize: '0.85rem' }}>{scannerStatus}</p>
+                                {scannerResult && <div style={{ padding: '14px', borderRadius: '10px', background: scannerResult.ok ? '#dcfce7' : '#fee2e2', color: scannerResult.ok ? '#166534' : '#991b1b' }}><strong>{scannerResult.ok ? '✓ VERIFIED' : '✕ NOT VERIFIED'}</strong><div style={{ marginTop: '5px' }}>{scannerResult.message}</div></div>}
+                                <div style={{ marginTop: '14px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Only students included in this invigilation duty allocation can be verified. A successful scan marks the student <strong>Present</strong> and <strong>Verified</strong>.</div>
+                            </div>
                         </div>
                     )}
 
