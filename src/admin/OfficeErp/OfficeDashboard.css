@@ -105,8 +105,9 @@
 }
 
 /* ---------------- SIDEBAR ---------------- */
-.dashboard-sidebar {
-    width: 272px;
+.dashboard-sidebars {
+    width: 302px;
+    padding: 30px;
     background: linear-gradient(180deg, #ffffff 0%, #fbfefd 100%);
     border-right: 1px solid var(--office-border);
     display: flex;
@@ -673,7 +674,7 @@
 
 /* ---------------- RESPONSIVE ---------------- */
 @media (max-width: 1100px) {
-    .dashboard-sidebar {
+    .dashboard-sidebars {
         width: 240px;
     }
 
@@ -699,7 +700,7 @@
         display: block;
     }
 
-    .dashboard-sidebar {
+    .dashboard-sidebars {
         position: fixed;
         top: 0;
         left: 0;
@@ -710,7 +711,7 @@
         box-shadow: 12px 0 35px rgba(15, 23, 42, .16);
     }
 
-    .dashboard-sidebar.mobile-open {
+    .dashboard-sidebars.mobile-open {
         transform: translateX(0);
     }
 
@@ -1351,4 +1352,13 @@
     color: #3730a3;
     font-weight: 700;
     font-size: .72rem;
+}
+
+.hall-ticket-management {
+    width: 100%
+}
+.office-manual-hall-btn { min-width: 150px; }
+#hall{
+    font-size: 13px;
+    font-weight: 600;
 }

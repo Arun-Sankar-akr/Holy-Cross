@@ -1593,6 +1593,30 @@ td {
   .floating-action-fab {
     display: none !important;
   }
+
+  /* Hall Ticket: only the ticket paper itself should print */
+  .no-print,
+  .hall-ticket-page > .card-header,
+  .hall-ticket-page .hall-ticket-card,
+  .hall-ticket-page .hall-ticket-locked-card,
+  .empty-sub-card {
+    display: none !important;
+  }
+
+  .hall-ticket-page,
+  .hall-ticket-preview {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .hall-ticket-print-paper {
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
 }
 
 /* -------------------------------------------------------------
@@ -2730,4 +2754,265 @@ td {
   .marks-summary-strip {
     grid-template-columns: 1fr 1fr;
   }
-} 
+}
+
+.hall-ticket-page {
+  padding: 8px
+}
+
+.hall-ticket-card {
+  margin-top: 18px;
+  padding: 24px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .08)
+}
+
+.hall-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px
+}
+
+.hall-ticket-grid>div {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0
+}
+
+.hall-ticket-grid span {
+  display: block;
+  font-size: .75rem;
+  color: #64748b;
+  margin-bottom: 5px
+}
+
+.hall-ticket-grid strong {
+  font-size: .95rem;
+  color: #0f172a
+}
+
+/* Hall Ticket access / preview */
+.hall-ticket-status.paid {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--accent-emerald-bg);
+  color: var(--accent-emerald);
+  border: 1px solid var(--dash-primary-border);
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.hall-ticket-locked-card {
+  margin-top: 18px;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--accent-amber-bg);
+  border: 1px solid rgba(245, 158, 11, .35);
+  box-shadow: var(--dash-shadow);
+}
+
+.hall-ticket-lock-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(245, 158, 11, .15);
+  color: var(--accent-amber);
+  margin-bottom: 12px;
+}
+
+.hall-ticket-locked-card h4 {
+  margin: 0 0 5px;
+  color: var(--dash-text-main);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.hall-ticket-locked-card p {
+  margin: 0;
+  color: var(--dash-text-muted);
+  font-size: .8rem;
+  line-height: 1.6;
+}
+
+.hall-ticket-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.hall-ticket-action-btn {
+  border: 0;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.hall-ticket-action-btn.view {
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  border: 1px solid var(--dash-primary-border);
+}
+
+.hall-ticket-action-btn.download {
+  color: #fff;
+  background: var(--dash-primary-grad);
+  box-shadow: var(--dash-shadow-sm);
+}
+
+.hall-ticket-action-btn.blocked {
+  background: rgba(100, 116, 139, .12);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, .25);
+}
+
+.hall-ticket-action-btn:not(.blocked):hover {
+  transform: translateY(-1px);
+}
+
+.hall-ticket-preview {
+  margin-top: 20px;
+  border: 1px solid var(--dash-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--dash-surface);
+  box-shadow: var(--dash-shadow);
+}
+
+.hall-ticket-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.hall-ticket-preview-header h4 {
+  margin: 0;
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.hall-ticket-preview-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--dash-text-muted);
+  font-size: .7rem;
+}
+
+.hall-ticket-preview-header button {
+  border: 1px solid var(--dash-border);
+  background: var(--dash-surface);
+  color: var(--dash-text-main);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.hall-ticket-preview-paper {
+  margin: 20px;
+  padding: 28px;
+  border: 2px solid #0f172a;
+  background: #fff;
+  color: #0f172a;
+}
+
+.hall-ticket-preview-paper h2 {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 1.25rem;
+  letter-spacing: .04em;
+}
+
+.hall-ticket-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hall-ticket-preview-grid p {
+  margin: 0;
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.hall-ticket-preview-grid span {
+  display: block;
+  color: #64748b;
+  font-size: .7rem;
+  margin-bottom: 4px;
+}
+
+.hall-ticket-preview-grid strong {
+  font-size: .85rem;
+}
+
+.hall-ticket-authorized {
+  margin: 28px 0 0;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .hall-ticket-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hall-ticket-preview-paper {
+    margin: 12px;
+    padding: 18px;
+  }
+
+  .hall-ticket-action-btn {
+    width: 100%;
+  }
+}
+
+/* Hall Ticket replica — mobile */
+@media (max-width: 640px) {
+  .hall-ticket-print-paper {
+    margin: 12px !important;
+    font-size: 12px !important;
+  }
+
+  .hall-ticket-header-row {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .hall-ticket-header-row>div:last-child {
+    display: none;
+  }
+
+  .hall-ticket-details-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hall-ticket-details-row>div:first-child {
+    width: 100%;
+  }
+}

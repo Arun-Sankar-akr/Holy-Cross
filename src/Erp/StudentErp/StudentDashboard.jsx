@@ -11,9 +11,14 @@ import {
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
+import principalSignature from "../../assets/logo.png"
+
+const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
+const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
 
 export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
+    const [selectedHallTicket, setSelectedHallTicket] = useState(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [examHallMenuOpen, setExamHallMenuOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -28,7 +33,10 @@ export default function StudentDashboard() {
     const [feeRecords, setFeeRecords] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
+    const [hallTicketPublications, setHallTicketPublications] = useState([]);
+    const [examTimetableList, setExamTimetableList] = useState([]);
     const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
+    const [hallTicketMeta, setHallTicketMeta] = useState({ downloadedAt: null, ip: null });
 
     // Selected Receipt state for printing the official fee receipt view
     const [selectedPrintReceipt, setSelectedPrintReceipt] = useState(null);
@@ -109,7 +117,6 @@ export default function StudentDashboard() {
     ];
 
     // Check scheduled reminders while the dashboard is open.
-    // A reminder is shown once when its date/time is reached.
     useEffect(() => {
         const checkScheduledReminders = () => {
             try {
@@ -407,14 +414,12 @@ export default function StudentDashboard() {
         const unsubAttendance = onSnapshot(
             collection(db, 'attendance_records'),
             (snap) => {
-
                 const allAttendance = snap.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data()
                 }));
 
                 const myAttendance = allAttendance.filter((record) => {
-
                     const studentIdMatch =
                         record.studentId &&
                         liveStudentRecord?.id &&
@@ -474,9 +479,16 @@ export default function StudentDashboard() {
             }
         });
 
-        // Live synchronized Exam Hall Allocation published by the Office Dashboard
         const unsubExamHalls = onSnapshot(collection(db, 'exam_hall_allocations'), (snap) => {
             setStudentExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubHallTicketPublications = onSnapshot(collection(db, 'hall_ticket_publications'), (snap) => {
+            setHallTicketPublications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubExamTimetables = onSnapshot(collection(db, 'exam_timetables'), (snap) => {
+            setExamTimetableList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
         return () => {
@@ -487,8 +499,10 @@ export default function StudentDashboard() {
             unsubSubmissions();
             unsubFees();
             unsubExamHalls();
+            unsubHallTicketPublications();
+            unsubExamTimetables();
         };
-    }, [studentData]);
+    }, [studentData, liveStudentRecord]);
 
     const studentSchedule = timetableList.filter(item => {
         const itemClass = cleanString(item.className);
@@ -566,7 +580,6 @@ export default function StudentDashboard() {
     const totalScore = marksEntries.reduce((acc, curr) => acc + curr.score, 0);
     const averageScore = marksEntries.length > 0 ? (totalScore / marksEntries.length).toFixed(1) : 'N/A';
 
-    // Marks Summary (Total / Percentage / Rank) for the currently filtered exam view
     const marksTotalObtained = filteredMarksEntries.reduce((acc, curr) => acc + curr.score, 0);
     const marksTotalMax = filteredMarksEntries.length * 100;
     const marksPercentage = marksTotalMax > 0 ? ((marksTotalObtained / marksTotalMax) * 100).toFixed(1) : '0.0';
@@ -575,127 +588,53 @@ export default function StudentDashboard() {
     const hasNewMarks = marksEntries.length > lastSeenMarksCount;
     const unseenAnnouncementsCount = Math.max(announcementsList.length - lastSeenAnnouncementsCount, 0);
 
-    // Auto-hide the "Exam Result" notify dot once the Marks tab is opened
     useEffect(() => {
         if (activeTab === 'marks' && marksEntries.length > lastSeenMarksCount) {
             setLastSeenMarksCount(marksEntries.length);
             localStorage.setItem('lastSeenMarksCount', String(marksEntries.length));
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab, marksEntries.length]);
+    }, [activeTab, marksEntries.length, lastSeenMarksCount]);
 
-    // Auto-hide the notification bell badge once the drawer or the Bulletins tab is opened
     useEffect(() => {
         if ((showNotifDrawer || activeTab === 'notices') && announcementsList.length > lastSeenAnnouncementsCount) {
             setLastSeenAnnouncementsCount(announcementsList.length);
             localStorage.setItem('lastSeenAnnouncementsCount', String(announcementsList.length));
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showNotifDrawer, activeTab, announcementsList.length]);
+    }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
     // Attendance Calculations
- 
-    // =====================================================
-    // ATTENDANCE CALCULATIONS - FULL HISTORY
-    // =====================================================
-
-    // Sort all attendance records: newest first
     const attendanceLogs = [...attendanceRecords].sort((a, b) => {
-        const dateA = new Date(
-            `${a.date || "1970-01-01"}T00:00:00`
-        );
-
-        const dateB = new Date(
-            `${b.date || "1970-01-01"}T00:00:00`
-        );
-
+        const dateA = new Date(`${a.date || "1970-01-01"}T00:00:00`);
+        const dateB = new Date(`${b.date || "1970-01-01"}T00:00:00`);
         return dateB - dateA;
     });
 
+    const hasStaffSubmittedAttendance = attendanceLogs.length > 0;
+    const latestAttendance = attendanceLogs.length > 0 ? attendanceLogs[0] : null;
+    const currentAttendanceStatus = latestAttendance?.status || "pending";
+    const totalWorkingDays = attendanceLogs.length;
 
-    // True when at least one attendance record exists
-    const hasStaffSubmittedAttendance =
-        attendanceLogs.length > 0;
+    const presentDaysCount = attendanceLogs.filter(
+        (record) => String(record.status || "").toLowerCase() === "present"
+    ).length;
 
+    const absentDaysCount = attendanceLogs.filter(
+        (record) => String(record.status || "").toLowerCase() === "absent"
+    ).length;
 
-    // Latest attendance record
-    const latestAttendance =
-        attendanceLogs.length > 0
-            ? attendanceLogs[0]
-            : null;
+    const rawAttendanceRate = totalWorkingDays > 0
+        ? Math.round((presentDaysCount / totalWorkingDays) * 100)
+        : 0;
 
+    const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
 
-    // Current/latest attendance status
-    const currentAttendanceStatus =
-        latestAttendance?.status || "pending";
-
-
-    // Total attendance periods
-    const totalWorkingDays =
-        attendanceLogs.length;
-
-
-    // Present periods
-    const presentDaysCount =
-        attendanceLogs.filter(
-            (record) =>
-                String(record.status || "")
-                    .toLowerCase() === "present"
-        ).length;
-
-
-    // Absent periods
-    const absentDaysCount =
-        attendanceLogs.filter(
-            (record) =>
-                String(record.status || "")
-                    .toLowerCase() === "absent"
-        ).length;
-
-
-    // Attendance percentage
-    const rawAttendanceRate =
-        totalWorkingDays > 0
-            ? Math.round(
-                (presentDaysCount / totalWorkingDays) * 100
-            )
-            : 0;
-
-
-    // Attendance defaulter status
-    const isDefaulter =
-        hasStaffSubmittedAttendance &&
-        rawAttendanceRate < 75;
-
-
-    // =====================================================
-    // FILTER ALL ATTENDANCE HISTORY
-    // =====================================================
-
-    const filteredAttendanceLogs =
-        attendanceLogs.filter((log) => {
-
-            const logStatus =
-                String(log.status || "")
-                    .toLowerCase();
-
-            const selectedStatus =
-                String(attendanceStatusFilter || "all")
-                    .toLowerCase();
-
-            const matchesStatus =
-                selectedStatus === "all" ||
-                logStatus === selectedStatus;
-
-            const matchesDate =
-                !attendanceDateFilter ||
-                log.date === attendanceDateFilter;
-
-            return (
-                matchesStatus &&
-                matchesDate
-            );
-        });
+    const filteredAttendanceLogs = attendanceLogs.filter((log) => {
+        const logStatus = String(log.status || "").toLowerCase();
+        const selectedStatus = String(attendanceStatusFilter || "all").toLowerCase();
+        const matchesStatus = selectedStatus === "all" || logStatus === selectedStatus;
+        const matchesDate = !attendanceDateFilter || log.date === attendanceDateFilter;
+        return matchesStatus && matchesDate;
+    });
 
     const pendingFeesList = feeRecords.filter(f => f.status !== 'Paid');
     const paidFeesList = feeRecords.filter(f => f.status === 'Paid');
@@ -735,7 +674,68 @@ export default function StudentDashboard() {
         window.print();
     };
 
-    // --- FEATURE 3: Global CSV / Data Export Function ---
+    const hasFeeClearance =
+        feeRecords.length > 0 &&
+        feeRecords.every(f => {
+            const status = String(f.status || '').trim().toLowerCase();
+            return status === 'paid' || Number(f.balance ?? 0) <= 0;
+        });
+
+    const myHallTicketAllocation = myExamHallAllocations?.[0] || null;
+
+    const myPublishedHallTickets = hallTicketPublications.filter(publication => {
+        if (publication.published !== true) return false;
+        const studentMatch =
+            publication.studentId === studentData.id ||
+            (publication.admissionNo &&
+                cleanString(publication.admissionNo) === cleanString(studentData.rollNo));
+        return studentMatch;
+    });
+
+    const myHallTicketPublication = myPublishedHallTickets[0] || null;
+    const isHallTicketPublished = Boolean(myHallTicketPublication);
+
+    const guardHallTicketAccess = () => {
+        if (!myHallTicketAllocation) {
+            alert('Exam hall allocation is not available yet. Please contact the office.');
+            return false;
+        }
+
+        if (!hasFeeClearance) {
+            alert('Hall Ticket is blocked because your fees are not fully paid. Please pay the pending fees or meet the office room.');
+            return false;
+        }
+
+        if (!isHallTicketPublished) {
+            alert('Hall Ticket has not been published by the office yet. Please contact the office.');
+            return false;
+        }
+
+        return true;
+    };
+
+    const stampHallTicketMeta = () => {
+        const now = new Date();
+        setHallTicketMeta({ downloadedAt: now, ip: null });
+        fetch('https://api.ipify.org?format=json')
+            .then((res) => res.json())
+            .then((data) => setHallTicketMeta((prev) => ({ ...prev, ip: data?.ip || null })))
+            .catch(() => { });
+    };
+
+    const viewHallTicket = () => {
+        if (!guardHallTicketAccess()) return;
+        stampHallTicketMeta();
+        setSelectedHallTicket(myHallTicketAllocation);
+    };
+
+    const downloadHallTicket = () => {
+        if (!guardHallTicketAccess()) return;
+        stampHallTicketMeta();
+        setSelectedHallTicket(myHallTicketAllocation);
+        setTimeout(() => window.print(), 150);
+    };
+
     const handleExportCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,";
         if (activeTab === 'marks') {
@@ -765,13 +765,13 @@ export default function StudentDashboard() {
 
     return (
         <div className="staff-style-dashboard">
-            {/* INLINE CSS TO PREVENT OVERPADDING & FORCE SINGLE-PAGE A4 PRINT FIT WITH A CRISP BORDER */}
             <style>{`
                 @media print {
                     body * {
                         visibility: hidden !important;
                     }
-                    .receipt-modal-overlay, .receipt-modal-overlay * {
+                    .receipt-modal-overlay, .receipt-modal-overlay *,
+                    .hall-ticket-preview, .hall-ticket-preview * {
                         visibility: visible !important;
                     }
                     .receipt-modal-overlay {
@@ -797,7 +797,7 @@ export default function StudentDashboard() {
                         margin: 0 auto !important;
                         transform: scale(0.98);
                     }
-                    .receipt-modal-overlay button {
+                    .receipt-modal-overlay button, .no-print {
                         display: none !important;
                     }
                     @page {
@@ -807,7 +807,6 @@ export default function StudentDashboard() {
                 }
             `}</style>
 
-            {/* FEATURE 5: INTERACTIVE QUICK DETAIL VIEW MODAL (Notification Preview) */}
             {detailModalContent && (
                 <div className="quick-preview-overlay">
                     <div className="quick-preview-modal">
@@ -835,7 +834,6 @@ export default function StudentDashboard() {
                 </div>
             )}
 
-            {/* POPUP MODAL FOR OFFICIAL FEE RECEIPT VIEW & PRINT */}
             {selectedPrintReceipt && (
                 <div className="receipt-modal-overlay" style={{
                     position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
@@ -852,7 +850,6 @@ export default function StudentDashboard() {
                             <X size={16} />
                         </button>
 
-                        {/* RECEIPT HEADER WITH UPLOADED SCHOOL EMBLEM & EXACT SCHOOL NAME */}
                         <div style={{ textAlign: 'center', borderBottom: '2px solid #cbd5e1', paddingBottom: '10px', marginBottom: '12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '4px' }}>
                                 <img
@@ -870,13 +867,11 @@ export default function StudentDashboard() {
                             </div>
                         </div>
 
-                        {/* RECEIPT META */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '10px', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px' }}>
                             <div><strong>Receipt No:</strong> RCPT-{selectedPrintReceipt.id ? selectedPrintReceipt.id.substring(0, 8).toUpperCase() : '2026/001'}</div>
                             <div><strong>Date:</strong> {selectedPrintReceipt.date || new Date().toLocaleDateString()}</div>
                         </div>
 
-                        {/* STUDENT & PAYMENT DETAILS BREAKDOWN */}
                         <div style={{ marginBottom: '12px' }}>
                             <h4 style={{ fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', marginBottom: '6px', color: '#334155' }}>Student Details</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.78rem', marginBottom: '10px' }}>
@@ -895,7 +890,6 @@ export default function StudentDashboard() {
                             </div>
                         </div>
 
-                        {/* TABLE SUMMARY */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px', fontSize: '0.78rem' }}>
                             <thead>
                                 <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
@@ -918,7 +912,6 @@ export default function StudentDashboard() {
                             <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0284c7' }}>₹{selectedPrintReceipt.totalFee || selectedPrintReceipt.paidAmount || '0.00'}</span>
                         </div>
 
-                        {/* SIGNATURES & FOOTER */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.74rem', color: '#64748b' }}>
                             <div style={{ textAlign: 'center' }}>
                                 <div style={{ borderTop: '1px solid #94a3b8', width: '130px', paddingTop: '3px', margin: '0 auto' }}>Student Signature</div>
@@ -928,7 +921,6 @@ export default function StudentDashboard() {
                             </div>
                         </div>
 
-                        {/* ACTION BUTTONS */}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                             <button
                                 onClick={() => window.print()}
@@ -947,7 +939,6 @@ export default function StudentDashboard() {
                 </div>
             )}
 
-            {/* POPUP ALERT FOR PENDING FEE DUES (Fees Preview) */}
             {showFeeAlertModal && pendingFeesList.length > 0 && (
                 <div className="fee-alert-overlay">
                     <div className="fee-alert-modal">
@@ -999,7 +990,6 @@ export default function StudentDashboard() {
                 <div className="staff-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />
             )}
 
-            {/* FEATURE 4: PERSISTENT FLOATING QUICK ACTION BUTTON */}
             <button className="floating-action-fab" onClick={handleExportCSV} title="Export Current View Data">
                 <Download size={16} /> <span>Quick Export</span>
             </button>
@@ -1087,6 +1077,12 @@ export default function StudentDashboard() {
                             )}
                         </div>
                         <button
+                            className={`staff-nav-item ${activeTab === 'hall-ticket' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('hall-ticket'); setIsMobileMenuOpen(false); }}
+                        >
+                            <Ticket size={16} /><span>Hall Ticket</span>
+                        </button>
+                        <button
                             className={`staff-nav-item ${activeTab === 'notices' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('notices'); setIsMobileMenuOpen(false); }}
                         >
@@ -1114,7 +1110,6 @@ export default function StudentDashboard() {
                         </div>
 
                         <div className="topbar-actions">
-                            {/* FEATURE 1: Dark Mode Toggle Button */}
                             <button
                                 className="topbar-icon-btn"
                                 onClick={() => setDarkMode(!darkMode)}
@@ -1123,7 +1118,6 @@ export default function StudentDashboard() {
                                 {darkMode ? <Sun size={15} /> : <Moon size={15} />}
                             </button>
 
-                            {/* FEATURE 2: Quick Notifications Drawer Toggle Button */}
                             <button
                                 className="topbar-icon-btn"
                                 onClick={() => setShowNotifDrawer(!showNotifDrawer)}
@@ -1135,7 +1129,6 @@ export default function StudentDashboard() {
                                 )}
                             </button>
 
-                            {/* FEATURE 2: Notifications Dropdown Drawer */}
                             {showNotifDrawer && (
                                 <div className="notif-drawer-dropdown">
                                     <div className="notif-drawer-header">
@@ -1158,7 +1151,6 @@ export default function StudentDashboard() {
                                 </div>
                             )}
 
-                            {/* FEATURE 3: Global CSV / Page Data Export Button */}
                             <button
                                 className="topbar-icon-btn"
                                 onClick={handleExportCSV}
@@ -1203,7 +1195,6 @@ export default function StudentDashboard() {
                                 )}
 
                                 <div className="preskool-grid">
-                                    {/* ===== COLUMN 1: Profile + Today's Class ===== */}
                                     <div className="preskool-col">
                                         <div className="ps-profile-card">
                                             <div className="ps-profile-top">
@@ -1302,7 +1293,6 @@ export default function StudentDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* ===== COLUMN 2: Attendance Ring ===== */}
                                     <div className="preskool-col">
                                         <div className="ps-panel">
                                             <div className="ps-panel-header">
@@ -1381,7 +1371,6 @@ export default function StudentDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* ===== COLUMN 3: Schedule / Calendar / Notices ===== */}
                                     <div className="preskool-col">
                                         <div className="ps-panel">
                                             <div className="ps-panel-header">
@@ -1873,6 +1862,350 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
+                        {activeTab === 'exam-halls' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>My Exam Hall Allocations</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Assigned seating & examination rooms
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {myExamHallAllocations.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Calendar size={32} color="var(--staff-primary)" />
+                                        <h4>No Exam Hall Allocations Found</h4>
+                                        <p>Seating arrangements have not been assigned by administration for your class yet.</p>
+                                    </div>
+                                ) : (
+                                    <div className="table-responsive">
+                                        <table className="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Exam Name</th>
+                                                    <th>Hall / Room No</th>
+                                                    <th>Seat No</th>
+                                                    <th>Target Class</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {myExamHallAllocations.map((alloc) => (
+                                                    <tr key={alloc.id}>
+                                                        <td><strong>{alloc.examName || alloc.title || 'Examination'}</strong></td>
+                                                        <td><span className="topic-badge">{alloc.hallNo || alloc.roomNo || 'Hall 1'}</span></td>
+                                                        <td><strong>{getMySeatNo(alloc) || alloc.seatNo || 'Unassigned'}</strong></td>
+                                                        <td>{alloc.targetClass || alloc.className || studentData.grade}</td>
+                                                        <td><span className="status-badge status-present">ALLOCATED</span></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'hall-ticket' && (
+                            <div className="hall-ticket-page">
+                                <style>{`
+                                    .hall-ticket-page .hall-ticket-locked-card{margin-top:18px;padding:24px;border-radius:0px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35)}
+                                    .hall-ticket-page .hall-ticket-lock-icon{width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:rgba(245,158,11,.15);color:#d97706;margin-bottom:12px}
+                                    .hall-ticket-page .hall-ticket-locked-card h4{margin:0 0 6px;font-size:1rem;font-weight:800}
+                                    .hall-ticket-page .hall-ticket-locked-card p{margin:0;color:var(--staff-text-muted);font-size:.8rem;line-height:1.6}
+                                    .hall-ticket-page .hall-ticket-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+                                    .hall-ticket-page .hall-ticket-action-btn{min-height:42px;padding:10px 16px;border:0;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:.78rem;font-weight:800;cursor:pointer}
+                                    .hall-ticket-page .hall-ticket-action-btn.view{background:var(--staff-primary-light,#ecfdf5);color:var(--staff-primary,#059669);border:1px solid rgba(5,150,105,.2)}
+                                    .hall-ticket-page .hall-ticket-action-btn.download{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+                                    .hall-ticket-page .hall-ticket-action-btn.blocked{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;cursor:not-allowed}
+                                    .hall-ticket-page .hall-ticket-status.paid{display:inline-flex;align-items:center;gap:7px;margin-bottom:18px;padding:8px 12px;border-radius:999px;background:#dcfce7;color:#047857;font-size:.75rem;font-weight:800}
+                                    .hall-ticket-page .hall-ticket-preview{margin-top:20px;border:1px solid var(--staff-border,#dbe7e2);border-radius:0px;overflow:hidden;background:#fff}
+                                    .hall-ticket-page .hall-ticket-preview-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e2e8f0}
+                                    .hall-ticket-page .hall-ticket-preview-header h4{margin:0;font-size:.9rem}
+                                    .hall-ticket-page .hall-ticket-preview-header span{font-size:.7rem;color:#64748b}
+                                    .hall-ticket-page .hall-ticket-preview-header button{width:34px;height:34px;border:1px solid #e2e8f0;border-radius:9px;background:#fff;cursor:pointer}
+                                    .hall-ticket-page .hall-ticket-preview-paper{margin:20px;padding:28px;border:2px solid #0f172a;background:#fff;color:#0f172a}
+                                    .hall-ticket-page .hall-ticket-preview-paper h2{text-align:center;margin:0 0 22px;font-size:1.25rem}
+                                    .hall-ticket-page .hall-ticket-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+                                    .hall-ticket-page .hall-ticket-preview-grid p{margin:0;padding:12px;border-bottom:1px solid #e2e8f0}
+                                    .hall-ticket-page .hall-ticket-preview-grid span{display:block;color:#64748b;font-size:.7rem;margin-bottom:4px}
+                                    .hall-ticket-page .hall-ticket-preview-grid strong{font-size:.85rem}
+                                    .hall-ticket-page .hall-ticket-authorized{margin-top:28px;font-size:.75rem;font-weight:700}
+                                    @media(max-width:600px){.hall-ticket-page .hall-ticket-preview-grid{grid-template-columns:1fr}.hall-ticket-page .hall-ticket-action-btn{width:100%}}
+                                `}</style>
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Exam Hall Ticket</h3>
+                                        <p>View and download Hall Tickets published by the Office.</p>
+                                    </div>
+                                    <Ticket size={28} />
+                                </div>
+
+                                {!myHallTicketAllocation ? (
+                                    <div className="empty-sub-card">
+                                        <Ticket size={32} />
+                                        <h4>Hall Ticket Not Available</h4>
+                                        <p>Your exam hall allocation has not been published yet. Please contact the office.</p>
+                                    </div>
+                                ) : !hasFeeClearance ? (
+                                    <div className="hall-ticket-locked-card">
+                                        <div className="hall-ticket-lock-icon"><AlertTriangle size={30} /></div>
+                                        <h4>Hall Ticket Blocked</h4>
+                                        <p>Your fees are not fully paid. Please pay the pending fees or meet the office room.</p>
+                                        <div className="hall-ticket-actions">
+                                            <button type="button" className="hall-ticket-action-btn blocked" onClick={() => alert('Hall Ticket is blocked because your fees are not fully paid. Please pay the pending fees or meet the office room.')}>
+                                                <Eye size={16} /> View Hall Ticket
+                                            </button>
+                                            <button type="button" className="hall-ticket-action-btn blocked" onClick={() => alert('Hall Ticket download is blocked because your fees are not fully paid. Please pay the pending fees or meet the office room.')}>
+                                                <Download size={16} /> Download Hall Ticket
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : !isHallTicketPublished ? (
+                                    <div className="hall-ticket-locked-card">
+                                        <div className="hall-ticket-lock-icon"><AlertTriangle size={30} /></div>
+                                        <h4>Hall Ticket Not Published Yet</h4>
+                                        <p>Your fees are cleared, but the Office has not published your Hall Ticket yet. Please contact the office.</p>
+                                        <div className="hall-ticket-actions">
+                                            <button type="button" className="hall-ticket-action-btn blocked" onClick={() => alert('Hall Ticket has not been published by the office yet. Please contact the office.')}>
+                                                <Eye size={16} /> View Hall Ticket
+                                            </button>
+                                            <button type="button" className="hall-ticket-action-btn blocked" onClick={() => alert('Hall Ticket has not been published by the office yet. Please contact the office.')}>
+                                                <Download size={16} /> Download Hall Ticket
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="hall-ticket-card">
+                                        <div className="hall-ticket-status paid">
+                                            <CheckCircle size={16} /> Fees Cleared — Hall Ticket Published
+                                        </div>
+
+                                        <div className="hall-ticket-grid">
+                                            <div><span>Student</span><strong>{studentData.name}</strong></div>
+                                            <div><span>Admission No</span><strong>{studentData.rollNo || studentData.id || '—'}</strong></div>
+                                            <div><span>Class / Section</span><strong>{studentData.grade} {studentData.section ? `/ ${studentData.section}` : ''}</strong></div>
+                                            <div><span>Exam</span><strong>{myHallTicketPublication.exam || myHallTicketAllocation.examName || 'Examination'}</strong></div>
+                                            <div><span>Year</span><strong>{myHallTicketPublication.year || '—'}</strong></div>
+                                            <div><span>Hall No</span><strong>{myHallTicketAllocation.hallNo || myHallTicketPublication.hallNo || '—'}</strong></div>
+                                            <div><span>Seat No</span><strong>{getMySeatNo(myHallTicketAllocation) || myHallTicketPublication.seatNo || '—'}</strong></div>
+                                        </div>
+
+                                        <div className="hall-ticket-actions">
+                                            <button type="button" className="hall-ticket-action-btn view" onClick={viewHallTicket}>
+                                                <Eye size={16} /> View Hall Ticket
+                                            </button>
+                                            <button type="button" className="hall-ticket-action-btn download" onClick={downloadHallTicket}>
+                                                <Download size={16} /> Download Hall Ticket
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedHallTicket && isHallTicketPublished && hasFeeClearance && activeTab === 'hall-ticket' && (() => {
+                                    const studentPhoto = liveStudentRecord?.photo || '';
+                                    const rollNoValue = studentData.rollNo || studentData.id || '—';
+                                    const examNameValue = myHallTicketPublication.exam || selectedHallTicket.examName || 'Examination';
+                                    const examYearValue = myHallTicketPublication.year || '';
+                                    const classValue = studentData.grade || 'Senior Secondary';
+                                    const examCenterCode = myHallTicketPublication.examCenterCode || selectedHallTicket.hallNo || myHallTicketPublication.hallNo || '—';
+                                    const matchedExamTimetable = examTimetableList.filter(t =>
+                                        cleanString(t.className) === cleanString(classValue) &&
+                                        cleanString(t.examName) === cleanString(examNameValue)
+                                    );
+                                    const subjectRows = matchedExamTimetable.length
+                                        ? matchedExamTimetable.map(t => ({ code: t.subjectCode, name: t.subject, date: t.examDate }))
+                                        : (Array.isArray(myHallTicketPublication.subjects) && myHallTicketPublication.subjects.length
+                                            ? myHallTicketPublication.subjects
+                                            : (Array.isArray(selectedHallTicket.subjects) ? selectedHallTicket.subjects : []));
+                                    const qrData = encodeURIComponent(`Roll No: ${rollNoValue} | Name: ${studentData.name} | Exam: ${examNameValue}`);
+                                    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=${qrData}`;
+
+                                    return (
+                                        <div className="hall-ticket-preview">
+                                            <div className="hall-ticket-preview-header no-print">
+                                                <div>
+                                                    <h4>Hall Ticket Preview</h4>
+                                                    <span>Official examination details</span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 8 }}>
+                                                    <button type="button" onClick={() => window.print()} title="Print / Download" style={{ width: 34, height: 34, border: '1px solid #e2e8f0', borderRadius: 9, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                                                        <Printer size={16} />
+                                                    </button>
+                                                    <button type="button" onClick={() => setSelectedHallTicket(null)} aria-label="Close hall ticket preview">
+                                                        <X size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className="hall-ticket-print-paper"
+                                                style={{
+                                                    margin: '20px', border: '2px solid #0f172a', background: '#fff', color: '#0f172a',
+                                                    fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '13px', lineHeight: 1.4
+                                                }}
+                                            >
+                                                <div className="hall-ticket-header-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: '2px solid #0f172a' }}>
+                                                    <img src={logo} alt="School Logo" style={{ width: 58, height: 58, objectFit: 'contain', flexShrink: 0 }} />
+                                                    <div style={{ flex: 1, textAlign: 'center' }}>
+                                                        <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#1a3b8a', letterSpacing: '.2px' }}>
+                                                            {HALL_TICKET_SCHOOL_NAME}
+                                                        </h1>
+                                                        <p style={{ margin: '3px 0 0', fontSize: '.72rem', fontStyle: 'italic', color: '#334155' }}>
+                                                            {HALL_TICKET_SCHOOL_TAGLINE}
+                                                        </p>
+                                                    </div>
+                                                    <div style={{ width: 58, flexShrink: 0 }} />
+                                                </div>
+
+                                                <div style={{ display: 'flex', background: 'linear-gradient(135deg,#1e3a5f,#0f2942)', color: '#fff' }}>
+                                                    <div style={{ flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,.25)', fontWeight: 800, fontSize: '.82rem' }}>
+                                                        Hall Ticket - Theory
+                                                    </div>
+                                                    <div style={{ flex: 1.6, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,.25)', fontWeight: 800, fontSize: '.82rem' }}>
+                                                        {examNameValue}{examYearValue ? ` ${examYearValue}` : ''} Examination
+                                                    </div>
+                                                    <div style={{ flex: 1, padding: '10px 12px', textAlign: 'center', fontWeight: 800, fontSize: '.82rem' }}>
+                                                        {classValue}
+                                                    </div>
+                                                </div>
+
+                                                <div className="hall-ticket-details-row" style={{ display: 'flex', justifyContent: 'space-between', gap: 18, padding: '18px', flexWrap: 'wrap' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        {[
+                                                            ['Roll No', rollNoValue],
+                                                            ['Name', studentData.name],
+                                                        ].map(([label, value]) => (
+                                                            <div key={label} style={{ display: 'flex', marginBottom: 8, fontSize: '.85rem' }}>
+                                                                <span style={{ width: 130, fontWeight: 700, flexShrink: 0 }}>{label}</span>
+                                                                <span style={{ width: 14, flexShrink: 0 }}>:</span>
+                                                                <span style={{ fontWeight: 700, textTransform: 'uppercase' }}>{value}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                                                        <img src={qrSrc} alt="QR Code" style={{ width: 100, height: 100, border: '1px solid #cbd5e1' }} />
+                                                        <div style={{ width: 90, height: 108, border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f8fafc' }}>
+                                                            {studentPhoto ? (
+                                                                <img src={studentPhoto} alt={studentData.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                <User size={34} color="#94a3b8" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderTop: 0, fontSize: '.78rem' }}>
+                                                    <div style={{ width: 150, flexShrink: 0, padding: '10px 14px', borderRight: '1px solid #cbd5e1', fontWeight: 700, background: '#f8fafc' }}>
+                                                        Hall Number<br />
+                                                    </div>
+                                                    <div style={{ flex: 1, padding: '10px 14px' }}>
+                                                        <div style={{ fontWeight: 800, marginBottom: 3 }}>{examCenterCode}</div>
+                                                    </div>
+                                                </div>
+
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', margin: '18px 0 0', fontSize: '.78rem' }}>
+                                                    <thead>
+                                                        <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
+                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Subject Code</th>
+                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Subject Name</th>
+                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Date of Exam</th>
+                                                            <th style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>Invigilator Signature</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {subjectRows.length > 0 ? subjectRows.map((sub, idx) => (
+                                                            <tr key={idx}>
+                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.code || sub.subjectCode || '—'}</td>
+                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.name || sub.subjectName || '—'}</td>
+                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>{sub.date || sub.examDate || '—'}</td>
+                                                                <td style={{ padding: '8px 14px', border: '1px solid #cbd5e1' }}>&nbsp;</td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr>
+                                                                <td colSpan={4} style={{ padding: '10px 14px', border: '1px solid #cbd5e1', color: '#64748b', textAlign: 'center' }}>
+                                                                    Subject-wise schedule will be updated by the office shortly.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '18px 18px 0' }}>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <div style={{ width: 180, borderTop: '1px solid #0f172a', paddingTop: 4, fontSize: '.74rem', fontWeight: 700 }}>
+                                                            Student Signature
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ padding: '18px' }}>
+                                                    <h4 style={{ margin: '0 0 8px', fontSize: '.88rem', fontWeight: 800 }}>Important Instructions</h4>
+                                                    <ol style={{ margin: 0, paddingLeft: 18, fontSize: '.74rem', color: '#334155', lineHeight: 1.7 }}>
+                                                        <li>For getting entry into the examination hall, candidate must bring the original Identity Card issued by the school along with the examination hall ticket and a valid photo identity proof.</li>
+                                                        <li>Carrying Mobile Phones, Cameras, bags, calculators and any other electronic gadgets etc. are not allowed in the Examination Center.</li>
+                                                        <li>Theory Examination timings and reporting time will be as communicated by the office. The candidates must report minimum one hour before the commencement of the exam.</li>
+                                                        <li>Candidate will not be allowed to appear in the exam if he/she reports after commencement of the exam.</li>
+                                                    </ol>
+
+                                                    <h4 style={{ margin: '16px 0 4px', fontSize: '.82rem', fontWeight: 800 }}>Disclaimer</h4>
+                                                    <p style={{ margin: 0, fontSize: '.68rem', color: '#64748b' }}>
+                                                        {HALL_TICKET_SCHOOL_NAME} is not responsible for any inadvertent error that may have crept in the Hall Ticket.
+                                                    </p>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 32 }}>
+                                                        <div style={{ textAlign: 'center' }}>
+                                                            <img src={principalSignature} alt="Principal Signature" style={{ width: 140, height: 50, objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                                            <div style={{ width: 180, borderTop: '1px solid #0f172a', paddingTop: 4, fontSize: '.74rem', fontWeight: 700 }}>
+                                                                <p>Fr. A. AROKIA SAHAYARAJ </p>
+                                                                <span>Principal Signature</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
+                        {activeTab === 'notices' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>School Circulars & Announcements</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Official circulars posted by school authorities
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {announcementsList.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <Bell size={32} color="var(--staff-primary)" />
+                                        <h4>No Circular Notices</h4>
+                                        <p>There are no active bulletins broadcast to students at this moment.</p>
+                                    </div>
+                                ) : (
+                                    <div className="student-assignments-grid">
+                                        {announcementsList.map(notice => (
+                                            <div key={notice.id} className="assignment-display-card" onClick={() => setDetailModalContent(notice)}>
+                                                <div className="assignment-badge-row">
+                                                    <span className="task-badge badge-homework">Bulletin</span>
+                                                    <span className="due-date-pill">{notice.date || 'Recent'}</span>
+                                                </div>
+                                                <h4>{notice.title || notice.subject || 'Announcement'}</h4>
+                                                <p className="assignment-body-desc">{notice.content || notice.message}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {activeTab === 'fees-history' && (
                             <div className="staff-card full">
                                 <div className="card-header">
@@ -1991,27 +2324,15 @@ export default function StudentDashboard() {
                                                             </a>
                                                         </td>
                                                         <td style={{ fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
-                                                            {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Recent'}
+                                                            {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Submitted'}
                                                         </td>
                                                         <td>
-                                                            {sub.obtainedMarks !== undefined ? (
-                                                                <span className="status-badge status-present">
-                                                                    <Check size={11} /> GRADED
-                                                                </span>
-                                                            ) : (
-                                                                <span className="status-badge status-absent">
-                                                                    <Clock size={11} /> IN REVIEW
-                                                                </span>
-                                                            )}
+                                                            <span className={`status-badge ${sub.obtainedMarks !== undefined ? 'status-present' : 'status-pending'}`}>
+                                                                {sub.obtainedMarks !== undefined ? 'GRADED' : 'PENDING EVALUATION'}
+                                                            </span>
                                                         </td>
                                                         <td>
-                                                            {sub.obtainedMarks !== undefined ? (
-                                                                <strong style={{ color: 'var(--staff-primary)', fontSize: '0.9rem' }}>
-                                                                    {sub.obtainedMarks} / 100
-                                                                </strong>
-                                                            ) : (
-                                                                <span style={{ color: 'var(--staff-text-muted)', fontSize: '0.75rem' }}>Pending</span>
-                                                            )}
+                                                            <strong>{sub.obtainedMarks !== undefined ? `${sub.obtainedMarks} / 100` : '--'}</strong>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -2021,196 +2342,104 @@ export default function StudentDashboard() {
                                 )}
                             </div>
                         )}
-
-                        {activeTab === 'exam-halls' && (
-                            <div className="staff-card full exam-hall-student-card">
-                                <div className="card-header">
-                                    <div>
-                                        <h3>Exam Hall Allocation</h3>
-                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
-                                            Live exam seating information published by the Office. Updates appear automatically.
-                                        </p>
-                                    </div>
-                                    <span className="exam-sync-pill"><CheckCircle size={13} /> Live Synced</span>
-                                </div>
-
-                                {myExamHallAllocations.length === 0 ? (
-                                    <div className="empty-sub-card">
-                                        <Calendar size={30} />
-                                        <h4>No Exam Hall Allocation Yet</h4>
-                                        <p>The office has not published an exam hall allocation for your class.</p>
-                                    </div>
-                                ) : (
-                                    <div className="exam-hall-grid">
-                                        {myExamHallAllocations.map(item => (
-                                            <div className="exam-hall-card" key={item.id}>
-                                                <div className="exam-hall-card-top">
-                                                    <span className="exam-hall-room">{item.hallNo || 'Hall —'}</span>
-                                                    <span className="exam-hall-class">{item.targetClass || studentData.grade}{item.targetSection ? ` / ${item.targetSection}` : ''}</span>
-                                                </div>
-                                                <h4>{item.examName || 'Examination'}</h4>
-                                                <div className="exam-hall-meta">
-                                                    <span><Users size={14} /> {item.studentCount || item.studentIds?.length || item.capacity || '—'} students</span>
-                                                    <span><User size={14} /> {item.invigilator || 'Not assigned'}</span>
-                                                    <span className="student-seat-badge"><Ticket size={14} /> Seat {getMySeatNo(item) || '—'}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeTab === 'notices' && (
-                            <div className="staff-card full">
-                                <div className="card-header">
-                                    <h3>Campus Circulars & Bulletins</h3>
-                                </div>
-                                <div className="full-notices-container">
-                                    {announcementsList.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="bulletin-card"
-                                            onClick={() => setDetailModalContent(item)}
-                                        >
-                                            <div className="bulletin-header">
-                                                <span className="bulletin-tag">Official Notice</span>
-                                                <span className="bulletin-date">
-                                                    {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : (item.date || 'Live')}
-                                                </span>
-                                            </div>
-                                            <p>{item.content || item.message}</p>
-                                        </div>
-                                    ))}
-                                    {announcementsList.length === 0 && (
-                                        <div className="empty-sub-card">
-                                            <Bell size={28} />
-                                            <p>No circulars posted at this time.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
 
-            {/* ===== SCHEDULE REMINDER MODAL ===== */}
+            {/* SCHEDULE NEW REMINDER POPUP MODAL */}
             {showReminderModal && (
-                <div className="reminder-overlay" role="dialog" aria-modal="true" aria-label="Schedule Reminder">
-                    <div className="reminder-modal">
-                        <div className="reminder-modal-header">
-                            <div>
-                                <h3>Schedule Reminder</h3>
-                                <p>Remember something on a specific day and time.</p>
-                            </div>
-                            <button
-                                type="button"
-                                className="reminder-close-btn"
-                                onClick={() => setShowReminderModal(false)}
-                                aria-label="Close"
-                            >
+                <div className="quick-preview-overlay">
+                    <div className="quick-preview-modal" style={{ maxWidth: '420px' }}>
+                        <div className="quick-preview-header">
+                            <h3><Calendar size={16} /> Schedule Personal Reminder</h3>
+                            <button type="button" className="quick-preview-close" onClick={() => setShowReminderModal(false)} aria-label="Close">
                                 <X size={18} />
                             </button>
                         </div>
-
-                        <div className="reminder-form">
-                            <label htmlFor="reminder-title">Reminder Title</label>
-                            <input
-                                id="reminder-title"
-                                type="text"
-                                placeholder="Example: Submit Assignment"
-                                value={reminderTitle}
-                                onChange={(e) => setReminderTitle(e.target.value)}
-                                autoFocus
-                            />
-
-                            <div className="reminder-date-time-row">
-                                <div>
-                                    <label htmlFor="reminder-date">Date</label>
+                        <div className="quick-preview-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Reminder Title</label>
+                                <input
+                                    type="text"
+                                    className="custom-select"
+                                    placeholder="e.g. Science Project Due"
+                                    value={reminderTitle}
+                                    onChange={(e) => setReminderTitle(e.target.value)}
+                                    style={{ width: '100%', marginTop: '4px' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Date</label>
                                     <input
-                                        id="reminder-date"
                                         type="date"
+                                        className="custom-select"
                                         value={reminderDate}
                                         onChange={(e) => setReminderDate(e.target.value)}
+                                        style={{ width: '100%', marginTop: '4px' }}
                                     />
                                 </div>
-                                <div>
-                                    <label htmlFor="reminder-time">Time</label>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Time</label>
                                     <input
-                                        id="reminder-time"
                                         type="time"
+                                        className="custom-select"
                                         value={reminderTime}
                                         onChange={(e) => setReminderTime(e.target.value)}
+                                        style={{ width: '100%', marginTop: '4px' }}
                                     />
                                 </div>
                             </div>
-
-                            <label htmlFor="reminder-note">Note (Optional)</label>
-                            <textarea
-                                id="reminder-note"
-                                placeholder="Add a note..."
-                                value={reminderNote}
-                                onChange={(e) => setReminderNote(e.target.value)}
-                                rows={3}
-                            />
-
-                            <button type="button" className="save-reminder-btn" onClick={saveReminder}>
-                                <Check size={16} />
-                                Save Reminder
+                            <div>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Optional Note</label>
+                                <textarea
+                                    className="custom-select"
+                                    rows="3"
+                                    placeholder="Add any specific instructions..."
+                                    value={reminderNote}
+                                    onChange={(e) => setReminderNote(e.target.value)}
+                                    style={{ width: '100%', marginTop: '4px', resize: 'none' }}
+                                />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                            <button type="button" className="submit-pdf-btn" style={{ flex: 1 }} onClick={saveReminder}>
+                                <Check size={14} /> Save Reminder
+                            </button>
+                            <button type="button" className="quick-preview-close-btn" style={{ marginTop: 0 }} onClick={() => setShowReminderModal(false)}>
+                                Cancel
                             </button>
                         </div>
-
-                        {reminders.filter(item => !item.completed).length > 0 && (
-                            <div className="scheduled-reminders-list">
-                                <div className="scheduled-reminders-title">Upcoming Reminders</div>
-                                {reminders.filter(item => !item.completed).slice(0, 5).map(item => (
-                                    <div className="scheduled-reminder-item" key={item.id}>
-                                        <div className="scheduled-reminder-info">
-                                            <strong>{item.title}</strong>
-                                            <span>{item.date} · {item.time}</span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="delete-reminder-btn"
-                                            onClick={() => deleteReminder(item.id)}
-                                            aria-label={`Delete ${item.title}`}
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
 
-            {/* ===== REMINDER ALERT POPUP ===== */}
+            {/* ALARM POPUP NOTIFICATION FOR DUE REMINDER */}
             {showReminderPopup && currentReminder && (
-                <div className="reminder-overlay" role="alertdialog" aria-modal="true">
-                    <div className="reminder-alert-popup">
-                        <div className="reminder-alert-icon">
-                            <Bell size={28} />
+                <div className="fee-alert-overlay">
+                    <div className="fee-alert-modal" style={{ maxWidth: '380px', textAlign: 'center' }}>
+                        <div className="fee-alert-modal-header" style={{ justifyContent: 'center' }}>
+                            <h3><Bell size={20} className="spin-icon" /> Scheduled Alert!</h3>
                         </div>
-                        <h2>Reminder</h2>
-                        <h3>{currentReminder.title}</h3>
-                        <p>{currentReminder.note || 'You have a scheduled reminder.'}</p>
-                        <div className="reminder-alert-time">
-                            <Calendar size={15} />
-                            <span>{currentReminder.date}</span>
-                            <Clock size={15} />
-                            <span>{currentReminder.time}</span>
-                        </div>
+                        <h4 style={{ margin: '10px 0 5px', color: 'var(--staff-primary)' }}>{currentReminder.title}</h4>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--staff-text-muted)', margin: '0 0 10px' }}>
+                            Time: {currentReminder.time} ({currentReminder.date})
+                        </p>
+                        {currentReminder.note && (
+                            <p className="quick-preview-desc" style={{ textAlign: 'left', marginBottom: '15px' }}>
+                                {currentReminder.note}
+                            </p>
+                        )}
                         <button
                             type="button"
-                            className="dismiss-reminder-btn"
+                            className="fee-alert-cta"
                             onClick={() => {
+                                deleteReminder(currentReminder.id);
                                 setShowReminderPopup(false);
                                 setCurrentReminder(null);
                             }}
                         >
-                            Got it
+                            Acknowledge & Dismiss
                         </button>
                     </div>
                 </div>

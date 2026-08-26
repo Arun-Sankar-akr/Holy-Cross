@@ -2,19 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../service/firebase';
 import { signOut } from 'firebase/auth';
-import logo from "../../assets/logo.png"
+import logo from "../../assets/logo.png";
 import {
-    collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
+    collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where
 } from 'firebase/firestore';
 import {
-    Users, DollarSign, Calendar, ClipboardList, UserPlus,
-    CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare
+    Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2
 } from 'lucide-react';
 import './OfficeDashboard.css';
 
 export default function OfficeDashboard() {
     const [activeTab, setActiveTab] = useState('enquiries');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const [hallTicketSearch, setHallTicketSearch] = useState("");
+    const [hallTicketExam, setHallTicketExam] = useState('1st Mid-Term Exam');
+    const [hallTicketYear, setHallTicketYear] = useState(String(new Date().getFullYear()));
+    const [hallTicketClass, setHallTicketClass] = useState('');
+    const [hallTicketSection, setHallTicketSection] = useState('');
+    const [hallTicketSelectedStudents, setHallTicketSelectedStudents] = useState([]);
+    const [hallTicketPublications, setHallTicketPublications] = useState([]);
+
+    // Exam Timetable States
+    const [timetableClass, setTimetableClass] = useState('');
+    const [timetableExamName, setTimetableExamName] = useState('1st Mid-Term Exam');
+    const [timetableSubjectCode, setTimetableSubjectCode] = useState('');
+    const [timetableSubject, setTimetableSubject] = useState('');
+    const [timetableDate, setTimetableDate] = useState('');
+    const [timetableTime, setTimetableTime] = useState('09:30 AM - 12:30 PM');
+    const [examTimetables, setExamTimetables] = useState([]);
 
     // Sidebar Submenu Open/Close Toggle State for Exam Halls
     const [isExamMenuOpen, setIsExamMenuOpen] = useState(true);
@@ -30,7 +47,7 @@ export default function OfficeDashboard() {
     const [staffExamHalls, setStaffExamHalls] = useState([]);
 
     // Fee Navigation & Drill-Down States
-    const [feeViewMode, setFeeViewMode] = useState('classes'); // 'classes' | 'sections' | 'students-fee'
+    const [feeViewMode, setFeeViewMode] = useState('classes');
     const [selectedFeeClass, setSelectedFeeClass] = useState(null);
     const [selectedFeeSection, setSelectedFeeSection] = useState(null);
 
@@ -38,8 +55,6 @@ export default function OfficeDashboard() {
     const [enquiryForm, setEnquiryForm] = useState({ studentName: '', parentName: '', phone: '', grade: '10th Std', notes: '' });
     const [feeForm, setFeeForm] = useState({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
     const [taskForm, setTaskForm] = useState({ title: '', assignedTo: '', priority: 'Normal', deadline: '' });
-    const [hallForm, setHallForm] = useState({ hallNo: '', examName: '', targetClass: '', capacity: '', invigilator: '' });
-    const [staffHallForm, setStaffHallForm] = useState({ hallNo: '', examName: '', staffName: '', dutyTime: '' });
 
     // Exam Hall Allocation - Student/Staff workflow
     const [examStudentClass, setExamStudentClass] = useState('');
@@ -53,6 +68,15 @@ export default function OfficeDashboard() {
     const [staffDutyTime, setStaffDutyTime] = useState('');
 
     const navigate = useNavigate();
+
+    const examTypes = [
+        '1st Mid-Term Exam',
+        'Quarterly Exam',
+        '2nd Mid-Term Exam',
+        'Half-yearly Exam',
+        '3rd Mid-Term Exam',
+        'Annual Exam'
+    ];
 
     useEffect(() => {
         const unsubEnquiries = onSnapshot(collection(db, 'office_enquiries'), snap =>
@@ -76,8 +100,14 @@ export default function OfficeDashboard() {
         const unsubHalls = onSnapshot(collection(db, 'exam_hall_allocations'), snap =>
             setExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubHallTicketPublications = onSnapshot(collection(db, 'hall_ticket_publications'), snap =>
+            setHallTicketPublications(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
         const unsubStaffHalls = onSnapshot(collection(db, 'staff_exam_halls'), snap =>
             setStaffExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
+        const unsubTimetables = onSnapshot(collection(db, 'exam_timetables'), snap =>
+            setExamTimetables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
 
         return () => {
@@ -89,10 +119,11 @@ export default function OfficeDashboard() {
             unsubStudents();
             unsubHalls();
             unsubStaffHalls();
+            unsubHallTicketPublications();
+            unsubTimetables();
         };
     }, []);
 
-    // Extract unique classes dynamically from students list
     const uniqueClasses = Array.from(new Set(studentsList.map(s => s.className || s.grade).filter(Boolean)));
 
     const examSections = Array.from(new Set(
@@ -109,9 +140,210 @@ export default function OfficeDashboard() {
     });
 
     const selectedExamStudentRecords = examClassStudents.filter(s => selectedExamStudents.includes(s.id));
-
     const selectedStaffHallRecord = examHalls.find(h => h.id === selectedStaffHall);
     const staffHallStudents = selectedStaffHallRecord?.studentList || [];
+
+    const officeHallTicketStudents = studentsList.filter(s => {
+        const q = hallTicketSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [s.name, s.admissionNo, s.rollNo].filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+    });
+    const hallTicketYears = Array.from({ length: 16 }, (_, index) => String(2025 + index));
+
+    const hallTicketExamOptions = examTypes;
+
+    const hallTicketClasses = Array.from(new Set(
+        studentsList.map(s => s.className || s.grade).filter(Boolean)
+    ));
+
+    const hallTicketSections = Array.from(new Set(
+        studentsList
+            .filter(s => !hallTicketClass || (s.className || s.grade) === hallTicketClass)
+            .map(s => s.sectionName || s.section)
+            .filter(Boolean)
+    ));
+
+    const getStudentFeeStatus = (student) => {
+        const admission = String(student.admissionNo || student.rollNo || '').trim().toLowerCase();
+        const name = String(student.name || '').trim().toLowerCase();
+
+        const records = feesList.filter(f => {
+            const feeAdmission = String(f.admissionNo || f.rollNo || '').trim().toLowerCase();
+            const feeName = String(f.studentName || f.name || '').trim().toLowerCase();
+            return (admission && feeAdmission && admission === feeAdmission) ||
+                (name && feeName && name === feeName);
+        });
+
+        const paid = records.length > 0 && records.every(f =>
+            String(f.status || '').trim().toLowerCase() === 'paid' ||
+            Number(f.balance ?? 0) <= 0
+        );
+
+        return { paid, records };
+    };
+
+    const hallTicketAllocationForStudent = (student) => examHalls.find(h =>
+        (h.studentIds || []).includes(student.id) ||
+        (h.studentList || []).some(x =>
+            x.id === student.id ||
+            (x.admissionNo && String(x.admissionNo) === String(student.admissionNo || student.rollNo))
+        )
+    );
+
+    const hallTicketListStudents = studentsList.filter(student => {
+        const q = hallTicketSearch.trim().toLowerCase();
+        const cls = student.className || student.grade;
+        const sec = student.sectionName || student.section;
+
+        const matchesSearch = !q || [student.name, student.admissionNo, student.rollNo]
+            .filter(Boolean)
+            .some(v => String(v).toLowerCase().includes(q));
+
+        const matchesClass = !hallTicketClass || cls === hallTicketClass;
+        const matchesSection = !hallTicketSection || sec === hallTicketSection;
+
+        return matchesSearch && matchesClass && matchesSection;
+    });
+
+    const paidHallTicketStudents = hallTicketListStudents.filter(s => getStudentFeeStatus(s).paid);
+    const unpaidHallTicketStudents = hallTicketListStudents.filter(s => !getStudentFeeStatus(s).paid);
+
+    const toggleHallTicketStudent = (studentId) => {
+        setHallTicketSelectedStudents(prev =>
+            prev.includes(studentId)
+                ? prev.filter(id => id !== studentId)
+                : [...prev, studentId]
+        );
+    };
+
+    const toggleAllPaidHallTicketStudents = () => {
+        const paidIds = paidHallTicketStudents.map(s => s.id);
+        const allSelected = paidIds.length > 0 && paidIds.every(id => hallTicketSelectedStudents.includes(id));
+
+        setHallTicketSelectedStudents(prev =>
+            allSelected
+                ? prev.filter(id => !paidIds.includes(id))
+                : Array.from(new Set([...prev, ...paidIds]))
+        );
+    };
+
+    const isHallTicketPublished = (student) => {
+        return hallTicketPublications.some(p =>
+            p.published === true &&
+            p.exam === hallTicketExam &&
+            String(p.year) === String(hallTicketYear) &&
+            (
+                p.studentId === student.id ||
+                (p.admissionNo && String(p.admissionNo) === String(student.admissionNo || student.rollNo))
+            )
+        );
+    };
+
+    const publishHallTicket = async (student) => {
+        const fee = getStudentFeeStatus(student);
+        if (!fee.paid) {
+            alert(`${student.name || 'This student'} has pending fees. Hall Ticket cannot be published.`);
+            return;
+        }
+
+        const allocation = hallTicketAllocationForStudent(student);
+        if (!allocation) {
+            alert('This student has no exam hall allocation. Allocate the exam hall first.');
+            return;
+        }
+
+        if (isHallTicketPublished(student)) {
+            alert('Hall Ticket is already published for this student.');
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'hall_ticket_publications'), {
+                studentId: student.id,
+                studentName: student.name || 'Student',
+                admissionNo: student.admissionNo || student.rollNo || '',
+                exam: hallTicketExam,
+                year: Number(hallTicketYear),
+                allocationId: allocation.id,
+                hallNo: allocation.hallNo || '',
+                seatNo: (allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '',
+                published: true,
+                publishedAt: serverTimestamp()
+            });
+
+            alert(`Hall Ticket published for ${student.name || 'student'}.`);
+        } catch (error) {
+            console.error('Hall Ticket publication failed:', error);
+            alert('Failed to publish Hall Ticket. Please try again.');
+        }
+    };
+
+    const publishSelectedHallTickets = async () => {
+        const selected = paidHallTicketStudents.filter(s => hallTicketSelectedStudents.includes(s.id));
+        if (selected.length === 0) {
+            alert('Please select at least one paid student.');
+            return;
+        }
+
+        for (const student of selected) {
+            if (!isHallTicketPublished(student)) {
+                await publishHallTicket(student);
+            }
+        }
+
+        setHallTicketSelectedStudents([]);
+    };
+
+    const handleAddTimetableSubject = async (e) => {
+        e.preventDefault();
+        if (!timetableClass || !timetableExamName || !timetableSubject.trim() || !timetableDate) {
+            alert('Please select class, exam name, enter subject name, and select exam date.');
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'exam_timetables'), {
+                className: timetableClass,
+                examName: timetableExamName,
+                subjectCode: timetableSubjectCode.trim(),
+                subject: timetableSubject.trim(),
+                examDate: timetableDate,
+                examTime: timetableTime.trim() || '09:30 AM - 12:30 PM',
+                createdAt: serverTimestamp()
+            });
+
+            setTimetableSubjectCode('');
+            setTimetableSubject('');
+            setTimetableDate('');
+            alert('Exam subject schedule added successfully!');
+        } catch (error) {
+            console.error('Error adding timetable schedule:', error);
+            alert('Failed to add timetable schedule.');
+        }
+    };
+
+    const printStudentHallTicket = (student) => {
+        const allocation = examHalls.find(h => (h.studentIds || []).includes(student.id) || (h.studentList || []).some(x => x.id === student.id));
+        if (!allocation) {
+            alert('This student has no exam hall allocation yet.');
+            return;
+        }
+        const seat = (allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '—';
+        const stClass = student.className || student.grade || allocation.targetClass || '';
+        const currentExam = allocation.examName || hallTicketExam || '1st Mid-Term Exam';
+
+        const matchedTimetable = examTimetables.filter(t => 
+            t.className === stClass && t.examName === currentExam
+        );
+
+        let timetableHtml = matchedTimetable.length > 0
+            ? matchedTimetable.map(t => `<tr><td>${t.examDate}</td><td>${t.subject}</td><td>${t.examTime || '09:30 AM - 12:30 PM'}</td></tr>`).join('')
+            : `<tr><td colSpan="3" style="text-align:center;">No Exam Schedule Available</td></tr>`;
+
+        const win = window.open('', '_blank', 'width=900,height=700');
+        win.document.write(`<html><head><title>Hall Ticket</title><style>body{font-family:Arial;padding:30px}.ticket{border:3px solid #111;padding:25px;max-width:750px;margin:auto}h1{text-align:center;margin-bottom:5px}h3{text-align:center;margin-top:0;color:#555}table{width:100%;border-collapse:collapse;margin-top:15px}td,th{padding:9px;border:1px solid #ccc;text-align:left}th{background:#f2f2f2}.info-table td{border:none;padding:6px 0}</style></head><body><div class="ticket"><h1>EXAMINATION HALL TICKET</h1><h3>${currentExam}</h3><table class="info-table"><tr><td><strong>Student Name:</strong> ${student.name || 'Student'}</td><td><strong>Admission No:</strong> ${student.admissionNo || student.rollNo || '—'}</td></tr><tr><td><strong>Class / Sec:</strong> ${stClass} / ${student.sectionName || student.section || ''}</td><td><strong>Hall / Seat:</strong> ${allocation.hallNo || '—'} / Seat ${seat}</td></tr></table><h4 style="margin-top:20px;margin-bottom:8px">EXAM TIMETABLE</h4><table><thead><tr><th>Date</th><th>Subject</th><th>Timing</th></tr></thead><tbody>${timetableHtml}</tbody></table><p style="margin-top:30px;text-align:right"><strong>Authorized Signatory</strong></p></div><script>window.print()</script></body></html>`);
+        win.document.close();
+    };
 
     const toggleExamStudent = (studentId) => {
         setSelectedExamStudents(prev =>
@@ -136,8 +368,6 @@ export default function OfficeDashboard() {
         }
 
         try {
-            // Assign seat numbers in the same order the students are selected.
-            // Seat numbers are scoped to this hall allocation and start from 1.
             const studentList = selectedExamStudentRecords.map((s, index) => ({
                 id: s.id,
                 name: s.name || 'Student',
@@ -267,9 +497,9 @@ export default function OfficeDashboard() {
             )}
 
             {/* Sidebar Navigation */}
-            <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+            <aside className={`dashboard-sidebars ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="brand-icon"> <img src={logo} alt="" id='logogs'/> </div>
+                    <div className="brand-icon"> <img src={logo} alt="" id='logogs' /> </div>
                     <span className="brand-titles">Front-Office Desk</span>
                 </div>
 
@@ -305,8 +535,17 @@ export default function OfficeDashboard() {
 
                         {isExamMenuOpen && (
                             <div className="submenu-children" style={{ display: 'flex', flexDirection: 'column', paddingLeft: '1.25rem', gap: '4px', marginTop: '6px' }}>
+                                <button className={`nav-links ${activeTab === 'exam-timetable' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-timetable'); setIsMobileMenuOpen(false); }}>
+                                    <CalendarDays size={18} /><span id='hall'>Exam Timetable</span>
+                                </button>
+                                <button className={`nav-links ${activeTab === 'hall-ticket-allocation' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-ticket-allocation'); setIsMobileMenuOpen(false); }}>
+                                    <Ticket size={18} /><span id='hall'>Hall Ticket Allocation</span>
+                                </button>
+                                <button className={`nav-links ${activeTab === 'hall-tickets' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-tickets'); setIsMobileMenuOpen(false); }}>
+                                    <Download size={18} /><span id='hall'>Hall Tickets</span>
+                                </button>
                                 <button className={`nav-links ${activeTab === 'exam-halls' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}>
-                                    <div className="nav-links-content"><Users size={16} /><span>Aloocate</span></div>
+                                    <div className="nav-links-content"><Users size={16} /><span>Allocate</span></div>
                                 </button>
                             </div>
                         )}
@@ -430,8 +669,8 @@ export default function OfficeDashboard() {
                                     </p>
                                 </div>
                                 {feeViewMode !== 'classes' && (
-                                    <button 
-                                        className="btn-primary" 
+                                    <button
+                                        className="btn-primary"
                                         style={{ background: '#64748b', padding: '6px 12px', fontSize: '0.8rem' }}
                                         onClick={() => {
                                             if (feeViewMode === 'students-fee') setFeeViewMode('sections');
@@ -450,13 +689,13 @@ export default function OfficeDashboard() {
                                         const classStudents = studentsList.filter(s => (s.className || s.grade) === clsName);
                                         const sections = Array.from(new Set(classStudents.map(s => s.sectionName || 'General').filter(Boolean)));
                                         return (
-                                            <div 
-                                                key={clsName} 
+                                            <div
+                                                key={clsName}
                                                 onClick={() => { setSelectedFeeClass(clsName); setFeeViewMode('sections'); }}
                                                 style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                                             >
                                                 <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#059669' }}></div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                                <div style={{ display: 'flex', items: 'center', gap: '10px', marginBottom: '10px' }}>
                                                     <div style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669', padding: '8px', borderRadius: '8px' }}>
                                                         <GraduationCap size={20} />
                                                     </div>
@@ -482,8 +721,8 @@ export default function OfficeDashboard() {
                                         });
 
                                         return Object.entries(sectionsMap).map(([secName, secStudents]) => (
-                                            <div 
-                                                key={secName} 
+                                            <div
+                                                key={secName}
                                                 onClick={() => { setSelectedFeeSection(secName); setFeeViewMode('students-fee'); }}
                                                 style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                                             >
@@ -521,8 +760,8 @@ export default function OfficeDashboard() {
                                                             <td><strong>{st.name}</strong></td>
                                                             <td>{st.phone || st.parentPhone || 'N/A'}</td>
                                                             <td style={{ textAlign: 'right' }}>
-                                                                <button 
-                                                                    className="btn-save-grade" 
+                                                                <button
+                                                                    className="btn-save-grade"
                                                                     onClick={() => {
                                                                         setFeeForm({
                                                                             admissionNo: st.admissionNo || '',
@@ -615,13 +854,13 @@ export default function OfficeDashboard() {
                                                 </td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     {item.status !== 'Paid' && (
-                                                        <button 
-                                                            className="btn-save-grade" 
+                                                        <button
+                                                            className="btn-save-grade"
                                                             onClick={async () => {
-                                                                await updateDoc(doc(db, 'fee_collections', item.id), { 
-                                                                    paidAmount: item.totalFee, 
-                                                                    balance: 0, 
-                                                                    status: 'Paid' 
+                                                                await updateDoc(doc(db, 'fee_collections', item.id), {
+                                                                    paidAmount: item.totalFee,
+                                                                    balance: 0,
+                                                                    status: 'Paid'
                                                                 });
                                                                 alert("Marked as Paid! Receipt generated for student.");
                                                             }}
@@ -634,6 +873,319 @@ export default function OfficeDashboard() {
                                             </tr>
                                         ))}
                                     </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* EXAM TIMETABLE MODULE */}
+                    {activeTab === 'exam-timetable' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <span className="exam-module-kicker">EXAMINATION TIMETABLE SCHEDULER</span>
+                                    <h3>Manage Exam Timetable</h3>
+                                    <p className="subtitle">Select class, exam type, subject and date to add dynamic timetables displayed directly on Student Hall Tickets.</p>
+                                </div>
+                                <CalendarDays size={28} />
+                            </div>
+
+                            <form onSubmit={handleAddTimetableSubject} className="form-grid" style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Choose Class</label>
+                                    <select className="custom-select full-width" value={timetableClass} onChange={e => setTimetableClass(e.target.value)} required>
+                                        <option value="">Select Class</option>
+                                        {uniqueClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Name</label>
+                                    <select className="custom-select full-width" value={timetableExamName} onChange={e => setTimetableExamName(e.target.value)} required>
+                                        {examTypes.map(exam => <option key={exam} value={exam}>{exam}</option>)}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Subject Code</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 041" value={timetableSubjectCode} onChange={e => setTimetableSubjectCode(e.target.value)} required />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Subject Name</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. Mathematics" value={timetableSubject} onChange={e => setTimetableSubject(e.target.value)} required />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Date</label>
+                                    <input type="date" className="table-input full-width-input" value={timetableDate} onChange={e => setTimetableDate(e.target.value)} required />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Exam Time Slot</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="e.g. 09:30 AM - 12:30 PM" value={timetableTime} onChange={e => setTimetableTime(e.target.value)} required />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                        <PlusCircle size={15} /> Add Subject Exam Schedule
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4>Published Exam Timetables ({examTimetables.length})</h4>
+                            <div className="table-responsive">
+                                <table className="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Class</th>
+                                            <th>Exam</th>
+                                            <th>Subject Code</th>
+                                            <th>Subject</th>
+                                            <th>Date</th>
+                                            <th>Timing</th>
+                                            <th style={{ textAlign: 'right' }}>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {examTimetables.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No timetables published yet.</td>
+                                            </tr>
+                                        ) : (
+                                            examTimetables.map(item => (
+                                                <tr key={item.id}>
+                                                    <td><strong>{item.className}</strong></td>
+                                                    <td><span className="task-target-tag">{item.examName}</span></td>
+                                                    <td>{item.subjectCode || '—'}</td>
+                                                    <td><strong>{item.subject}</strong></td>
+                                                    <td>{item.examDate}</td>
+                                                    <td>{item.examTime || '09:30 AM - 12:30 PM'}</td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <button className="delete-task-btn" onClick={() => handleDelete('exam_timetables', item.id)} title="Delete Entry"><X size={14} /></button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HALL TICKET OFFICE MODULE */}
+                    {activeTab === 'hall-ticket-allocation' && (
+                        <div className="dash-card full-width hall-ticket-allocation-module">
+                            <style>{`
+                                .hall-ticket-allocation-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0;padding:18px;border:1px solid #dbe7e2;border-radius:16px;background:#f8fbfa}
+                                .hall-ticket-allocation-filters label{display:flex;flex-direction:column;gap:7px;font-size:.75rem;font-weight:800;color:#475569}
+                                .hall-ticket-allocation-filters select,.hall-ticket-allocation-filters input{height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:.8rem;outline:none}
+                                .hall-ticket-allocation-filters select:focus,.hall-ticket-allocation-filters input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+                                .hall-ticket-search-field{grid-column:span 1}
+                                .hall-ticket-summary-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+                                .hall-ticket-count{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:10px;font-size:.75rem}
+                                .hall-ticket-count strong{font-size:1rem}
+                                .hall-ticket-count.paid{background:#dcfce7;color:#047857}
+                                .hall-ticket-count.blocked{background:#fee2e2;color:#b91c1c}
+                                .hall-ticket-publish-selected{background:#059669!important;color:#fff!important}
+                                .hall-ticket-publish-selected:disabled,.hall-ticket-summary-row .exam-primary-btn:disabled{opacity:.45;cursor:not-allowed}
+                                .hall-ticket-allocation-table td{vertical-align:middle}
+                                .hall-ticket-allocation-table input[type="checkbox"]{width:16px;height:16px;accent-color:#059669}
+                                .hall-ticket-fee-badge,.hall-ticket-published-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;font-size:.68rem;font-weight:900}
+                                .hall-ticket-fee-badge.paid{background:#dcfce7;color:#047857}
+                                .hall-ticket-fee-badge.not-paid{background:#fee2e2;color:#b91c1c}
+                                .hall-ticket-published-badge{background:#d1fae5;color:#047857}
+                                .hall-ticket-publish-btn,.hall-ticket-block-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:9px;padding:9px 12px;font-size:.72rem;font-weight:800;cursor:pointer}
+                                .hall-ticket-publish-btn{background:#059669;color:#fff}
+                                .hall-ticket-publish-btn:hover{background:#047857}
+                                .hall-ticket-block-btn{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
+                                .hall-ticket-row-blocked{background:rgba(248,113,113,.035)}
+                                .hall-ticket-no-allocation{color:#94a3b8;font-size:.72rem}
+                                @media(max-width:900px){.hall-ticket-allocation-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                                @media(max-width:560px){.hall-ticket-allocation-filters{grid-template-columns:1fr}.hall-ticket-search-field{grid-column:auto}}
+                            `}</style>
+                            <div className="card-header">
+                                <div>
+                                    <span className="exam-module-kicker">HALL TICKET MANAGEMENT</span>
+                                    <h3>Hall Ticket Allocation</h3>
+                                    <p className="subtitle">Select the examination and academic year, then publish Hall Tickets only for students whose fees are fully paid.</p>
+                                </div>
+                                <Ticket size={28} />
+                            </div>
+
+                            <div className="hall-ticket-allocation-filters">
+                                <label>
+                                    <span>Exam</span>
+                                    <select value={hallTicketExam} onChange={e => setHallTicketExam(e.target.value)}>
+                                        {hallTicketExamOptions.map(exam => <option key={exam} value={exam}>{exam}</option>)}
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Year</span>
+                                    <select value={hallTicketYear} onChange={e => setHallTicketYear(e.target.value)}>
+                                        {hallTicketYears.map(year => <option key={year} value={year}>{year}</option>)}
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Class</span>
+                                    <select value={hallTicketClass} onChange={e => {
+                                        setHallTicketClass(e.target.value);
+                                        setHallTicketSection('');
+                                    }}>
+                                        <option value="">All Classes</option>
+                                        {hallTicketClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                                    </select>
+                                </label>
+
+                                <label>
+                                    <span>Section</span>
+                                    <select value={hallTicketSection} onChange={e => setHallTicketSection(e.target.value)}>
+                                        <option value="">All Sections</option>
+                                        {hallTicketSections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                                    </select>
+                                </label>
+
+                                <label className="hall-ticket-search-field">
+                                    <span>Search Student</span>
+                                    <input
+                                        value={hallTicketSearch}
+                                        onChange={e => setHallTicketSearch(e.target.value)}
+                                        placeholder="Name / Admission No..."
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="hall-ticket-summary-row">
+                                <div className="hall-ticket-count paid">
+                                    <strong>{paidHallTicketStudents.length}</strong>
+                                    <span>Paid</span>
+                                </div>
+                                <div className="hall-ticket-count blocked">
+                                    <strong>{unpaidHallTicketStudents.length}</strong>
+                                    <span>Not Paid / Blocked</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="exam-primary-btn"
+                                    onClick={toggleAllPaidHallTicketStudents}
+                                    disabled={paidHallTicketStudents.length === 0}
+                                >
+                                    <CheckSquare size={15} /> Select All Paid
+                                </button>
+                                <button
+                                    type="button"
+                                    className="exam-primary-btn hall-ticket-publish-selected"
+                                    onClick={publishSelectedHallTickets}
+                                    disabled={hallTicketSelectedStudents.length === 0}
+                                >
+                                    <Ticket size={15} /> Publish Selected ({hallTicketSelectedStudents.length})
+                                </button>
+                            </div>
+
+                            <div className="table-responsive">
+                                <table className="custom-table hall-ticket-allocation-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Select</th>
+                                            <th>Student</th>
+                                            <th>Admission No</th>
+                                            <th>Class / Section</th>
+                                            <th>Fee Status</th>
+                                            <th>Hall / Seat</th>
+                                            <th>Hall Ticket</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {hallTicketListStudents.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" style={{ textAlign: 'center', padding: '28px' }}>
+                                                    No students found for the selected filters.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            hallTicketListStudents.map(student => {
+                                                const fee = getStudentFeeStatus(student);
+                                                const allocation = hallTicketAllocationForStudent(student);
+                                                const published = isHallTicketPublished(student);
+                                                const seat = allocation
+                                                    ? (allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '—'
+                                                    : '—';
+
+                                                return (
+                                                    <tr key={student.id} className={!fee.paid ? 'hall-ticket-row-blocked' : ''}>
+                                                        <td>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={hallTicketSelectedStudents.includes(student.id)}
+                                                                onChange={() => toggleHallTicketStudent(student.id)}
+                                                                disabled={!fee.paid || published}
+                                                            />
+                                                        </td>
+                                                        <td><strong>{student.name || 'Student'}</strong></td>
+                                                        <td>{student.admissionNo || student.rollNo || '—'}</td>
+                                                        <td>{student.className || student.grade || ''} {student.sectionName || student.section ? `/ ${student.sectionName || student.section}` : ''}</td>
+                                                        <td>
+                                                            <span className={`hall-ticket-fee-badge ${fee.paid ? 'paid' : 'not-paid'}`}>
+                                                                {fee.paid ? 'PAID' : 'NOT PAID'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {allocation
+                                                                ? `${allocation.hallNo || '—'} / Seat ${seat}`
+                                                                : <span className="hall-ticket-no-allocation">Not Allocated</span>}
+                                                        </td>
+                                                        <td>
+                                                            {published ? (
+                                                                <span className="hall-ticket-published-badge">
+                                                                    <CheckCircle size={14} /> Published
+                                                                </span>
+                                                            ) : fee.paid && allocation ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="hall-ticket-publish-btn"
+                                                                    onClick={() => publishHallTicket(student)}
+                                                                >
+                                                                    <Ticket size={14} /> Publish Hall Ticket
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    className="hall-ticket-block-btn"
+                                                                    disabled
+                                                                    title={!fee.paid ? 'Fees are pending' : 'Exam hall is not allocated'}
+                                                                >
+                                                                    <XCircle size={14} /> Blocked
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'hall-tickets' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div><h3>Hall Ticket Management</h3><p>Office can manually search any student and download the hall ticket.</p></div>
+                                <Ticket size={28} />
+                            </div>
+                            <div style={{ margin: '18px 0' }}>
+                                <input value={hallTicketSearch} onChange={e => setHallTicketSearch(e.target.value)} placeholder="Search student name or admission number..." style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+                            </div>
+                            <div className="table-responsive">
+                                <table className="custom-table" style={{ width: '100%' }}>
+                                    <thead><tr><th>Student</th><th>Admission No</th><th>Class</th><th>Hall Status</th><th>Action</th></tr></thead>
+                                    <tbody>{officeHallTicketStudents.map(student => {
+                                        const allocation = examHalls.find(h => (h.studentIds || []).includes(student.id) || (h.studentList || []).some(x => x.id === student.id));
+                                        return <tr key={student.id}><td><strong>{student.name || 'Student'}</strong></td><td>{student.admissionNo || student.rollNo || '—'}</td><td>{student.className || student.grade || ''} {student.sectionName || student.section ? `/ ${student.sectionName || student.section}` : ''}</td><td>{allocation ? `${allocation.hallNo} / Seat ${(allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '—'}` : 'Not Allocated'}</td><td><button className="exam-primary-btn" disabled={!allocation} onClick={() => printStudentHallTicket(student)}><Download size={15} /> Download Hall Ticket</button></td></tr>
+                                    })}</tbody>
                                 </table>
                             </div>
                         </div>
@@ -691,7 +1243,9 @@ export default function OfficeDashboard() {
 
                                             <div className="exam-field">
                                                 <label>Exam Name</label>
-                                                <input value={examName} onChange={e => setExamName(e.target.value)} placeholder="e.g. 1st Mid-Term Exam" />
+                                                <select value={examName} onChange={e => setExamName(e.target.value)}>
+                                                    {examTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                                                </select>
                                             </div>
 
                                             <div className="exam-field">
@@ -959,32 +1513,36 @@ export default function OfficeDashboard() {
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
-                                        <PlusCircle size={15} /> Add Task
+                                        <PlusCircle size={15} /> Create Task Item
                                     </button>
                                 </div>
                             </form>
 
-                            <h4>Active Office Tasks ({officeTasks.length})</h4>
+                            <h4>Pending Front-Office Tasks ({officeTasks.length})</h4>
                             <div className="table-responsive">
                                 <table className="custom-table">
                                     <thead>
                                         <tr>
-                                            <th>Task Title</th>
-                                            <th>Assigned To</th>
+                                            <th>Task Description</th>
+                                            <th>Assigned Staff</th>
                                             <th>Priority</th>
                                             <th>Deadline</th>
                                             <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {officeTasks.map(item => (
-                                            <tr key={item.id}>
-                                                <td><strong>{item.title}</strong></td>
-                                                <td>{item.assignedTo}</td>
-                                                <td><span className="task-target-tag">{item.priority}</span></td>
-                                                <td>{item.deadline}</td>
+                                        {officeTasks.map(task => (
+                                            <tr key={task.id}>
+                                                <td><strong>{task.title}</strong></td>
+                                                <td>{task.assignedTo}</td>
+                                                <td>
+                                                    <span className={`status-badge ${task.priority === 'Urgent' ? 'status-absent' : 'status-present'}`}>
+                                                        {task.priority}
+                                                    </span>
+                                                </td>
+                                                <td>{task.deadline}</td>
                                                 <td style={{ textAlign: 'right' }}>
-                                                    <button className="delete-task-btn" onClick={() => handleDelete('office_tasks', item.id)} title="Delete Task"><X size={14} /></button>
+                                                    <button className="delete-task-btn" onClick={() => handleDelete('office_tasks', task.id)} title="Delete Task"><X size={14} /></button>
                                                 </td>
                                             </tr>
                                         ))}

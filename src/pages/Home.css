@@ -1,17 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
-
-/* ==================================================================
-   HOLY CROSS MATRICULATION HR. SEC. SCHOOL — Home page theme
-   ------------------------------------------------------------------
-   Design system: "Soaring towards Bright Future"
-   Palette   : Indigo (authority/structure) + Emerald (signature accent)
-               + Rose (warmth/service) + Sky (growth) on a cool,
-               crisp white/pale-indigo surface — a deliberate move
-               away from the earlier warm cream + orange scheme.
-   Type      : Outfit only. Hierarchy comes from weight, tracking and
-               case — no other font families are used anywhere.
-   ================================================================== */
-
 :root {
     /* ---- Brand palette ---- */
     --ink: #172033;
