@@ -180,22 +180,12 @@ export default function Home({ setActivePage }) {
                         </h2>
 
                         <div className="hero-cta-row">
-                            <button className="btn-primary" onClick={() => { navigate("/admissions"); }}>
-                                <span>Admission Portal</span>
+                            <button className="btn-primary" onClick={() => { navigate("/gallery"); }}>
+                                <span>Explore Campus</span>
                                 <ArrowRight size={14} />
                             </button>
 
-                            <div className="hero-reviews">
-                                <div className="hero-reviews-avatars">
-                                    <span className="hr-avatar av-1"><GraduationCap size={13} /></span>
-                                    <span className="hr-avatar av-2"><BookOpen size={13} /></span>
-                                    <span className="hr-avatar av-3"><Trophy size={13} /></span>
-                                </div>
-                                <div className="hero-reviews-text">
-                                    <strong>3400+</strong>
-                                    <span>Happy Students</span>
-                                </div>
-                            </div>
+                           
                         </div>
 
                         <p>
@@ -216,11 +206,11 @@ export default function Home({ setActivePage }) {
                                 <span className="hs-label">Board Exam Focus</span>
                             </div>
                             <div className="hero-stat-box box-amber">
-                                <span className="hs-num">15+</span>
+                                <span className="hs-num">2.7+</span>
                                 <span className="hs-label">Acres Campus</span>
                             </div>
                             <div className="hero-stat-box box-peach">
-                                <span className="hs-num">24+</span>
+                                <span className="hs-num">n+</span>
                                 <span className="hs-label">Expert Faculty</span>
                             </div>
                         </div>
@@ -229,9 +219,9 @@ export default function Home({ setActivePage }) {
             </section>
 
             {/* 3. Quick Action Portals (Scale Up Animation) */}
-            <section className="quick-portals-wrapper scroll-animate anim-scale-up">
+            {/* <section className="quick-portals-wrapper scroll-animate anim-scale-up">
                 <div className="portal-grid">
-                    <div className="portal-card portal-purple" onClick={() => setActivePage('admissions')}>
+                    {/* <div className="portal-card portal-purple" onClick={() => setActivePage('admissions')}>
                         <div className="portal-icon-wrapper">
                             <GraduationCap size={20} />
                         </div>
@@ -239,7 +229,7 @@ export default function Home({ setActivePage }) {
                             <h4>Online Admission</h4>
                             <p>Grade X, XI & XII Application</p>
                         </div>
-                    </div>
+                    </div> 
 
                     <div className="portal-card portal-pink" onClick={() => setActivePage('progress-report')}>
                         <div className="portal-icon-wrapper">
@@ -271,7 +261,7 @@ export default function Home({ setActivePage }) {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* 4. Notice Board / Circulars (Fade Up Animation) */}
             <div className="scroll-animate anim-fade-up">

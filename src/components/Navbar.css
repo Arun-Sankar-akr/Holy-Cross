@@ -4,8 +4,8 @@
     position: fixed;
     top: 0;
     z-index: 1000;
-    background-color: #8004c7;
-    color: #ffffff;
+    background-color: #F8FAFC;
+    color: #1E293B;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     font-family: 'Outfit', sans-serif;
     transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -65,7 +65,7 @@
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.04em;
-    color: #ffffff;
+    color: #1E293B;
     margin: 0;
     line-height: 1.2;
     white-space: nowrap;
@@ -80,7 +80,7 @@
 
 .subline-divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(100, 116, 139, 0.45);
     flex-grow: 1;
 }
 
@@ -88,7 +88,7 @@
     font-size: 0.50rem;
     font-weight: 700;
     letter-spacing: 0.14em;
-    color: #ffffff;
+    color: #1E293B;
     text-transform: uppercase;
     white-space: nowrap;
     opacity: 0.95;
@@ -107,7 +107,7 @@
 .nav-link {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(30, 41, 59, 0.88);
     font-family: 'Outfit', sans-serif;
     font-size: 0.88rem;
     font-weight: 500;
@@ -136,7 +136,7 @@
     left: 0;
     width: 0;
     height: 2.5px;
-    background-color: #ffffff;
+    background-color: #1E293B;
     border-radius: 2px;
     transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -170,9 +170,9 @@
     position: absolute;
     top: 100%;
     left: 0;
-    background-color: #8004c7;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    /* border-top: 3px solid #ffffff; */
+    background-color: #F8FAFC;
+    border: 1px solid rgba(15, 23, 42, 0.10);
+    /* border-top: 3px solid #1E293B; */
     border-radius: 0 0 8px 8px;
     min-width: 210px;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
@@ -202,7 +202,7 @@
     padding: 10px 18px;
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(30, 41, 59, 0.88);
     font-family: 'Outfit', sans-serif;
     font-size: 0.84rem;
     font-weight: 500;
@@ -214,8 +214,8 @@
 
 .dropdown-link:hover,
 .dropdown-link.is-active {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+    background-color: rgba(15, 23, 42, 0.06);
+    color: #1E293B;
     padding-left: 22px;
 }
 
@@ -223,7 +223,7 @@
     display: none;
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: #1E293B;
     cursor: pointer;
     padding: 4px;
     align-items: center;
@@ -235,7 +235,7 @@
    Scrolled Header State
    ========================================== */
 .header-root.is-scrolled {
-    background-color: rgba(128, 4, 199, 0.96);
+    background-color: rgba(248, 250, 252, 0.97);
     backdrop-filter: blur(8px);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
@@ -302,7 +302,7 @@
         right: 0;
         bottom: 0;
         height: calc(100vh - 64px);
-        background: rgba(128, 4, 199, 0.95);
+        background: rgba(248, 250, 252, 0.98);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         flex-direction: column;
@@ -312,7 +312,7 @@
         overflow-y: auto;
         z-index: 999;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        border-top: 1px solid rgba(15, 23, 42, 0.10);
 
         opacity: 0;
         visibility: hidden;
@@ -349,7 +349,7 @@
         width: 100%;
         box-shadow: none;
         border: none;
-        background: rgba(255, 255, 255, 0.12);
+        background: #F8FAFC;
         border-radius: 8px;
         margin-top: 6px;
         padding: 6px 0;
@@ -364,19 +364,19 @@
 
 /* ===== SST NAVBAR THEME ===== */
 .header-root {
-    background: linear-gradient(90deg, #0B1F3A 0%, #123A70 52%, #155EEF 100%);
+    background: #F8FAFC;
     box-shadow: 0 5px 20px rgba(11,31,58,.20);
 }
 
 .header-root.scrolled {
-    background: rgba(11,31,58,.96);
+    background: rgba(248,250,252,.97);
     box-shadow: 0 7px 24px rgba(11,31,58,.24);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
 
 .brand-title {
-    color: #FFFFFF;
+    color: #1E293B;
 }
 
 .subline-divider {
@@ -384,50 +384,50 @@
 }
 
 .subline-text {
-    color: #DCEBFF;
+    color: #64748B;
 }
 
 .header-nav a {
-    color: #E8F1FF;
+    color: #334155;
 }
 
 .header-nav a:hover,
 .header-nav a.active {
-    color: #FFFFFF;
+    color: #1E293B;
 }
 
 .header-nav a::after {
-    background: linear-gradient(90deg, #38BDF8, #FBBF24);
+    background: #2563EB;
 }
 
 .nav-portal-btn {
-    background: linear-gradient(135deg, #2563EB, #4F46E5);
+    background: #2563EB;
     border-color: rgba(255,255,255,.14);
     box-shadow: 0 7px 18px rgba(37,99,235,.28);
 }
 
 .nav-portal-btn:hover {
-    background: linear-gradient(135deg, #3B82F6, #6366F1);
+    background: #1D4ED8;
     box-shadow: 0 10px 24px rgba(37,99,235,.34);
 }
 
 .mobile-menu-toggle {
-    background: rgba(255,255,255,.10);
+    background: #F1F5F9;
     border-color: rgba(255,255,255,.18);
-    color: #FFFFFF;
+    color: #1E293B;
 }
 
 .mobile-menu-toggle:hover {
-    background: rgba(37,99,235,.42);
+    background: #E0ECFF;
 }
 
 @media (max-width: 900px) {
     .header-root {
-        background: linear-gradient(90deg, #0B1F3A, #155EEF);
+        background: #F8FAFC;
     }
 
     .header-nav {
-        background: #0B1F3A;
+        background: #F8FAFC;
         border-top-color: rgba(147,197,253,.16);
         box-shadow: 0 14px 28px rgba(11,31,58,.22);
     }
@@ -482,7 +482,7 @@
     width: 54px;
     height: 2px;
     border-radius: 999px;
-    background: linear-gradient(90deg, #38BDF8, #FBBF24);
+    background: #2563EB;
     box-shadow: 0 0 12px rgba(56,189,248,.38);
 }
 
@@ -496,7 +496,7 @@
     margin: 2px 0;
     padding: 10px 13px 10px 15px;
 
-    color: #E8F1FF;
+    color: #334155;
     background: transparent;
     border: 1px solid transparent;
     border-radius: 9px;
@@ -531,14 +531,9 @@
 .dropdown-link:hover,
 .dropdown-link.is-active {
     padding-left: 15px;
-    color: #FFFFFF;
+    color: #1E293B;
 
-    background:
-        linear-gradient(
-            90deg,
-            rgba(37,99,235,.42),
-            rgba(79,70,229,.28)
-        );
+    background: rgba(37, 99, 235, 0.08);
 
     border-color: rgba(147,197,253,.18);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
@@ -554,18 +549,18 @@
 
 /* Make the dropdown arrow fit the new theme */
 .arrow-indicator {
-    color: #BFDBFE;
+    color: #64748B;
     opacity: .9;
 }
 
 .nav-dropdown-group:hover .arrow-indicator,
 .arrow-indicator.is-rotated {
-    color: #67E8F9;
+    color: #2563EB;
 }
 
 /* Keep the submenu connected visually to the navbar */
 .nav-dropdown-group:hover .nav-link {
-    color: #FFFFFF;
+    color: #1E293B;
 }
 
 .nav-dropdown-group:hover .nav-link::after {
@@ -611,14 +606,14 @@
         margin: 2px 0;
         padding: 9px 13px;
         border-radius: 8px;
-        color: #E8F1FF;
+        color: #334155;
     }
 
     .dropdown-link:hover,
     .dropdown-link.is-active {
         padding-left: 13px;
         transform: none;
-        background: rgba(37,99,235,.34);
+        background: #EEF4FF;
         border-color: rgba(147,197,253,.16);
     }
 
@@ -642,5 +637,81 @@
         min-height: 40px;
         padding: 8px 11px;
         font-size: .92rem;
+    }
+}
+
+/* ================================================================
+   LIGHT DROPDOWN THEME
+   ================================================================ */
+
+.dropdown-panel {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-top: 2px solid #2563EB !important;
+    border-radius: 0 0 12px 12px;
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.10),
+        0 4px 12px rgba(15, 23, 42, 0.06);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.dropdown-panel::before {
+    background: #2563EB;
+    box-shadow: none;
+}
+
+.dropdown-link {
+    color: #334155 !important;
+    background: transparent !important;
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+.dropdown-link:hover,
+.dropdown-link.is-active {
+    color: #1D4ED8 !important;
+    background: #EFF6FF !important;
+    border-color: #DBEAFE;
+    box-shadow: none;
+    transform: translateX(2px);
+}
+
+.dropdown-link::before {
+    background: #2563EB;
+}
+
+.arrow-indicator {
+    color: #64748B !important;
+}
+
+.nav-dropdown-group:hover .arrow-indicator,
+.arrow-indicator.is-rotated {
+    color: #2563EB !important;
+}
+
+@media (max-width: 1024px) {
+    .dropdown-panel {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-top: 1px solid #BFDBFE !important;
+        border-radius: 10px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .dropdown-link {
+        color: #334155 !important;
+    }
+
+    .dropdown-link:hover,
+    .dropdown-link.is-active {
+        background: #EFF6FF !important;
+        border-color: #DBEAFE;
+    }
+}
+
+@media (max-width: 600px) {
+    .dropdown-panel {
+        background: #FFFFFF !important;
     }
 }

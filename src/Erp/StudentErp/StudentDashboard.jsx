@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
-import principalSignature from "../../assets/logo.png"
+import principalSignature from "../../assets/signature.png"
 
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
 const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
