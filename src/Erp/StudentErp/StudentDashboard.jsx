@@ -664,6 +664,70 @@ export default function StudentDashboard() {
         }
     }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
+    // Calendar attendance helpers: green = present, red = absent,
+    // white = today / not marked / future / no attendance record.
+    const getLocalDateKey = (date = new Date()) => {
+        const d = date instanceof Date ? date : new Date(date);
+        if (Number.isNaN(d.getTime())) return '';
+        return [
+            d.getFullYear(),
+            String(d.getMonth() + 1).padStart(2, '0'),
+            String(d.getDate()).padStart(2, '0')
+        ].join('-');
+    };
+
+    const normalizeAttendanceDate = (value) => {
+        if (!value) return '';
+        const raw = String(value).trim();
+
+        // Firestore Timestamp / Date-like values
+        if (typeof value?.toDate === 'function') {
+            return getLocalDateKey(value.toDate());
+        }
+
+        // YYYY-MM-DD (also safely handles ISO timestamps)
+        const isoMatch = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+        // DD/MM/YYYY or DD-MM-YYYY
+        const dmyMatch = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/);
+        if (dmyMatch) {
+            return `${dmyMatch[3]}-${String(dmyMatch[2]).padStart(2, '0')}-${String(dmyMatch[1]).padStart(2, '0')}`;
+        }
+
+        return '';
+    };
+
+    const attendanceByDate = attendanceRecords.reduce((map, record) => {
+        const dateKey = normalizeAttendanceDate(record.date);
+        if (!dateKey) return map;
+
+        const status = String(record.status || '').trim().toLowerCase();
+
+        // If multiple period records exist for the same date:
+        // absent wins, then present; unknown/pending is ignored.
+        if (!map[dateKey]) {
+            map[dateKey] = status;
+        } else if (status === 'absent') {
+            map[dateKey] = 'absent';
+        } else if (status === 'present' && map[dateKey] !== 'absent') {
+            map[dateKey] = 'present';
+        }
+
+        return map;
+    }, {});
+
+    const getCalendarAttendanceClass = (year, monthIndex, day) => {
+        const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const status = attendanceByDate[dateKey];
+        const todayKey = getLocalDateKey(new Date());
+
+        if (dateKey === todayKey) return 'today';
+        if (status === 'present') return 'attendance-present';
+        if (status === 'absent') return 'attendance-absent';
+        return 'attendance-unmarked';
+    };
+
     // Attendance Calculations
     const attendanceLogs = [...attendanceRecords].sort((a, b) => {
         const dateA = new Date(`${a.date || "1970-01-01"}T00:00:00`);
@@ -1133,7 +1197,7 @@ export default function StudentDashboard() {
                                         className={`staff-submenu-item ${activeTab === 'exam-halls' ? 'active' : ''}`}
                                         onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
                                     >
-                                        <CheckCircle size={13} /> My Hall Allocation
+                                        <CheckCircle size={13} /> Seating Arrangement
                                     </button>
                                 </div>
                             )}
@@ -1451,10 +1515,26 @@ export default function StudentDashboard() {
                                                     <span key={`blank-${i}`} />
                                                 ))}
                                                 {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }).map((_, i) => {
+                                                    const now = new Date();
+                                                    const year = now.getFullYear();
+                                                    const monthIndex = now.getMonth();
                                                     const dayNum = i + 1;
-                                                    const isToday = dayNum === new Date().getDate();
+                                                    const attendanceClass = getCalendarAttendanceClass(year, monthIndex, dayNum);
+                                                    const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                                    const status = attendanceByDate[dateKey];
+                                                    const statusLabel =
+                                                        attendanceClass === 'attendance-present' ? 'Present' :
+                                                        attendanceClass === 'attendance-absent' ? 'Absent' :
+                                                        attendanceClass === 'today' ? 'Today / Attendance not marked' :
+                                                        'Attendance not marked';
+
                                                     return (
-                                                        <span key={dayNum} className={`ps-cal-day ${isToday ? 'today' : ''}`}>
+                                                        <span
+                                                            key={dayNum}
+                                                            className={`ps-cal-day ${attendanceClass}`}
+                                                            title={`${dateKey} — ${statusLabel}`}
+                                                            aria-label={`${dateKey} — ${statusLabel}`}
+                                                        >
                                                             {dayNum}
                                                         </span>
                                                     );

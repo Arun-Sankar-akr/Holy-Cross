@@ -3374,3 +3374,106 @@ td {
     print-color-adjust: exact;
   }
 }
+
+.ps-mini-cal-day {
+    position: relative;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.ps-mini-cal-day.attendance-present {
+    background: #DCFCE7 !important;
+    color: #166534 !important;
+    border-color: #86EFAC !important;
+    font-weight: 800;
+}
+
+.ps-mini-cal-day.attendance-absent {
+    background: #FEE2E2 !important;
+    color: #B91C1C !important;
+    border-color: #FCA5A5 !important;
+    font-weight: 800;
+}
+
+.ps-mini-cal-day.attendance-unmarked,
+.ps-mini-cal-day.today {
+    background: #FFFFFF !important;
+    color: #334155 !important;
+    border-color: #E2E8F0 !important;
+}
+
+/* Today remains white, with a clear outline so it is still identifiable. */
+.ps-mini-cal-day.today {
+    box-shadow: inset 0 0 0 2px #2563EB;
+    font-weight: 800;
+}
+
+.ps-mini-cal-day.attendance-present:hover,
+.ps-mini-cal-day.attendance-absent:hover,
+.ps-mini-cal-day.attendance-unmarked:hover,
+.ps-mini-cal-day.today:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, .08);
+}
+
+/* Legend */
+.ps-attendance-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 14px;
+    margin-top: 10px;
+    font-size: .67rem;
+    color: #64748B;
+}
+
+.ps-attendance-calendar-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ps-attendance-calendar-legend i {
+    width: 9px;
+    height: 9px;
+    display: inline-block;
+    border-radius: 3px;
+    border: 1px solid #CBD5E1;
+}
+
+.ps-attendance-calendar-legend .legend-present {
+    background: #DCFCE7;
+    border-color: #86EFAC;
+}
+
+.ps-attendance-calendar-legend .legend-absent {
+    background: #FEE2E2;
+    border-color: #FCA5A5;
+}
+
+.ps-attendance-calendar-legend .legend-unmarked {
+    background: #FFFFFF;
+}
+
+.ps-attendance-calendar-legend .legend-today {
+    background: #FFFFFF;
+    border: 2px solid #2563EB;
+}
+
+@media (max-width: 600px) {
+    .ps-mini-cal-day {
+        min-height: 28px;
+        border-radius: 7px;
+    }
+
+    .ps-attendance-calendar-legend {
+        gap: 7px 10px;
+        font-size: .62rem;
+    }
+}
