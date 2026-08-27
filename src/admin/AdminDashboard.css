@@ -144,7 +144,7 @@ body {
 }
 
 .sidebar-collapsed .admin-sidebar {
-  width: var(--sidebar-w-collapsed);
+  width: 0px;
 }
 
 /* first child wraps brand + nav; must be a flex column that can shrink
@@ -203,7 +203,7 @@ body {
 .sidebar-toggle-btn {
   position: absolute;
   top: 18px;
-  right: -13px;
+  right: 13px;
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -2208,7 +2208,7 @@ body {
 }
 
 .sidebar-collapsed .admin-sidebar {
-  width: var(--sidebar-w-collapsed);
+  width:0px;
 }
 
 /* first child wraps brand + nav; must be a flex column that can shrink
@@ -2351,8 +2351,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: 190px;
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 .topbar-icon-btn {
@@ -2944,6 +2944,10 @@ body {
   font-size: .8rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.cancel-btn {
+  padding: 10xp auto;
 }
 
 .cancel-btn:hover,
@@ -6054,6 +6058,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 10px;
   min-width: 78px;
   border: 1px solid #c7d2fe;
   border-radius: 10px;

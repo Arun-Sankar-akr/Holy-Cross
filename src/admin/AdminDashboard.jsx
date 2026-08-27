@@ -1998,7 +1998,7 @@ export default function AdminDashboard() {
                                             className="cancel-btn"
                                             onClick={() => { setIsCreatingGalleryFolder(false); setGalleryNewFolderName(''); }}
                                         >
-                                            <X size={14} />
+                                            Cancel
                                         </button>
                                     </form>
                                 )}
