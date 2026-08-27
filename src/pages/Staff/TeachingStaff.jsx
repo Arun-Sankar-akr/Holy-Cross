@@ -83,7 +83,11 @@ export default function TeachingStaff() {
                             onClick={() => setSelectedTeacher(teacher)}
                         >
                             <div className="teacher-avatar">
-                                <UserCheck size={22} color="#8004c7" />
+                                {teacher.photo ? (
+                                    <img src={teacher.photo} alt={teacher.name} className="teacher-avatar-photo" />
+                                ) : (
+                                    <UserCheck size={22} color="#8004c7" />
+                                )}
                             </div>
                             <div className="teacher-info">
                                 <h3>{teacher.name}</h3>
@@ -177,10 +181,19 @@ export default function TeachingStaff() {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     border: '3px solid #e2bbf5',
-                                    flexShrink: 0
+                                    flexShrink: 0,
+                                    overflow: 'hidden'
                                 }}
                             >
-                                <UserCheck size={38} color="#8004c7" />
+                                {selectedTeacher.photo ? (
+                                    <img
+                                        src={selectedTeacher.photo}
+                                        alt={selectedTeacher.name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <UserCheck size={38} color="#8004c7" />
+                                )}
                             </div>
                         </div>
 

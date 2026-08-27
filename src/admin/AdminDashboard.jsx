@@ -10,7 +10,7 @@ import {
     Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu,
     PanelLeftClose, PanelLeftOpen, User, RefreshCw, BarChart3, Settings,
     Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send,
-    FileText, CheckCircle, XCircle, Eye, Mail, MessageSquare
+    FileText, CheckCircle, XCircle, Eye, Mail, MessageSquare, Upload, FolderPlus, Images, Filter
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -101,7 +101,24 @@ export default function AdminDashboard() {
     const [adminForm, setAdminForm] = useState({ name: '', role: '', qualification: '', message: '', email: '', phone: '' });
     const [topperForm, setTopperForm] = useState({ name: '', streamOrGrade: '', scoreOrPercentage: '' });
     const [eventForm, setEventForm] = useState({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' });
-    const [galleryForm, setGalleryForm] = useState({ title: '', category: 'Campus', image: '', description: '' });
+    const [galleryForm, setGalleryForm] = useState({
+        title: '',
+        description: '',
+        files: []
+    });
+    const [galleryUploadFiles, setGalleryUploadFiles] = useState([]);
+    const [galleryUploading, setGalleryUploading] = useState(false);
+    // Desktop-style folder navigation: '' = Home/root. Nested folders use 'Parent/Child' paths.
+    const [galleryCurrentPath, setGalleryCurrentPath] = useState('');
+    const [galleryFolderRecords, setGalleryFolderRecords] = useState([]);
+    const [isCreatingGalleryFolder, setIsCreatingGalleryFolder] = useState(false);
+    const [galleryNewFolderName, setGalleryNewFolderName] = useState('');
+    // Gallery photo edit modal state
+    const [editingGalleryId, setEditingGalleryId] = useState(null);
+    const [editGalleryForm, setEditGalleryForm] = useState({ title: '', description: '', folderPath: '', image: '' });
+    const [editGalleryNewImageFile, setEditGalleryNewImageFile] = useState(null);
+    const [editGalleryImagePreview, setEditGalleryImagePreview] = useState('');
+    const [galleryUpdating, setGalleryUpdating] = useState(false);
     const [holidayForm, setHolidayForm] = useState({ date: '', day: '', occasion: '', type: 'National Holiday' });
     const [noticeText, setNoticeText] = useState('');
 
@@ -117,7 +134,7 @@ export default function AdminDashboard() {
     const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
     // Staff Form & Update States
-    const initialStaffForm = { name: '', staffId: '', password: '', department: '', email: '' };
+    const initialStaffForm = { name: '', staffId: '', password: '', department: '', email: '', photo: '' };
     const [staffForm, setStaffForm] = useState(initialStaffForm);
     const [editingStaffId, setEditingStaffId] = useState(null);
     const [editStaffForm, setEditStaffForm] = useState(initialStaffForm);
@@ -133,6 +150,58 @@ export default function AdminDashboard() {
 
     const sidebarRef = useRef(null);
     const studentFormRef = useRef(null);
+
+    // Live clock for the Institution KPI header
+    const [currentTime, setCurrentTime] = useState(new Date());
+    useEffect(() => {
+        const clockTimer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(clockTimer);
+    }, []);
+
+    // Builds and downloads a plain-text snapshot of the current KPI data
+    const handleDownloadReport = () => {
+        const now = new Date();
+        const reportLines = [
+            `${settingsForm.schoolName} — Institution KPI Report`,
+            `Generated: ${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at ${now.toLocaleTimeString('en-GB')}`,
+            '',
+            '--- Overview & Live Analytics ---',
+            `Total Enrolled Students: ${studentsList.length}`,
+            `Class Sections: ${sectionsList.length}`,
+            `Faculty Staff Members: ${staffList.length}`,
+            `Staff Work Slots: ${staffTimetables.length}`,
+            `Student Schedule Periods: ${studentTimetables.length}`,
+            `Campus Circulars Published: ${announcements.length}`,
+            `Events on Record: ${calendarEvents.length}`,
+        ].join('\n');
+
+        try {
+            const blob = new Blob([reportLines], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `institution-kpi-report-${now.toISOString().slice(0, 10)}.txt`;
+            link.rel = 'noopener';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err) {
+            // Some sandboxed preview iframes (CodeSandbox/StackBlitz previews,
+            // embedded dev tools, etc.) block the `download` attribute / blob
+            // URLs outright. Falling back to a new tab still lets the admin
+            // see and manually save the report in that case.
+            console.error('Download failed, falling back to a new tab:', err);
+            const win = window.open('', '_blank');
+            if (win) {
+                win.document.write(`<pre>${reportLines.replace(/</g, '&lt;')}</pre>`);
+                win.document.title = 'Institution KPI Report';
+            } else {
+                alert('Your browser blocked the download. Please allow pop-ups for this site and try again.');
+            }
+        }
+    };
 
     // Topbar title/subtitle per tab (mirrors the section headers in the reference design)
     const tabMeta = {
@@ -264,6 +333,251 @@ export default function AdminDashboard() {
         };
     };
 
+    // Gallery multi-upload helpers. Each selected image is compressed before it is
+    // written as its own Firestore gallery document, while `folder` keeps the UI organized.
+    const compressImageToDataUrl = (file) => new Promise((resolve, reject) => {
+        if (!file) return reject(new Error('No file selected'));
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedFormats.includes(file.type.toLowerCase())) {
+            reject(new Error(`${file.name}: unsupported image format. Use JPG, JPEG, PNG or WEBP.`));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error(`Unable to process ${file.name}`));
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 1200;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                let quality = 0.82;
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                while (dataUrl.length > 680000 && quality > 0.3) {
+                    quality -= 0.08;
+                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+                resolve(dataUrl);
+            };
+        };
+        reader.readAsDataURL(file);
+    });
+
+    const handleGalleryFilesChange = (event) => {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        setGalleryUploadFiles(files);
+        setGalleryForm(prev => ({ ...prev, files }));
+    };
+
+    // Resolves the full folder path a photo lives in, e.g. "Campus/Day 1".
+    // Falls back to older folder/subfolder/category fields so existing photos keep working.
+    const getItemPath = (item) => {
+        if (item.folderPath) return item.folderPath;
+        const legacyFolder = item.folder || item.category || '';
+        const legacySubfolder = (item.subfolder || '').trim();
+        if (legacyFolder && legacySubfolder) return `${legacyFolder}/${legacySubfolder}`;
+        return legacyFolder || 'Uncategorized';
+    };
+
+    // If fullPath sits directly inside basePath, returns that immediate child folder name; otherwise null.
+    const getChildFolderName = (fullPath, basePath) => {
+        const prefix = basePath ? `${basePath}/` : '';
+        if (basePath) {
+            if (!fullPath.startsWith(prefix)) return null;
+        } else if (!fullPath) {
+            return null;
+        }
+        const remainder = basePath ? fullPath.slice(prefix.length) : fullPath;
+        if (!remainder) return null;
+        return remainder.split('/')[0];
+    };
+
+    // Subfolders visible while browsing galleryCurrentPath, combining folders that hold
+    // photos with folders explicitly created (which may still be empty).
+    const galleryChildFolders = Array.from(new Set([
+        ...galleryItems.map(item => getChildFolderName(getItemPath(item), galleryCurrentPath)).filter(Boolean),
+        ...galleryFolderRecords.map(rec => getChildFolderName(rec.path, galleryCurrentPath)).filter(Boolean)
+    ])).sort((a, b) => a.localeCompare(b));
+
+    // Photos that live directly inside the folder currently being browsed (not in a deeper subfolder).
+    const galleryItemsHere = galleryItems.filter(item => getItemPath(item) === galleryCurrentPath);
+
+    const getFolderItemCount = (fullPath) => galleryItems.filter(item => {
+        const itemPath = getItemPath(item);
+        return itemPath === fullPath || itemPath.startsWith(`${fullPath}/`);
+    }).length;
+
+    const handleCreateGalleryFolder = async () => {
+        const name = galleryNewFolderName.trim();
+        if (!name) return;
+        const fullPath = galleryCurrentPath ? `${galleryCurrentPath}/${name}` : name;
+        if (galleryChildFolders.some(existing => existing.toLowerCase() === name.toLowerCase())) {
+            alert('A folder with that name already exists here.');
+            return;
+        }
+        try {
+            await addDoc(collection(db, 'galleryFolders'), {
+                path: fullPath,
+                name,
+                parentPath: galleryCurrentPath,
+                createdAt: serverTimestamp()
+            });
+            setGalleryNewFolderName('');
+            setIsCreatingGalleryFolder(false);
+        } catch (error) {
+            console.error('Error creating gallery folder:', error);
+            alert('Could not create the folder. Please try again.');
+        }
+    };
+
+    const handleDeleteGalleryFolder = async (fullPath) => {
+        const itemCount = getFolderItemCount(fullPath);
+        const confirmMsg = itemCount > 0
+            ? `Delete "${fullPath}" and all ${itemCount} photo${itemCount === 1 ? '' : 's'} inside it (including subfolders)? This can't be undone.`
+            : `Delete the empty folder "${fullPath}"?`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const photosToDelete = galleryItems.filter(item => {
+                const itemPath = getItemPath(item);
+                return itemPath === fullPath || itemPath.startsWith(`${fullPath}/`);
+            });
+            const foldersToDelete = galleryFolderRecords.filter(rec =>
+                rec.path === fullPath || rec.path.startsWith(`${fullPath}/`)
+            );
+
+            const batch = writeBatch(db);
+            photosToDelete.forEach(item => batch.delete(doc(db, 'gallery', item.id)));
+            foldersToDelete.forEach(rec => batch.delete(doc(db, 'galleryFolders', rec.id)));
+            await batch.commit();
+        } catch (error) {
+            console.error('Error deleting gallery folder:', error);
+            alert('Could not delete the folder. Please try again.');
+        }
+    };
+
+    const handleGalleryMultiUpload = async (event) => {
+        event.preventDefault();
+        if (!galleryUploadFiles.length) {
+            alert('Please select one or more images.');
+            return;
+        }
+
+        setGalleryUploading(true);
+        let uploaded = 0;
+        try {
+            for (const file of galleryUploadFiles) {
+                const image = await compressImageToDataUrl(file);
+                const title = galleryForm.title.trim()
+                    ? (galleryUploadFiles.length === 1 ? galleryForm.title.trim() : `${galleryForm.title.trim()} - ${file.name.replace(/\.[^/.]+$/, '')}`)
+                    : file.name.replace(/\.[^/.]+$/, '');
+
+                await addDoc(collection(db, 'gallery'), {
+                    title,
+                    folderPath: galleryCurrentPath || 'Uncategorized',
+                    image,
+                    description: galleryForm.description.trim(),
+                    fileName: file.name,
+                    createdAt: serverTimestamp()
+                });
+                uploaded += 1;
+            }
+
+            const destinationLabel = galleryCurrentPath || 'Home';
+            alert(`${uploaded} image${uploaded === 1 ? '' : 's'} uploaded successfully to "${destinationLabel}".`);
+            setGalleryUploadFiles([]);
+            setGalleryForm({ title: '', description: '', files: [] });
+            event.target.reset();
+        } catch (error) {
+            console.error('Gallery multi-upload failed:', error);
+            alert(`Upload stopped after ${uploaded} image${uploaded === 1 ? '' : 's'}. ${error.message || 'Please try again.'}`);
+        } finally {
+            setGalleryUploading(false);
+        }
+    };
+
+    // Opens the edit modal for a gallery photo, pre-filling the form with its current details.
+    const handleStartEditGallery = (item) => {
+        setEditingGalleryId(item.id);
+        setEditGalleryForm({
+            title: item.title || '',
+            description: item.description || '',
+            folderPath: getItemPath(item),
+            image: item.image || ''
+        });
+        setEditGalleryNewImageFile(null);
+        setEditGalleryImagePreview('');
+    };
+
+    const handleCancelEditGallery = () => {
+        setEditingGalleryId(null);
+        setEditGalleryForm({ title: '', description: '', folderPath: '', image: '' });
+        setEditGalleryNewImageFile(null);
+        setEditGalleryImagePreview('');
+    };
+
+    // Lets the admin swap in a new image file for the photo being edited, with an instant preview.
+    const handleEditGalleryImageChange = (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedFormats.includes(file.type.toLowerCase())) {
+            alert(`${file.name}: unsupported image format. Use JPG, JPEG, PNG or WEBP.`);
+            event.target.value = '';
+            return;
+        }
+        setEditGalleryNewImageFile(file);
+        const reader = new FileReader();
+        reader.onload = (ev) => setEditGalleryImagePreview(ev.target.result);
+        reader.readAsDataURL(file);
+    };
+
+    // Saves edits (title, description, folder, and optionally a replacement image) to Firestore.
+    const handleSaveGalleryEdit = async (event) => {
+        event.preventDefault();
+        if (!editingGalleryId) return;
+
+        setGalleryUpdating(true);
+        try {
+            const updates = {
+                title: editGalleryForm.title.trim() || 'Untitled',
+                description: editGalleryForm.description.trim(),
+                folderPath: editGalleryForm.folderPath.trim() || 'Uncategorized'
+            };
+
+            if (editGalleryNewImageFile) {
+                updates.image = await compressImageToDataUrl(editGalleryNewImageFile);
+                updates.fileName = editGalleryNewImageFile.name;
+            }
+
+            await updateDoc(doc(db, 'gallery', editingGalleryId), updates);
+            handleCancelEditGallery();
+        } catch (error) {
+            console.error('Error updating gallery photo:', error);
+            alert(error.message || 'Could not update the photo. Please try again.');
+        } finally {
+            setGalleryUpdating(false);
+        }
+    };
+
     const handleTabClick = (tabKey, extraCallback) => {
         setActiveTab(tabKey);
         setIsMobileMenuOpen(false);
@@ -387,6 +701,9 @@ export default function AdminDashboard() {
         const unsubGallery = onSnapshot(collection(db, 'gallery'), snap =>
             setGalleryItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubGalleryFolders = onSnapshot(collection(db, 'galleryFolders'), snap =>
+            setGalleryFolderRecords(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
         const unsubHolidays = onSnapshot(collection(db, 'holidays'), snap =>
             setHolidays(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
@@ -421,6 +738,7 @@ export default function AdminDashboard() {
             unsubToppers();
             unsubEvents();
             unsubGallery();
+            unsubGalleryFolders();
             unsubHolidays();
             unsubAnnouncements();
             unsubStaff();
@@ -446,7 +764,7 @@ export default function AdminDashboard() {
     };
 
     const handleDelete = async (collectionName, id) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
+        if (window.confirm('Are you sure you want to remove this student?')) {
             try {
                 await deleteDoc(doc(db, collectionName, id));
             } catch (error) {
@@ -779,7 +1097,8 @@ export default function AdminDashboard() {
             staffId: staffForm.staffId.trim(),
             password: staffForm.password.trim(),
             department: staffForm.department.trim(),
-            email: staffForm.email.trim()
+            email: staffForm.email.trim(),
+            photo: staffForm.photo || ''
         }, () => setStaffForm(initialStaffForm));
     };
 
@@ -790,7 +1109,8 @@ export default function AdminDashboard() {
             staffId: member.staffId || '',
             password: member.password || '',
             department: member.department || '',
-            email: member.email || ''
+            email: member.email || '',
+            photo: member.photo || ''
         });
     };
 
@@ -802,7 +1122,8 @@ export default function AdminDashboard() {
                 staffId: editStaffForm.staffId.trim(),
                 password: editStaffForm.password.trim(),
                 department: editStaffForm.department.trim(),
-                email: editStaffForm.email.trim()
+                email: editStaffForm.email.trim(),
+                photo: editStaffForm.photo || ''
             });
             setEditingStaffId(null);
             setEditStaffForm(initialStaffForm);
@@ -812,7 +1133,7 @@ export default function AdminDashboard() {
     };
 
     if (authLoading) {
-        return <div style={{ textAlign: 'center', padding: '60px' }}>Checking Authorization...</div>;
+        return <div style={{ textAlign: 'center', padding: '350px' }}>Checking Authorization...</div>;
     }
 
     if (!user) {
@@ -906,7 +1227,7 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => handleTabClick('staff')}>
                                         <Users size={15} /> Staff Directory
                                     </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass('10th Std'); setSelectedSection(null); })}>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass(null); setSelectedSection(null); })}>
                                         <GraduationCap size={15} /> Students ERP
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
@@ -1182,14 +1503,17 @@ export default function AdminDashboard() {
                     {/* INSTITUTION ANALYTICS & GLOBAL SEARCH */}
                     {activeTab === 'analytics' && (
                         <div className="applications-management-card">
-                            <div className="welcome-banner">
+                            <div className="welcome-banners">
                                 <div>
                                     <h3 className="welcome-title">Welcome back, Admin <span role="img" aria-label="wave">👋</span></h3>
                                     <p className="welcome-sub">Here's what's happening with your institution today.</p>
                                 </div>
                                 <div className="welcome-actions">
-                                    <span className="welcome-date">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                                    <button type="button" className="add-notice-btn" onClick={() => window.print()}><FileText size={15} /> Download Report</button>
+                                    <div className="welcome-datetime">
+                                        <span className="welcome-date">{currentTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                        <span className="welcome-time">{currentTime.toLocaleTimeString('en-GB')}</span>
+                                    </div>
+                                    <button type="button" className="add-notice-btn" onClick={handleDownloadReport}><FileText size={15} /> Download Report</button>
                                 </div>
                             </div>
 
@@ -1235,12 +1559,11 @@ export default function AdminDashboard() {
 
                             <h4 style={{ marginTop: '4px' }}>Quick Links</h4>
                             <div className="quick-links-grid">
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('students', () => { setSelectedClass('10th Std'); setSelectedSection(null); })}><UserCheck size={15} /> Add Student</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('staff')}><Users size={15} /> Add Staff</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('students')}><GraduationCap size={15} /> Add Class</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}><Award size={15} /> Results</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('student_timetable', () => { setSelectedClassTT(null); setSelectedSectionTT(null); })}><Clock size={15} /> Timetable</button>
                                 <button type="button" className="quick-link-chip" onClick={() => handleTabClick('announcements')}><Bell size={15} /> Add Announcement</button>
                                 <button type="button" className="quick-link-chip" onClick={() => handleTabClick('upcoming_events')}><Calendar size={15} /> Create Event</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('results')}><Award size={15} /> Collect Fees</button>
+                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('fees')}><Users size={15} /> Collect Fees</button>
                             </div>
 
                             <h4 style={{ marginTop: '24px' }}>Quick Directory Search</h4>
@@ -1613,62 +1936,261 @@ export default function AdminDashboard() {
 
                     {/* GALLERY */}
                     {activeTab === 'gallery' && (
-                        <div className="applications-management-card publish-management-card publish-gallery-section">
-                            <h3>Publish Gallery Photo</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('gallery', galleryForm, () =>
-                                    setGalleryForm({ title: '', category: 'Campus', image: '', description: '' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Photo Title" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} required /></div>
+                        <div className="applications-management-card publish-management-card publish-gallery-section gallery-management-modern">
+                            <div className="gallery-manager-head">
                                 <div>
-                                    <select value={galleryForm.category} onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value })}>
-                                        <option value="Campus">Campus</option>
-                                        <option value="Events">Events</option>
-                                        <option value="Sports">Sports</option>
-                                        <option value="Academics">Academics</option>
-                                    </select>
+                                    <div className="gallery-manager-kicker"><Images size={15} /> Media Library</div>
+                                    <h3>Gallery Management</h3>
+                                    <p>Browse folders like on your computer — open a folder, make new ones, and upload photos into wherever you are.</p>
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                        Upload Image (Auto-compressed to &lt; 500 KB)
-                                    </label>
+                                <div className="gallery-total-count">
+                                    <strong>{galleryItems.length}</strong>
+                                    <span>Total Photos</span>
+                                </div>
+                            </div>
+
+                            <div className="gallery-explorer-bar">
+                                <div className="gallery-breadcrumbs">
+                                    <button
+                                        type="button"
+                                        className={`gallery-crumb ${!galleryCurrentPath ? 'active' : ''}`}
+                                        onClick={() => setGalleryCurrentPath('')}
+                                    >
+                                        <Folder size={14} /> Home
+                                    </button>
+                                    {galleryCurrentPath && galleryCurrentPath.split('/').map((segment, idx, arr) => {
+                                        const pathUpToHere = arr.slice(0, idx + 1).join('/');
+                                        const isLast = idx === arr.length - 1;
+                                        return (
+                                            <React.Fragment key={pathUpToHere}>
+                                                <span className="gallery-crumb-sep">/</span>
+                                                <button
+                                                    type="button"
+                                                    className={`gallery-crumb ${isLast ? 'active' : ''}`}
+                                                    onClick={() => setGalleryCurrentPath(pathUpToHere)}
+                                                >
+                                                    {segment}
+                                                </button>
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </div>
+
+                                {!isCreatingGalleryFolder ? (
+                                    <button type="button" className="gallery-secondary-btn" onClick={() => setIsCreatingGalleryFolder(true)}>
+                                        <FolderPlus size={15} /> New Folder
+                                    </button>
+                                ) : (
+                                    <form
+                                        className="gallery-new-folder-row gallery-new-folder-inline"
+                                        onSubmit={e => { e.preventDefault(); handleCreateGalleryFolder(); }}
+                                    >
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={galleryNewFolderName}
+                                            onChange={e => setGalleryNewFolderName(e.target.value)}
+                                            placeholder="Folder name"
+                                        />
+                                        <button type="submit" className="gallery-secondary-btn">Create</button>
+                                        <button
+                                            type="button"
+                                            className="cancel-btn"
+                                            onClick={() => { setIsCreatingGalleryFolder(false); setGalleryNewFolderName(''); }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+
+                            {galleryChildFolders.length > 0 && (
+                                <div className="gallery-folder-tiles">
+                                    {galleryChildFolders.map(name => {
+                                        const fullPath = galleryCurrentPath ? `${galleryCurrentPath}/${name}` : name;
+                                        const count = getFolderItemCount(fullPath);
+                                        return (
+                                            <div
+                                                key={fullPath}
+                                                className="gallery-folder-tile"
+                                                onClick={() => setGalleryCurrentPath(fullPath)}
+                                                title={`Open ${name}`}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    className="gallery-folder-tile-delete"
+                                                    onClick={e => { e.stopPropagation(); handleDeleteGalleryFolder(fullPath); }}
+                                                    title="Delete Folder"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                                <Folder size={30} />
+                                                <strong>{name}</strong>
+                                                <span>{count} item{count === 1 ? '' : 's'}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleGalleryMultiUpload} className="gallery-upload-form">
+                                <div className="gallery-upload-location">
+                                    Uploading into: <strong>{galleryCurrentPath || 'Home'}</strong>
+                                </div>
+
+                                <div className="gallery-upload-fields">
+                                    <div>
+                                        <span className="gallery-form-label">Photo Title <small>(optional)</small></span>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Annual Day Highlights"
+                                            value={galleryForm.title}
+                                            onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="gallery-form-label">Description <small>(optional)</small></span>
+                                        <input
+                                            type="text"
+                                            placeholder="Short description for these photos"
+                                            value={galleryForm.description}
+                                            onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <label className="gallery-dropzone">
                                     <input
                                         type="file"
                                         accept=".jpg,.jpeg,.png,.webp"
-                                        onChange={e => handleImageUpload(e.target.files[0], (base64) => setGalleryForm({ ...galleryForm, image: base64 }))}
-                                        required={!galleryForm.image}
+                                        multiple
+                                        onChange={handleGalleryFilesChange}
                                     />
-                                    {galleryForm.image && (
-                                        <div style={{ marginTop: '6px' }}>
-                                            <img src={galleryForm.image} alt="Preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }} />
+                                    <span className="gallery-drop-icon"><Upload size={24} /></span>
+                                    <strong>Select Photos</strong>
+                                    <span>Click to browse or select several JPG, PNG or WEBP files</span>
+                                    <em>Images are automatically resized and compressed before upload</em>
+                                </label>
+
+                                {galleryUploadFiles.length > 0 && (
+                                    <div className="gallery-selected-files">
+                                        <div className="gallery-selected-head">
+                                            <strong>{galleryUploadFiles.length} photo{galleryUploadFiles.length === 1 ? '' : 's'} selected</strong>
+                                            <button type="button" onClick={() => setGalleryUploadFiles([])}>Clear</button>
                                         </div>
-                                    )}
-                                </div>
-                                <textarea placeholder="Description" value={galleryForm.description} onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Gallery Photo</button>
+                                        <div className="gallery-selected-list">
+                                            {galleryUploadFiles.map((file, index) => (
+                                                <div key={`${file.name}-${index}`} className="gallery-selected-file">
+                                                    <ImageIcon size={15} />
+                                                    <span>{file.name}</span>
+                                                    <small>{Math.round(file.size / 1024)} KB</small>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button type="submit" className="gallery-upload-btn" disabled={galleryUploading || !galleryUploadFiles.length}>
+                                    <Upload size={16} />
+                                    {galleryUploading ? 'Uploading Photos...' : `Upload ${galleryUploadFiles.length || ''} Photo${galleryUploadFiles.length === 1 ? '' : 's'} Here`}
+                                </button>
                             </form>
 
-                            <h4>Published Gallery Photos <span className="count-badge">{galleryItems.length}</span></h4>
-                            {galleryItems.length === 0 ? <div className="empty-state">No gallery photos published yet.</div> : (
-                                <div className="gallery-grid">
-                                    {galleryItems.map(item => (
-                                        <div key={item.id} className="gallery-tile">
-                                            {item.image ? (
-                                                <img src={item.image} alt={item.title} className="gallery-tile-img" />
-                                            ) : (
-                                                <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>
-                                            )}
+                            <div className="gallery-library-header">
+                                <div>
+                                    <h4>Photos in "{galleryCurrentPath || 'Home'}"</h4>
+                                    <span>{galleryItemsHere.length} photo{galleryItemsHere.length === 1 ? '' : 's'} shown</span>
+                                </div>
+                            </div>
+
+                            {galleryItemsHere.length === 0 ? (
+                                <div className="gallery-empty-modern">
+                                    <Folder size={28} />
+                                    <strong>No photos directly in this folder</strong>
+                                    <span>Open a subfolder above, or upload photos here.</span>
+                                </div>
+                            ) : (
+                                <div className="gallery-grid gallery-grid-modern">
+                                    {galleryItemsHere.map(item => (
+                                        <div key={item.id} className="gallery-tile gallery-tile-modern">
+                                            {item.image ? <img src={item.image} alt={item.title} className="gallery-tile-img" /> : <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>}
                                             <div className="gallery-tile-overlay">
                                                 <div>
                                                     <strong>{item.title}</strong>
-                                                    <span className="gallery-tile-category">{item.category}</span>
+                                                    <span className="gallery-tile-category">{item.fileName || galleryCurrentPath || 'Home'}</span>
                                                 </div>
-                                                <button onClick={() => handleDelete('gallery', item.id)} title="Delete Photo"><Trash2 size={14} /></button>
+                                                <div className="gallery-tile-actions">
+                                                    <button type="button" onClick={() => handleStartEditGallery(item)} title="Edit Photo"><Edit2 size={14} /></button>
+                                                    <button type="button" className="gallery-tile-delete" onClick={() => handleDelete('gallery', item.id)} title="Delete Photo"><Trash2 size={14} /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {editingGalleryId && (
+                                <div className="admin-modal-backdrop" onClick={handleCancelEditGallery}>
+                                    <div className="admin-modal-card gallery-edit-modal-card" onClick={e => e.stopPropagation()}>
+                                        <h3>Edit Photo</h3>
+                                        <form className="gallery-edit-form" onSubmit={handleSaveGalleryEdit}>
+                                            <div className="gallery-edit-preview">
+                                                {(editGalleryImagePreview || editGalleryForm.image) ? (
+                                                    <img src={editGalleryImagePreview || editGalleryForm.image} alt={editGalleryForm.title} />
+                                                ) : (
+                                                    <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>
+                                                )}
+                                                <label className="gallery-secondary-btn gallery-edit-replace-btn">
+                                                    <Upload size={14} /> Replace Photo
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                                                        onChange={handleEditGalleryImageChange}
+                                                        hidden
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            <label>
+                                                <span className="gallery-form-label">Photo Title</span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Photo title"
+                                                    value={editGalleryForm.title}
+                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, title: e.target.value })}
+                                                />
+                                            </label>
+
+                                            <label>
+                                                <span className="gallery-form-label">Description <small>(optional)</small></span>
+                                                <textarea
+                                                    rows={3}
+                                                    placeholder="Short description"
+                                                    value={editGalleryForm.description}
+                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, description: e.target.value })}
+                                                />
+                                            </label>
+
+                                            <label>
+                                                <span className="gallery-form-label">Folder <small>(e.g. Campus/Day 1)</small></span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Uncategorized"
+                                                    value={editGalleryForm.folderPath}
+                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, folderPath: e.target.value })}
+                                                />
+                                            </label>
+
+                                            <div className="gallery-edit-actions">
+                                                <button type="submit" className="gallery-upload-btn" disabled={galleryUpdating}>
+                                                    {galleryUpdating ? 'Saving...' : <><Save size={14} /> Save Changes</>}
+                                                </button>
+                                                <button type="button" className="cancel-btn" onClick={handleCancelEditGallery}>
+                                                    <X size={14} /> Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1817,6 +2339,21 @@ export default function AdminDashboard() {
                                             required
                                         />
                                     </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                            Photo (Auto-compressed to &lt; 500 KB)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept=".jpg,.jpeg,.png,.webp"
+                                            onChange={e => handleImageUpload(e.target.files[0], (base64) => setStaffForm({ ...staffForm, photo: base64 }))}
+                                        />
+                                        {staffForm.photo && (
+                                            <div style={{ marginTop: '6px' }}>
+                                                <img src={staffForm.photo} alt="Preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
+                                            </div>
+                                        )}
+                                    </div>
                                     <button type="submit" className="add-notice-btn" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
                                         <PlusCircle size={15} /> Add Staff Member
                                     </button>
@@ -1888,6 +2425,17 @@ export default function AdminDashboard() {
                                                                 onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
                                                                 placeholder="Email"
                                                             />
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                                                {editStaffForm.photo && (
+                                                                    <img src={editStaffForm.photo} alt="Preview" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
+                                                                )}
+                                                                <input
+                                                                    type="file"
+                                                                    accept=".jpg,.jpeg,.png,.webp"
+                                                                    style={{ fontSize: '0.7rem' }}
+                                                                    onChange={e => handleImageUpload(e.target.files[0], (base64) => setEditStaffForm({ ...editStaffForm, photo: base64 }))}
+                                                                />
+                                                            </div>
                                                             <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                                                                 <button className="save-btn" onClick={() => handleUpdateStaff(member.id)}>
                                                                     <Check size={12} /> Save
@@ -1908,9 +2456,13 @@ export default function AdminDashboard() {
                                                                 </button>
                                                             </div>
                                                             <div className="staff-card-header">
-                                                                <div className="staff-avatar-placeholder">
-                                                                    {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
-                                                                </div>
+                                                                {member.photo ? (
+                                                                    <img src={member.photo} alt={member.name} className="staff-avatar-photo" />
+                                                                ) : (
+                                                                    <div className="staff-avatar-placeholder">
+                                                                        {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
+                                                                    </div>
+                                                                )}
                                                                 <div className="staff-header-info">
                                                                     <h5>{member.name}</h5>
                                                                     <span className="staff-dept-badge">{member.department || 'General'}</span>

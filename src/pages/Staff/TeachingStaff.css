@@ -98,6 +98,14 @@
     justify-content: center;
     border: 2px solid #e2bbf5;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.teacher-avatar-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .teacher-info {

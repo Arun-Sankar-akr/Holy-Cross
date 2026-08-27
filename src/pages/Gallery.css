@@ -1,147 +1,328 @@
-/* ==========================================================================
-   Campus Gallery Component Styling
-   ========================================================================== */
-
-:root {
-    --gal-purple: #4c1d95;
-    --gal-purple-hover: #5b21b6;
-    --gal-accent: #f59e0b;
-    --gal-border: #e2e8f0;
-    --gal-text-dark: #0f172a;
-    --gal-text-muted: #64748b;
-}
-
 .gal-root {
-    max-width: 1320px;
-    margin: 0 auto;
-    padding: 32px 20px 80px;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --gal-primary: #6d4aff;
+    --gal-primary-dark: #4f32d6;
+    --gal-accent: #a78bfa;
+    --gal-bg: #f7f8fc;
+    --gal-surface: rgba(255, 255, 255, 0.88);
+    --gal-border: rgba(30, 41, 59, 0.08);
+    --gal-text: #172033;
+    --gal-muted: #697386;
+    --gal-shadow: 0 18px 45px rgba(31, 41, 55, 0.09);
+
+    width: 100%;
+    min-height: 100%;
+    padding: 38px clamp(18px, 4vw, 54px) 60px;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(124, 92, 255, 0.11), transparent 30%),
+        radial-gradient(circle at 92% 8%, rgba(167, 139, 250, 0.10), transparent 28%),
+        linear-gradient(180deg, #fbfbfe 0%, var(--gal-bg) 100%);
+    color: var(--gal-text);
+    font-family: inherit;
+    box-sizing: border-box;
 }
 
-/* --- Header Section --- */
+.gal-root *,
+.gal-root *::before,
+.gal-root *::after {
+    box-sizing: border-box;
+}
+
 .gal-header {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto 28px;
     text-align: center;
-    max-width: 680px;
-    margin: 0 auto 40px;
+}
+
+.gal-header::before {
+    content: "";
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    transform: translateX(-50%);
+    background: rgba(109, 74, 255, 0.10);
+    filter: blur(28px);
+    border-radius: 50%;
+    z-index: 0;
 }
 
 .gal-badge {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(76, 29, 149, 0.08);
-    color: var(--gal-purple);
-    border: 1px solid rgba(76, 29, 149, 0.2);
-    padding: 6px 16px;
-    border-radius: 50px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    margin-bottom: 12px;
+    gap: 7px;
+    padding: 8px 13px;
+    border: 1px solid rgba(109, 74, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--gal-primary-dark);
+    box-shadow: 0 8px 24px rgba(79, 50, 214, 0.08);
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.02em;
 }
 
 .gal-header h2 {
-    font-size: 2.2rem;
+    position: relative;
+    z-index: 1;
+    margin: 14px 0 8px;
+    font-size: clamp(1.8rem, 3vw, 2.65rem);
+    line-height: 1.12;
+    letter-spacing: -0.035em;
     font-weight: 800;
-    color: var(--gal-text-dark);
-    margin: 0 0 10px;
-    letter-spacing: -0.02em;
+    background: linear-gradient(120deg, #1b2140 5%, #6544e8 55%, #8a68ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .gal-header p {
-    color: var(--gal-text-muted);
-    font-size: 1rem;
-    margin: 0 0 28px;
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    color: var(--gal-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
 }
 
-/* --- Category Filter Tabs --- */
-.gal-filter-tabs {
+.gal-breadcrumbs {
+    max-width: fit-content;
+    margin: 26px 110px 14px;
+    padding: 9px 12px;
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    /* border: 1px solid var(--gal-border); */
+    border-radius: 14px;
+    /* background: rgba(255, 255, 255, 0.72); */
+    backdrop-filter: blur(14px);
+    /* box-shadow: 0 8px 28px rgba(31, 41, 55, 0.045); */
+    scrollbar-width: thin;
 }
 
-.gal-tab-btn {
-    background: #f1f5f9;
-    color: var(--gal-text-muted);
-    border: 1px solid var(--gal-border);
-    padding: 8px 20px;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 0.85rem;
+.gal-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 9px;
+    padding: 7px 10px;
+    background: transparent;
+    color: #7b8496;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 650;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: 0.22s ease;
 }
 
-.gal-tab-btn:hover {
-    background: #e2e8f0;
-    color: var(--gal-text-dark);
+.gal-crumb:hover {
+    background: rgba(109, 74, 255, 0.08);
+    color: var(--gal-primary-dark);
 }
 
-.gal-tab-btn.active {
-    background: var(--gal-purple);
-    color: #ffffff;
-    border-color: var(--gal-purple);
-    box-shadow: 0 4px 12px rgba(76, 29, 149, 0.25);
+.gal-crumb.active {
+    background: rgba(109, 74, 255, 0.10);
+    color: var(--gal-primary-dark);
 }
 
-/* --- Gallery Grid Layout --- */
-.gal-grid {
+.gal-crumb-sep {
+    flex: 0 0 auto;
+    color: #a9b0bd;
+}
+
+.gal-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 4px 110px 18px;
+    padding: 9px 13px;
+    border: 1px solid rgba(109, 74, 255, 0.13);
+    border-radius: 10px;
+    background: #fff;
+    color: #5b46c8;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 7px 20px rgba(31, 41, 55, 0.055);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.gal-back-btn:hover {
+    transform: translateY(-2px);
+    background: #faf9ff;
+    box-shadow: 0 12px 25px rgba(31, 41, 55, 0.09);
+}
+
+.gal-album-grid {
+    max-width: 1200px;
+    margin: 18px auto 30px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 28px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px;
+}
+
+.gal-album-card {
+    overflow: hidden;
+    border: 1px solid var(--gal-border);
+    border-radius: 18px;
+    background: var(--gal-surface);
+    box-shadow: var(--gal-shadow);
+    cursor: pointer;
+    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    backdrop-filter: blur(12px);
+}
+
+.gal-album-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(109, 74, 255, 0.18);
+    box-shadow: 0 24px 50px rgba(31, 41, 55, 0.13);
+}
+
+.gal-album-cover {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ece9ff, #f7f5ff);
+}
+
+.gal-album-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 48%, rgba(12, 16, 30, 0.42));
+    pointer-events: none;
+}
+
+.gal-album-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.45s ease;
+}
+
+.gal-album-card:hover .gal-album-cover img {
+    transform: scale(1.07);
+}
+
+.gal-album-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--gal-primary);
+}
+
+.gal-album-count {
+    position: absolute;
+    z-index: 2;
+    right: 10px;
+    bottom: 10px;
+    padding: 5px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    background: rgba(12, 16, 30, 0.55);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+}
+
+.gal-album-label {
+    min-height: 52px;
+    padding: 13px 14px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #252c40;
+}
+
+.gal-album-label svg {
+    flex: 0 0 auto;
+    color: var(--gal-primary);
+}
+
+.gal-album-label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.88rem;
+    font-weight: 750;
+}
+
+.gal-subheading {
+    max-width: 1200px;
+    margin: 30px auto 15px;
+    font-size: 1rem;
+    color: #30384d;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.gal-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+    gap: 20px;
 }
 
 .gal-card {
-    background: #ffffff;
-    border: 1px solid var(--gal-border);
-    border-radius: 16px;
     overflow: hidden;
+    border: 1px solid var(--gal-border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.90);
+    box-shadow: 0 13px 35px rgba(31, 41, 55, 0.075);
     cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    display: flex;
-    flex-direction: column;
+    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
 }
 
 .gal-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+    border-color: rgba(109, 74, 255, 0.18);
+    box-shadow: 0 23px 48px rgba(31, 41, 55, 0.13);
 }
 
 .gal-image-wrapper {
     position: relative;
-    width: 100%;
-    height: 220px;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
-    background-color: #f1f5f9;
+    background: #eeeef5;
 }
 
 .gal-image-wrapper img {
     width: 100%;
     height: 100%;
+    display: block;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    transition: transform 0.55s cubic-bezier(.2, .7, .2, 1);
 }
 
 .gal-card:hover .gal-image-wrapper img {
-    transform: scale(1.08);
+    transform: scale(1.065);
 }
 
-/* Image Overlay */
 .gal-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.4);
-    opacity: 0;
+    inset: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    gap: 12px;
-    transition: opacity 0.3s ease;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    background: linear-gradient(180deg, rgba(30, 24, 67, 0.18), rgba(30, 24, 67, 0.62));
+    transition: opacity 0.25s ease;
 }
 
 .gal-card:hover .gal-overlay {
@@ -149,136 +330,255 @@
 }
 
 .gal-zoom-icon {
-    color: #ffffff;
+    padding: 11px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--gal-primary-dark);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.14);
 }
 
 .gal-card-category {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(8px);
-    color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 50px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(109, 74, 255, 0.10);
+    color: var(--gal-primary-dark);
+    font-size: 0.68rem;
+    font-weight: 750;
 }
 
-/* Card Content Body */
+.gal-overlay .gal-card-category {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    backdrop-filter: blur(8px);
+}
+
 .gal-card-info {
-    padding: 20px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    padding: 15px 16px 17px;
 }
 
 .gal-card-info h3 {
     margin: 0 0 6px;
-    font-size: 1.1rem;
+    color: #20283b;
+    font-size: 0.94rem;
     font-weight: 800;
-    color: var(--gal-text-dark);
+    line-height: 1.35;
 }
 
 .gal-card-info p {
     margin: 0;
-    font-size: 0.85rem;
-    color: var(--gal-text-muted);
-    line-height: 1.5;
+    color: #788194;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-/* --- Lightbox Modal --- */
+.gal-empty-msg {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 40px 20px;
+    border: 1px dashed rgba(109, 74, 255, 0.22);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.68);
+    color: var(--gal-muted);
+    text-align: center;
+    font-size: 0.9rem;
+}
+
 .gal-lightbox-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
+    inset: 0;
+    z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1200;
-    padding: 20px;
+    padding: 22px;
+    background: rgba(12, 15, 28, 0.78);
+    backdrop-filter: blur(14px);
+    animation: galFadeIn 0.2s ease;
 }
 
 .gal-lightbox-content {
-    background: #ffffff;
-    border-radius: 20px;
-    width: 100%;
-    max-width: 720px;
-    overflow: hidden;
     position: relative;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    width: min(940px, 96vw);
+    max-height: 94vh;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 35px 100px rgba(0, 0, 0, 0.32);
+    animation: galScaleIn 0.24s ease;
 }
 
 .gal-lightbox-close {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(15, 23, 42, 0.6);
-    color: #ffffff;
-    border: none;
+    z-index: 4;
+    top: 13px;
+    right: 13px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.35);
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: rgba(15, 18, 30, 0.58);
+    color: #fff;
     cursor: pointer;
-    z-index: 10;
-    transition: background 0.2s;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .gal-lightbox-close:hover {
-    background: rgba(15, 23, 42, 0.9);
+    transform: rotate(6deg) scale(1.05);
+    background: rgba(15, 18, 30, 0.78);
 }
 
 .gal-lightbox-image-container {
     width: 100%;
-    max-height: 440px;
-    overflow: hidden;
-    background: #000000;
+    max-height: 72vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #10131e;
 }
 
 .gal-lightbox-image-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
     display: block;
+    width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
 }
 
 .gal-lightbox-details {
-    padding: 24px;
-}
-
-.gal-lightbox-details .gal-card-category {
-    background: var(--gal-purple);
-    color: #ffffff;
-    display: inline-block;
-    margin-bottom: 8px;
+    padding: 18px 21px 20px;
 }
 
 .gal-lightbox-details h3 {
-    margin: 4px 0 8px;
-    font-size: 1.3rem;
+    margin: 9px 0 5px;
+    color: #1e2638;
+    font-size: 1.15rem;
     font-weight: 800;
-    color: var(--gal-text-dark);
 }
 
 .gal-lightbox-details p {
     margin: 0;
-    color: var(--gal-text-muted);
-    font-size: 0.95rem;
+    color: #70798b;
+    font-size: 0.84rem;
+    line-height: 1.65;
 }
 
-/* Responsive Styles */
-@media (max-width: 640px) {
-    .gal-grid {
-        grid-template-columns: 1fr;
+@keyframes galFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes galScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (max-width: 700px) {
+    .gal-root {
+        padding: 25px 13px 40px;
+    }
+
+    .gal-header {
+        margin-bottom: 20px;
     }
 
     .gal-header h2 {
-        font-size: 1.8rem;
+        font-size: 1.75rem;
+    }
+
+    .gal-header p {
+        font-size: 0.84rem;
+    }
+
+    .gal-album-grid,
+    .gal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .gal-album-card,
+    .gal-card {
+        border-radius: 14px;
+    }
+
+    .gal-album-label {
+        padding: 10px 11px;
+        min-height: 45px;
+    }
+
+    .gal-album-label span {
+        font-size: 0.76rem;
+    }
+
+    .gal-card-info {
+        padding: 11px 12px 13px;
+    }
+
+    .gal-card-info h3 {
+        font-size: 0.82rem;
+    }
+
+    .gal-card-info p {
+        font-size: 0.7rem;
+    }
+
+    .gal-overlay {
+        opacity: 1;
+        justify-content: flex-end;
+        align-items: flex-end;
+        padding: 10px;
+        background: linear-gradient(180deg, transparent 45%, rgba(20, 17, 42, 0.62));
+    }
+
+    .gal-zoom-icon {
+        display: none;
+    }
+
+    .gal-lightbox-overlay {
+        padding: 10px;
+    }
+
+    .gal-lightbox-content {
+        border-radius: 16px;
+    }
+
+    .gal-lightbox-image-container,
+    .gal-lightbox-image-container img {
+        max-height: 62vh;
+    }
+
+    .gal-lightbox-details {
+        padding: 14px 15px 17px;
+    }
+}
+
+@media (max-width: 390px) {
+
+    .gal-album-grid,
+    .gal-grid {
+        grid-template-columns: 1fr;
     }
 }
