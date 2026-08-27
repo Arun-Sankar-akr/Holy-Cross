@@ -1,164 +1,200 @@
+/* ============================================
+   Holy Cross Preloader — Navy & Gold
+   ============================================ */
+
 .preloader-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
-    max-width: 200%;
-    min-height: 100vh;
-    background: linear-gradient(rgba(252, 253, 255, 0.85), rgba(250, 250, 250, 0.85)),
-        url('../assets/rm347-porpla-02-a-01.jpg') no-repeat center center fixed;
-    background-size: cover;
-    overflow-x: hidden;
     height: 100vh;
-    background-color: #03081a;
-    /* Dark Navy Background */
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 9999;
+    overflow: hidden;
+
+    background:
+        radial-gradient(circle at 50% 30%, rgba(30, 64, 110, 0.55), transparent 60%),
+        linear-gradient(160deg, #050b18 0%, #0a1730 55%, #0c1f3d 100%);
+
     opacity: 1;
     visibility: visible;
-    transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+    transition: opacity 0.7s ease, visibility 0.7s ease;
 }
 
-/* Smooth Fade-Out Animation */
+.preloader-overlay::before {
+    /* subtle vignette texture */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.45) 100%);
+    pointer-events: none;
+}
+
 .preloader-overlay.fade-out {
     opacity: 0;
     visibility: hidden;
 }
 
-/* Central Content Box */
+/* ---------- Content ---------- */
 .preloader-content {
+    position: relative;
+    z-index: 1;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* Circular Logo Area */
-.logo-ring-container {
+/* ---------- Crest ---------- */
+.crest-container {
     position: relative;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
+    width: 176px;
+    height: 176px;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
-.logo-ring-container img {
-    width: 150px;
-    height: 150px;
-}
-
-/* Glowing Border Effect */
-.glowing-ring {
+.crest-glow {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     border-radius: 50%;
-    background: #fff;
-    border: 2px solid rgba(234, 179, 8, 0.4);
-    box-shadow: 0 0 25px rgba(234, 179, 8, 0.3);
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.20) 0%, transparent 68%);
+    filter: blur(10px);
+    animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 0.5; transform: scale(0.94); }
+    50% { opacity: 0.9; transform: scale(1.06); }
 }
 
 .preloader-logo {
-    width: 110px;
-    height: 110px;
+    position: relative;
+    width: 148px;
+    height: 148px;
     object-fit: contain;
-    z-index: 2;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+    animation: floatLogo 3.2s ease-in-out infinite;
 }
 
-/* Typography */
+@keyframes floatLogo {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* ---------- Typography ---------- */
+.preloader-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .school-title {
-    color: #000;
-    font-size: 2.2rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin: 0 0 6px 0;
-    font-family: 'Outfit', serif;
+    color: #f5f7fb;
+    font-family: 'Outfit', 'Georgia', serif;
+    font-size: 1.65rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin: 0;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+    max-width: 360px;
+    line-height: 1.3;
+}
+
+.title-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 10px;
+}
+
+.divider-line {
+    width: 28px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.7));
+}
+
+.title-divider .divider-line:last-child {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.7), transparent);
+}
+
+.divider-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #d4af37;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.8);
 }
 
 .school-subtitle {
-    color: #94a3b8;
-    font-size: 1rem;
-    letter-spacing: 2px;
-    margin: 0 0 30px 0;
-    font-weight: 600;
+    color: #9fb4d1;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin: 0 0 34px 0;
 }
 
-/* Progress Line Container */
+/* ---------- Loading Bar ---------- */
 .loading-bar-container {
-    width: 120px;
+    width: 140px;
     height: 3px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     overflow: hidden;
     position: relative;
 }
 
-/* Animated Shimmer Line */
 .loading-bar-progress {
-    width: 40%;
+    width: 36%;
     height: 100%;
-    background: linear-gradient(90deg, #d97706, #f59e0b, #d97706);
     border-radius: 10px;
     position: absolute;
-    animation: loadingSlide 1.5s infinite ease-in-out;
+    background: linear-gradient(90deg, #b8860b, #d4af37, #f4d675, #d4af37, #b8860b);
+    animation: loadingSlide 1.4s infinite ease-in-out;
 }
 
 @keyframes loadingSlide {
-    0% {
-        left: -40%;
-    }
-
-    100% {
-        left: 100%;
-    }
+    0% { left: -40%; }
+    100% { left: 100%; }
 }
 
-/* ===== SST PRELOADER THEME ===== */
-.preloader-overlay {
-    background:
-        linear-gradient(135deg,
-            rgba(7, 20, 42, .94),
-            rgba(11, 31, 58, .90)) no-repeat center center fixed;
-    background-size: cover;
-    background-color: #07142A;
-}
-
-.logo-ring-container {
-    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .30));
-}
-
-.glowing-ring {
-    background: rgba(255, 255, 255, .07);
-    border-color: rgba(96, 165, 250, .62);
-    box-shadow:
-        0 0 22px rgba(37, 99, 235, .30),
-        0 0 45px rgba(6, 182, 212, .14),
-        inset 0 0 18px rgba(255, 255, 255, .05);
-}
-
-.school-title {
-    color: #FFFFFF;
+.loading-label {
+    margin: 12px 0 0 0;
+    color: #6f88ab;
     font-family: 'Outfit', sans-serif;
-    text-shadow: 0 3px 16px rgba(0, 0, 0, .35);
+    font-size: 0.68rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
 }
 
-.school-subtitle {
-    font-family: 'Outfit', sans-serif;
-    color: #BFD7F4;
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .crest-glow,
+    .preloader-logo,
+    .loading-bar-progress {
+        animation: none;
+    }
 }
 
-.loading-bar-container {
-    background: rgba(255, 255, 255, .12);
-}
-
-.loading-bar {
-    background: linear-gradient(90deg, #2563EB, #06B6D4, #F59E0B);
-    box-shadow: 0 0 12px rgba(37, 99, 235, .35);
+/* ---------- Mobile ---------- */
+@media (max-width: 480px) {
+    .crest-container {
+        width: 128px;
+        height: 128px;
+    }
+    .preloader-logo {
+        width: 108px;
+        height: 108px;
+    }
+    .school-title {
+        font-size: 1.3rem;
+        max-width: 280px;
+    }
 }
