@@ -4,7 +4,7 @@ import './Footer.css';
 
 export default function Footer() {
     return (
-        <footer className="site-footer">
+        <footer className="site-footer footer-with-image">
             <div className="footer-top-accent"></div>
 
             <div className="footer-container">
@@ -69,11 +69,6 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Bottom Bar */}
-            {/* <div className="views-counter">
-                        <Eye size={16} className="views-icon" />
-                        <span>Views : <strong className="counter-badge">987,326</strong></span>
-                    </div> */}
             <div className="footer-bottom-bar">
                 <div className="footer-bottom-container">
 
