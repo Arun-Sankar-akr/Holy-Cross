@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, LogIn, ArrowRight, FileText, KeyRound } from 'lucide-react';
-import './AdmissionApply.css';
+import './Admissionapply.css';
 
 export default function AdmissionApply() {
     const navigate = useNavigate();

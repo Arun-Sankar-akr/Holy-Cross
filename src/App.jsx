@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 
-import"./pages/Admission/Admissionstandalone.css"
-
 // Auth Protection Wrapper
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
 import StdProtectedRoute from './Erp/StudentErp/StdProtectedRoute'
@@ -51,10 +49,9 @@ import StaffCommittees from './pages/Staff/StaffCommittees';
 
 // Admission Pages
 import AdmissionDashboard from './pages/Admission/AdmissionDashboard';
-import AdmissionApply from './pages/Admission/Admissionapply';
 import Admissionregisterpage from './pages/Admission/Admissionregisterpage';  
 import Admissionloginpage from './pages/Admission/Admissionloginpage';  
-import Admissioncontinuepage from './pages/Admission/Admissioncontinuepage';  
+
 // ERP & Dashboards
 import StaffErp from './Erp/StaffErp/StaffErp';
 import StudentErp from './Erp/StudentErp/StudentErp';
