@@ -5,6 +5,9 @@
     --adm-primary-dark: #0B1F3A;
     --adm-primary-mid: #123A70;
     --adm-primary-soft: #EEF4FF;
+    --adm-navy: #0B1B3D;
+    --adm-navy-deep: #071224;
+    --adm-accent: #5B4FE5;
     --adm-ink: #111827;
     --adm-muted: #667085;
     --adm-border: #E4E7EC;
@@ -22,40 +25,45 @@
     margin: 26px auto 70px;
     font-family: 'Outfit', sans-serif;
     color: var(--adm-ink);
+    scroll-margin-top: 20px;
 }
 
 /* =========================================================
-   PORTAL HEADER
+   NAVY NAVBAR (BHC-portal style)
 ========================================================= */
 
-.adm-portal-header {
-    min-height: 72px;
+.adm-navbar {
+    position: sticky;
+    top: 10px;
+    z-index: 40;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 12px 18px;
+    gap: 18px;
+    min-height: 68px;
+    padding: 10px 20px;
     margin-bottom: 18px;
-    background: #fff;
-    border: 1px solid var(--adm-border);
+    background: linear-gradient(120deg, var(--adm-navy) 0%, var(--adm-navy-deep) 100%);
     border-radius: 16px;
-    box-shadow: 0 6px 22px rgba(16, 24, 40, .04);
+    box-shadow: 0 14px 34px rgba(7, 18, 36, .28);
 }
 
 .adm-brand {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: none;
 }
 
 .adm-brand-mark {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     display: grid;
     place-items: center;
     color: #fff;
-    background: linear-gradient(145deg, var(--adm-primary-dark), var(--adm-primary));
-    border-radius: 12px;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 11px;
 }
 
 .adm-brand strong,
@@ -64,44 +72,70 @@
 }
 
 .adm-brand strong {
+    color: #fff;
     font-size: 1rem;
     line-height: 1.15;
 }
 
 .adm-brand span {
     margin-top: 3px;
-    color: var(--adm-muted);
-    font-size: .76rem;
+    color: rgba(255, 255, 255, .6);
+    font-size: .72rem;
     font-weight: 500;
 }
 
-.adm-header-meta {
+.adm-navlinks {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 4px;
+    flex: 1;
+    justify-content: center;
 }
 
-.adm-secure,
-.adm-year {
+.adm-navlinks button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 34px;
-    padding: 7px 11px;
+    gap: 7px;
+    padding: 9px 13px;
+    border: 0;
     border-radius: 9px;
-    font-size: .75rem;
+    color: rgba(255, 255, 255, .78);
+    background: transparent;
+    font-family: inherit;
+    font-size: .82rem;
     font-weight: 600;
+    cursor: pointer;
+    transition: .18s ease;
+    white-space: nowrap;
 }
 
-.adm-secure {
-    color: #475467;
-    background: #F8FAFC;
-    border: 1px solid #EAECF0;
+.adm-navlinks button:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .08);
 }
 
-.adm-year {
-    color: var(--adm-primary);
-    background: var(--adm-primary-soft);
+.adm-nav-cta {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--adm-primary);
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(21, 94, 239, .3);
+    transition: .18s ease;
+}
+
+.adm-nav-cta:hover {
+    transform: translateY(-1px);
+    background: #0e4fd1;
 }
 
 /* =========================================================
@@ -120,7 +154,7 @@
     color: #fff;
     background:
         radial-gradient(circle at 82% 10%, rgba(255,255,255,.15), transparent 26%),
-        linear-gradient(115deg, #071A33 0%, #0B2B55 55%, #155EEF 100%);
+        linear-gradient(115deg, var(--adm-navy-deep) 0%, var(--adm-navy) 55%, #155EEF 100%);
     box-shadow: 0 24px 60px rgba(11, 31, 58, .20);
 }
 
@@ -320,6 +354,120 @@
 }
 
 /* =========================================================
+   WHY CHOOSE US — colourful feature grid (BHC "Why BHC" style)
+========================================================= */
+
+.adm-why-section {
+    margin: 0 0 46px;
+    scroll-margin-top: 20px;
+}
+
+.adm-why-heading {
+    max-width: 620px;
+    margin: 0 auto 30px;
+    text-align: center;
+}
+
+.adm-why-heading h2 {
+    margin: 0;
+    color: #101828;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800;
+}
+
+.adm-why-heading h2 span {
+    color: var(--adm-primary);
+}
+
+.adm-why-heading p {
+    margin: 10px 0 0;
+    color: var(--adm-muted);
+    font-size: .92rem;
+}
+
+.adm-why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.adm-why-card {
+    position: relative;
+    padding: 24px 22px 20px;
+    border: 1px solid var(--adm-border);
+    border-top: 3px solid transparent;
+    border-radius: 16px;
+    background: #fff;
+    transition: .2s ease;
+}
+
+.adm-why-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--adm-shadow);
+}
+
+.adm-why-icon {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 14px;
+    border-radius: 12px;
+}
+
+.adm-why-card h3 {
+    margin: 0 0 3px;
+    color: #101828;
+    font-size: 1.02rem;
+    font-weight: 700;
+}
+
+.adm-why-kicker {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--adm-muted);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.adm-why-card p {
+    margin: 0 0 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F1F3F6;
+    color: var(--adm-muted);
+    font-size: .82rem;
+    line-height: 1.55;
+}
+
+.adm-why-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #475467;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+/* Tone variants */
+.adm-why-card.tone-blue { border-top-color: #155EEF; }
+.adm-why-card.tone-blue .adm-why-icon { color: #155EEF; background: #EEF4FF; }
+
+.adm-why-card.tone-indigo { border-top-color: #5B4FE5; }
+.adm-why-card.tone-indigo .adm-why-icon { color: #5B4FE5; background: #EFEDFC; }
+
+.adm-why-card.tone-green { border-top-color: #12B76A; }
+.adm-why-card.tone-green .adm-why-icon { color: #12B76A; background: #E9FBF1; }
+
+.adm-why-card.tone-pink { border-top-color: #EE46BC; }
+.adm-why-card.tone-pink .adm-why-icon { color: #EE46BC; background: #FDEEF9; }
+
+.adm-why-card.tone-orange { border-top-color: #F79009; }
+.adm-why-card.tone-orange .adm-why-icon { color: #F79009; background: #FEF3E3; }
+
+.adm-why-card.tone-teal { border-top-color: #0E9384; }
+.adm-why-card.tone-teal .adm-why-icon { color: #0E9384; background: #E7FBF8; }
+
+/* =========================================================
    PROCESS
 ========================================================= */
 
@@ -335,7 +483,8 @@
     margin-bottom: 18px;
 }
 
-.adm-section-heading > div > span {
+.adm-section-heading > div > span,
+.adm-section-heading > span {
     color: var(--adm-primary);
     font-size: .68rem;
     font-weight: 800;
@@ -358,19 +507,37 @@
     text-align: right;
 }
 
+.adm-section-heading-center {
+    display: block;
+    max-width: 620px;
+    margin: 0 auto 32px;
+    text-align: center;
+}
+
+.adm-section-heading-center h2 {
+    margin: 6px 0 8px;
+}
+
+.adm-section-heading-center > p {
+    max-width: none;
+    margin: 0 auto;
+    text-align: center;
+}
+
 .adm-process-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: 16px;
 }
 
 .adm-process-card {
     position: relative;
-    min-height: 170px;
-    padding: 20px;
+    min-height: 190px;
+    padding: 26px 20px 20px;
     border: 1px solid var(--adm-border);
-    border-radius: 15px;
+    border-radius: 16px;
     background: #fff;
+    text-align: center;
     transition: .22s ease;
 }
 
@@ -380,21 +547,33 @@
     box-shadow: var(--adm-shadow);
 }
 
-.adm-process-card > span {
-    position: absolute;
-    top: 17px;
-    right: 17px;
-    color: #98A2B3;
-    font-size: .68rem;
+.adm-process-badge {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, var(--adm-primary-dark), var(--adm-primary));
+    font-size: .95rem;
     font-weight: 800;
+    box-shadow: 0 8px 16px rgba(21,94,239,.22);
 }
 
-.adm-process-card > svg {
+.adm-process-icon {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 12px;
+    border-radius: 10px;
     color: var(--adm-primary);
+    background: var(--adm-primary-soft);
 }
 
 .adm-process-card h3 {
-    margin: 22px 0 6px;
+    margin: 0 0 6px;
     font-size: .95rem;
 }
 
@@ -493,8 +672,14 @@
     background: linear-gradient(90deg, var(--adm-primary-dark), var(--adm-primary));
 }
 
-.adm-track-card {
+/* Track status — light lavender callout box, BHC "Track Your Application" style */
+.adm-track-callout {
     max-width: 780px;
+    margin: 0 auto;
+    padding: 34px;
+    border: 1px solid #E1E6F5;
+    border-radius: 20px;
+    background: linear-gradient(180deg, var(--adm-primary-soft) 0%, #FBFCFF 100%);
 }
 
 .adm-track-heading {
@@ -735,6 +920,16 @@
    RESPONSIVE
 ========================================================= */
 
+@media (max-width: 980px) {
+    .adm-navlinks {
+        display: none;
+    }
+
+    .adm-why-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 900px) {
     .adm-hero-section {
         grid-template-columns: 1fr;
@@ -756,15 +951,11 @@
         margin-top: 12px;
     }
 
-    .adm-portal-header {
+    .adm-navbar {
         padding: 10px 12px;
     }
 
-    .adm-header-meta {
-        gap: 5px;
-    }
-
-    .adm-secure {
+    .adm-brand span {
         display: none;
     }
 
@@ -779,6 +970,10 @@
         letter-spacing: -1.6px;
     }
 
+    .adm-why-grid {
+        grid-template-columns: 1fr;
+    }
+
     .adm-section-heading {
         display: block;
     }
@@ -786,6 +981,10 @@
     .adm-section-heading > p {
         margin-top: 8px;
         text-align: left;
+    }
+
+    .adm-track-callout {
+        padding: 24px 18px;
     }
 
     .adm-track-form {
@@ -804,20 +1003,16 @@
     }
 
     .adm-brand-mark {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
     }
 
     .adm-brand strong {
-        font-size: .9rem;
+        font-size: .88rem;
     }
 
-    .adm-brand span {
-        font-size: .68rem;
-    }
-
-    .adm-year {
-        font-size: .68rem;
+    .adm-nav-cta span {
+        display: none;
     }
 
     .adm-hero-section {
@@ -861,7 +1056,7 @@
     }
 
     .adm-process-card {
-        min-height: 145px;
+        min-height: 165px;
     }
 
     .adm-tabs-container {

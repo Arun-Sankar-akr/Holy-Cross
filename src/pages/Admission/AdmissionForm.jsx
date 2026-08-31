@@ -1,34 +1,52 @@
 import React, { useState } from 'react';
 import { db } from '../../service/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
-import { CheckCircle2, Send, ArrowLeft, ArrowRight, Upload, FileText, Check } from 'lucide-react';
+import { collection, addDoc, doc, updateDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { CheckCircle2, Send, ArrowLeft, ArrowRight, Upload, FileText, Check, ShieldCheck, BadgeCheck, ClipboardCheck } from 'lucide-react';
 import './AdmissionForm.css';
 
-export default function AdmissionForm() {
+// Step metadata driving both the left registration-step sidebar and the
+// top circular stepper — content/logic below is unchanged, only the
+// wizard chrome around it has been redesigned.
+const STEP_META = [
+    { key: 1, label: 'Personal Details', tag: 'PERSONAL INFO', icon: <FileText size={18} />, bullets: ['Name, Grade & DOB', 'Parent & Contact'] },
+    { key: 2, label: 'Background', tag: 'ELIGIBILITY INFO', icon: <BadgeCheck size={18} />, bullets: ['Identity & Community', 'Physical Ability'] },
+    { key: 3, label: 'Documents', tag: 'FILE UPLOAD', icon: <Upload size={18} />, bullets: ['ID Proof & TC', 'Community Certificate'] },
+    { key: 4, label: 'Review', tag: 'FINAL STEP', icon: <ClipboardCheck size={18} />, bullets: ['Verify Details', 'Submit Application'] },
+];
+
+/**
+ * AdmissionForm — used two ways:
+ *  - mode="create" (default): fresh application, called from the Register page.
+ *    Generates a new acknowledgement number and creates a Firestore doc on submit.
+ *  - mode="edit": resuming an application found via the Login page. `docId` and
+ *    `initialData` (the existing Firestore doc, including acknowledgementNumber)
+ *    are supplied by the caller; submit updates that same doc instead of creating one.
+ */
+export default function AdmissionForm({ mode = 'create', docId = null, initialData = null, onUpdated }) {
     const [step, setStep] = useState(1);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [ackNumber, setAckNumber] = useState('');
+    const [ackNumber, setAckNumber] = useState(initialData?.acknowledgementNumber || '');
     const [compressionStatus, setCompressionStatus] = useState('');
 
     const [formData, setFormData] = useState({
-        firstName: '',
-        middleName: '',
-        lastName: '',
-        grade: 'LKG',
-        parentName: '',
-        phone: '',
-        address: '',
-        religion: '',
-        caste: '',
-        subCaste: '',
-        idNumber: '',
-        communityCertNo: '',
-        physicalAbility: 'Normal',
-        disabilityDetails: '',
-        aadharFile: null,
-        communityFile: null,
-        tcFile: null
+        firstName: initialData?.firstName || '',
+        middleName: initialData?.middleName || '',
+        lastName: initialData?.lastName || '',
+        grade: initialData?.grade || 'LKG',
+        parentName: initialData?.parentName || '',
+        phone: initialData?.phone || '',
+        address: initialData?.address || '',
+        religion: initialData?.religion || '',
+        caste: initialData?.caste || '',
+        subCaste: initialData?.subCaste || '',
+        idNumber: initialData?.idNumber || '',
+        communityCertNo: initialData?.communityCertNo || '',
+        physicalAbility: initialData?.physicalAbility || 'Normal',
+        disabilityDetails: initialData?.disabilityDetails || '',
+        aadharFile: initialData?.aadharFileUrl || null,
+        communityFile: initialData?.communityFileUrl || null,
+        tcFile: initialData?.tcFileUrl || null
     });
 
     /**
@@ -160,35 +178,49 @@ export default function AdmissionForm() {
         e.preventDefault();
         setLoading(true);
 
+        const payload = {
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            grade: formData.grade,
+            parentName: formData.parentName,
+            phone: formData.phone,
+            address: formData.address,
+            religion: formData.religion,
+            caste: formData.caste,
+            subCaste: formData.subCaste,
+            idNumber: formData.idNumber,
+            communityCertNo: formData.communityCertNo,
+            physicalAbility: formData.physicalAbility,
+            disabilityDetails: formData.disabilityDetails,
+            aadharFileUrl: formData.aadharFile,        // Compressed Base64 string representation
+            communityFileUrl: formData.communityFile, // Compressed Base64 string representation
+            tcFileUrl: formData.tcFile,               // Compressed Base64 string representation
+        };
+
         try {
-            const generatedAck = await generateAcknowledgementNumber();
-            setAckNumber(generatedAck);
+            if (mode === 'edit' && docId) {
+                // Resuming an existing application found via Login — update the same doc.
+                await updateDoc(doc(db, "admissions", docId), {
+                    ...payload,
+                    updatedAt: serverTimestamp()
+                });
+                setSubmitted(true);
+                if (onUpdated) onUpdated();
+            } else {
+                const generatedAck = await generateAcknowledgementNumber();
+                setAckNumber(generatedAck);
 
-            // Directly save form data along with compressed Base64 strings into Firestore[cite: 2]
-            await addDoc(collection(db, "admissions"), {
-                firstName: formData.firstName,
-                middleName: formData.middleName,
-                lastName: formData.lastName,
-                grade: formData.grade,
-                parentName: formData.parentName,
-                phone: formData.phone,
-                address: formData.address,
-                religion: formData.religion,
-                caste: formData.caste,
-                subCaste: formData.subCaste,
-                idNumber: formData.idNumber,
-                communityCertNo: formData.communityCertNo,
-                physicalAbility: formData.physicalAbility,
-                disabilityDetails: formData.disabilityDetails,
-                aadharFileUrl: formData.aadharFile,        // Compressed Base64 string representation[cite: 2]
-                communityFileUrl: formData.communityFile, // Compressed Base64 string representation[cite: 2]
-                tcFileUrl: formData.tcFile,               // Compressed Base64 string representation[cite: 2]
-                acknowledgementNumber: generatedAck,
-                status: 'Pending',
-                createdAt: serverTimestamp()
-            });
+                // Directly save form data along with compressed Base64 strings into Firestore[cite: 2]
+                await addDoc(collection(db, "admissions"), {
+                    ...payload,
+                    acknowledgementNumber: generatedAck,
+                    status: 'Pending',
+                    createdAt: serverTimestamp()
+                });
 
-            setSubmitted(true);
+                setSubmitted(true);
+            }
         } catch (error) {
             console.error("Error submitting application: ", error);
             alert("Submission failed. The combined document size may still be exceeding Firestore limits or network rules.");
@@ -198,9 +230,21 @@ export default function AdmissionForm() {
     };
 
     if (submitted) {
+        if (mode === 'edit') {
+            return (
+                <div className="adm-premium-card success-card-view">
+                    <div className="success-icon-badge"><CheckCircle2 size={48} color="#123A70" /></div>
+                    <h3>Application Updated Successfully!</h3>
+                    <p>Your changes have been saved against acknowledgement number:</p>
+                    <div className="ack-badge-box">{ackNumber}</div>
+                    <p className="sub-text">You can log in again any time to review or update your details further.</p>
+                </div>
+            );
+        }
+
         return (
             <div className="adm-premium-card success-card-view">
-                <div className="success-icon-badge"><CheckCircle2 size={48} color="#8004c7" /></div>
+                <div className="success-icon-badge"><CheckCircle2 size={48} color="#123A70" /></div>
                 <h3>Application Submitted Successfully!</h3>
                 <p>Welcome. Your unique tracking acknowledgement number is:</p>
                 <div className="ack-badge-box">{ackNumber}</div>
@@ -212,31 +256,71 @@ export default function AdmissionForm() {
         );
     }
 
+    const currentMeta = STEP_META[step - 1];
+
     return (
-        <div className="adm-premium-card">
-            <div className="form-header-area">
-                <div className="form-title-group">
-                    <h3>Online Admission Portal</h3>
-                    <p>Academic Year 2026–2027</p>
-                </div>
-                <div className="step-indicator-pill">Step {step} of 4</div>
-            </div>
+        <div className="adm-reg-shell">
+            <div className="adm-reg-grid">
 
-            <div className="wizard-steps-bar">
-                {['Personal Details', 'Background', 'Documents', 'Review'].map((name, idx) => {
-                    const stepNum = idx + 1;
-                    const isActive = step === stepNum;
-                    const isCompleted = step > stepNum;
-                    return (
-                        <div key={idx} className={`wizard-step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                            <div className="wizard-step-bubble">{isCompleted ? <Check size={14} /> : stepNum}</div>
-                            <span>{name}</span>
+                {/* Left step sidebar — mirrors the registration-flow step cards */}
+                <aside className="adm-reg-sidenav">
+                    {STEP_META.map((s) => {
+                        const isActive = step === s.key;
+                        const isDone = step > s.key;
+                        return (
+                            <div key={s.key} className={`adm-reg-navitem ${isActive ? 'active' : ''} ${isDone ? 'completed' : ''}`}>
+                                <div className="adm-reg-navnum">{isDone ? <Check size={14} /> : s.key}</div>
+                                <div className="adm-reg-navtext">
+                                    <strong>{s.label}</strong>
+                                    <span>{s.tag}</span>
+                                    <ul>
+                                        {s.bullets.map((b, i) => <li key={i}>{b}</li>)}
+                                    </ul>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </aside>
+
+                {/* Right registration panel */}
+                <div className="adm-reg-panel">
+                    <div className="adm-reg-panel-head">
+                        <div className="adm-reg-panel-title">
+                            <span className="adm-reg-panel-icon"><FileText size={18} /></span>
+                            <div>
+                                <h3>{mode === 'edit' ? 'Application Flow' : 'Registration Flow'}</h3>
+                                <p>{mode === 'edit' ? 'Review and update your submitted details' : 'Follow steps to complete your application'}</p>
+                            </div>
                         </div>
-                    );
-                })}
-            </div>
+                        <span className="adm-reg-secure-pill"><ShieldCheck size={14} /> Secure Portal</span>
+                    </div>
 
-            <form onSubmit={step === 4 ? handleSubmit : handleNext} className="adm-real-form">
+                    <div className="adm-reg-stepper">
+                        {STEP_META.map((s, idx) => {
+                            const isActive = step === s.key;
+                            const isDone = step > s.key;
+                            return (
+                                <React.Fragment key={s.key}>
+                                    <div className={`adm-reg-step-node ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}`}>
+                                        <div className="adm-reg-step-circle">{isDone ? <Check size={16} /> : s.icon}</div>
+                                        <span>{s.label}</span>
+                                    </div>
+                                    {idx < STEP_META.length - 1 && (
+                                        <div className={`adm-reg-step-line ${step > s.key ? 'filled' : ''}`} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+
+                    <form onSubmit={step === 4 ? handleSubmit : handleNext} className="adm-real-form">
+                        <div className="adm-reg-step-heading">
+                            <div>
+                                <h4>{currentMeta.label}</h4>
+                                <span className="adm-reg-step-tag">{currentMeta.tag}</span>
+                            </div>
+                            <span className="adm-reg-step-count">STEP {step} / 4</span>
+                        </div>
                 {step === 1 && (
                     <div className="form-grid fade-in-section">
                         <div className="form-group"><label>First Name *</label><input type="text" required placeholder="e.g. Alex" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} /></div>
@@ -344,20 +428,35 @@ export default function AdmissionForm() {
                     </div>
                 )}
 
-                <div className="form-nav-buttons">
-                    {step > 1 ? (
-                        <button type="button" onClick={handlePrev} className="secondary-nav-btn"><ArrowLeft size={16} /> Back</button>
-                    ) : <div />}
+                        <div className="adm-reg-footer">
+                            <div className="adm-reg-progress">
+                                <span className="adm-reg-progress-label">PROGRESS</span>
+                                <div className="adm-reg-progress-track">
+                                    <div className="adm-reg-progress-fill" style={{ width: `${(step / 4) * 100}%` }} />
+                                </div>
+                                <span className="adm-reg-progress-count">{step} of 4</span>
+                            </div>
 
-                    {step < 4 ? (
-                        <button type="submit" className="submit-action-btn">Next Step <ArrowRight size={16} /></button>
-                    ) : (
-                        <button type="submit" className="submit-action-btn final-submit-btn" disabled={loading}>
-                            <Send size={16} /> {loading ? 'Processing Submission...' : 'Confirm & Submit Application'}
-                        </button>
-                    )}
+                            <div className="adm-reg-footer-actions">
+                                {step > 1 && (
+                                    <button type="button" onClick={handlePrev} className="secondary-nav-btn"><ArrowLeft size={16} /> Back</button>
+                                )}
+
+                                {step < 4 ? (
+                                    <button type="submit" className="submit-action-btn">Next Step <ArrowRight size={16} /></button>
+                                ) : (
+                                    <button type="submit" className="submit-action-btn final-submit-btn" disabled={loading}>
+                                        <Send size={16} />
+                                        {loading
+                                            ? (mode === 'edit' ? 'Saving Changes...' : 'Processing Submission...')
+                                            : (mode === 'edit' ? 'Save Changes' : 'Confirm & Submit Application')}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     );
 }
