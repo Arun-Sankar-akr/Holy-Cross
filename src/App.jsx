@@ -51,7 +51,7 @@ import StaffCommittees from './pages/Staff/StaffCommittees';
 
 // Admission Pages
 import AdmissionDashboard from './pages/Admission/AdmissionDashboard';
-import Admissionapply from './pages/Admission/AdmissionApply';
+import AdmissionApply from './pages/Admission/Admissionapply';
 import Admissionregisterpage from './pages/Admission/Admissionregisterpage';  
 import Admissionloginpage from './pages/Admission/Admissionloginpage';  
 import Admissioncontinuepage from './pages/Admission/Admissioncontinuepage';  
