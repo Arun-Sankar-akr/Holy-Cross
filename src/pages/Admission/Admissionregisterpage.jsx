@@ -25,7 +25,7 @@ export default function AdmissionRegisterPage() {
             </header>
 
             <div className="adm-standalone-body">
-                <Link to="/admission" className="adm-back-link">
+                <Link to="/admissions" className="adm-back-link">
                     <ArrowLeft size={15} /> Back to Admissions Home
                 </Link>
 

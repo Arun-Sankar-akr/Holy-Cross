@@ -4,9 +4,6 @@ import { collection, addDoc, doc, updateDoc, getDocs, query, orderBy, limit, ser
 import { CheckCircle2, Send, ArrowLeft, ArrowRight, Upload, FileText, Check, ShieldCheck, BadgeCheck, ClipboardCheck } from 'lucide-react';
 import './AdmissionForm.css';
 
-// Step metadata driving both the left registration-step sidebar and the
-// top circular stepper — content/logic below is unchanged, only the
-// wizard chrome around it has been redesigned.
 const STEP_META = [
     { key: 1, label: 'Personal Details', tag: 'PERSONAL INFO', icon: <FileText size={18} />, bullets: ['Name, Grade & DOB', 'Parent & Contact'] },
     { key: 2, label: 'Background', tag: 'ELIGIBILITY INFO', icon: <BadgeCheck size={18} />, bullets: ['Identity & Community', 'Physical Ability'] },

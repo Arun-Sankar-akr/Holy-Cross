@@ -15,13 +15,6 @@ import {
 } from 'lucide-react';
 import './Admissionstandalone.css';
 
-/**
- * Standalone "Login" page — this is what /admission/login renders.
- * An existing applicant enters their acknowledgement number and the phone
- * number they registered with. On success we navigate to /admission/continue
- * carrying the matched Firestore doc, where AdmissionForm (mode="edit") lets
- * them review and update their details.
- */
 export default function AdmissionLoginPage() {
     const navigate = useNavigate();
     const [ackNumber, setAckNumber] = useState('');
@@ -129,7 +122,7 @@ export default function AdmissionLoginPage() {
 
                         <div className="adm-login-footer">
                             <span>New applicant? <Link to="/admission/register">Register Now</Link></span>
-                            <Link to="/admission">Back to Home</Link>
+                            <Link to="/admissions">Back to Home</Link>
                         </div>
                     </div>
                 </div>
