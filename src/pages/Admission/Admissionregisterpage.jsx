@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import AdmissionForm from './AdmissionForm';
+// added
 import { ensureAdmissionAuth } from './Ensureadmissionauth';
 import './Admissionstandalone.css';
 
@@ -41,7 +42,7 @@ export default function AdmissionRegisterPage() {
                 </div>
                 <div className="adm-standalone-meta">
                     <span>Admissions Portal</span>
-                    <small>Academic Year 2026–2027</small>
+                    <small><p>Academic Year 2026–2027</p></small>
                 </div>
             </header>
 
