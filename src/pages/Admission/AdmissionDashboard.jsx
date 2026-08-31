@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import AdmissionProcedure from './AdmissionProcedure';
 import FeeStructure from './FeeStructure';
-import AdmissionApply from './AdmissionApply';
+import AdmissionApply from './Admissionapply';
 import { db } from '../../service/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import './AdmissionDashboard.css';
