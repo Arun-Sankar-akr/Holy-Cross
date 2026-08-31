@@ -205,6 +205,8 @@ export default function AdmissionDashboard() {
             </section>
 
             {/* Why choose us — BHC-inspired colourful feature grid */}
+            {/* Why choose us — BHC-inspired colourful feature grid */}
+            {/* Why choose us — BHC-inspired colourful feature grid */} 
             <section className="adm-why-section">
                 <div className="adm-why-heading">
                     <h2>Why Choose <span>Holy Cross</span></h2>
