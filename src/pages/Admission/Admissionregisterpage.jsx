@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, ArrowLeft } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import AdmissionForm from './AdmissionForm';
+import { ensureAdmissionAuth } from './Ensureadmissionauth';
 import './Admissionstandalone.css';
 
 
 export default function AdmissionRegisterPage() {
+    const [authReady, setAuthReady] = useState(false);
+    const [authError, setAuthError] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        ensureAdmissionAuth()
+            .then(() => {
+                if (!cancelled) setAuthReady(true);
+            })
+            .catch((err) => {
+                console.error('Anonymous auth failed:', err);
+                if (!cancelled) {
+                    setAuthError('Could not start a secure session. Please check your internet connection and refresh the page.');
+                }
+            });
+
+        return () => { cancelled = true; };
+    }, []);
+
     return (
         <div className="adm-standalone-page">
             <header className="adm-standalone-topbar">
@@ -29,7 +50,21 @@ export default function AdmissionRegisterPage() {
                     <ArrowLeft size={15} /> Back to Admissions Home
                 </Link>
 
-                <AdmissionForm mode="create" />
+                {authError && (
+                    <div className="adm-auth-error">
+                        <AlertTriangle size={16} />
+                        <span>{authError}</span>
+                    </div>
+                )}
+
+                {!authError && !authReady && (
+                    <div className="adm-auth-loading">
+                        <Loader2 size={18} className="adm-spin" />
+                        <span>Preparing secure session…</span>
+                    </div>
+                )}
+
+                {authReady && <AdmissionForm mode="create" />}
             </div>
         </div>
     );
