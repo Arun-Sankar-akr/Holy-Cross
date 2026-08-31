@@ -1,27 +1,66 @@
-import { auth } from '../../service/firebase';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth } from '../../service/firebase';
+
 
 export function ensureAdmission() {
     return new Promise((resolve, reject) => {
-        const unsubscribe = onAuthStateChanged(
+        let unsubscribe = null;
+        let resolved = false;
+
+        const finish = (callback, value) => {
+            if (resolved) return;
+
+            resolved = true;
+
+            if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+            }
+
+            callback(value);
+        };
+
+        unsubscribe = onAuthStateChanged(
             auth,
             async (user) => {
-                unsubscribe();
                 if (user) {
-                    resolve(user);
+                    finish(resolve, user);
                     return;
                 }
+
                 try {
-                    const cred = await signInAnonymously(auth);
-                    resolve(cred.user);
-                } catch (err) {
-                    reject(err);
+                    const credential = await signInAnonymously(auth);
+
+                    if (credential?.user) {
+                        finish(resolve, credential.user);
+                    } else {
+                        finish(
+                            reject,
+                            new Error(
+                                'Firebase anonymous authentication did not return a user.'
+                            )
+                        );
+                    }
+                } catch (error) {
+                    console.error(
+                        'Firebase anonymous authentication failed:',
+                        error
+                    );
+
+                    finish(reject, error);
                 }
             },
-            (err) => {
-                unsubscribe();
-                reject(err);
+            (error) => {
+                console.error(
+                    'Firebase authentication state error:',
+                    error
+                );
+
+                finish(reject, error);
             }
         );
     });
 }
+
+export default ensureAdmission;
+
