@@ -97,8 +97,16 @@
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    max-height: 320px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.announcements-grid::-webkit-scrollbar {
+    display: none;
 }
 
 /* List Item Rows (No Card Look) */
@@ -197,11 +205,108 @@
     font-weight: 700;
     color: var(--text-secondary);
     transition: color 0.15s ease, transform 0.15s ease;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
 }
 
 .announcement-card:hover .read-more {
     color: #4f46e5;
     transform: translateX(2px);
+}
+
+/* Preview Modal */
+.notice-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+    animation: noticeOverlayFade 0.15s ease;
+}
+
+@keyframes noticeOverlayFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.notice-modal {
+    position: relative;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 480px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    animation: noticeModalPop 0.18s ease;
+}
+
+@keyframes noticeModalPop {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notice-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.notice-modal-close:hover {
+    background: #e2e8f0;
+    color: var(--text-primary);
+}
+
+.notice-modal-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #4f46e5;
+    margin-bottom: 0.85rem;
+}
+
+.notice-modal-date {
+    display: inline-flex;
+    margin-bottom: 1rem;
+}
+
+.notice-modal-content {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    font-weight: 500;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+    .notice-modal {
+        padding: 1.5rem;
+        border-radius: 14px;
+    }
 }
 
 /* Loading & Empty States */

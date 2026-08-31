@@ -300,16 +300,84 @@
 }
 
 .forgot-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
     color: #155EEF;
     font-size: .78rem;
     font-weight: 650;
     text-decoration: none;
+    cursor: pointer;
     transition: color .18s ease;
 }
 
 .forgot-link:hover {
     color: #4F46E5;
     text-decoration: none;
+}
+
+.forgot-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: -4px;
+    font-family: inherit;
+    color: #64748B;
+    font-size: .80rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: color .18s ease;
+}
+
+.forgot-back-link:hover {
+    color: #155EEF;
+}
+
+.forgot-intro {
+    margin: 0;
+    color: #4A5A72;
+    font-size: .85rem;
+    line-height: 1.55;
+}
+
+.forgot-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: .82rem;
+    line-height: 1.5;
+}
+
+.forgot-status svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+}
+
+.forgot-status-success {
+    border: 1px solid #A7E3CC;
+    background: linear-gradient(135deg, #F2FBF7, #EAFAF2);
+    color: #0F5132;
+}
+
+.forgot-status-success svg {
+    color: #0F9F6E;
+}
+
+.forgot-status-error {
+    border: 1px solid #FECACA;
+    background: linear-gradient(135deg, #FFF7F7, #FFF1F2);
+    color: #991B1B;
+}
+
+.forgot-status-error svg {
+    color: #DC2626;
 }
 
 /* ================================================================

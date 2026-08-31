@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     // Form inputs state
     const [calendarForm, setCalendarForm] = useState({ month: '', date: '', day: '', title: '', category: 'General' });
     const [adminForm, setAdminForm] = useState({ name: '', role: '', qualification: '', message: '', email: '', phone: '' });
-    const [topperForm, setTopperForm] = useState({ name: '', streamOrGrade: '', scoreOrPercentage: '' });
+    const [topperForm, setTopperForm] = useState({ name: '', streamOrGrade: '', scoreOrPercentage: '', photo: '', rank: '1' });
     const [eventForm, setEventForm] = useState({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' });
     const [galleryForm, setGalleryForm] = useState({
         title: '',
@@ -272,6 +272,20 @@ export default function AdminDashboard() {
         '6th Std', '7th Std', '8th Std', '9th Std', '10th Std',
         '11th Std', '12th Std'
     ];
+
+    // Board exam toppers are ordered Class X first, then Class XII, and by rank within each class.
+    const getTopperClassOrder = (streamOrGrade = '') => {
+        const value = String(streamOrGrade).toUpperCase();
+        if (value.includes('XII')) return 2;
+        if (value.includes('X')) return 1;
+        return 99;
+    };
+    const sortToppers = (list) =>
+        [...list].sort((a, b) => {
+            const classDiff = getTopperClassOrder(a.streamOrGrade) - getTopperClassOrder(b.streamOrGrade);
+            if (classDiff !== 0) return classDiff;
+            return Number(a.rank || 99) - Number(b.rank || 99);
+        });
 
     const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -764,7 +778,7 @@ export default function AdminDashboard() {
     };
 
     const handleDelete = async (collectionName, id) => {
-        if (window.confirm('Are you sure you want to remove this student?')) {
+        if (window.confirm('Are you sure you want to remove this seclected one?')) {
             try {
                 await deleteDoc(doc(db, collectionName, id));
             } catch (error) {
@@ -1356,21 +1370,67 @@ export default function AdminDashboard() {
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 handlePublish('exam_toppers', topperForm, () =>
-                                    setTopperForm({ name: '', streamOrGrade: '', scoreOrPercentage: '' })
+                                    setTopperForm({ name: '', streamOrGrade: '', scoreOrPercentage: '', photo: '', rank: '1' })
                                 );
                             }}>
                                 <div><input type="text" placeholder="Student Name (e.g., Aarthi S.)" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Grade & Board (e.g., Grade XII • State Board)" value={topperForm.streamOrGrade} onChange={e => setTopperForm({ ...topperForm, streamOrGrade: e.target.value })} required /></div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                        Class
+                                    </label>
+                                    <select value={topperForm.streamOrGrade} onChange={e => setTopperForm({ ...topperForm, streamOrGrade: e.target.value })} required>
+                                        <option value="">Select Class</option>
+                                        <option value="Class X">Class X</option>
+                                        <option value="Class XII">Class XII</option>
+                                    </select>
+                                </div>
                                 <div><input type="text" placeholder="Score / Achievement (e.g., 491 / 500 (District Rank))" value={topperForm.scoreOrPercentage} onChange={e => setTopperForm({ ...topperForm, scoreOrPercentage: e.target.value })} required /></div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                        Rank
+                                    </label>
+                                    <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: e.target.value })}>
+                                        <option value="1">1st (Gold)</option>
+                                        <option value="2">2nd (Silver)</option>
+                                        <option value="3">3rd (Bronze)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                        Student Photo (Auto-compressed to &lt; 500 KB)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp"
+                                        onChange={e => handleImageUpload(e.target.files[0], (base64) => setTopperForm({ ...topperForm, photo: base64 }))}
+                                    />
+                                    {topperForm.photo && (
+                                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <img src={topperForm.photo} alt="Preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
+                                            <button
+                                                type="button"
+                                                onClick={() => setTopperForm({ ...topperForm, photo: '' })}
+                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper Profile</button>
                             </form>
 
                             <h4>Published Toppers & Achievers <span className="count-badge">{toppers.length}</span></h4>
                             {toppers.length === 0 ? <div className="empty-state">No toppers published yet.</div> : (
                                 <ul>
-                                    {toppers.map(item => (
+                                    {sortToppers(toppers).map(item => (
                                         <li key={item.id}>
-                                            <span><strong>{item.name}</strong> ({item.streamOrGrade}) — {item.scoreOrPercentage}</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                {item.photo ? (
+                                                    <img src={item.photo} alt={item.name} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)', flexShrink: 0 }} />
+                                                ) : null}
+                                                <span><strong>{item.name}</strong> ({item.streamOrGrade}) — {item.scoreOrPercentage} — Rank #{item.rank || '3'}</span>
+                                            </span>
                                             <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}

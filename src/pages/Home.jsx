@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { db } from '../service/firebase';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -6,7 +6,10 @@ import {
     ArrowRight,
     ArrowUp,
     BookOpen,
+    Calendar,
     CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     Clock,
     Compass,
     Globe2,
@@ -101,6 +104,14 @@ export default function Home({ setActivePage }) {
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [toppersList, setToppersList] = useState([]);
 
+    const eventsSectionRef = useRef(null);
+    const eventsScrollRef = useRef(null);
+    const eventsPausedRef = useRef(false);
+
+    const achieversSectionRef = useRef(null);
+    const achieversScrollRef = useRef(null);
+    const achieversPausedRef = useRef(false);
+
     useEffect(() => {
         const handleScroll = () => setShowScrollTop(window.scrollY > 500);
         window.addEventListener('scroll', handleScroll, { passive: true });
@@ -147,6 +158,108 @@ export default function Home({ setActivePage }) {
             unsubToppers();
         };
     }, []);
+
+    // Gentle continuous auto-scroll through the upcoming events list
+    useEffect(() => {
+        const el = eventsScrollRef.current;
+        if (!el) return;
+
+        let rafId;
+        let lastTime = null;
+        const pixelsPerSecond = 28;
+
+        const step = (time) => {
+            if (lastTime === null) lastTime = time;
+            const delta = time - lastTime;
+            lastTime = time;
+
+            if (!eventsPausedRef.current && el.scrollHeight > el.clientHeight) {
+                el.scrollTop += (pixelsPerSecond * delta) / 1000;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
+                    el.scrollTop = 0;
+                }
+            }
+            rafId = requestAnimationFrame(step);
+        };
+
+        rafId = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(rafId);
+    }, [upcomingEvents]);
+
+    // Once the events board scrolls out of view, clear the pause so it auto-scrolls again next time it's visible
+    useEffect(() => {
+        const node = eventsSectionRef.current;
+        if (!node) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (!entry.isIntersecting) {
+                    eventsPausedRef.current = false;
+                }
+            },
+            { threshold: 0 }
+        );
+
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, []);
+
+    const handleEventClick = () => {
+        eventsPausedRef.current = true;
+    };
+
+    // Gentle continuous auto-scroll carousel through the toppers & achievers cards
+    useEffect(() => {
+        const el = achieversScrollRef.current;
+        if (!el) return;
+
+        let rafId;
+        let lastTime = null;
+        const pixelsPerSecond = 40;
+
+        const step = (time) => {
+            if (lastTime === null) lastTime = time;
+            const delta = time - lastTime;
+            lastTime = time;
+
+            if (!achieversPausedRef.current && el.scrollWidth > el.clientWidth) {
+                el.scrollLeft += (pixelsPerSecond * delta) / 1000;
+                if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 1) {
+                    el.scrollLeft = 0;
+                }
+            }
+            rafId = requestAnimationFrame(step);
+        };
+
+        rafId = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(rafId);
+    }, [toppersList]);
+
+    // Once the achievers carousel scrolls out of view, clear the pause so it auto-scrolls again next time it's visible
+    useEffect(() => {
+        const node = achieversSectionRef.current;
+        if (!node) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (!entry.isIntersecting) {
+                    achieversPausedRef.current = false;
+                }
+            },
+            { threshold: 0 }
+        );
+
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, []);
+
+    const scrollAchievers = (direction) => {
+        const el = achieversScrollRef.current;
+        if (!el) return;
+        achieversPausedRef.current = true;
+        const cardWidth = el.querySelector('.achiever-card')?.offsetWidth || 260;
+        el.scrollBy({ left: direction * (cardWidth + 20), behavior: 'smooth' });
+    };
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -230,9 +343,53 @@ export default function Home({ setActivePage }) {
             </section>
 
             <div className="home-content">
-                <section className="notice-section scroll-animate">
-                    <HomeNoticeBoard onNavigate={setActivePage} />
-                </section>
+                <div className="notice">
+                    <section className="notice-section scroll-animate">
+                        <HomeNoticeBoard onNavigate={setActivePage} />
+                    </section>
+                    <section className="section-block events-section scroll-animate" ref={eventsSectionRef}>
+                        <div className="announcements-header">
+                            <div className="header-title">
+                                <div className="bell-icon-wrapper">
+                                    <Calendar size={22} />
+                                </div>
+                                <h2>Upcoming Events</h2>
+                            </div>
+                            <span className="live-badge">Live Updates</span>
+                        </div>
+
+                        <div className="events-subheading">
+                            <p>Stay connected with activities, programmes and important moments on campus.</p>
+                            {/* <button className="outline-action" onClick={() => setActivePage('calendar')}>
+                                View calendar <ArrowRight size={15} />
+                            </button> */}
+                        </div>
+
+                        <div className="events-grid" ref={eventsScrollRef}>
+                            {upcomingEvents.length === 0 ? (
+                                <div className="empty-state">No upcoming events published at the moment.</div>
+                            ) : (
+                                upcomingEvents.map((event) => (
+                                    <article className="event-card" key={event.id} onClick={handleEventClick}>
+                                        <div className="event-date">
+                                            <span>{event.month}</span>
+                                            <strong>{event.day}</strong>
+                                        </div>
+                                        <div className="event-content">
+                                            <span className="event-type">School activity</span>
+                                            <h3>{event.title}</h3>
+                                            <p>{event.description}</p>
+                                        </div>
+                                        <div className="event-footer">
+                                            <span className="event-time"><Clock size={14} /> {event.time}</span>
+                                        </div>
+                                    </article>
+                                ))
+                            )}
+                        </div>
+                    </section>
+
+                </div>
 
                 <section className="section-block scroll-animate">
                     <SectionHeading
@@ -291,7 +448,7 @@ export default function Home({ setActivePage }) {
                                 <strong>Fr. A. Arokia Sahayaraj</strong>
                                 <span><br />Principal <br /> Holy Cross Matriculation Higher Secondary School</span>
                             </div>
-                            
+
                         </div>
                     </div>
 
@@ -366,41 +523,7 @@ export default function Home({ setActivePage }) {
                     </div>
                 </section>
 
-                <section className="section-block scroll-animate">
-                    <SectionHeading
-                        eyebrow="School calendar"
-                        title="Upcoming events"
-                        description="Stay connected with activities, programmes and important moments on campus."
-                        action={
-                            <button className="outline-action" onClick={() => setActivePage('calendar')}>
-                                View calendar <ArrowRight size={15} />
-                            </button>
-                        }
-                    />
-
-                    <div className="events-grid">
-                        {upcomingEvents.length === 0 ? (
-                            <div className="empty-state">No upcoming events published at the moment.</div>
-                        ) : (
-                            upcomingEvents.map((event) => (
-                                <article className="event-card" key={event.id}>
-                                    <div className="event-date">
-                                        <span>{event.month}</span>
-                                        <strong>{event.day}</strong>
-                                    </div>
-                                    <div className="event-content">
-                                        <span className="event-type">School activity</span>
-                                        <h3>{event.title}</h3>
-                                        <p>{event.description}</p>
-                                        <span className="event-time"><Clock size={14} /> {event.time}</span>
-                                    </div>
-                                </article>
-                            ))
-                        )}
-                    </div>
-                </section>
-
-                <section className="section-block achievers-section scroll-animate">
+                <section className="section-block achievers-section scroll-animate" ref={achieversSectionRef}>
                     <SectionHeading
                         eyebrow="Excellence"
                         title="Board exam toppers & achievers"
@@ -412,21 +535,70 @@ export default function Home({ setActivePage }) {
                         }
                     />
 
-                    <div className="achievers-grid">
-                        {toppersList.length === 0 ? (
-                            <div className="empty-state">No toppers published yet.</div>
-                        ) : (
-                            toppersList.map((topper, index) => (
-                                <article className="achiever-card" key={topper.id}>
-                                    <div className="achiever-rank">#{index + 1}</div>
-                                    <IconBadge tone="gold"><Trophy size={21} /></IconBadge>
-                                    <h3>{topper.name}</h3>
-                                    <span>{topper.streamOrGrade}</span>
-                                    <strong>{topper.scoreOrPercentage}</strong>
-                                </article>
-                            ))
-                        )}
-                    </div>
+                    {toppersList.length === 0 ? (
+                        <div className="empty-states">No toppers published yet.</div>
+                    ) : (
+                        <div className="achievers-carousel">
+                            <button
+                                type="button"
+                                className="achievers-carousel-btn achievers-carousel-btn-prev"
+                                onClick={() => scrollAchievers(-1)}
+                                aria-label="Scroll to previous achievers"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+
+                            <div
+                                className="achievers-grid"
+                                ref={achieversScrollRef}
+                                onMouseEnter={() => { achieversPausedRef.current = true; }}
+                                onMouseLeave={() => { achieversPausedRef.current = false; }}
+                                onTouchStart={() => { achieversPausedRef.current = true; }}
+                            >
+                                {[...toppersList]
+                                    .sort((a, b) => {
+                                        const classRank = (v = '') => {
+                                            const value = String(v).toUpperCase();
+                                            if (value.includes('XII')) return 2;
+                                            if (value.includes('X')) return 1;
+                                            return 99;
+                                        };
+                                        const rankNum = (r) => {
+                                            const n = parseInt(r, 10);
+                                            return Number.isFinite(n) ? n : 99;
+                                        };
+                                        const classDiff = classRank(a.streamOrGrade) - classRank(b.streamOrGrade);
+                                        if (classDiff !== 0) return classDiff;
+                                        return rankNum(a.rank) - rankNum(b.rank);
+                                    })
+                                    .map((topper) => (
+                                        <article className="achiever-card" key={topper.id}>
+                                            <div className="achiever-rank">#{topper.rank || 3}</div>
+                                            {topper.photo ? (
+                                                <div className="achiever-photo-wrap">
+                                                    <img src={topper.photo} alt={topper.name} className="achiever-photo" />
+                                                    <span className="achiever-photo-badge"><Trophy size={13} /></span>
+                                                </div>
+                                            ) : (
+                                                <IconBadge tone="gold"><Trophy size={21} /></IconBadge>
+                                            )}
+                                            <h3>{topper.name}</h3>
+                                            <span>{topper.streamOrGrade}</span>
+                                            <strong>{topper.scoreOrPercentage}</strong>
+                                        </article>
+                                    ))}
+                            </div>
+
+                            <button
+                                type="button"
+                                className="achievers-carousel-btn achievers-carousel-btn-next"
+                                onClick={() => scrollAchievers(1)}
+                                aria-label="Scroll to next achievers"
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+                        </div>
+                    )}
                 </section>
 
                 <section className="campus-showcase scroll-animate">
