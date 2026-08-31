@@ -16,7 +16,7 @@ import { auth } from '../../service/firebase';
 
 import AdmissionForm from './AdmissionForm';
 import './Admissionstandalone.css';
-
+// endure
 function ensureAdmission() {
     return new Promise((resolve, reject) => {
         let unsubscribe = null;
@@ -67,7 +67,7 @@ function ensureAdmission() {
                             finish(
                                 reject,
                                 new Error(
-                                    'Firebase authentication did not return a user.'
+                                    'Firebase authentications did not return a user.'
                                 )
                             );
                         }
