@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import AdmissionForm from './AdmissionForm';
-// added
-import { ensureAdmissionAuth } from './Ensureadmissionauth';
+import { ensureAdmission } from './Ensureadmissionauth';
 import './Admissionstandalone.css';
 
 
@@ -14,7 +13,7 @@ export default function AdmissionRegisterPage() {
     useEffect(() => {
         let cancelled = false;
 
-        ensureAdmissionAuth()
+        ensureAdmission()
             .then(() => {
                 if (!cancelled) setAuthReady(true);
             })

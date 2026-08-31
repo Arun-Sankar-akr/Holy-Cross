@@ -1,7 +1,7 @@
 import { auth } from '../../service/firebase';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 
-export function ensureAdmissionAuth() {
+export function ensureAdmission() {
     return new Promise((resolve, reject) => {
         const unsubscribe = onAuthStateChanged(
             auth,
