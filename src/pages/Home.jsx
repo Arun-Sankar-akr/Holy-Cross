@@ -672,7 +672,7 @@ export default function Home({ setActivePage }) {
                         </details>
                         <details>
                             <summary><span>03</span> Are transport facilities available?<Plus size={18} /></summary>
-                            <p>Yes — safe, reliable school bus routes cover much of the Trichy district for student convenience.</p>
+                            <p>No — local vans and vehicles are arranged for student convenience and the school bus initiating soon.</p>
                         </details>
                     </div>
                 </section>
