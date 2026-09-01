@@ -1,22 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-    --adm-primary: #155EEF;
-    --adm-primary-dark: #0B1F3A;
-    --adm-navy: #0B1B3D;
-    --adm-navy-deep: #071224;
-    --adm-accent: #5B4FE5;
-    --adm-ink: #111827;
-    --adm-muted: #667085;
-    --adm-border: #E4E7EC;
-    --adm-primary-soft: #EEF4FF;
+    --hc-paper: #FFFFFF;
+    --hc-paper-deep: #E6E1CE;
+    --hc-maroon: #1F4D3D;
+    --hc-maroon-deep: #0F2E24;
+    --hc-gold: #B08D3F;
+    --hc-ink: #24261F;
+    --hc-muted: #737763;
+    --hc-line: #D3D2BC;
+    --hc-error: #A2472E;
+    --hc-error-bg: #F6E5DC;
 }
 
 .adm-standalone-page {
     min-height: 100vh;
-    font-family: 'Outfit', sans-serif;
-    color: var(--adm-ink);
-    background: #F7F9FC;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--hc-ink);
+    background: var(--hc-paper);
 }
 
 /* ---- Top bar shared by Register / Continue pages ---- */
@@ -27,8 +28,8 @@
     justify-content: space-between;
     gap: 16px;
     padding: 16px 28px;
-    background: #fff;
-    border-bottom: 1px solid var(--adm-border);
+    background: var(--hc-paper);
+    border-bottom: 1px solid var(--hc-line);
 }
 
 .adm-standalone-brand {
@@ -42,24 +43,25 @@
     height: 42px;
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(145deg, var(--adm-navy-deep), var(--adm-primary));
-    border-radius: 11px;
+    color: var(--hc-paper);
+    background: var(--hc-maroon);
+    border-radius: 50%;
 }
 
 .adm-standalone-brand strong {
     display: block;
-    font-size: 1.02rem;
-    color: var(--adm-navy);
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    color: var(--hc-maroon-deep);
 }
 
 .adm-standalone-brand span {
     display: block;
     margin-top: 2px;
-    color: var(--adm-accent);
+    color: var(--hc-gold);
     font-size: .74rem;
-    font-weight: 700;
-    letter-spacing: .4px;
+    font-weight: 600;
+    letter-spacing: .3px;
 }
 
 .adm-standalone-meta {
@@ -68,15 +70,15 @@
 
 .adm-standalone-meta span {
     display: block;
-    color: #101828;
+    color: var(--hc-ink);
     font-size: .88rem;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .adm-standalone-meta small {
     display: block;
     margin-top: 2px;
-    color: var(--adm-muted);
+    color: var(--hc-muted);
     font-size: .72rem;
 }
 
@@ -90,9 +92,9 @@
     align-items: center;
     gap: 6px;
     margin-bottom: 18px;
-    color: var(--adm-accent);
+    color: var(--hc-maroon);
     font-size: .84rem;
-    font-weight: 700;
+    font-weight: 600;
     text-decoration: none;
 }
 
@@ -100,147 +102,100 @@
     text-decoration: underline;
 }
 
-/* ---- Login page: split screen ---- */
+/* ---- Login page: single ticket card, centered ---- */
 
 .adm-login-shell {
     min-height: 100vh;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
-}
-
-.adm-login-left {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 40px;
-    background: #fff;
+    padding: 40px 20px;
+    background:
+        radial-gradient(circle at 8% 8%, rgba(122,23,48,.05), transparent 45%),
+        radial-gradient(circle at 92% 88%, rgba(185,139,42,.07), transparent 40%),
+        var(--hc-paper);
 }
 
-.adm-login-card {
+.adm-ticket {
     width: 100%;
-    max-width: 420px;
+    max-width: 460px;
 }
 
-.adm-login-brand {
+/* Letterhead */
+
+.adm-ticket-letterhead {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 34px;
+    padding: 20px 26px;
+    background: var(--hc-maroon-deep);
+    border-radius: 16px 16px 0 0;
 }
 
-.adm-login-brand-mark {
-    width: 46px;
-    height: 46px;
+.adm-ticket-seal {
+    flex: none;
+    width: 40px;
+    height: 40px;
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(145deg, var(--adm-navy-deep), var(--adm-primary));
-    border-radius: 12px;
+    color: var(--hc-maroon-deep);
+    background: var(--hc-gold);
+    border-radius: 50%;
 }
 
-.adm-login-brand strong {
+.adm-ticket-letterhead-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.adm-ticket-letterhead-text strong {
     display: block;
-    color: var(--adm-navy);
-    font-size: 1.05rem;
+    font-family: 'Fraunces', serif;
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: var(--hc-paper);
 }
 
-.adm-login-brand span {
+.adm-ticket-letterhead-text span {
     display: block;
     margin-top: 2px;
-    color: var(--adm-accent);
-    font-size: .72rem;
-    font-weight: 700;
-    letter-spacing: .8px;
-    text-transform: uppercase;
+    color: rgba(246,241,230,.65);
+    font-size: .74rem;
+    font-weight: 500;
 }
 
-.adm-login-card h1 {
-    margin: 0 0 6px;
-    color: #101828;
-    font-size: 1.7rem;
-    font-weight: 800;
-}
-
-.adm-login-card > p {
-    margin: 0 0 28px;
-    color: var(--adm-muted);
-    font-size: .88rem;
-}
-
-.adm-login-field {
-    margin-bottom: 18px;
-}
-
-.adm-login-field label {
-    display: block;
-    margin-bottom: 7px;
-    color: #344054;
-    font-size: .7rem;
-    font-weight: 700;
-    letter-spacing: .6px;
-    text-transform: uppercase;
-}
-
-.adm-login-input {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-height: 50px;
-    padding: 0 14px;
-    border: 1px solid #D0D5DD;
-    border-radius: 11px;
-    background: #F9FAFB;
-    transition: .18s ease;
-}
-
-.adm-login-input:focus-within {
-    border-color: var(--adm-primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(21,94,239,.08);
-}
-
-.adm-login-input svg {
+.adm-ticket-serial {
     flex: none;
-    color: #98A2B3;
+    padding: 5px 10px;
+    border: 1px solid rgba(185,139,42,.55);
+    border-radius: 7px;
+    color: var(--hc-gold);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .5px;
 }
 
-.adm-login-input input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    font-family: inherit;
-    font-size: .92rem;
-    color: #101828;
+/* Ticket body (the form) */
+
+.adm-ticket-body {
+    padding: 30px 26px 26px;
+    background: #fff;
 }
 
-.adm-login-submit {
-    width: 100%;
-    min-height: 52px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 6px;
-    border: 0;
-    border-radius: 12px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--adm-accent), #4338CA);
-    font-family: inherit;
-    font-size: .92rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 10px 22px rgba(91,79,229,.28);
-    transition: .18s ease;
+.adm-ticket-body h1 {
+    margin: 0 0 6px;
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--hc-ink);
 }
 
-.adm-login-submit:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.adm-login-submit:disabled {
-    opacity: .65;
-    cursor: not-allowed;
+.adm-ticket-body > p {
+    margin: 0 0 24px;
+    color: var(--hc-muted);
+    font-size: .87rem;
+    line-height: 1.5;
 }
 
 .adm-login-error {
@@ -249,26 +204,150 @@
     gap: 8px;
     margin-bottom: 18px;
     padding: 11px 13px;
-    border: 1px solid #FDA29B;
-    border-radius: 10px;
-    background: #FEF3F2;
-    color: #B42318;
+    border: 1px solid #E7B9A8;
+    border-radius: 9px;
+    background: var(--hc-error-bg);
+    color: var(--hc-error);
     font-size: .8rem;
     line-height: 1.5;
+}
+
+.adm-login-field {
+    margin-bottom: 16px;
+}
+
+.adm-login-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--hc-ink);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.adm-login-input {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--hc-line);
+    border-radius: 9px;
+    background: var(--hc-paper);
+    transition: .18s ease;
+}
+
+.adm-login-input:focus-within {
+    border-color: var(--hc-maroon);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(122,23,48,.08);
+}
+
+.adm-login-input svg {
+    flex: none;
+    color: var(--hc-gold);
+}
+
+.adm-login-input input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .92rem;
+    color: var(--hc-ink);
+}
+
+.adm-forgot-link-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -6px 0 18px;
+}
+
+.adm-forgot-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--hc-maroon);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.adm-forgot-link:hover {
+    text-decoration: underline;
+}
+
+.adm-login-submit {
+    width: 100%;
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--hc-paper);
+    background: var(--hc-maroon);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.adm-login-submit:hover:not(:disabled) {
+    background: var(--hc-maroon-deep);
+}
+
+.adm-login-submit:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* Perforation between ticket body and stub */
+
+.adm-ticket-perforation {
+    position: relative;
+    height: 0;
+    border-top: 2px dashed var(--hc-line);
+    background: #fff;
+}
+
+.adm-ticket-perforation::before,
+.adm-ticket-perforation::after {
+    content: "";
+    position: absolute;
+    top: -13px;
+    width: 26px;
+    height: 26px;
+    background: var(--hc-paper);
+    border-radius: 50%;
+}
+
+.adm-ticket-perforation::before { left: -13px; }
+.adm-ticket-perforation::after { right: -13px; }
+
+/* Stub footer */
+
+.adm-ticket-stub {
+    padding: 20px 26px 26px;
+    background: #fff;
+    border-radius: 0 0 16px 16px;
 }
 
 .adm-login-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 22px;
     font-size: .82rem;
-    color: var(--adm-muted);
+    color: var(--hc-muted);
 }
 
 .adm-login-footer a {
-    color: var(--adm-accent);
-    font-weight: 700;
+    color: var(--hc-maroon);
+    font-weight: 600;
     text-decoration: none;
 }
 
@@ -276,74 +355,151 @@
     text-decoration: underline;
 }
 
-.adm-login-right {
-    padding: 56px 44px;
-    color: #fff;
-    background: linear-gradient(160deg, var(--adm-navy-deep) 0%, var(--adm-navy) 100%);
+/* ---- Forgot acknowledgement number modal ---- */
+
+.adm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(42,33,26,.55);
+    z-index: 60;
 }
 
-.adm-login-right-head {
+.adm-modal {
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.adm-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--hc-line);
+}
+
+.adm-modal-head h2 {
+    margin: 0 0 4px;
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--hc-ink);
+}
+
+.adm-modal-head p {
+    margin: 0;
+    color: var(--hc-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.adm-modal-close {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--hc-paper);
+    color: var(--hc-muted);
+    cursor: pointer;
+}
+
+.adm-modal-close:hover {
+    background: var(--hc-paper-deep);
+    color: var(--hc-ink);
+}
+
+.adm-modal-body {
+    padding: 20px 22px 24px;
+}
+
+.adm-modal-submit {
+    width: 100%;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    border: 0;
+    border-radius: 9px;
+    color: var(--hc-paper);
+    background: var(--hc-maroon);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.adm-modal-submit:hover:not(:disabled) {
+    background: var(--hc-maroon-deep);
+}
+
+.adm-modal-submit:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.adm-modal-results {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--hc-line);
+}
+
+.adm-modal-results p {
+    margin: 0 0 10px;
+    color: var(--hc-muted);
+    font-size: .78rem;
+}
+
+.adm-modal-result-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 26px;
-    color: #fff;
-    font-size: 1.05rem;
-    font-weight: 700;
+    padding: 11px 13px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hc-line);
+    border-radius: 9px;
+    background: var(--hc-paper);
 }
 
-.adm-login-right-head::before {
-    content: "";
-    width: 22px;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--adm-accent);
-}
-
-.adm-login-info-item {
-    display: flex;
-    gap: 14px;
-    margin-bottom: 24px;
-}
-
-.adm-login-info-icon {
+.adm-modal-result-item svg {
     flex: none;
-    width: 38px;
-    height: 38px;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    background: rgba(255,255,255,.1);
-    color: #9BC0FF;
+    color: var(--hc-gold);
 }
 
-.adm-login-info-item h4 {
-    margin: 0 0 4px;
-    color: #fff;
-    font-size: .9rem;
-}
-
-.adm-login-info-item p {
-    margin: 0;
-    color: rgba(255,255,255,.62);
-    font-size: .78rem;
-    line-height: 1.55;
-}
-
-@media (max-width: 900px) {
-    .adm-login-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .adm-login-right {
-        order: -1;
-        padding: 34px 26px;
-    }
+.adm-modal-result-item span {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--hc-ink);
+    letter-spacing: .3px;
 }
 
 @media (max-width: 520px) {
-    .adm-login-left {
-        padding: 34px 22px;
+    .adm-login-shell {
+        padding: 24px 14px;
+    }
+
+    .adm-ticket-body {
+        padding: 26px 20px 22px;
+    }
+
+    .adm-ticket-letterhead {
+        padding: 18px 20px;
+    }
+
+    .adm-ticket-stub {
+        padding: 18px 20px 22px;
     }
 
     .adm-standalone-topbar {
