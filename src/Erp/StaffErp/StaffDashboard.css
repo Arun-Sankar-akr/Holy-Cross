@@ -6361,3 +6361,101 @@ body {
     font-size: 0.78rem;
     color: var(--muted, #868faa);
 }
+
+/* ============================================================
+   LIBRARY (Staff Dashboard)
+   ============================================================ */
+.library-subtabs {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 4px;
+    flex-wrap: wrap;
+}
+
+.library-subtab-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line, #e8ebf6);
+    background: var(--surface, #fff);
+    color: var(--muted, #868faa);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.library-subtab-btn:hover {
+    border-color: var(--staff-primary, #4f46e5);
+    color: var(--staff-primary, #4f46e5);
+}
+
+.library-subtab-btn.active {
+    background: var(--staff-primary, #4f46e5);
+    border-color: var(--staff-primary, #4f46e5);
+    color: #fff;
+}
+
+.library-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.library-book-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--line, #e8ebf6);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 8px 20px rgba(40, 54, 110, .06);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.library-book-card h5 {
+    margin: 2px 0 0;
+    font-size: 0.95rem;
+    color: var(--text, #23253a);
+}
+
+.library-book-card .task-desc-line {
+    font-size: 0.82rem;
+    color: var(--muted, #868faa);
+    margin: 0;
+}
+
+.library-isbn {
+    font-size: 0.72rem;
+    color: var(--muted, #868faa);
+    margin: 0;
+}
+
+.library-copies-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: rgba(16, 185, 129, .12);
+    color: #059669;
+    white-space: nowrap;
+}
+
+.library-copies-tag.out {
+    background: rgba(239, 68, 68, .12);
+    color: #dc2626;
+}
+
+.library-book-card .task-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line, #e8ebf6);
+    font-size: 0.78rem;
+    color: var(--muted, #868faa);
+}

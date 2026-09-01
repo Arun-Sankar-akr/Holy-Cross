@@ -5,7 +5,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import logo from "../../assets/logo.png"
 import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where,
-    setDoc, orderBy, limit, arrayUnion, arrayRemove
+    setDoc, orderBy, limit, arrayUnion, arrayRemove, increment
 } from 'firebase/firestore';
 import {
     Users, User, Calendar, BookOpen, FileText, Bell, CheckCircle, Clock,
@@ -156,6 +156,17 @@ export default function StaffDashboard() {
     const [isSyllabusCompressing, setIsSyllabusCompressing] = useState(false);
     const [syllabusUploadStatus, setSyllabusUploadStatus] = useState('');
 
+    // Library State
+    const [libraryBooks, setLibraryBooks] = useState([]);
+    const [libraryIssues, setLibraryIssues] = useState([]);
+    const [librarySubTab, setLibrarySubTab] = useState('catalog'); // catalog | issue | issued
+    const [librarySearch, setLibrarySearch] = useState('');
+    const initialBookForm = { title: '', author: '', category: '', isbn: '', totalCopies: 1 };
+    const [bookForm, setBookForm] = useState(initialBookForm);
+    const initialIssueForm = { bookId: '', className: '', sectionName: '', studentId: '', dueDate: '' };
+    const [issueForm, setIssueForm] = useState(initialIssueForm);
+    const [libraryStatus, setLibraryStatus] = useState('');
+
     const classList = [
         'LKG', 'UKG',
         '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std',
@@ -272,6 +283,15 @@ export default function StaffDashboard() {
             setSyllabusList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        // Library — book catalog and issue/return tracking
+        const unsubLibraryBooks = onSnapshot(collection(db, 'library_books'), (snap) => {
+            setLibraryBooks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        const unsubLibraryIssues = onSnapshot(collection(db, 'library_issues'), (snap) => {
+            setLibraryIssues(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         // Live synchronized Exam Hall Staff Duties published by the Office Dashboard
         const unsubStaffExamHalls = onSnapshot(collection(db, 'staff_exam_halls'), (snap) => {
             setStaffExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -304,6 +324,8 @@ export default function StaffDashboard() {
             unsubAssignments();
             unsubSubmissions();
             unsubSyllabus();
+            unsubLibraryBooks();
+            unsubLibraryIssues();
             unsubStaffExamHalls();
             unsubLeaves();
             unsubStaffMembers();
@@ -1462,6 +1484,104 @@ export default function StaffDashboard() {
         }
     };
 
+    // ---- Library Handlers ----
+    const handleAddBook = async (e) => {
+        e.preventDefault();
+        if (!bookForm.title.trim() || !bookForm.author.trim()) return;
+
+        const copies = parseInt(bookForm.totalCopies, 10) || 1;
+
+        try {
+            await addDoc(collection(db, 'library_books'), {
+                title: bookForm.title.trim(),
+                author: bookForm.author.trim(),
+                category: bookForm.category.trim() || 'General',
+                isbn: bookForm.isbn.trim(),
+                totalCopies: copies,
+                availableCopies: copies,
+                addedBy: staffData.name,
+                createdAt: serverTimestamp()
+            });
+            setBookForm(initialBookForm);
+            setLibraryStatus('Book added to catalog!');
+            setTimeout(() => setLibraryStatus(''), 2500);
+        } catch (err) {
+            console.error("Add book error:", err);
+            alert("Failed to add book. Please try again.");
+        }
+    };
+
+    const handleDeleteBook = async (bookId) => {
+        const hasActiveIssue = libraryIssues.some(iss => iss.bookId === bookId && iss.status === 'issued');
+        if (hasActiveIssue) {
+            alert("This book has copies currently issued to students. All copies must be returned before it can be removed.");
+            return;
+        }
+        if (window.confirm("Remove this book from the library catalog permanently?")) {
+            try {
+                await deleteDoc(doc(db, 'library_books', bookId));
+            } catch (err) {
+                console.error("Delete book error:", err);
+            }
+        }
+    };
+
+    const handleIssueBook = async (e) => {
+        e.preventDefault();
+        const book = libraryBooks.find(b => b.id === issueForm.bookId);
+        const student = allStudents.find(s => s.id === issueForm.studentId);
+
+        if (!book) { alert("Please select a book to issue."); return; }
+        if (!student) { alert("Please select a valid student."); return; }
+        if ((book.availableCopies || 0) <= 0) { alert("No copies of this book are currently available."); return; }
+        if (!issueForm.dueDate) { alert("Please select a return due date."); return; }
+
+        try {
+            await addDoc(collection(db, 'library_issues'), {
+                bookId: book.id,
+                bookTitle: book.title,
+                studentId: student.id,
+                studentName: student.name,
+                studentRoll: student.rollNo || student.rollNumber || '',
+                studentClass: student.className || '',
+                studentSection: student.sectionName || student.section || '',
+                issueDate: new Date().toISOString().slice(0, 10),
+                dueDate: issueForm.dueDate,
+                returnDate: null,
+                status: 'issued',
+                issuedBy: staffData.name,
+                createdAt: serverTimestamp()
+            });
+
+            await updateDoc(doc(db, 'library_books', book.id), {
+                availableCopies: increment(-1)
+            });
+
+            setIssueForm(initialIssueForm);
+            setLibraryStatus(`"${book.title}" issued to ${student.name}!`);
+            setTimeout(() => setLibraryStatus(''), 2500);
+        } catch (err) {
+            console.error("Issue book error:", err);
+            alert("Failed to issue book. Please try again.");
+        }
+    };
+
+    const handleReturnBook = async (issue) => {
+        if (!window.confirm(`Mark "${issue.bookTitle}" as returned by ${issue.studentName}?`)) return;
+        try {
+            await updateDoc(doc(db, 'library_issues', issue.id), {
+                status: 'returned',
+                returnDate: new Date().toISOString().slice(0, 10)
+            });
+            await updateDoc(doc(db, 'library_books', issue.bookId), {
+                availableCopies: increment(1)
+            });
+        } catch (err) {
+            console.error("Return book error:", err);
+            alert("Failed to update return status. Please try again.");
+        }
+    };
+
     const handleSaveSubmissionGrade = async (submissionId, studentId, taskTitle) => {
         const score = submissionGrades[submissionId];
         if (score === undefined || score === '') {
@@ -1577,6 +1697,26 @@ export default function StaffDashboard() {
         })
         .filter(Boolean)
         .slice(0, 4);
+
+    // ---------- Library: derived views ----------
+    const filteredLibraryBooks = libraryBooks.filter(b => {
+        const q = cleanString(librarySearch);
+        if (!q) return true;
+        return cleanString(b.title).includes(q) || cleanString(b.author).includes(q) || cleanString(b.category).includes(q);
+    });
+
+    const studentsForIssue = allStudents.filter(s => {
+        if (issueForm.className && cleanString(s.className) !== cleanString(issueForm.className)) return false;
+        if (issueForm.sectionName && cleanString(s.sectionName || s.section) !== cleanString(issueForm.sectionName)) return false;
+        return true;
+    });
+
+    const currentlyIssuedBooks = libraryIssues
+        .filter(i => i.status === 'issued')
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const isOverdue = (dueDate) => dueDate && dueDate < todayISO;
 
     // ---------- Right-rail: Upcoming Activities (from live schedule + assignments) ----------
     const upcomingActivities = [
@@ -4095,21 +4235,298 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* LIBRARY / EVENTS - lightweight placeholders */}
-                    {['library', 'events'].includes(activeTab) && (
+                    {/* LIBRARY — book catalog, issue/return tracking */}
+                    {activeTab === 'library' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
                                 <div>
-                                    <h3>
-                                        {activeTab === 'library' && 'Library'}
-                                        {activeTab === 'events' && 'Events'}
-                                    </h3>
+                                    <h3>Library</h3>
+                                    <p className="subtitle">Manage the book catalog and track issue / return of books to students.</p>
+                                </div>
+                            </div>
+
+                            <div className="library-subtabs">
+                                <button
+                                    className={`library-subtab-btn ${librarySubTab === 'catalog' ? 'active' : ''}`}
+                                    onClick={() => setLibrarySubTab('catalog')}
+                                >
+                                    <BookOpen size={14} /> Catalog ({libraryBooks.length})
+                                </button>
+                                <button
+                                    className={`library-subtab-btn ${librarySubTab === 'issue' ? 'active' : ''}`}
+                                    onClick={() => setLibrarySubTab('issue')}
+                                >
+                                    <Send size={14} /> Issue Book
+                                </button>
+                                <button
+                                    className={`library-subtab-btn ${librarySubTab === 'issued' ? 'active' : ''}`}
+                                    onClick={() => setLibrarySubTab('issued')}
+                                >
+                                    <ClipboardList size={14} /> Issued ({currentlyIssuedBooks.length})
+                                </button>
+                            </div>
+
+                            {libraryStatus && (
+                                <div style={{ color: 'var(--accent-emerald)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Check size={18} /> {libraryStatus}
+                                </div>
+                            )}
+
+                            {/* --- CATALOG --- */}
+                            {librarySubTab === 'catalog' && (
+                                <>
+                                    <form onSubmit={handleAddBook} className="assignment-form-grid" style={{ marginTop: '10px' }}>
+                                        <div>
+                                            <label>Book Title</label>
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. A Brief History of Time"
+                                                value={bookForm.title}
+                                                onChange={(e) => setBookForm({ ...bookForm, title: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Author</label>
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. Stephen Hawking"
+                                                value={bookForm.author}
+                                                onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Category</label>
+                                            <select
+                                                className="custom-select full-width"
+                                                value={bookForm.category}
+                                                onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
+                                            >
+                                                <option value="">Select Category</option>
+                                                <option value="Fiction">Fiction</option>
+                                                <option value="Non-Fiction">Non-Fiction</option>
+                                                <option value="Science">Science</option>
+                                                <option value="Mathematics">Mathematics</option>
+                                                <option value="History">History</option>
+                                                <option value="Biography">Biography</option>
+                                                <option value="Reference">Reference</option>
+                                                <option value="Competitive Exams">Competitive Exams</option>
+                                                <option value="General">General</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label>ISBN / Code (optional)</label>
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. 978-0553380163"
+                                                value={bookForm.isbn}
+                                                onChange={(e) => setBookForm({ ...bookForm, isbn: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Total Copies</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="table-input full-width-input"
+                                                value={bookForm.totalCopies}
+                                                onChange={(e) => setBookForm({ ...bookForm, totalCopies: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                            <button type="submit" className="btn-primary">
+                                                <PlusCircle size={15} /> Add Book
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <div className="search-bar" style={{ margin: '18px 0 12px', maxWidth: '340px' }}>
+                                        <Search size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search by title, author, category..."
+                                            value={librarySearch}
+                                            onChange={(e) => setLibrarySearch(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {filteredLibraryBooks.length === 0 ? (
+                                        <div className="empty-sub-card">
+                                            <Library size={28} />
+                                            <p>No books in the catalog yet. Add your first book above.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="library-book-grid">
+                                            {filteredLibraryBooks.map(book => (
+                                                <div key={book.id} className="library-book-card">
+                                                    <div className="task-header-row">
+                                                        <span className="topic-badge">{book.category || 'General'}</span>
+                                                        <span className={`library-copies-tag ${(book.availableCopies || 0) === 0 ? 'out' : ''}`}>
+                                                            {book.availableCopies ?? 0} / {book.totalCopies ?? 0} available
+                                                        </span>
+                                                    </div>
+                                                    <h5>{book.title}</h5>
+                                                    <p className="task-desc-line">by {book.author}</p>
+                                                    {book.isbn && <p className="library-isbn">ISBN: {book.isbn}</p>}
+                                                    <div className="task-footer-row">
+                                                        <span>Added by {book.addedBy || 'Staff'}</span>
+                                                        <button
+                                                            onClick={() => handleDeleteBook(book.id)}
+                                                            className="delete-task-btn"
+                                                            title="Remove Book"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* --- ISSUE BOOK --- */}
+                            {librarySubTab === 'issue' && (
+                                <form onSubmit={handleIssueBook} className="assignment-form-grid" style={{ marginTop: '10px' }}>
+                                    <div>
+                                        <label>Book</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={issueForm.bookId}
+                                            onChange={(e) => setIssueForm({ ...issueForm, bookId: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select Book</option>
+                                            {libraryBooks.map(book => (
+                                                <option key={book.id} value={book.id} disabled={(book.availableCopies || 0) <= 0}>
+                                                    {book.title} ({book.availableCopies ?? 0} available)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label>Class</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={issueForm.className}
+                                            onChange={(e) => setIssueForm({ ...issueForm, className: e.target.value, sectionName: '', studentId: '' })}
+                                        >
+                                            <option value="">All Classes</option>
+                                            {classList.map(cls => (
+                                                <option key={cls} value={cls}>{cls}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label>Section</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={issueForm.sectionName}
+                                            onChange={(e) => setIssueForm({ ...issueForm, sectionName: e.target.value, studentId: '' })}
+                                            disabled={!issueForm.className}
+                                        >
+                                            <option value="">All Sections</option>
+                                            {sectionsList
+                                                .filter(s => s.className === issueForm.className)
+                                                .map(sec => (
+                                                    <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                                ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label>Student</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={issueForm.studentId}
+                                            onChange={(e) => setIssueForm({ ...issueForm, studentId: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select Student</option>
+                                            {studentsForIssue.map(st => (
+                                                <option key={st.id} value={st.id}>
+                                                    {st.name} {st.rollNo ? `(Roll ${st.rollNo})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label>Due Date</label>
+                                        <input
+                                            type="date"
+                                            className="table-input full-width-input"
+                                            value={issueForm.dueDate}
+                                            min={todayISO}
+                                            onChange={(e) => setIssueForm({ ...issueForm, dueDate: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                        <button type="submit" className="btn-primary">
+                                            <Send size={15} /> Issue Book
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {/* --- CURRENTLY ISSUED / RETURN --- */}
+                            {librarySubTab === 'issued' && (
+                                currentlyIssuedBooks.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <ClipboardList size={28} />
+                                        <p>No books are currently issued.</p>
+                                    </div>
+                                ) : (
+                                    <div className="library-book-grid">
+                                        {currentlyIssuedBooks.map(issue => (
+                                            <div key={issue.id} className="library-book-card">
+                                                <div className="task-header-row">
+                                                    <span className="topic-badge">{issue.studentClass}{issue.studentSection ? ` - ${formatSectionTitle(issue.studentSection)}` : ''}</span>
+                                                    {isOverdue(issue.dueDate) && (
+                                                        <span className="library-copies-tag out">Overdue</span>
+                                                    )}
+                                                </div>
+                                                <h5>{issue.bookTitle}</h5>
+                                                <p className="task-desc-line">Issued to {issue.studentName}{issue.studentRoll ? ` (Roll ${issue.studentRoll})` : ''}</p>
+                                                <p className="library-isbn">Issued: {issue.issueDate} • Due: {issue.dueDate}</p>
+                                                <div className="task-footer-row">
+                                                    <span>By {issue.issuedBy || 'Staff'}</span>
+                                                    <button
+                                                        onClick={() => handleReturnBook(issue)}
+                                                        className="btn-primary"
+                                                        style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                                                    >
+                                                        <Check size={13} /> Mark Returned
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    )}
+
+                    {/* EVENTS - lightweight placeholder */}
+                    {activeTab === 'events' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Events</h3>
                                     <p className="subtitle">This workspace is coming soon.</p>
                                 </div>
                             </div>
                             <div className="empty-sub-card">
-                                {activeTab === 'library' && <Library size={28} />}
-                                {activeTab === 'events' && <PartyPopper size={28} />}
+                                <PartyPopper size={28} />
                                 <p>Nothing here yet — check back soon.</p>
                             </div>
                         </div>

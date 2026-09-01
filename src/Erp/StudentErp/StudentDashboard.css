@@ -1,59 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
 
 :root {
-  /* Green Palette */
-  --dash-bg: #eaf5f0;
+  /* Modern Minimal — Soft Indigo & Cloud Palette */
+  --dash-bg: #f5f5fb;
   --dash-surface: #ffffff;
-  --dash-border: #d1e7dd;
+  --dash-border: #ececf5;
 
-  --dash-text-main: #0f2d24;
-  --dash-text-muted: #52796f;
+  --dash-text-main: #22223a;
+  --dash-text-muted: #9093a8;
 
-  /* Primary Emerald Theme */
-  --dash-primary: #10b981;
-  --dash-primary-grad: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
-  --dash-primary-light: #ecfdf5;
-  --dash-primary-border: #a7f3d0;
+  /* Primary — soft indigo/periwinkle */
+  --dash-primary: #665cf0;
+  --dash-primary-grad: linear-gradient(135deg, #8b80f9 0%, #665cf0 55%, #5748dd 100%);
+  --dash-primary-light: #f0eefe;
+  --dash-primary-border: #dad4fb;
 
-  /* Accent Colors */
-  --accent-emerald: #10b981;
-  --accent-emerald-bg: #d1fae5;
-  --accent-rose: #f43f5e;
-  --accent-rose-bg: #fff1f2;
-  --accent-amber: #f59e0b;
-  --accent-amber-bg: #fffbeb;
-  --accent-cyan: #06b6d4;
-  --accent-cyan-bg: #ecfeff;
-  --accent-purple: #8b5cf6;
-  --accent-purple-bg: #f5f3ff;
+  /* Accent Colors — soft, muted pastels */
+  --accent-emerald: #19a974;
+  --accent-emerald-bg: #e7f8ef;
+  --accent-rose: #e84c76;
+  --accent-rose-bg: #fdedf1;
+  --accent-amber: #d99332;
+  --accent-amber-bg: #fdf3e4;
+  --accent-cyan: #2ba6c9;
+  --accent-cyan-bg: #e9f6fa;
+  --accent-purple: #9b6fea;
+  --accent-purple-bg: #f4eefd;
 
-  /* Compact Radius & Shadows */
-  --dash-shadow-sm: 0 2px 8px rgba(16, 185, 129, 0.05);
-  --dash-shadow: 0 6px 18px rgba(16, 185, 129, 0.08);
-  --dash-shadow-lg: 0 12px 28px -6px rgba(5, 150, 105, 0.3);
-  --dash-radius: 16px;
-  /* Scaled down from 24px */
+  /* Airy Radius & Feather-soft Shadows */
+  --dash-shadow-sm: 0 1px 3px rgba(34, 34, 58, 0.04);
+  --dash-shadow: 0 12px 32px rgba(34, 34, 58, 0.07);
+  --dash-shadow-lg: 0 18px 38px -8px rgba(87, 72, 221, 0.28);
+  --dash-radius: 22px;
+  /* Larger, softer corners for a more spacious feel */
 }
 
 /* Dark Theme Variant */
 [data-theme='dark'] {
-  --dash-bg: #061814;
-  --dash-surface: #0e2a22;
-  --dash-border: #1a4237;
+  --dash-bg: #14131f;
+  --dash-surface: #1c1b2c;
+  --dash-border: #2c2a41;
 
-  --dash-text-main: #f0fdf4;
-  --dash-text-muted: #86efac;
+  --dash-text-main: #f2f1fb;
+  --dash-text-muted: #a6a3c4;
 
-  --dash-primary-light: rgba(16, 185, 129, 0.12);
-  --dash-primary-border: rgba(16, 185, 129, 0.3);
+  --dash-primary-light: rgba(102, 92, 240, 0.16);
+  --dash-primary-border: rgba(102, 92, 240, 0.32);
 
-  --accent-emerald-bg: rgba(16, 185, 129, 0.15);
-  --accent-rose-bg: rgba(244, 63, 94, 0.15);
-  --accent-amber-bg: rgba(245, 158, 11, 0.15);
-  --accent-cyan-bg: rgba(6, 182, 212, 0.15);
-  --accent-purple-bg: rgba(139, 92, 246, 0.15);
+  --accent-emerald-bg: rgba(25, 169, 116, 0.16);
+  --accent-rose-bg: rgba(232, 76, 118, 0.16);
+  --accent-amber-bg: rgba(217, 147, 50, 0.16);
+  --accent-cyan-bg: rgba(43, 166, 201, 0.16);
+  --accent-purple-bg: rgba(155, 111, 234, 0.16);
 
-  --dash-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.5);
+  --dash-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45);
 }
 
 [data-theme='dark'] .staff-search-input-group,
@@ -68,18 +68,24 @@
 [data-theme='dark'] .bulletin-card,
 [data-theme='dark'] .student-task-item,
 [data-theme='dark'] .assignment-body-desc,
-[data-theme='dark'] .pdf-file-label {
-  background-color: #12352b !important;
-  color: #f0fdf4 !important;
-  border-color: #1a4237 !important;
+[data-theme='dark'] .pdf-file-label,
+[data-theme='dark'] .staff-main-workspace,
+[data-theme='dark'] .empty-sub-card,
+[data-theme='dark'] td,
+[data-theme='dark'] .empty-state,
+[data-theme='dark'] .hall-ticket-card ,
+[data-theme='dark'] .staff-user-profile {
+  background-color: #241f38 !important;
+  color: #f2f1fb !important;
+  border-color: #2c2a41 !important;
 }
 
 [data-theme='dark'] .assignment-display-card {
-  background-color: #0e2a22 !important;
-  border-color: #1a4237 !important;
+  background-color: #1c1b2c !important;
+  border-color: #2c2a41 !important;
 }
 
-/* Force Outfit Font Globally */
+/* Force a modern, minimal geometric sans everywhere */
 *,
 *::before,
 *::after,
@@ -95,26 +101,28 @@ td {
 
 .staff-style-dashboard {
   position: relative;
-  padding-top: 50px;
+  padding-top: 32px;
   width: 100%;
   min-height: 150vh;
-  background-color: #fff;
+  background-color: var(--dash-bg);
   color: var(--dash-text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .staff-layout-grid {
   display: flex;
+  align-items: flex-start;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
   min-height: calc(100vh - 2rem);
-  background-color: #fff;
-  box-shadow: 0px 1px 12px 5px #cfcfcf;
-  border-radius: var(--dash-radius);
-  gap: 1rem;
+  background-color: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  gap: 1.5rem;
   margin-bottom: 50px;
-  /* Compact layout spacing */
+  padding: 0 1.25rem;
+  /* Open, airy canvas — cards carry their own elevation */
 }
 
 .font-bold {
@@ -122,7 +130,7 @@ td {
 }
 
 .green-accent {
-  color: #34d399;
+  color: var(--dash-primary);
   font-weight: 800;
 }
 
@@ -130,36 +138,38 @@ td {
    1. Left Sidebar (Smaller & Compact)
 ------------------------------------------------------------- */
 .staff-sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: var(--dash-primary-grad);
+  width: 232px;
+  min-width: 232px;
+  background: #665cf0;
+  border: 1px solid var(--dash-border);
   border-radius: var(--dash-radius);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0.85rem;
+  padding: 1.5rem 1rem;
   z-index: 10;
-  box-shadow: var(--dash-shadow-lg);
-  color: #ffffff;
+  box-shadow: var(--dash-shadow-sm);
+  color: var(--dash-text-main);
+  position: sticky;
+  top: 20px;
 }
 
 .staff-user-profile {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 0.65rem;
-  border-radius: 12px;
-  margin-bottom: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 0.65rem;
+  background: var(--dash-primary-light);
+  padding: 0.75rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--dash-primary-border);
 }
 
 .staff-avatar-ring {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #ffffff;
-  color: var(--dash-primary);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--dash-primary-grad);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,7 +187,7 @@ td {
   margin: 0;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--dash-text-main);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -187,14 +197,14 @@ td {
 .staff-user-info p {
   margin: 1px 0 0 0;
   font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--dash-text-muted);
   font-weight: 500;
 }
 
 .roll-no-tag {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #a7f3d0;
+  color: var(--dash-primary);
   display: inline-block;
   margin-top: 1px;
 }
@@ -1600,7 +1610,7 @@ td {
 
   /* Hall Ticket: only the ticket paper itself should print */
   .no-print,
-  .hall-ticket-page > .card-header,
+  .hall-ticket-page>.card-header,
   .hall-ticket-page .hall-ticket-card,
   .hall-ticket-page .hall-ticket-locked-card,
   .empty-sub-card {
@@ -3374,6 +3384,7 @@ td {
 }
 
 @media print {
+
   .ht-table thead th,
   .ht-band {
     -webkit-print-color-adjust: exact;
@@ -3382,184 +3393,184 @@ td {
 }
 
 .ps-mini-cal-day {
-    position: relative;
-    min-height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: #FFFFFF;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  position: relative;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
 }
 
 .ps-mini-cal-day.attendance-present {
-    background: #DCFCE7 !important;
-    color: #166534 !important;
-    border-color: #86EFAC !important;
-    font-weight: 800;
+  background: #DCFCE7 !important;
+  color: #166534 !important;
+  border-color: #86EFAC !important;
+  font-weight: 800;
 }
 
 .ps-mini-cal-day.attendance-absent {
-    background: #FEE2E2 !important;
-    color: #B91C1C !important;
-    border-color: #FCA5A5 !important;
-    font-weight: 800;
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border-color: #FCA5A5 !important;
+  font-weight: 800;
 }
 
 .ps-mini-cal-day.attendance-unmarked,
 .ps-mini-cal-day.today {
-    background: #FFFFFF !important;
-    color: #334155 !important;
-    border-color: #E2E8F0 !important;
+  background: #FFFFFF !important;
+  color: #334155 !important;
+  border-color: #E2E8F0 !important;
 }
 
 /* Today remains white, with a clear outline so it is still identifiable. */
 .ps-mini-cal-day.today {
-    box-shadow: inset 0 0 0 2px #2563EB;
-    font-weight: 800;
+  box-shadow: inset 0 0 0 2px #2563EB;
+  font-weight: 800;
 }
 
 .ps-mini-cal-day.attendance-present:hover,
 .ps-mini-cal-day.attendance-absent:hover,
 .ps-mini-cal-day.attendance-unmarked:hover,
 .ps-mini-cal-day.today:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(15, 23, 42, .08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, .08);
 }
 
 /* Legend */
 .ps-attendance-calendar-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 9px 14px;
-    margin-top: 10px;
-    font-size: .67rem;
-    color: #64748B;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  margin-top: 10px;
+  font-size: .67rem;
+  color: #64748B;
 }
 
 .ps-attendance-calendar-legend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .ps-attendance-calendar-legend i {
-    width: 9px;
-    height: 9px;
-    display: inline-block;
-    border-radius: 3px;
-    border: 1px solid #CBD5E1;
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 3px;
+  border: 1px solid #CBD5E1;
 }
 
 .ps-attendance-calendar-legend .legend-present {
-    background: #DCFCE7;
-    border-color: #86EFAC;
+  background: #DCFCE7;
+  border-color: #86EFAC;
 }
 
 .ps-attendance-calendar-legend .legend-absent {
-    background: #FEE2E2;
-    border-color: #FCA5A5;
+  background: #FEE2E2;
+  border-color: #FCA5A5;
 }
 
 .ps-attendance-calendar-legend .legend-unmarked {
-    background: #FFFFFF;
+  background: #FFFFFF;
 }
 
 .ps-attendance-calendar-legend .legend-today {
-    background: #FFFFFF;
-    border: 2px solid #2563EB;
+  background: #FFFFFF;
+  border: 2px solid #2563EB;
 }
 
 @media (max-width: 600px) {
-    .ps-mini-cal-day {
-        min-height: 28px;
-        border-radius: 7px;
-    }
+  .ps-mini-cal-day {
+    min-height: 28px;
+    border-radius: 7px;
+  }
 
-    .ps-attendance-calendar-legend {
-        gap: 7px 10px;
-        font-size: .62rem;
-    }
+  .ps-attendance-calendar-legend {
+    gap: 7px 10px;
+    font-size: .62rem;
+  }
 }
 
 /* ============================================================
    SYLLABUS (Student Dashboard) — subject-wise, teacher uploaded
    ============================================================ */
 .syllabus-subject-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 6px;
 }
 
 .syllabus-subject-heading {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 10px;
-    font-size: 0.95rem;
-    color: var(--dash-text-main);
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--dash-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--dash-text-main);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--dash-border);
 }
 
 .syllabus-items-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .syllabus-item-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: var(--dash-surface);
-    border: 1px solid var(--dash-border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: var(--dash-shadow-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--dash-shadow-sm);
 }
 
 .syllabus-item-icon {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    border-radius: 10px;
-    background: var(--dash-primary-light);
-    color: var(--dash-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 10px;
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .syllabus-item-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .syllabus-item-info strong {
-    font-size: 0.86rem;
-    color: var(--dash-text-main);
+  font-size: 0.86rem;
+  color: var(--dash-text-main);
 }
 
 .syllabus-item-info p {
-    margin: 2px 0 0;
-    font-size: 0.78rem;
-    color: var(--dash-text-muted);
-    line-height: 1.4;
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--dash-text-muted);
+  line-height: 1.4;
 }
 
 .syllabus-item-meta {
-    font-size: 0.7rem;
-    color: var(--dash-text-muted);
-    margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--dash-text-muted);
+  margin-top: 2px;
 }
 
 .syllabus-item-row .view-pdf-link {
-    align-self: center;
-    white-space: nowrap;
+  align-self: center;
+  white-space: nowrap;
 }
