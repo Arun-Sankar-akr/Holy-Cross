@@ -7,7 +7,7 @@ import {
     Menu, X, Clock, FileText, User, Users, Ticket, AlertCircle, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
     ChevronRight, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
-    Download, Sparkles, Eye, ChevronDown
+    Download, Sparkles, Eye, ChevronDown, BookMarked
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
@@ -30,6 +30,7 @@ export default function StudentDashboard() {
     const [announcementsList, setAnnouncementsList] = useState([]);
     const [assignmentsList, setAssignmentsList] = useState([]);
     const [submissionsList, setSubmissionsList] = useState([]);
+    const [syllabusList, setSyllabusList] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
@@ -52,6 +53,9 @@ export default function StudentDashboard() {
 
     // Subject/Exam filter on Marks tab
     const [selectedExamView, setSelectedExamView] = useState('All');
+
+    // Subject filter on Syllabus tab
+    const [selectedSyllabusSubject, setSelectedSyllabusSubject] = useState('All');
 
     // --- FEATURE 1: Dark / Light Mode Theme Toggle State ---
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('portalTheme') === 'dark');
@@ -520,6 +524,11 @@ export default function StudentDashboard() {
             setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        // Syllabus documents uploaded by subject teachers, live synced
+        const unsubSyllabus = onSnapshot(collection(db, 'class_syllabus'), (snap) => {
+            setSyllabusList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         const unsubSubmissions = onSnapshot(collection(db, 'assignment_submissions'), (snap) => {
             const mySubmissions = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
@@ -558,6 +567,7 @@ export default function StudentDashboard() {
             unsubAttendance();
             unsubAnnounce();
             unsubAssignments();
+            unsubSyllabus();
             unsubSubmissions();
             unsubFees();
             unsubExamHalls();
@@ -615,6 +625,25 @@ export default function StudentDashboard() {
 
         return isClassMatch && isSecMatch;
     });
+
+    const studentSyllabus = syllabusList.filter(item => {
+        const itemClass = cleanString(item.className);
+        const studentClass = cleanString(studentData.grade);
+        const itemSec = cleanString(item.sectionName);
+        const studentSec = cleanString(studentData.section);
+
+        const isClassMatch = !itemClass || !studentClass || itemClass === studentClass || itemClass.includes(studentClass) || studentClass.includes(itemClass);
+        const isSecMatch = !itemSec || !studentSec || itemSec === studentSec || itemSec.includes(studentSec) || studentSec.includes(itemSec);
+
+        return isClassMatch && isSecMatch;
+    });
+
+    const syllabusBySubject = studentSyllabus.reduce((acc, item) => {
+        const subj = item.subject || 'General';
+        if (!acc[subj]) acc[subj] = [];
+        acc[subj].push(item);
+        return acc;
+    }, {});
 
     const handleLogout = () => {
         localStorage.removeItem('studentUser');
@@ -1155,6 +1184,12 @@ export default function StudentDashboard() {
                             onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
                         >
                             <Layers size={16} /><span>PDF Tasks & Uploads</span>
+                        </button>
+                        <button
+                            className={`staff-nav-item ${activeTab === 'syllabus' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
+                        >
+                            <BookMarked size={16} /><span>Syllabus</span>
                         </button>
                         <button
                             className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
@@ -1855,6 +1890,78 @@ export default function StudentDashboard() {
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'syllabus' && (
+                            <div className="staff-card full">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Syllabus</h3>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
+                                            Uploaded by your subject teachers for {studentData.grade} {studentData.section ? `(Section ${studentData.section})` : ''}, organized subject-wise
+                                        </p>
+                                    </div>
+                                    <div className="exam-filter-group">
+                                        <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filter Subject:</label>
+                                        <select
+                                            className="custom-select"
+                                            value={selectedSyllabusSubject}
+                                            onChange={(e) => setSelectedSyllabusSubject(e.target.value)}
+                                        >
+                                            <option value="All">All Subjects</option>
+                                            {Object.keys(syllabusBySubject).map(subject => (
+                                                <option key={subject} value={subject}>{subject}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {Object.keys(syllabusBySubject).length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <BookMarked size={32} color="var(--staff-primary)" />
+                                        <h4>No Syllabus Available</h4>
+                                        <p>Your teachers have not uploaded a syllabus for your class yet.</p>
+                                    </div>
+                                ) : (
+                                    <div className="syllabus-subject-groups">
+                                        {Object.entries(syllabusBySubject)
+                                            .filter(([subject]) => selectedSyllabusSubject === 'All' || subject === selectedSyllabusSubject)
+                                            .map(([subject, items]) => (
+                                            <div key={subject} className="syllabus-subject-group">
+                                                <h4 className="syllabus-subject-heading">
+                                                    <BookMarked size={15} /> {subject}
+                                                </h4>
+                                                <div className="syllabus-items-list">
+                                                    {items.map(item => (
+                                                        <div key={item.id} className="syllabus-item-row">
+                                                            <div className="syllabus-item-icon">
+                                                                <FileText size={18} />
+                                                            </div>
+                                                            <div className="syllabus-item-info">
+                                                                <strong>{item.title}</strong>
+                                                                {item.description && <p>{item.description}</p>}
+                                                                <span className="syllabus-item-meta">
+                                                                    By {item.staffName || 'Teacher'}
+                                                                    {item.sectionName ? ` • Section ${item.sectionName}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            {item.pdfData && (
+                                                                <a
+                                                                    href={item.pdfData}
+                                                                    download={item.fileName || `${item.title || 'Syllabus'}.pdf`}
+                                                                    className="view-pdf-link"
+                                                                >
+                                                                    <Download size={13} /> Download
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

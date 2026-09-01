@@ -94,13 +94,12 @@ td {
 }
 
 .staff-style-dashboard {
-  margin-top: 70px;
+  position: relative;
+  padding-top: 50px;
   width: 100%;
-  min-height: 100vh;
-  background-color: var(--dash-bg);
+  min-height: 150vh;
+  background-color: #fff;
   color: var(--dash-text-main);
-  padding: 1rem;
-  /* Compact padding */
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -110,9 +109,11 @@ td {
   max-width: 1280px;
   margin: 0 auto;
   min-height: calc(100vh - 2rem);
-  background-color: var(--dash-bg);
+  background-color: #fff;
+  box-shadow: 0px 1px 12px 5px #cfcfcf;
   border-radius: var(--dash-radius);
   gap: 1rem;
+  margin-bottom: 50px;
   /* Compact layout spacing */
 }
 
@@ -268,7 +269,10 @@ td {
 ------------------------------------------------------------- */
 .staff-main-workspace {
   flex: 1;
+  padding: 10px;
+  background-color: #ffff;
   display: flex;
+  border-radius: 24px;
   flex-direction: column;
   min-width: 0;
 }
@@ -3478,4 +3482,84 @@ td {
         gap: 7px 10px;
         font-size: .62rem;
     }
+}
+
+/* ============================================================
+   SYLLABUS (Student Dashboard) — subject-wise, teacher uploaded
+   ============================================================ */
+.syllabus-subject-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 6px;
+}
+
+.syllabus-subject-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    color: var(--dash-text-main);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--dash-border);
+}
+
+.syllabus-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.syllabus-item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--dash-surface);
+    border: 1px solid var(--dash-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: var(--dash-shadow-sm);
+}
+
+.syllabus-item-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 10px;
+    background: var(--dash-primary-light);
+    color: var(--dash-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.syllabus-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.syllabus-item-info strong {
+    font-size: 0.86rem;
+    color: var(--dash-text-main);
+}
+
+.syllabus-item-info p {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    color: var(--dash-text-muted);
+    line-height: 1.4;
+}
+
+.syllabus-item-meta {
+    font-size: 0.7rem;
+    color: var(--dash-text-muted);
+    margin-top: 2px;
+}
+
+.syllabus-item-row .view-pdf-link {
+    align-self: center;
+    white-space: nowrap;
 }

@@ -14,7 +14,8 @@ import {
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
     TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
-    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical, Mail
+    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical, Mail,
+    BookMarked, Upload, Loader2
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -141,6 +142,20 @@ export default function StaffDashboard() {
     const [submissionGrades, setSubmissionGrades] = useState({});
     const [gradingLoadingId, setGradingLoadingId] = useState(null);
 
+    // Syllabus Upload State
+    const [syllabusList, setSyllabusList] = useState([]);
+    const initialSyllabusForm = {
+        className: '10th Std',
+        sectionName: '',
+        subject: '',
+        title: '',
+        description: ''
+    };
+    const [syllabusForm, setSyllabusForm] = useState(initialSyllabusForm);
+    const [pendingSyllabusFile, setPendingSyllabusFile] = useState(null);
+    const [isSyllabusCompressing, setIsSyllabusCompressing] = useState(false);
+    const [syllabusUploadStatus, setSyllabusUploadStatus] = useState('');
+
     const classList = [
         'LKG', 'UKG',
         '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std',
@@ -252,6 +267,11 @@ export default function StaffDashboard() {
             setSubmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        // Syllabus documents uploaded by staff, subject-wise per class/section
+        const unsubSyllabus = onSnapshot(collection(db, 'class_syllabus'), (snap) => {
+            setSyllabusList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         // Live synchronized Exam Hall Staff Duties published by the Office Dashboard
         const unsubStaffExamHalls = onSnapshot(collection(db, 'staff_exam_halls'), (snap) => {
             setStaffExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -283,6 +303,7 @@ export default function StaffDashboard() {
             unsubStaffTT();
             unsubAssignments();
             unsubSubmissions();
+            unsubSyllabus();
             unsubStaffExamHalls();
             unsubLeaves();
             unsubStaffMembers();
@@ -1352,6 +1373,95 @@ export default function StaffDashboard() {
         }
     };
 
+    // Syllabus Handlers — client-side PDF compressor (Max ~500 KB) so the file
+    // can be embedded directly into the Firestore document, same pattern used
+    // for student assignment submissions.
+    const handleSyllabusFileSelect = (file) => {
+        if (!file) return;
+
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Invalid file format! Please upload only standard PDF documents.');
+            return;
+        }
+
+        setIsSyllabusCompressing(true);
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                let base64String = e.target.result;
+                const maxCharLimit = 680000;
+
+                if (file.size > 500 * 1024) {
+                    const binary = atob(base64String.split(',')[1]);
+                    let cleanedBinary = binary.replace(/\/Metadata\s+\d+\s+\d+\s+R/g, '');
+                    cleanedBinary = cleanedBinary.replace(/\/PieceInfo\s+<<.*?>>/gs, '');
+
+                    base64String = `data:application/pdf;base64,${btoa(cleanedBinary)}`;
+
+                    if (base64String.length > maxCharLimit) {
+                        alert('PDF file is too large to compress under 500 KB. Please reduce pages or compress image layers.');
+                        setIsSyllabusCompressing(false);
+                        return;
+                    }
+                }
+
+                setPendingSyllabusFile({
+                    fileName: file.name,
+                    fileSize: (file.size / 1024).toFixed(1) + ' KB',
+                    data: base64String
+                });
+            } catch (err) {
+                console.error("Syllabus PDF processing error:", err);
+                alert("Could not process PDF file. Please try another document.");
+            } finally {
+                setIsSyllabusCompressing(false);
+            }
+        };
+
+        reader.readAsDataURL(file);
+    };
+
+    const handleUploadSyllabus = async (e) => {
+        e.preventDefault();
+        if (!syllabusForm.className || !syllabusForm.subject || !syllabusForm.title) return;
+
+        if (!pendingSyllabusFile) {
+            alert('Please attach a syllabus PDF before uploading.');
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'class_syllabus'), {
+                ...syllabusForm,
+                fileName: pendingSyllabusFile.fileName,
+                fileSize: pendingSyllabusFile.fileSize,
+                pdfData: pendingSyllabusFile.data,
+                staffId: staffData.staffId,
+                staffName: staffData.name,
+                createdAt: serverTimestamp()
+            });
+
+            setSyllabusForm({ ...initialSyllabusForm, className: syllabusForm.className });
+            setPendingSyllabusFile(null);
+            setSyllabusUploadStatus('Syllabus uploaded successfully!');
+            setTimeout(() => setSyllabusUploadStatus(''), 3000);
+        } catch (error) {
+            console.error("Error uploading syllabus:", error);
+            alert("Failed to upload syllabus. Please try again.");
+        }
+    };
+
+    const handleDeleteSyllabus = async (id) => {
+        if (window.confirm("Delete this syllabus document permanently?")) {
+            try {
+                await deleteDoc(doc(db, 'class_syllabus', id));
+            } catch (err) {
+                console.error("Delete syllabus error:", err);
+            }
+        }
+    };
+
     const handleSaveSubmissionGrade = async (submissionId, studentId, taskTitle) => {
         const score = submissionGrades[submissionId];
         if (score === undefined || score === '') {
@@ -1669,6 +1779,17 @@ export default function StaffDashboard() {
                             <div className="nav-links-content">
                                 <ClipboardList size={18} />
                                 <span>Tasks</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
+                            className={`nav-links ${activeTab === 'syllabus' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <BookMarked size={18} />
+                                <span>Syllabus</span>
                             </div>
                             <ChevronRight size={15} className="nav-arrow" />
                         </button>
@@ -3173,6 +3294,179 @@ export default function StaffDashboard() {
                                             </div>
                                         </form>
                                     </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SYLLABUS UPLOAD — subject-wise, by class taught */}
+                    {activeTab === 'syllabus' && (
+                        <div className="dash-card full-width">
+                            <div className="card-header">
+                                <div>
+                                    <h3>Upload Syllabus</h3>
+                                    <p className="subtitle">Share the subject syllabus with students of the class & section you teach.</p>
+                                </div>
+                            </div>
+
+                            {syllabusUploadStatus && (
+                                <div style={{ color: 'var(--accent-emerald)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Check size={18} /> {syllabusUploadStatus}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleUploadSyllabus} className="assignment-form-grid">
+                                <div>
+                                    <label>Class</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={syllabusForm.className}
+                                        onChange={(e) => setSyllabusForm({ ...syllabusForm, className: e.target.value, sectionName: '' })}
+                                        required
+                                    >
+                                        <option value="">Select Class</option>
+                                        {classList.map(cls => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Section (optional)</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={syllabusForm.sectionName}
+                                        onChange={(e) => setSyllabusForm({ ...syllabusForm, sectionName: e.target.value })}
+                                        disabled={!syllabusForm.className}
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sectionsList
+                                            .filter(s => s.className === syllabusForm.className)
+                                            .map(sec => (
+                                                <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                            ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Subject</label>
+                                    <select
+                                        className="custom-select full-width"
+                                        value={syllabusForm.subject}
+                                        onChange={(e) => setSyllabusForm({ ...syllabusForm, subject: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select Subject</option>
+                                        {subjectList.map(sub => (
+                                            <option key={sub} value={sub}>{sub}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label>Syllabus Title</label>
+                                    <input
+                                        type="text"
+                                        className="table-input full-width-input"
+                                        placeholder="e.g. Term 1 Syllabus / Unit 4 Topics"
+                                        value={syllabusForm.title}
+                                        onChange={(e) => setSyllabusForm({ ...syllabusForm, title: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label>Notes / Topics Covered</label>
+                                    <textarea
+                                        rows="3"
+                                        className="custom-textarea"
+                                        placeholder="Add unit breakdown, chapters, or exam weightage..."
+                                        value={syllabusForm.description}
+                                        onChange={(e) => setSyllabusForm({ ...syllabusForm, description: e.target.value })}
+                                    />
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label>Syllabus PDF</label>
+                                    <div className="upload-action-box">
+                                        <label className="pdf-file-label">
+                                            <Upload size={14} />
+                                            <span>{pendingSyllabusFile ? pendingSyllabusFile.fileName : 'Choose Syllabus PDF (Auto-compressed to 500KB)'}</span>
+                                            <input
+                                                type="file"
+                                                accept="application/pdf"
+                                                onChange={(e) => handleSyllabusFileSelect(e.target.files[0])}
+                                                disabled={isSyllabusCompressing}
+                                                style={{ display: 'none' }}
+                                            />
+                                        </label>
+
+                                        {isSyllabusCompressing && (
+                                            <div className="compressing-pill">
+                                                <Loader2 size={12} className="spin-icon" /> Compressing PDF &lt; 500KB...
+                                            </div>
+                                        )}
+
+                                        {pendingSyllabusFile && !isSyllabusCompressing && (
+                                            <div className="pdf-ready-row">
+                                                <span className="pdf-ready-tag">Ready: {pendingSyllabusFile.fileSize}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary" disabled={isSyllabusCompressing}>
+                                        <PlusCircle size={15} /> Upload Syllabus
+                                    </button>
+                                </div>
+                            </form>
+
+                            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
+                                Uploaded Syllabus Documents ({syllabusList.length})
+                            </h4>
+
+                            {syllabusList.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <BookMarked size={28} />
+                                    <p>No syllabus documents uploaded yet.</p>
+                                </div>
+                            ) : (
+                                <div className="syllabus-admin-grid">
+                                    {syllabusList.map(item => (
+                                        <div key={item.id} className="syllabus-admin-card">
+                                            <div className="task-header-row">
+                                                <span className="topic-badge">{item.subject}</span>
+                                                <span className="task-target-tag">
+                                                    {item.className}{item.sectionName ? ` - ${formatSectionTitle(item.sectionName)}` : ' - All Sections'}
+                                                </span>
+                                            </div>
+                                            <h5>{item.title}</h5>
+                                            {item.description && <p className="task-desc-line">{item.description}</p>}
+                                            <div className="task-footer-row">
+                                                <span>By {item.staffName || 'Faculty'}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    {item.pdfData && (
+                                                        <a
+                                                            href={item.pdfData}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="view-pdf-link"
+                                                        >
+                                                            <ExternalLink size={13} /> View PDF
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleDeleteSyllabus(item.id)}
+                                                        className="delete-task-btn"
+                                                        title="Delete Syllabus"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
