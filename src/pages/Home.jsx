@@ -359,7 +359,7 @@ export default function Home({ setActivePage }) {
                         </div>
 
                         <div className="events-subheading">
-                            <p>Stay connected with activities, programmes and important moments on campus.</p>
+                            {/* <p>Stay connected with activities, programmes and important moments on campus.</p> */}
                             {/* <button className="outline-action" onClick={() => setActivePage('calendar')}>
                                 View calendar <ArrowRight size={15} />
                             </button> */}

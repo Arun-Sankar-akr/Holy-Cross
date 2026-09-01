@@ -204,27 +204,6 @@ export default function AdmissionDashboard() {
 
             <div className="adm-dashboard-wrapper">
 
-                <section className="adm-why-section">
-                    <div className="adm-why-heading">
-                        <h2>Why Choose <span>Holy Cross</span></h2>
-                        <p>A learning environment built on trust, care, and consistent academic quality.</p>
-                    </div>
-
-                    <div className="adm-why-grid">
-                        {whyItems.map((item, idx) => (
-                            <div key={idx} className={`adm-why-card tone-${item.tone}`}>
-                                <div className="adm-why-icon">{item.icon}</div>
-                                <h3>{item.title}</h3>
-                                <span className="adm-why-kicker">{item.kicker}</span>
-                                <p>{item.desc}</p>
-                                <div className="adm-why-tag">
-                                    <Clock size={13} />
-                                    {item.tag}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
 
                 {/* Four-step process — circular numbered badges, BHC "Application Process" style */}
                 <section className="adm-process-section">
@@ -403,6 +382,29 @@ export default function AdmissionDashboard() {
                         )}
                     </div>
                 </main>
+
+                <section className="adm-why-section">
+                    <div className="adm-why-heading">
+                        <h2>Why Choose <span>Holy Cross</span></h2>
+                        <p>A learning environment built on trust, care, and consistent academic quality.</p>
+                    </div>
+
+                    <div className="adm-why-grid">
+                        {whyItems.map((item, idx) => (
+                            <div key={idx} className={`adm-why-card tone-${item.tone}`}>
+                                <div className="adm-why-icon">{item.icon}</div>
+                                <h3>{item.title}</h3>
+                                <span className="adm-why-kicker">{item.kicker}</span>
+                                <p>{item.desc}</p>
+                                <div className="adm-why-tag">
+                                    <Clock size={13} />
+                                    {item.tag}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
             </div>
         </>
     );
