@@ -2619,10 +2619,11 @@ td {
 
 /* --- Fees Preview (Pending Fee Dues alert modal) ------------------- */
 .fee-alert-overlay {
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
+  /* display: flex; */
   justify-content: center;
   align-items: center;
   z-index: 9999;
@@ -2630,6 +2631,7 @@ td {
 }
 
 .fee-alert-modal {
+  display: none;
   background: var(--dash-surface);
   padding: 1.5rem;
   border-radius: var(--dash-radius);

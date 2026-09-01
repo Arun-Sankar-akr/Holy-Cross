@@ -367,6 +367,46 @@ export default function StaffDashboard() {
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
+    // ---------- Marks Entry: only classes / sections / subjects THIS staff is timetabled to teach ----------
+    // Prevents any staff member from opening another teacher's subject/class and
+    // viewing or editing marks for students who are not theirs to grade.
+    const myTaughtAssignments = mySchedule
+        .map(item => ({
+            className: item.className || item.class || '',
+            sectionName: item.sectionName || item.section || '',
+            subject: item.subject || ''
+        }))
+        .filter(item => item.className && item.subject);
+
+    const myTaughtClasses = [...new Set(myTaughtAssignments.map(a => a.className))];
+
+    const getMyTaughtSectionsForClass = (cls) => {
+        const names = myTaughtAssignments
+            .filter(a => cleanString(a.className) === cleanString(cls))
+            .map(a => a.sectionName)
+            .filter(Boolean);
+        return [...new Set(names)];
+    };
+
+    const getMyTaughtSubjectsForClass = (cls, sectionName) => {
+        const subs = myTaughtAssignments
+            .filter(a =>
+                cleanString(a.className) === cleanString(cls) &&
+                (!sectionName || !a.sectionName || cleanString(a.sectionName) === cleanString(sectionName))
+            )
+            .map(a => a.subject)
+            .filter(Boolean);
+        return [...new Set(subs)];
+    };
+
+    // Is this staff member timetabled to teach `subject` to `cls` / `sectionName`?
+    const isAssignedToTeach = (cls, sectionName, subject) =>
+        myTaughtAssignments.some(a =>
+            cleanString(a.className) === cleanString(cls) &&
+            cleanString(a.subject) === cleanString(subject) &&
+            (!a.sectionName || !sectionName || cleanString(a.sectionName) === cleanString(sectionName))
+        );
+
     // ---------- STRICT Mark Attendance <-> Weekly Timetable sync ----------
     // Normalize timetable field names first. This prevents a timetable using
     // `class`, `grade`, or `section` from accidentally showing all students.
@@ -1155,12 +1195,21 @@ export default function StaffDashboard() {
             return;
         }
 
+        // Defense in depth: even if the UI state is stale, never write a mark
+        // for a student/subject this staff member isn't timetabled to teach.
+        const student = allStudents.find(s => s.id === studentId);
+        if (!student || !isAssignedToTeach(selectedClass, student.sectionName, selectedSubject)) {
+            alert("You are not assigned to teach this subject to this student's class/section.");
+            return;
+        }
+
         const compositeKey = getExamSubjectKey();
         try {
             const studentRef = doc(db, 'students_records', studentId);
             await updateDoc(studentRef, {
                 [`marksDraft.${compositeKey}`]: Number(score),
-                lastMarksDraftSaved: new Date().toISOString()
+                lastMarksDraftSaved: new Date().toISOString(),
+                [`marksDraftEnteredBy.${compositeKey}`]: staffData.staffId || staffData.name
             });
             setMarksActionStatus(`Saved draft score for student #${studentId.slice(0, 5)}`);
             setTimeout(() => setMarksActionStatus(''), 3000);
@@ -1171,6 +1220,12 @@ export default function StaffDashboard() {
     };
 
     const handleResetSingleMark = async (studentId) => {
+        const student = allStudents.find(s => s.id === studentId);
+        if (!student || !isAssignedToTeach(selectedClass, student.sectionName, selectedSubject)) {
+            alert("You are not assigned to teach this subject to this student's class/section.");
+            return;
+        }
+
         const compositeKey = getExamSubjectKey();
         if (!window.confirm("Are you sure you want to clear this student's mark?")) return;
 
@@ -1178,6 +1233,7 @@ export default function StaffDashboard() {
             const studentRef = doc(db, 'students_records', studentId);
             await updateDoc(studentRef, {
                 [`marksDraft.${compositeKey}`]: deleteField(),
+                [`marksDraftEnteredBy.${compositeKey}`]: deleteField(),
                 lastMarksUpdated: new Date().toISOString()
             });
 
@@ -1199,13 +1255,14 @@ export default function StaffDashboard() {
         const compositeKey = getExamSubjectKey();
         try {
             const batch = writeBatch(db);
-            activeStudents.forEach(student => {
+            marksFilteredStudents.forEach(student => {
                 const score = studentMarks[student.id] ?? student.marksDraft?.[compositeKey] ?? student.marks?.[compositeKey];
                 if (score !== undefined && score !== '') {
                     const studentRef = doc(db, 'students_records', student.id);
                     batch.update(studentRef, {
                         [`marksDraft.${compositeKey}`]: Number(score),
-                        lastMarksDraftSaved: new Date().toISOString()
+                        lastMarksDraftSaved: new Date().toISOString(),
+                        [`marksDraftEnteredBy.${compositeKey}`]: staffData.staffId || staffData.name
                     });
                 }
             });
@@ -1226,10 +1283,11 @@ export default function StaffDashboard() {
         setIsSubmitting(true);
         try {
             const batch = writeBatch(db);
-            activeStudents.forEach(student => {
+            marksFilteredStudents.forEach(student => {
                 const studentRef = doc(db, 'students_records', student.id);
                 batch.update(studentRef, {
-                    [`marksDraft.${compositeKey}`]: deleteField()
+                    [`marksDraft.${compositeKey}`]: deleteField(),
+                    [`marksDraftEnteredBy.${compositeKey}`]: deleteField()
                 });
             });
             await batch.commit();
@@ -1438,6 +1496,14 @@ export default function StaffDashboard() {
     const filteredStudents = activeStudents.filter(s =>
         s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Marks Entry roster: same class/section match as filteredStudents, further
+    // narrowed to only the students this staff member is timetabled to teach
+    // the currently selected subject to. Stops every staff account from seeing
+    // (and editing) marks for a whole class regardless of who actually teaches it.
+    const marksFilteredStudents = filteredStudents.filter(student =>
+        isAssignedToTeach(selectedClass, student.sectionName, selectedSubject)
     );
 
     const sectionSubmissions = submissionsList.filter(item => {
@@ -2683,6 +2749,12 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
+                            {myTaughtClasses.length === 0 ? (
+                                <div className="empty-sub-card">
+                                    <AlertCircle size={28} />
+                                    <p>You have no class/subject assigned in the timetable yet. Please contact the admin to get a timetable assignment before entering marks.</p>
+                                </div>
+                            ) : (
                             <div className="form-grid marks-four-col-grid">
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
@@ -2690,12 +2762,18 @@ export default function StaffDashboard() {
                                         className="custom-select full-width"
                                         value={selectedClass || ''}
                                         onChange={(e) => {
-                                            setSelectedClass(e.target.value);
+                                            const cls = e.target.value;
+                                            setSelectedClass(cls);
                                             setSelectedSection(null);
+                                            const nextSubjects = getMyTaughtSubjectsForClass(cls, null);
+                                            if (!nextSubjects.includes(selectedSubject)) {
+                                                setSelectedSubject(nextSubjects[0] || '');
+                                            }
                                             setMarksActionStatus('');
                                         }}
                                     >
-                                        {classList.map(cls => (
+                                        {/* Only classes this staff member is timetabled to teach */}
+                                        {myTaughtClasses.map(cls => (
                                             <option key={cls} value={cls}>{cls}</option>
                                         ))}
                                     </select>
@@ -2714,13 +2792,18 @@ export default function StaffDashboard() {
                                                 const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
                                                 setSelectedSection(match || { name: secName });
                                             }
+                                            const nextSubjects = getMyTaughtSubjectsForClass(selectedClass, secName || null);
+                                            if (!nextSubjects.includes(selectedSubject)) {
+                                                setSelectedSubject(nextSubjects[0] || '');
+                                            }
                                             setMarksActionStatus('');
                                         }}
                                         disabled={!selectedClass}
                                     >
-                                        <option value="">All Sections</option>
+                                        <option value="">All My Sections</option>
+                                        {/* Only sections of this class that this staff member actually teaches */}
                                         {sectionsList
-                                            .filter(s => s.className === selectedClass)
+                                            .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
                                             .map(sec => (
                                                 <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
                                             ))}
@@ -2753,12 +2836,14 @@ export default function StaffDashboard() {
                                             setMarksActionStatus('');
                                         }}
                                     >
-                                        {subjectList.map(subj => (
+                                        {/* Only subjects this staff member is timetabled to teach for the selected class/section */}
+                                        {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
                                             <option key={subj} value={subj}>{subj}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
+                            )}
 
                             <div className="table-responsive">
                                 <table className="custom-table">
@@ -2773,14 +2858,20 @@ export default function StaffDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredStudents.length === 0 ? (
+                                        {myTaughtClasses.length === 0 ? (
                                             <tr>
                                                 <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No students available for this class / section.
+                                                    No timetable assignment found for your account.
+                                                </td>
+                                            </tr>
+                                        ) : marksFilteredStudents.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                    No students available for this class / section / subject that you teach.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredStudents.map((student) => {
+                                            marksFilteredStudents.map((student) => {
                                                 const compositeKey = getExamSubjectKey();
                                                 const currentVal = studentMarks[student.id] ?? (student.marksDraft?.[compositeKey] ?? '');
                                                 return (
@@ -2836,7 +2927,7 @@ export default function StaffDashboard() {
                                     className="delete-task-btn"
                                     style={{ padding: '0.5rem 0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
                                     onClick={handleResetAllExamMarks}
-                                    disabled={isSubmitting || filteredStudents.length === 0}
+                                    disabled={isSubmitting || marksFilteredStudents.length === 0}
                                 >
                                     <RotateCcw size={14} /> Clear All Drafts
                                 </button>
@@ -2845,7 +2936,7 @@ export default function StaffDashboard() {
                                         type="button"
                                         className="btn-save-draft"
                                         onClick={handleSaveMarksDraft}
-                                        disabled={isSubmitting || filteredStudents.length === 0}
+                                        disabled={isSubmitting || marksFilteredStudents.length === 0}
                                     >
                                         <Save size={15} /> Save All as Draft
                                     </button>
