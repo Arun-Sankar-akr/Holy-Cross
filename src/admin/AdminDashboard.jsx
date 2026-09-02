@@ -144,10 +144,6 @@ export default function AdminDashboard() {
     const [editingSectionId, setEditingSectionId] = useState(null);
     const [editSectionForm, setEditSectionForm] = useState({ name: '', roomNo: '' });
 
-    // Fee Management Form State
-    const initialFeeForm = { studentId: '', studentName: '', className: '', totalFee: '', paid: '' };
-    const [feeForm, setFeeForm] = useState(initialFeeForm);
-
     const sidebarRef = useRef(null);
     const studentFormRef = useRef(null);
 
@@ -217,7 +213,6 @@ export default function AdminDashboard() {
         staff: { title: 'Teachers', subtitle: 'Manage staff directory and details.' },
         students: { title: 'Students', subtitle: 'Manage all student details and information.' },
         results: { title: 'Results Management', subtitle: 'Publish and manage exam results.' },
-        fees: { title: 'Fee Management', subtitle: 'Manage student fee details.' },
         student_timetable: { title: 'Timetable', subtitle: 'Manage class schedules.' },
         staff_timetable: { title: 'Staff Timetable', subtitle: 'Manage staff work schedules.' },
         settings: { title: 'System Settings', subtitle: 'Manage system configuration and settings.' },
@@ -1247,9 +1242,7 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
                                         <Award size={15} /> Results & Publish
                                     </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => handleTabClick('fees')}>
-                                        <FileText size={15} /> Fee Management
-                                    </button>
+                                  
                                 </div>
                             )}
 
@@ -3060,102 +3053,6 @@ export default function AdminDashboard() {
                             )}
                         </div>
                     )}
-
-                    {/* FEE MANAGEMENT TAB */}
-                    {activeTab === 'fees' && (() => {
-                        const totalCollected = feeRecords.reduce((sum, f) => sum + (parseFloat(f.paid) || 0), 0);
-                        const totalPending = feeRecords.reduce((sum, f) => sum + (parseFloat(f.due) || 0), 0);
-                        return (
-                            <div className="applications-management-card">
-                                <h3><FileText size={18} color="var(--primary)" /> Fee Management</h3>
-
-                                <div className="admin-kpi-grid kpi-cols-3">
-                                    <div className="admin-kpi-card indigo">
-                                        <div className="kpi-icon-wrapper"><Save size={22} /></div>
-                                        <div className="kpi-info">
-                                            <span>Total Collected</span>
-                                            <h4>₹{totalCollected.toLocaleString('en-IN')}</h4>
-                                        </div>
-                                    </div>
-                                    <div className="admin-kpi-card rose">
-                                        <div className="kpi-icon-wrapper"><AlertTriangle size={22} /></div>
-                                        <div className="kpi-info">
-                                            <span>Total Pending</span>
-                                            <h4>₹{totalPending.toLocaleString('en-IN')}</h4>
-                                        </div>
-                                    </div>
-                                    <div className="admin-kpi-card amber">
-                                        <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
-                                        <div className="kpi-info">
-                                            <span>Total Students Billed</span>
-                                            <h4>{feeRecords.length}</h4>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h4 style={{ marginTop: '24px' }}>Add Fee Record</h4>
-                                <form onSubmit={handleAddFeeRecord}>
-                                    <div>
-                                        <label>Student</label>
-                                        <select
-                                            value={feeForm.studentId}
-                                            onChange={e => {
-                                                const s = studentsList.find(st => st.id === e.target.value);
-                                                setFeeForm({ ...feeForm, studentId: e.target.value, studentName: s ? s.name : '', className: s ? s.className : '' });
-                                            }}
-                                            required
-                                        >
-                                            <option value="">Select Student</option>
-                                            {studentsList.map(s => (<option key={s.id} value={s.id}>{s.name} ({s.className} - {s.sectionName})</option>))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Total Fee (₹)</label>
-                                        <input type="number" min="0" placeholder="e.g. 15000" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
-                                    </div>
-                                    <div>
-                                        <label>Amount Paid (₹)</label>
-                                        <input type="number" min="0" placeholder="e.g. 10000" value={feeForm.paid} onChange={e => setFeeForm({ ...feeForm, paid: e.target.value })} required />
-                                    </div>
-                                    <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Add Fee Record</button>
-                                </form>
-
-                                <h4 style={{ marginTop: '24px' }}>Fee Records <span className="count-badge">{feeRecords.length}</span></h4>
-                                <div className="table-responsive-wrapper">
-                                    <table className="custom-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Student Name</th>
-                                                <th>Class</th>
-                                                <th>Total Fee</th>
-                                                <th>Paid</th>
-                                                <th>Due</th>
-                                                <th>Status</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {feeRecords.length === 0 ? (
-                                                <tr><td colSpan="7" className="no-data-cell">No fee records added yet.</td></tr>
-                                            ) : feeRecords.map(f => (
-                                                <tr key={f.id}>
-                                                    <td>{f.studentName}</td>
-                                                    <td>{f.className}</td>
-                                                    <td>₹{Number(f.totalFee).toLocaleString('en-IN')}</td>
-                                                    <td>₹{Number(f.paid).toLocaleString('en-IN')}</td>
-                                                    <td>₹{Number(f.due).toLocaleString('en-IN')}</td>
-                                                    <td><span className={`status-pill ${f.status === 'Paid' ? 'status-present' : f.status === 'Partial' ? 'pending' : 'status-absent'}`}>{f.status}</span></td>
-                                                    <td className="actions-cell">
-                                                        <button className="icon-btn delete-btn" onClick={() => handleDelete('fee_records', f.id)} title="Delete Record"><Trash2 size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        );
-                    })()}
 
                     {/* STUDENT TIMETABLE TAB */}
                     {activeTab === 'student_timetable' && (

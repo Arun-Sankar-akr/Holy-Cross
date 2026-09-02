@@ -12,9 +12,9 @@ import {
     LogOut, Search, Menu, X, Check, GraduationCap, ArrowLeft,
     Folder, KeyRound, Sparkles, ChevronDown, ChevronRight, ChevronLeft, PlusCircle, Trash2, Layers,
     FileCheck, ExternalLink, Award, Send, Save, AlertCircle, UserX,
-    TrendingUp, AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
+    AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
-    Library, PartyPopper, Moon, CalendarClock, Cake, Gift, MoreVertical, Mail,
+    Library, PartyPopper, Moon, CalendarClock, MoreVertical,
     BookMarked, Upload, Loader2
 } from 'lucide-react';
 import './StaffDashboard.css';
@@ -35,10 +35,8 @@ export default function StaffDashboard() {
     const [showAddEventForm, setShowAddEventForm] = useState(false);
     const [newEventForm, setNewEventForm] = useState({ title: '', time: '' });
 
-
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
 
-    // Leave Request States
     const [staffLeaveList, setStaffLeaveList] = useState([]);
     const [leaveForm, setLeaveForm] = useState({
         leaveType: 'Casual Leave',
@@ -49,11 +47,9 @@ export default function StaffDashboard() {
     const [isLeaveSubmitting, setIsLeaveSubmitting] = useState(false);
     const [leaveActionStatus, setLeaveActionStatus] = useState('');
 
-    // --- Departments (synced from Admin Dashboard) & Staff Directory ---
     const [allStaffMembers, setAllStaffMembers] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState(null);
 
-    // --- Communication: Chats (1-to-1) ---
     const [myChats, setMyChats] = useState([]);
     const [activeChatId, setActiveChatId] = useState(null);
     const [activeChatInfo, setActiveChatInfo] = useState(null);
@@ -62,13 +58,11 @@ export default function StaffDashboard() {
     const [showNewChatPicker, setShowNewChatPicker] = useState(false);
     const [chatDirectorySearch, setChatDirectorySearch] = useState('');
 
-    // --- Communication: Request modal (from Departments -> Staff) ---
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestTargetStaff, setRequestTargetStaff] = useState(null);
     const [requestForm, setRequestForm] = useState({ subject: '', message: '' });
     const [isRequestSubmitting, setIsRequestSubmitting] = useState(false);
 
-    // --- Communication: Staff Room (shared group chat) ---
     const [staffRoomMessages, setStaffRoomMessages] = useState([]);
     const [staffRoomInput, setStaffRoomInput] = useState('');
 
@@ -91,16 +85,13 @@ export default function StaffDashboard() {
             publishedMarks: deleteField()
         });
     };
-    // Shared active class & section states across tabs
     const [selectedClass, setSelectedClass] = useState('10th Std');
     const [selectedSection, setSelectedSection] = useState(null);
 
-    // Attendance Date & Period States
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [attendancePeriod, setAttendancePeriod] = useState('');
     const [attendanceSlotId, setAttendanceSlotId] = useState('');
 
-    // Submissions Review State
     const [subClassFilter, setSubClassFilter] = useState(null);
     const [subSectionFilter, setSubSectionFilter] = useState(null);
     const [submissionFilterStatus, setSubmissionFilterStatus] = useState('all');
@@ -112,7 +103,6 @@ export default function StaffDashboard() {
     const [submissionsList, setSubmissionsList] = useState([]);
     const [staffExamHallAllocations, setStaffExamHallAllocations] = useState([]);
 
-    // Hall-ticket QR verification
     const [showHallTicketScanner, setShowHallTicketScanner] = useState(false);
     const [activeExamDuty, setActiveExamDuty] = useState(null);
     const [scannerStatus, setScannerStatus] = useState('');
@@ -128,7 +118,6 @@ export default function StaffDashboard() {
     const [marksActionStatus, setMarksActionStatus] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Assignment CRUD State
     const initialAssignmentForm = {
         title: '',
         type: 'Assignment',
@@ -144,7 +133,6 @@ export default function StaffDashboard() {
     const [submissionGrades, setSubmissionGrades] = useState({});
     const [gradingLoadingId, setGradingLoadingId] = useState(null);
 
-    // Syllabus Upload State
     const [syllabusList, setSyllabusList] = useState([]);
     const initialSyllabusForm = {
         className: '10th Std',
@@ -158,10 +146,9 @@ export default function StaffDashboard() {
     const [isSyllabusCompressing, setIsSyllabusCompressing] = useState(false);
     const [syllabusUploadStatus, setSyllabusUploadStatus] = useState('');
 
-    // Library State
     const [libraryBooks, setLibraryBooks] = useState([]);
     const [libraryIssues, setLibraryIssues] = useState([]);
-    const [librarySubTab, setLibrarySubTab] = useState('catalog'); // catalog | issue | issued
+    const [librarySubTab, setLibrarySubTab] = useState('catalog');
     const [librarySearch, setLibrarySearch] = useState('');
     const initialBookForm = { title: '', author: '', category: '', isbn: '', totalCopies: 1 };
     const [bookForm, setBookForm] = useState(initialBookForm);
@@ -243,7 +230,6 @@ export default function StaffDashboard() {
             }
         }
 
-        // Load this staff member's previously saved schedule events (grouped by day)
         try {
             const storedEvents = localStorage.getItem(`staffScheduleEvents_${resolvedStaffId || 'default'}`);
             if (storedEvents) {
@@ -280,12 +266,10 @@ export default function StaffDashboard() {
             setSubmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Syllabus documents uploaded by staff, subject-wise per class/section
         const unsubSyllabus = onSnapshot(collection(db, 'class_syllabus'), (snap) => {
             setSyllabusList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Library — book catalog and issue/return tracking
         const unsubLibraryBooks = onSnapshot(collection(db, 'library_books'), (snap) => {
             setLibraryBooks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -294,24 +278,19 @@ export default function StaffDashboard() {
             setLibraryIssues(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Live synchronized Exam Hall Staff Duties published by the Office Dashboard
         const unsubStaffExamHalls = onSnapshot(collection(db, 'staff_exam_halls'), (snap) => {
             setStaffExamHallAllocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Fetch Staff Leave Requests
         const unsubLeaves = onSnapshot(collection(db, 'staff_leaves'), (snap) => {
             const leaves = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Filter leaves for current staff member if staffId exists
             setStaffLeaveList(leaves);
         });
 
-        // Staff Directory — synced live from Admin Dashboard (used to build Departments)
         const unsubStaffMembers = onSnapshot(collection(db, 'staff_members'), (snap) => {
             setAllStaffMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Staff Room — single shared group chat, most recent 200 messages
         const unsubStaffRoom = onSnapshot(
             query(collection(db, 'staffroom_messages'), orderBy('createdAt', 'asc'), limit(200)),
             (snap) => {
@@ -335,7 +314,6 @@ export default function StaffDashboard() {
         };
     }, []);
 
-    // Communication: my 1-to-1 conversations (live), ordered by most recent activity
     useEffect(() => {
         if (!staffData.staffId) return;
 
@@ -359,7 +337,6 @@ export default function StaffDashboard() {
         return () => unsubChats();
     }, [staffData.staffId]);
 
-    // Communication: live messages for the currently open conversation
     useEffect(() => {
         if (!activeChatId) {
             setActiveChatMessages([]);
@@ -396,11 +373,6 @@ export default function StaffDashboard() {
         return trimmed.toLowerCase().startsWith('section') ? trimmed : `Section ${trimmed}`;
     };
 
-    // Pulls the raw time range out of a period label, e.g.
-    // 'Period 1 (09:00 - 09:45 AM)' -> '09:00 - 09:45 AM'.
-    // Timetables (admin-managed) store the bare time range as their timeSlot,
-    // while the attendance period dropdown here uses the "Period N (...)" label,
-    // so this lets the two be compared on equal footing.
     const extractTimeRange = (periodLabel) => {
         if (!periodLabel) return '';
         const match = periodLabel.match(/\(([^)]+)\)/);
@@ -412,9 +384,6 @@ export default function StaffDashboard() {
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
-    // ---------- Marks Entry: only classes / sections / subjects THIS staff is timetabled to teach ----------
-    // Prevents any staff member from opening another teacher's subject/class and
-    // viewing or editing marks for students who are not theirs to grade.
     const myTaughtAssignments = mySchedule
         .map(item => ({
             className: item.className || item.class || '',
@@ -444,7 +413,6 @@ export default function StaffDashboard() {
         return [...new Set(subs)];
     };
 
-    // Is this staff member timetabled to teach `subject` to `cls` / `sectionName`?
     const isAssignedToTeach = (cls, sectionName, subject) =>
         myTaughtAssignments.some(a =>
             cleanString(a.className) === cleanString(cls) &&
@@ -452,9 +420,6 @@ export default function StaffDashboard() {
             (!a.sectionName || !sectionName || cleanString(a.sectionName) === cleanString(sectionName))
         );
 
-    // ---------- STRICT Mark Attendance <-> Weekly Timetable sync ----------
-    // Normalize timetable field names first. This prevents a timetable using
-    // `class`, `grade`, or `section` from accidentally showing all students.
     const attendanceWeekday = attendanceDate
         ? new Date(`${attendanceDate}T00:00:00`)
             .toLocaleDateString('en-US', {
@@ -462,8 +427,6 @@ export default function StaffDashboard() {
             })
         : '';
 
-
-    // Normalize timetable fields
     const normalizeTimetableSlot = (slot) => ({
         ...slot,
 
@@ -488,20 +451,14 @@ export default function StaffDashboard() {
             slot.weekday ||
             ''
     });
-    // ONLY this staff member's timetable entries for the selected weekday.
     const scheduledPeriodsForAttendance = mySchedule
         .map(normalizeTimetableSlot)
 
-        // Selected day only
         .filter((slot) => {
 
             const sameDay =
                 cleanString(slot.timetableDay) ===
                 cleanString(attendanceWeekday);
-
-            // IMPORTANT:
-            // Attendance is allowed only if admin selected
-            // BOTH class and section.
 
             const hasClass =
                 Boolean(slot.timetableClass);
@@ -530,8 +487,6 @@ export default function StaffDashboard() {
             );
         });
 
-
-    // Used to detect timetable changes
     const scheduledPeriodKey =
         scheduledPeriodsForAttendance
             .map((slot) =>
@@ -539,13 +494,9 @@ export default function StaffDashboard() {
             )
             .join(',');
 
-
-    // Check if staff has schedule
     const hasAttendanceSchedule =
         scheduledPeriodsForAttendance.length > 0;
 
-
-    // Exact selected timetable document
     const selectedAttendanceSlot =
         scheduledPeriodsForAttendance.find(
             (slot) =>
@@ -553,8 +504,6 @@ export default function StaffDashboard() {
                 String(attendanceSlotId)
         ) || null;
 
-
-    // Automatically select first available timetable slot
     useEffect(() => {
 
         if (
@@ -568,14 +517,12 @@ export default function StaffDashboard() {
             return;
         }
 
-
         const slotStillExists =
             scheduledPeriodsForAttendance.some(
                 (slot) =>
                     String(slot.id) ===
                     String(attendanceSlotId)
             );
-
 
         if (!slotStillExists) {
 
@@ -600,8 +547,6 @@ export default function StaffDashboard() {
         scheduledPeriodKey
     ]);
 
-
-    // When timetable period changes
     useEffect(() => {
 
         if (!selectedAttendanceSlot) return;
@@ -623,8 +568,6 @@ export default function StaffDashboard() {
         return idMatch || !assigned || !current || assigned === current || assigned.includes(current) || current.includes(assigned);
     });
 
-    // Live progress for the hall currently open in the scanner (re-derived every render
-    // from the Firestore-synced allocations, so it updates right after each verified scan).
     const liveActiveExamDuty = activeExamDuty
         ? (myExamHallDuties.find(d => d.id === activeExamDuty.id) || activeExamDuty)
         : null;
@@ -709,7 +652,6 @@ export default function StaffDashboard() {
         const startScanner = async () => {
             try { const cameras = await Html5Qrcode.getCameras(); if (!cameras?.length) throw new Error('No camera found'); const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0]; if (cancelled) return;
                 await scanner.start(preferred.id, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, async (decodedText) => {
-                    // Ignore extra decode callbacks while we're already processing / showing the result popup
                     if (scanProcessingRef.current) return;
                     scanProcessingRef.current = true;
                     setScannerStatus('Verifying student...');
@@ -735,8 +677,6 @@ export default function StaffDashboard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showHallTicketScanner]);
 
-    // Once every allocated student for this hall has been verified, stop the camera
-    // and let the "All Students Verified" panel (with its Close button) take over.
     useEffect(() => {
         if (!showHallTicketScanner || !allStudentsScanned) return;
         if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
@@ -752,7 +692,6 @@ export default function StaffDashboard() {
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
-    // Active Students based on Selected Class & Section
     const getActiveStudents = () => {
         return allStudents.filter(student => {
             if (!selectedClass) return false;
@@ -785,10 +724,6 @@ export default function StaffDashboard() {
 
     const activeStudents = getActiveStudents();
 
-    // ---------- EXACT TIMETABLE -> STUDENT ROSTER MATCHING ----------
-    // Admin/student records do not always use identical text formats:
-    // "10th Std", "10", "10th" and "Sec A", "Section A", "A" can refer
-    // to the same class/section. Convert them to stable comparison keys.
     const normalizeClassKey = (value) => {
         const raw = String(value ?? '').trim().toLowerCase();
         if (!raw) return '';
@@ -806,7 +741,6 @@ export default function StaffDashboard() {
             .replace(/^section\s*/i, '')
             .replace(/^sec\.?\s*/i, '')
             .trim();
-        // Handles A, Sec A, Section A and section IDs ending in A.
         const letter = withoutPrefix.match(/\b([a-z])\b/i);
         return letter ? letter[1].toLowerCase() : withoutPrefix.replace(/[^a-z0-9]/g, '');
     };
@@ -833,8 +767,6 @@ export default function StaffDashboard() {
         return '';
     };
 
-    // EXACT scheduled timetable class + section only.
-    // No fallback to another section and no fallback to all students.
     const attendanceStudents = selectedAttendanceSlot &&
         selectedAttendanceSlot.timetableClass &&
         selectedAttendanceSlot.timetableSection
@@ -856,7 +788,6 @@ export default function StaffDashboard() {
         student.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Attendance Analytics Computations
     const presentStudentsCount = activeStudents.filter(s => s.status === 'present').length;
     const absentStudentsCount = activeStudents.filter(s => s.status === 'absent').length;
     const classAttendanceRate = activeStudents.length > 0
@@ -873,7 +804,6 @@ export default function StaffDashboard() {
         navigate('/');
     };
 
-    // The selected timetable row itself is the exact attendance authorization.
     const getMatchedTimetableSlot = () => {
         if (!selectedAttendanceSlot) return null;
         if (!selectedAttendanceSlot.timetableClass || !selectedAttendanceSlot.timetableSection) return null;
@@ -927,10 +857,6 @@ export default function StaffDashboard() {
                     student.id
                 );
 
-                /*
-                 * 1. Update the student's latest attendance.
-                 * This keeps your existing dashboard logic working.
-                 */
                 batch.update(studentRef, {
                     status: attendanceStatus,
                     lastAttendanceDate: attendanceDate,
@@ -951,13 +877,6 @@ export default function StaffDashboard() {
                         matchedSlot.timetableSection
                 });
 
-                /*
-                 * 2. IMPORTANT:
-                 * Create a NEW permanent attendance history record.
-                 *
-                 * Every period gets its own document.
-                 * Old attendance will NOT be overwritten.
-                 */
                 const attendanceHistoryRef = doc(
                     collection(db, 'attendance_records')
                 );
@@ -1034,7 +953,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // Leave Request Handler
     const handleSubmitleaveRequest = async (e) => {
         e.preventDefault();
         if (!leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason) {
@@ -1072,7 +990,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // --- Communication: open (or create) a 1-to-1 conversation with a staff member ---
     const openChatWithStaff = async (member) => {
         if (!member?.staffId || !staffData.staffId) return;
         const chatId = getChatId(staffData.staffId, member.staffId);
@@ -1202,7 +1119,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // --- Communication: quick "Request" from a Department staff card ---
     const openRequestModal = (member) => {
         setRequestTargetStaff(member);
         setRequestForm({ subject: '', message: '' });
@@ -1262,7 +1178,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // --- Communication: Staff Room (shared group chat) ---
     const sendStaffRoomMessage = async () => {
         const text = staffRoomInput.trim();
         if (!text) return;
@@ -1282,7 +1197,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // Marks CRUD
     const getExamSubjectKey = () => `${examType} - ${selectedSubject}`;
 
     const handleMarkChange = (studentId, value) => {
@@ -1299,8 +1213,6 @@ export default function StaffDashboard() {
             return;
         }
 
-        // Defense in depth: even if the UI state is stale, never write a mark
-        // for a student/subject this staff member isn't timetabled to teach.
         const student = allStudents.find(s => s.id === studentId);
         if (!student || !isAssignedToTeach(selectedClass, student.sectionName, selectedSubject)) {
             alert("You are not assigned to teach this subject to this student's class/section.");
@@ -1405,7 +1317,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // Assignments Handlers
     const handleCreateAssignment = async (e) => {
         e.preventDefault();
         if (!assignmentForm.title || !assignmentForm.className || !assignmentForm.sectionName) return;
@@ -1456,9 +1367,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // Syllabus Handlers — client-side PDF compressor (Max ~500 KB) so the file
-    // can be embedded directly into the Firestore document, same pattern used
-    // for student assignment submissions.
     const handleSyllabusFileSelect = (file) => {
         if (!file) return;
 
@@ -1545,7 +1453,6 @@ export default function StaffDashboard() {
         }
     };
 
-    // ---- Library Handlers ----
     const handleAddBook = async (e) => {
         e.preventDefault();
         if (!bookForm.title.trim() || !bookForm.author.trim()) return;
@@ -1687,7 +1594,6 @@ export default function StaffDashboard() {
         { id: 3, title: 'Independence Day Event Photos Uploaded', date: 'Aug 15, 2026', type: 'normal' },
     ];
 
-    // ---------- Right-rail: Weekly Schedule Calendar ----------
     const todayRef = new Date();
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const startOfCurrentWeek = new Date(todayRef);
@@ -1731,14 +1637,12 @@ export default function StaffDashboard() {
         persistDayEvents(updated);
     };
 
-    // ---------- Left column: Today's Plan (from live timetable) ----------
     const todayWeekdayName = todayRef.toLocaleDateString('en-US', { weekday: 'long' });
     const todaysPlanItems = (mySchedule.filter(i => i.day === todayWeekdayName).length > 0
         ? mySchedule.filter(i => i.day === todayWeekdayName)
         : mySchedule
     ).slice(0, 3);
 
-    // ---------- Left column: Documents (latest turned-in submissions) ----------
     const recentDocuments = [...submissionsList]
         .sort((a, b) => {
             const aT = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
@@ -1747,7 +1651,6 @@ export default function StaffDashboard() {
         })
         .slice(0, 4);
 
-    // ---------- Left column: Class Progress (live attendance rate per class) ----------
     const classProgressData = classList
         .map(cls => {
             const studentsInClass = allStudents.filter(s => s.className === cls);
@@ -1759,7 +1662,6 @@ export default function StaffDashboard() {
         .filter(Boolean)
         .slice(0, 4);
 
-    // ---------- Library: derived views ----------
     const filteredLibraryBooks = libraryBooks.filter(b => {
         const q = cleanString(librarySearch);
         if (!q) return true;
@@ -1779,7 +1681,6 @@ export default function StaffDashboard() {
     const todayISO = new Date().toISOString().slice(0, 10);
     const isOverdue = (dueDate) => dueDate && dueDate < todayISO;
 
-    // ---------- Right-rail: Upcoming Activities (from live schedule + assignments) ----------
     const upcomingActivities = [
         ...mySchedule.slice(0, 1).map(item => ({
             id: `sch-${item.id}`,
@@ -1799,7 +1700,6 @@ export default function StaffDashboard() {
             }))
     ].slice(0, 3);
 
-    // ---------- Right-rail: Notifications (live counts, no fabricated data) ----------
     const pendingLeaveCount = myLeaveRequests.filter(l => (l.status || 'Pending') === 'Pending').length;
     const ungradedSubmissionsCount = submissionsList.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
     const dueSoonAssignmentsCount = assignmentsList.filter(a => a.dueDate && new Date(a.dueDate) >= new Date(new Date().setHours(0, 0, 0, 0))).length;
@@ -1809,10 +1709,6 @@ export default function StaffDashboard() {
         s.admissionNo?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Marks Entry roster: same class/section match as filteredStudents, further
-    // narrowed to only the students this staff member is timetabled to teach
-    // the currently selected subject to. Stops every staff account from seeing
-    // (and editing) marks for a whole class regardless of who actually teaches it.
     const marksFilteredStudents = filteredStudents.filter(student =>
         isAssignedToTeach(selectedClass, student.sectionName, selectedSubject)
     );
@@ -1870,9 +1766,6 @@ export default function StaffDashboard() {
         return true;
     });
 
-    // --- Departments: synced live from the staff directory published by Admin ---
-    // Canonical subject order first, then any extra department names Admin has
-    // added on staff records that aren't in the canonical list.
     const extraDepartments = [...new Set(
         allStaffMembers
             .map(s => (s.department || '').trim())
@@ -1887,7 +1780,6 @@ export default function StaffDashboard() {
 
     const activeDepartmentStaff = selectedDepartment ? (departmentGroups[selectedDepartment] || []) : [];
 
-    // --- Communication: staff directory search (for starting a new chat) ---
     const chatDirectoryResults = allStaffMembers.filter(s => {
         if (s.staffId === staffData.staffId) return false;
         const q = chatDirectorySearch.trim().toLowerCase();
@@ -1902,7 +1794,6 @@ export default function StaffDashboard() {
 
     return (
         <div className="dashboard-containers">
-            {/* Mobile Topbar */}
             <header className="mobile-topbar">
                 <div className="mobile-brand">
                     <img src={logo} alt="" id='logog' />
@@ -1921,7 +1812,6 @@ export default function StaffDashboard() {
                 <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
             )}
 
-            {/* Sidebar */}
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
                     <div className="brand-icon"><img src={logo} alt="" id='logog' /></div>
@@ -1937,7 +1827,6 @@ export default function StaffDashboard() {
                 </div>
 
                 <nav className="sidebar-nav">
-                    {/* GROUP: MY WORKSPACE */}
                     <div className="sidebar-group">
                         <span className="sidebar-group-label">My Workspace</span>
 
@@ -2085,7 +1974,6 @@ export default function StaffDashboard() {
                         </div>
                     </div>
 
-                    {/* GROUP: EXAM HALL ALLOCATION */}
                     <div className="sidebar-group">
                         <span className="sidebar-group-label">Examinations</span>
                         <div className="nav-group">
@@ -2114,7 +2002,6 @@ export default function StaffDashboard() {
                         </div>
                     </div>
 
-                    {/* GROUP: COMMUNICATION */}
                     <div className="sidebar-group">
                         <span className="sidebar-group-label">Communication</span>
 
@@ -2152,7 +2039,6 @@ export default function StaffDashboard() {
                         </button>
                     </div>
 
-                    {/* GROUP: APPROVALS & ALERTS */}
                     <div className="sidebar-group">
                         <span className="sidebar-group-label">Approval & Alerts</span>
 
@@ -2168,7 +2054,6 @@ export default function StaffDashboard() {
                         </button>
                     </div>
 
-                    {/* GROUP: OTHERS */}
                     <div className="sidebar-group">
                         <span className="sidebar-group-label">Others</span>
 
@@ -2212,7 +2097,6 @@ export default function StaffDashboard() {
                 </div>
             </aside>
 
-            {/* Main Workspace */}
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
                     <h1 className="dashboard-page-title">Staff Dashboard</h1>
@@ -2303,7 +2187,6 @@ export default function StaffDashboard() {
                 </header>
 
                 <div className="dashboard-content">
-                    {/* OVERVIEW TAB */}
                     {activeTab === 'overview' && (
                         <div className="overview-layout">
                             <div className="overview-left">
@@ -2624,7 +2507,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* STUDENT ROSTER TAB */}
                     {activeTab === 'students' && (
                         <div className="dash-card full-width">
                             {!selectedClass && (
@@ -2761,7 +2643,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* ATTENDANCE TAB */}
                     {activeTab === 'attendance' && (
                         <div className="dash-card full-width">
                             <div className="card-header" style={{ flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
@@ -2918,7 +2799,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* ATTENDANCE ANALYTICS TAB */}
                     {activeTab === 'analytics' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -3042,7 +2922,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* MARKS ENTRY & CRUD TAB */}
                     {activeTab === 'marks' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -3094,7 +2973,6 @@ export default function StaffDashboard() {
                                             setMarksActionStatus('');
                                         }}
                                     >
-                                        {/* Only classes this staff member is timetabled to teach */}
                                         {myTaughtClasses.map(cls => (
                                             <option key={cls} value={cls}>{cls}</option>
                                         ))}
@@ -3123,7 +3001,6 @@ export default function StaffDashboard() {
                                         disabled={!selectedClass}
                                     >
                                         <option value="">All My Sections</option>
-                                        {/* Only sections of this class that this staff member actually teaches */}
                                         {sectionsList
                                             .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
                                             .map(sec => (
@@ -3158,7 +3035,6 @@ export default function StaffDashboard() {
                                             setMarksActionStatus('');
                                         }}
                                     >
-                                        {/* Only subjects this staff member is timetabled to teach for the selected class/section */}
                                         {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
                                             <option key={subj} value={subj}>{subj}</option>
                                         ))}
@@ -3267,7 +3143,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* ASSIGNMENTS / TASKS */}
                     {activeTab === 'assignments' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -3500,7 +3375,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* SYLLABUS UPLOAD — subject-wise, by class taught */}
                     {activeTab === 'syllabus' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -3673,7 +3547,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* PDF SUBMISSIONS & GRADING */}
                     {activeTab === 'submissions' && (
                         <div className="dash-card full-width">
                             {!subClassFilter && (
@@ -3980,7 +3853,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* SCHEDULE TAB */}
                     {activeTab === 'schedule' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4005,7 +3877,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* DEPARTMENTS TAB — synced live from the Admin Dashboard staff directory */}
                     {activeTab === 'departments' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4097,7 +3968,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* CHATS TAB — 1-to-1 direct messages, synced live via Firestore */}
                     {activeTab === 'chats' && (
                         <div className="dash-card full-width chats-workspace">
                             <div className="card-header">
@@ -4222,7 +4092,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* STAFF ROOM TAB — shared group chat for all faculty */}
                     {activeTab === 'staffroom' && (
                         <div className="dash-card full-width staffroom-workspace">
                             <div className="card-header">
@@ -4296,7 +4165,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* LIBRARY — book catalog, issue/return tracking */}
                     {activeTab === 'library' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4333,7 +4201,6 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            {/* --- CATALOG --- */}
                             {librarySubTab === 'catalog' && (
                                 <>
                                     <form onSubmit={handleAddBook} className="assignment-form-grid" style={{ marginTop: '10px' }}>
@@ -4451,7 +4318,6 @@ export default function StaffDashboard() {
                                 </>
                             )}
 
-                            {/* --- ISSUE BOOK --- */}
                             {librarySubTab === 'issue' && (
                                 <form onSubmit={handleIssueBook} className="assignment-form-grid" style={{ marginTop: '10px' }}>
                                     <div>
@@ -4539,7 +4405,6 @@ export default function StaffDashboard() {
                                 </form>
                             )}
 
-                            {/* --- CURRENTLY ISSUED / RETURN --- */}
                             {librarySubTab === 'issued' && (
                                 currentlyIssuedBooks.length === 0 ? (
                                     <div className="empty-sub-card">
@@ -4577,7 +4442,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* EVENTS - lightweight placeholder */}
                     {activeTab === 'events' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4593,7 +4457,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* NEW CHAT PICKER MODAL */}
                     {showNewChatPicker && (
                         <div className="modal-overlay" onClick={() => setShowNewChatPicker(false)}>
                             <div className="modal-content" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
@@ -4639,7 +4502,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* DEPARTMENT "REQUEST" MODAL */}
                     {showRequestModal && requestTargetStaff && (
                         <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
                             <div className="modal-content" style={{ maxWidth: '460px' }} onClick={(e) => e.stopPropagation()}>
@@ -4680,7 +4542,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* SCHOOL NEWS TAB - reuses live announcements data */}
                     {activeTab === 'exam-halls' && (
                         <div className="dash-card full-width exam-hall-staff-card">
                             <div className="card-header">
@@ -4819,7 +4680,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* DOWNLOADS TAB - reuses live submissions data */}
                     {activeTab === 'downloads' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4854,7 +4714,6 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {/* NEW: LEAVE REQUESTS TAB */}
                     {activeTab === 'leaves' && (
                         <div className="dash-card full-width">
                             <div className="card-header">
@@ -4870,7 +4729,6 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            {/* Leave Application Form */}
                             <form onSubmit={handleSubmitleaveRequest} className="assignment-form-grid" style={{ marginBottom: '30px' }}>
                                 <div>
                                     <label>Leave Type</label>

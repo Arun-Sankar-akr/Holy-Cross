@@ -4,7 +4,7 @@ import { db } from '../../service/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
-    Menu, X, Clock, FileText, User, Users, Ticket, AlertCircle, Layers, Check, XCircle,
+    Menu, X, Clock, FileText, User, Ticket, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
     ChevronRight, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
     Download, Sparkles, Eye, ChevronDown, BookMarked
@@ -24,7 +24,6 @@ export default function StudentDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [studentData, setStudentData] = useState({ name: 'Student', grade: '', section: '', rollNo: '', id: '' });
 
-    // Live Synced States
     const [timetableList, setTimetableList] = useState([]);
     const [liveStudentRecord, setLiveStudentRecord] = useState(null);
     const [announcementsList, setAnnouncementsList] = useState([]);
@@ -39,33 +38,23 @@ export default function StudentDashboard() {
     const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
     const [hallTicketMeta, setHallTicketMeta] = useState({ downloadedAt: null, ip: null });
 
-    // Selected Receipt state for printing the official fee receipt view
     const [selectedPrintReceipt, setSelectedPrintReceipt] = useState(null);
 
-    // Attendance Table Filters
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
 
-    // PDF Upload States
     const [uploadingTaskId, setUploadingTaskId] = useState(null);
     const [pdfBase64Map, setPdfBase64Map] = useState({});
     const [isCompressing, setIsCompressing] = useState(false);
 
-    // Subject/Exam filter on Marks tab
     const [selectedExamView, setSelectedExamView] = useState('All');
 
-    // Subject filter on Syllabus tab
     const [selectedSyllabusSubject, setSelectedSyllabusSubject] = useState('All');
 
-    // --- FEATURE 1: Dark / Light Mode Theme Toggle State ---
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('portalTheme') === 'dark');
 
-    // --- FEATURE 2: Header Notification Drawer Dropdown State ---
     const [showNotifDrawer, setShowNotifDrawer] = useState(false);
 
-    // --- Unread tracking for the Notification Bell & Exam Result badge ---
-    // A badge dot/count shows only for NEW items since the user last opened
-    // that section. Once opened, the badge hides until fresh data arrives.
     const [lastSeenAnnouncementsCount, setLastSeenAnnouncementsCount] = useState(
         () => Number(localStorage.getItem('lastSeenAnnouncementsCount')) || 0
     );
@@ -73,11 +62,8 @@ export default function StudentDashboard() {
         () => Number(localStorage.getItem('lastSeenMarksCount')) || 0
     );
 
-    // --- FEATURE 5: Interactive Quick Detail View Modal State ---
     const [detailModalContent, setDetailModalContent] = useState(null);
 
-    // --- FEATURE 6: Personal Scheduled Reminder Popup ---
-    // Stored locally in this browser. No Firebase Cloud Messaging or Cloud Functions.
     const [showReminderModal, setShowReminderModal] = useState(false);
     const [showReminderPopup, setShowReminderPopup] = useState(false);
     const [currentReminder, setCurrentReminder] = useState(null);
@@ -120,7 +106,6 @@ export default function StudentDashboard() {
         'Class Unit Test'
     ];
 
-    // Check scheduled reminders while the dashboard is open.
     useEffect(() => {
         const checkScheduledReminders = () => {
             try {
@@ -159,7 +144,6 @@ export default function StudentDashboard() {
         return () => clearInterval(reminderTimer);
     }, []);
 
-    // Feature 1 Theme Effect
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
         localStorage.setItem('portalTheme', darkMode ? 'dark' : 'light');
@@ -230,12 +214,9 @@ export default function StudentDashboard() {
             .trim();
     };
 
-    // Hall-ticket date helpers:
-    // Display dates consistently as DD-MM-YYYY and sort the timetable chronologically.
     const parseHallTicketDate = (value) => {
         if (!value) return null;
 
-        // Firestore Timestamp / JS Date
         if (value?.toDate && typeof value.toDate === 'function') {
             const d = value.toDate();
             return Number.isNaN(d.getTime()) ? null : d;
@@ -248,7 +229,6 @@ export default function StudentDashboard() {
         const raw = String(value).trim();
         if (!raw) return null;
 
-        // YYYY-MM-DD / YYYY/MM/DD
         let match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
         if (match) {
             const [, y, m, d] = match;
@@ -256,7 +236,6 @@ export default function StudentDashboard() {
             return Number.isNaN(date.getTime()) ? null : date;
         }
 
-        // DD-MM-YYYY / DD/MM/YYYY
         match = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
         if (match) {
             const [, d, m, y] = match;
@@ -284,7 +263,6 @@ export default function StudentDashboard() {
             const dateA = parseHallTicketDate(a.date || a.examDate);
             const dateB = parseHallTicketDate(b.date || b.examDate);
 
-            // Valid dates first, then undated rows.
             if (dateA && dateB) return dateA.getTime() - dateB.getTime();
             if (dateA) return -1;
             if (dateB) return 1;
@@ -297,7 +275,6 @@ export default function StudentDashboard() {
         return str.toString().toLowerCase().replace(/\s*(am|pm)\s*/g, '').replace(/[^0-9]/g, '');
     };
 
-    // Client-Side PDF Compressor (Max 500 KB Limit)
     const handlePdfUpload = (taskId, file) => {
         if (!file) return;
 
@@ -384,7 +361,6 @@ export default function StudentDashboard() {
         }
     };
 
-    // 1. Timetable listener
     useEffect(() => {
         const parseFirestoreDoc = (doc) => {
             const data = doc.data();
@@ -462,7 +438,6 @@ export default function StudentDashboard() {
         };
     }, []);
 
-    // 2. Real-time Live Synchronized Records & Fees Listeners
     useEffect(() => {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), (snap) => {
             const current = snap.docs.find(doc => {
@@ -524,7 +499,6 @@ export default function StudentDashboard() {
             setAssignmentsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // Syllabus documents uploaded by subject teachers, live synced
         const unsubSyllabus = onSnapshot(collection(db, 'class_syllabus'), (snap) => {
             setSyllabusList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -650,7 +624,6 @@ export default function StudentDashboard() {
         navigate('/erp/student');
     };
 
-    // Marks Calculations
     const publishedMarksObj = liveStudentRecord?.publishedMarks || liveStudentRecord?.marks || {};
     const marksEntries = Object.entries(publishedMarksObj).map(([key, val]) => {
         const score = typeof val === 'object' && val !== null ? val.score : Number(val);
@@ -693,8 +666,6 @@ export default function StudentDashboard() {
         }
     }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
-    // Calendar attendance helpers: green = present, red = absent,
-    // white = today / not marked / future / no attendance record.
     const getLocalDateKey = (date = new Date()) => {
         const d = date instanceof Date ? date : new Date(date);
         if (Number.isNaN(d.getTime())) return '';
@@ -709,16 +680,13 @@ export default function StudentDashboard() {
         if (!value) return '';
         const raw = String(value).trim();
 
-        // Firestore Timestamp / Date-like values
         if (typeof value?.toDate === 'function') {
             return getLocalDateKey(value.toDate());
         }
 
-        // YYYY-MM-DD (also safely handles ISO timestamps)
         const isoMatch = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
         if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
 
-        // DD/MM/YYYY or DD-MM-YYYY
         const dmyMatch = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/);
         if (dmyMatch) {
             return `${dmyMatch[3]}-${String(dmyMatch[2]).padStart(2, '0')}-${String(dmyMatch[1]).padStart(2, '0')}`;
@@ -733,8 +701,6 @@ export default function StudentDashboard() {
 
         const status = String(record.status || '').trim().toLowerCase();
 
-        // If multiple period records exist for the same date:
-        // absent wins, then present; unknown/pending is ignored.
         if (!map[dateKey]) {
             map[dateKey] = status;
         } else if (status === 'absent') {
@@ -757,7 +723,6 @@ export default function StudentDashboard() {
         return 'attendance-unmarked';
     };
 
-    // Attendance Calculations
     const attendanceLogs = [...attendanceRecords].sort((a, b) => {
         const dateA = new Date(`${a.date || "1970-01-01"}T00:00:00`);
         const dateB = new Date(`${b.date || "1970-01-01"}T00:00:00`);
@@ -1039,7 +1004,6 @@ export default function StudentDashboard() {
                             <h4 style={{ fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', marginBottom: '6px', color: '#334155' }}>Transaction Details</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.78rem' }}>
                                 <div><strong>Which Fees / Term:</strong> {selectedPrintReceipt.term || 'Term 1'}</div>
-                                {/* <div><strong>Transaction ID:</strong> TXN-{Math.floor(100000000 + Math.random() * 900000000)}</div> */}
                                 <div><strong>Payment Mode:</strong> Cash / Online Verified</div>
                                 <div><strong>Status:</strong> <span style={{ color: '#16a34a', fontWeight: 700 }}>SUCCESS</span></div>
                             </div>
@@ -1131,10 +1095,6 @@ export default function StudentDashboard() {
             )}
 
             <div className="staff-mobile-toggle-bar">
-                {/* <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-                    <span>Student Portal</span>
-                </button> */}
                 <button
                     className="menu-toggle-btn"
                     aria-label="Toggle Sidebar"
@@ -2278,7 +2238,6 @@ export default function StudentDashboard() {
                                             ? myHallTicketPublication.subjects
                                             : (Array.isArray(selectedHallTicket.subjects) ? selectedHallTicket.subjects : []));
 
-                                    // Always show the hall-ticket timetable in date order: 1 -> 31.
                                     const subjectRows = sortHallTicketSubjectRows(rawSubjectRows);
                                     const qrData = encodeURIComponent(`Roll No: ${rollNoValue} | Name: ${studentData.name} | Exam: ${examNameValue}`);
                                     const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=${qrData}`;
@@ -2600,7 +2559,6 @@ export default function StudentDashboard() {
                 </div>
             </div>
 
-            {/* SCHEDULE NEW REMINDER POPUP MODAL */}
             {showReminderModal && (
                 <div className="quick-preview-overlay">
                     <div className="quick-preview-modal" style={{ maxWidth: '420px' }}>
@@ -2668,7 +2626,6 @@ export default function StudentDashboard() {
                 </div>
             )}
 
-            {/* ALARM POPUP NOTIFICATION FOR DUE REMINDER */}
             {showReminderPopup && currentReminder && (
                 <div className="fee-alert-overlay">
                     <div className="fee-alert-modal" style={{ maxWidth: '380px', textAlign: 'center' }}>
