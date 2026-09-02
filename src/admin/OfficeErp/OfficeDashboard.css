@@ -1357,8 +1357,634 @@
 .hall-ticket-management {
     width: 100%
 }
-.office-manual-hall-btn { min-width: 150px; }
-#hall{
+
+.office-manual-hall-btn {
+    min-width: 150px;
+}
+
+#hall {
     font-size: 13px;
     font-weight: 600;
+}
+
+
+.classwise-timetable-section {
+    margin-top: 24px;
+}
+
+
+/* Header */
+
+.classwise-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 16px;
+}
+
+
+.classwise-kicker {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #059669;
+
+    font-size: .62rem;
+
+    font-weight: 800;
+
+    letter-spacing: 1.4px;
+}
+
+
+.classwise-header h4 {
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: 1rem;
+
+    font-weight: 850;
+}
+
+
+.classwise-header p {
+    margin: 4px 0 0;
+
+    color: #64748b;
+
+    font-size: .72rem;
+}
+
+
+/* Schedule count */
+
+.classwise-count {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    min-width: 72px;
+
+    padding: 9px 13px;
+
+    border-radius: 12px;
+
+    background: #ecfdf5;
+
+    border: 1px solid #bbf7d0;
+}
+
+
+.classwise-count strong {
+    color: #047857;
+
+    font-size: 1.05rem;
+
+    line-height: 1;
+}
+
+
+.classwise-count span {
+    margin-top: 3px;
+
+    color: #059669;
+
+    font-size: .58rem;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   CLASS FILTER
+   ========================================================= */
+
+.class-filter-bar {
+    display: flex;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+
+    padding: 10px;
+
+    margin-bottom: 18px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 13px;
+}
+
+
+.class-filter-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    min-height: 34px;
+
+    padding: 6px 11px;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 9px;
+
+    background: #fff;
+
+    color: #475569;
+
+    font-size: .68rem;
+
+    font-weight: 750;
+
+    cursor: pointer;
+
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        color .18s ease,
+        transform .18s ease;
+}
+
+
+.class-filter-btn:hover {
+    border-color: #86efac;
+
+    background: #f0fdf4;
+
+    color: #047857;
+
+    transform: translateY(-1px);
+}
+
+
+.class-filter-btn.active {
+    color: #fff;
+
+    background: #059669;
+
+    border-color: #059669;
+
+    box-shadow:
+        0 4px 12px rgba(5, 150, 105, .16);
+}
+
+
+.class-filter-btn b {
+    min-width: 19px;
+    height: 19px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 6px;
+
+    background: #f1f5f9;
+
+    color: #64748b;
+
+    font-size: .58rem;
+}
+
+
+.class-filter-btn.active b {
+    background: rgba(255, 255, 255, .18);
+
+    color: #fff;
+}
+
+
+/* =========================================================
+   CLASS CARD
+   ========================================================= */
+
+.classwise-timetable-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 16px;
+}
+
+
+.classwise-card {
+    overflow: hidden;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 15px;
+
+    background: #fff;
+
+    box-shadow:
+        0 5px 18px rgba(15, 23, 42, .045);
+
+    transition:
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+
+.classwise-card:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 9px 25px rgba(15, 23, 42, .07);
+}
+
+
+/* =========================================================
+   CLASS CARD HEADER
+   ========================================================= */
+
+.classwise-card-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 13px 16px;
+
+    background:
+        linear-gradient(90deg,
+            #f0fdf4,
+            #ffffff);
+
+    border-bottom: 1px solid #e2e8f0;
+}
+
+
+.class-title-area {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.class-icon {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 10px;
+
+    color: #047857;
+
+    background: #dcfce7;
+
+    border: 1px solid #bbf7d0;
+}
+
+
+.class-title-area span {
+    display: block;
+
+    margin-bottom: 2px;
+
+    color: #94a3b8;
+
+    font-size: .52rem;
+
+    font-weight: 800;
+
+    letter-spacing: 1px;
+}
+
+
+.class-title-area h3 {
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: .95rem;
+
+    font-weight: 850;
+}
+
+
+/* Exam count */
+
+.class-exam-count {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 5px 9px;
+
+    border-radius: 8px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e2e8f0;
+}
+
+
+.class-exam-count strong {
+    color: #047857;
+
+    font-size: .72rem;
+}
+
+
+.class-exam-count span {
+    color: #64748b;
+
+    font-size: .61rem;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   CLASS TABLE
+   ========================================================= */
+
+.classwise-exam-table {
+    margin: 0;
+}
+
+
+.classwise-exam-table th {
+    padding: 10px 12px;
+
+    background: #f8fafc;
+
+    color: #64748b;
+
+    font-size: .61rem;
+
+    letter-spacing: .35px;
+
+    text-transform: uppercase;
+}
+
+
+.classwise-exam-table td {
+    padding: 11px 12px;
+
+    font-size: .72rem;
+}
+
+
+.classwise-exam-table tbody tr:hover {
+    background: #f8fffc;
+}
+
+
+/* Number */
+
+.exam-number {
+    width: 23px;
+    height: 23px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 7px;
+
+    background: #f1f5f9;
+
+    color: #64748b;
+
+    font-size: .6rem;
+
+    font-weight: 800;
+}
+
+
+/* Date */
+
+.exam-date {
+    color: #0f172a;
+
+    white-space: nowrap;
+}
+
+
+/* Exam badge */
+
+.exam-name-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 4px 8px;
+
+    border-radius: 7px;
+
+    background: #eff6ff;
+
+    border: 1px solid #dbeafe;
+
+    color: #1d4ed8;
+
+    font-size: .62rem;
+
+    font-weight: 750;
+
+    white-space: nowrap;
+}
+
+
+/* Subject code */
+
+.classwise-exam-table code {
+    display: inline-block;
+
+    padding: 4px 7px;
+
+    border-radius: 6px;
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    font-size: .63rem;
+
+    font-weight: 700;
+}
+
+
+/* Subject */
+
+.classwise-exam-table td strong {
+    color: #1e293b;
+
+    font-weight: 800;
+}
+
+
+/* Time */
+
+.exam-time {
+    display: inline-flex;
+
+    padding: 4px 8px;
+
+    border-radius: 7px;
+
+    background: #fff7ed;
+
+    border: 1px solid #fed7aa;
+
+    color: #c2410c;
+
+    font-size: .62rem;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.classwise-empty {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 45px 20px;
+
+    border: 1px dashed #cbd5e1;
+
+    border-radius: 14px;
+
+    background: #f8fafc;
+
+    text-align: center;
+
+    color: #94a3b8;
+}
+
+
+.classwise-empty svg {
+    margin-bottom: 8px;
+
+    color: #94a3b8;
+}
+
+
+.classwise-empty h4 {
+    margin: 0;
+
+    color: #475569;
+
+    font-size: .85rem;
+}
+
+
+.classwise-empty p {
+    max-width: 340px;
+
+    margin: 5px 0 0;
+
+    color: #94a3b8;
+
+    font-size: .68rem;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .classwise-header {
+        align-items: flex-start;
+    }
+
+    .classwise-card-header {
+        padding: 11px 12px;
+    }
+
+    .classwise-exam-table {
+        min-width: 720px;
+    }
+
+    .classwise-timetable-list {
+        gap: 12px;
+    }
+
+    .classwise-count {
+        min-width: 60px;
+        padding: 7px 9px;
+    }
+}
+
+
+@media (max-width: 480px) {
+
+    .classwise-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .classwise-count {
+        flex-direction: row;
+
+        gap: 5px;
+
+        width: auto;
+    }
+
+    .class-filter-bar {
+        padding: 8px;
+
+        gap: 6px;
+    }
+
+    .class-filter-btn {
+        font-size: .61rem;
+
+        padding: 5px 8px;
+    }
+
+    .classwise-card-header {
+        padding: 10px;
+    }
+
+    .class-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .class-title-area h3 {
+        font-size: .85rem;
+    }
 }

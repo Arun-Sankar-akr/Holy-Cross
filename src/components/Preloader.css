@@ -1,90 +1,60 @@
-
-
 .preloader-overlay {
     position: fixed;
     inset: 0;
+
     width: 100%;
     height: 100vh;
-    min-height: 100vh;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
     overflow: hidden;
+
     z-index: 99999;
 
     background:
         radial-gradient(
-            circle at 50% 42%,
-            rgba(38, 93, 166, 0.24) 0%,
-            transparent 32%
-        ),
-        radial-gradient(
-            circle at 15% 20%,
-            rgba(44, 111, 190, 0.14) 0%,
-            transparent 30%
+            circle at center,
+            rgba(255, 255, 255, 0.13),
+            transparent 38%
         ),
         linear-gradient(
-            145deg,
-            #061426 0%,
-            #081b32 48%,
-            #04101f 100%
+            135deg,
+            #0756a3 0%,
+            #064b91 55%,
+            #063f7c 100%
         );
 
     opacity: 1;
     visibility: visible;
 
     transition:
-        opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.8s ease;
+        opacity 0.65s ease,
+        visibility 0.65s ease;
 }
 
 
-/* Subtle premium texture */
+/* =========================================================
+   SOFT BACKGROUND
+   ========================================================= */
 
 .preloader-overlay::before {
     content: "";
-    position: absolute;
-    inset: 0;
 
-    background-image:
-        linear-gradient(
-            rgba(255, 255, 255, 0.018) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.018) 1px,
-            transparent 1px
-        );
-
-    background-size: 55px 55px;
-
-    mask-image: linear-gradient(
-        to bottom,
-        transparent,
-        black 30%,
-        black 70%,
-        transparent
-    );
-
-    pointer-events: none;
-}
-
-
-/* Dark vignette */
-
-.preloader-overlay::after {
-    content: "";
     position: absolute;
     inset: 0;
 
     background:
         radial-gradient(
-            ellipse at center,
-            transparent 35%,
-            rgba(0, 0, 0, 0.48) 100%
+            circle at 20% 20%,
+            rgba(255, 255, 255, 0.08),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 80% 80%,
+            rgba(255, 210, 90, 0.07),
+            transparent 28%
         );
 
     pointer-events: none;
@@ -103,165 +73,14 @@
 
 
 /* =========================================================
-   AMBIENT LIGHT ORBS
+   MAIN CARD
    ========================================================= */
 
-.preloader-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(70px);
-    pointer-events: none;
-    opacity: 0.45;
-}
-
-.orb-one {
-    width: 320px;
-    height: 320px;
-
-    top: -150px;
-    left: -100px;
-
-    background: rgba(25, 91, 165, 0.32);
-
-    animation: ambientFloat 9s ease-in-out infinite;
-}
-
-.orb-two {
-    width: 300px;
-    height: 300px;
-
-    right: -120px;
-    bottom: -130px;
-
-    background: rgba(212, 166, 70, 0.10);
-
-    animation: ambientFloatReverse 11s ease-in-out infinite;
-}
-
-
-@keyframes ambientFloat {
-    0%,
-    100% {
-        transform: translate(0, 0);
-    }
-
-    50% {
-        transform: translate(50px, 35px);
-    }
-}
-
-
-@keyframes ambientFloatReverse {
-    0%,
-    100% {
-        transform: translate(0, 0);
-    }
-
-    50% {
-        transform: translate(-40px, -30px);
-    }
-}
-
-
-/* =========================================================
-   FLOATING PARTICLES
-   ========================================================= */
-
-.preloader-particles {
-    position: absolute;
-    inset: 0;
-
-    pointer-events: none;
-}
-
-.preloader-particles span {
-    position: absolute;
-
-    width: 3px;
-    height: 3px;
-
-    border-radius: 50%;
-
-    background: rgba(255, 255, 255, 0.55);
-
-    box-shadow:
-        0 0 8px rgba(255, 255, 255, 0.45);
-
-    animation: particleFloat 5s ease-in-out infinite;
-}
-
-.preloader-particles span:nth-child(1) {
-    left: 14%;
-    top: 24%;
-    animation-delay: 0s;
-}
-
-.preloader-particles span:nth-child(2) {
-    left: 82%;
-    top: 19%;
-    animation-delay: 1s;
-}
-
-.preloader-particles span:nth-child(3) {
-    left: 74%;
-    top: 72%;
-    animation-delay: 2s;
-}
-
-.preloader-particles span:nth-child(4) {
-    left: 19%;
-    top: 76%;
-    animation-delay: 1.5s;
-}
-
-.preloader-particles span:nth-child(5) {
-    left: 91%;
-    top: 46%;
-    animation-delay: 2.5s;
-}
-
-.preloader-particles span:nth-child(6) {
-    left: 8%;
-    top: 51%;
-    animation-delay: 3s;
-}
-
-.preloader-particles span:nth-child(7) {
-    left: 38%;
-    top: 13%;
-    animation-delay: 1.2s;
-}
-
-.preloader-particles span:nth-child(8) {
-    left: 61%;
-    top: 87%;
-    animation-delay: 2.8s;
-}
-
-
-@keyframes particleFloat {
-    0%,
-    100% {
-        opacity: 0.2;
-        transform: translateY(0) scale(0.8);
-    }
-
-    50% {
-        opacity: 0.9;
-        transform: translateY(-18px) scale(1.2);
-    }
-}
-
-
-/* =========================================================
-   CONTENT
-   ========================================================= */
-
-.preloader-content {
+.preloader-card {
     position: relative;
-    z-index: 5;
+    z-index: 2;
 
-    width: min(90%, 520px);
+    width: 300px;
 
     display: flex;
     flex-direction: column;
@@ -269,122 +88,115 @@
 
     text-align: center;
 
-    animation: contentReveal 1s cubic-bezier(0.22, 1, 0.36, 1);
+    padding: 28px 25px 25px;
+
+    border-radius: 18px;
+
+    background:
+        rgba(255, 255, 255, 0.075);
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    box-shadow:
+        0 25px 70px rgba(0, 25, 65, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+    backdrop-filter: blur(14px);
+
+    animation: cardAppear 0.7s ease both;
 }
 
 
-@keyframes contentReveal {
+@keyframes cardAppear {
     from {
         opacity: 0;
-        transform: translateY(25px);
+        transform: translateY(12px) scale(0.97);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 
 /* =========================================================
-   PREMIUM LOGO
+   LOGO
    ========================================================= */
 
-.premium-logo-wrapper {
+.logo-wrapper {
     position: relative;
 
-    width: 190px;
-    height: 190px;
+    width: 92px;
+    height: 92px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    margin-bottom: 28px;
+    margin-bottom: 17px;
 }
 
 
-/* Ambient logo glow */
+/* Soft glow */
 
-.logo-glow {
+.logo-halo {
     position: absolute;
 
-    width: 145px;
-    height: 145px;
+    width: 90px;
+    height: 90px;
 
     border-radius: 50%;
 
     background:
         radial-gradient(
             circle,
-            rgba(225, 185, 84, 0.20) 0%,
-            rgba(35, 107, 190, 0.10) 40%,
-            transparent 72%
+            rgba(255, 255, 255, 0.30),
+            transparent 68%
         );
 
-    filter: blur(14px);
+    filter: blur(8px);
 
-    animation: logoGlowPulse 3s ease-in-out infinite;
+    animation: haloPulse 2.8s ease-in-out infinite;
 }
 
 
-@keyframes logoGlowPulse {
+@keyframes haloPulse {
     0%,
     100% {
-        transform: scale(0.9);
         opacity: 0.55;
+        transform: scale(0.92);
     }
 
     50% {
-        transform: scale(1.12);
-        opacity: 1;
+        opacity: 0.9;
+        transform: scale(1.06);
     }
 }
 
 
-/* Glass logo card */
-
-.logo-card {
-    position: relative;
-
-    width: 138px;
-    height: 138px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.11),
-            rgba(255, 255, 255, 0.025)
-        );
-
-    border: 1px solid rgba(255, 255, 255, 0.16);
-
-    box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.45),
-        inset 0 1px 1px rgba(255, 255, 255, 0.16);
-
-    backdrop-filter: blur(10px);
-
-    animation: logoFloat 4s ease-in-out infinite;
-}
-
+/* White logo background */
 
 .preloader-logo {
-    width: 112px;
-    height: 112px;
+    position: relative;
+    z-index: 2;
+
+    width: 78px;
+    height: 78px;
+
+    padding: 6px;
 
     object-fit: contain;
 
-    filter:
-        drop-shadow(0 8px 18px rgba(0, 0, 0, 0.40));
+    border-radius: 50%;
 
-    animation: logoBreath 3.5s ease-in-out infinite;
+    background: rgba(255, 255, 255, 0.97);
+
+    box-shadow:
+        0 8px 22px rgba(0, 25, 60, 0.24),
+        0 0 0 2px rgba(255, 255, 255, 0.22);
+
+    animation: logoFloat 3.2s ease-in-out infinite;
 }
 
 
@@ -395,386 +207,107 @@
     }
 
     50% {
-        transform: translateY(-7px);
-    }
-}
-
-
-@keyframes logoBreath {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.035);
+        transform: translateY(-3px);
     }
 }
 
 
 /* =========================================================
-   ANIMATED RINGS
+   SCHOOL INFORMATION
    ========================================================= */
 
-.logo-ring {
-    position: absolute;
-
-    border-radius: 50%;
-
-    border: 1px solid rgba(224, 181, 75, 0.22);
-
-    pointer-events: none;
-}
-
-
-.ring-one {
-    width: 158px;
-    height: 158px;
-
-    border-top-color: rgba(224, 181, 75, 0.75);
-
-    animation: rotateRing 7s linear infinite;
-}
-
-
-.ring-two {
-    width: 174px;
-    height: 174px;
-
-    border-right-color: rgba(89, 148, 211, 0.55);
-
-    animation: rotateRingReverse 10s linear infinite;
-}
-
-
-.ring-three {
-    width: 190px;
-    height: 190px;
-
-    border-bottom-color: rgba(224, 181, 75, 0.28);
-
-    animation: rotateRing 14s linear infinite;
-}
-
-
-@keyframes rotateRing {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-
-@keyframes rotateRingReverse {
-    from {
-        transform: rotate(360deg);
-    }
-
-    to {
-        transform: rotate(0deg);
-    }
-}
-
-
-/* =========================================================
-   ORBIT DOTS
-   ========================================================= */
-
-.orbit-dot {
-    position: absolute;
-
-    width: 6px;
-    height: 6px;
-
-    border-radius: 50%;
-
-    background: #e1b94f;
-
-    box-shadow:
-        0 0 12px rgba(225, 185, 79, 0.9);
-}
-
-
-.orbit-one {
-    top: 7px;
-    left: 50%;
-
-    animation: orbitOne 7s linear infinite;
-    transform-origin: 0 88px;
-}
-
-
-.orbit-two {
-    bottom: 10px;
-    right: 50%;
-
-    width: 4px;
-    height: 4px;
-
-    background: rgba(137, 183, 226, 0.9);
-
-    animation: orbitTwo 10s linear infinite;
-    transform-origin: 0 -82px;
-}
-
-
-@keyframes orbitOne {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-
-@keyframes orbitTwo {
-    from {
-        transform: rotate(360deg);
-    }
-
-    to {
-        transform: rotate(0deg);
-    }
-}
-
-
-/* =========================================================
-   TYPOGRAPHY
-   ========================================================= */
-
-.preloader-text {
+.school-info {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
 
-/* Welcome label */
+/* Welcome */
 
-.eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 9px;
+.welcome {
+    margin-bottom: 6px;
 
-    margin-bottom: 10px;
-
-    color: #d8b45b;
+    color: #f3cd69;
 
     font-family:
+        "Poppins",
         "Outfit",
-        "Inter",
+        Arial,
         sans-serif;
 
-    font-size: 0.58rem;
+    font-size: 0.48rem;
+
     font-weight: 600;
 
-    letter-spacing: 4px;
+    letter-spacing: 3px;
 }
 
 
-.eyebrow span {
-    width: 18px;
-    height: 1px;
+/* School name */
 
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(216, 180, 91, 0.8)
-    );
-}
-
-
-.eyebrow span:last-child {
-    background: linear-gradient(
-        90deg,
-        rgba(216, 180, 91, 0.8),
-        transparent
-    );
-}
-
-
-/* Main title */
-
-.school-title {
+.school-info h1 {
     margin: 0;
-
-    color: #f8fafc;
-
-    font-family:
-        "Outfit",
-        "Inter",
-        sans-serif;
-
-    font-size: clamp(1.55rem, 4vw, 2rem);
-
-    font-weight: 400;
-
-    letter-spacing: 0.3px;
-
-    line-height: 1.2;
-
-    text-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.45);
-
-    animation: titleReveal 1s 0.2s both;
-}
-
-
-.school-title strong {
-    display: block;
-
-    margin-top: 4px;
-
-    font-size: 0.82em;
-
-    font-weight: 600;
 
     color: #ffffff;
 
-    letter-spacing: 0.8px;
+    font-family:
+        "Georgia",
+        "Times New Roman",
+        serif;
+
+    font-size: 1.65rem;
+
+    font-weight: 600;
+
+    letter-spacing: 0.5px;
+
+    line-height: 1.15;
 }
 
 
-@keyframes titleReveal {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-        letter-spacing: 4px;
-    }
+/* School type */
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-        letter-spacing: 0.3px;
-    }
-}
+.school-info p {
+    margin: 5px 0 0;
 
-
-/* =========================================================
-   DIVIDER
-   ========================================================= */
-
-.title-divider {
-    display: flex;
-    align-items: center;
-
-    gap: 9px;
-
-    margin: 16px 0 11px;
-}
-
-
-.divider-line {
-    width: 38px;
-    height: 1px;
-
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(219, 181, 81, 0.65)
-    );
-}
-
-
-.divider-line:last-child {
-    background: linear-gradient(
-        90deg,
-        rgba(219, 181, 81, 0.65),
-        transparent
-    );
-}
-
-
-.divider-diamond {
-    color: #dfb850;
-
-    font-size: 7px;
-
-    text-shadow:
-        0 0 8px rgba(223, 184, 80, 0.8);
-
-    animation: diamondPulse 2s ease-in-out infinite;
-}
-
-
-@keyframes diamondPulse {
-    0%,
-    100% {
-        opacity: 0.55;
-        transform: scale(0.8);
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1.15);
-    }
-}
-
-
-/* Subtitle */
-
-.school-subtitle {
-    margin: 0;
-
-    color: rgba(188, 208, 230, 0.72);
+    color: rgba(255, 255, 255, 0.88);
 
     font-family:
+        "Poppins",
         "Outfit",
-        "Inter",
+        Arial,
         sans-serif;
 
-    font-size: 0.67rem;
-
-    font-weight: 500;
-
-    letter-spacing: 3px;
-
-    text-transform: uppercase;
-}
-
-
-.school-subtitle b {
-    margin: 0 5px;
-
-    color: #d9b65a;
+    font-size: 0.65rem;
 
     font-weight: 400;
+
+    letter-spacing: 1px;
 }
 
 
-/* =========================================================
-   LOADER SECTION
-   ========================================================= */
+/* Location */
 
-.loader-section {
-    width: min(310px, 80vw);
-
-    margin-top: 36px;
-}
-
-
-/* Status */
-
-.loader-status {
+.location {
     display: flex;
-    justify-content: space-between;
     align-items: center;
 
-    margin-bottom: 9px;
+    gap: 7px;
 
-    color: rgba(188, 208, 230, 0.55);
+    margin-top: 10px;
+
+    color: rgba(255, 255, 255, 0.52);
 
     font-family:
+        "Poppins",
         "Outfit",
-        "Inter",
+        Arial,
         sans-serif;
 
-    font-size: 0.58rem;
+    font-size: 0.48rem;
+
+    font-weight: 500;
 
     letter-spacing: 1.5px;
 
@@ -782,37 +315,147 @@
 }
 
 
-/* Animated dots */
+.location span {
+    color: #f3cd69;
 
-.loader-dots {
-    display: flex;
-    gap: 3px;
+    font-size: 0.55rem;
 }
 
 
-.loader-dots i {
+/* =========================================================
+   LOADER
+   ========================================================= */
+
+.loader {
+    width: 100%;
+
+    margin-top: 25px;
+}
+
+
+/* Track */
+
+.loader-track {
+    position: relative;
+
+    width: 100%;
+    height: 2px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.15);
+}
+
+
+/* Moving progress */
+
+.loader-progress {
+    position: absolute;
+
+    left: -35%;
+    top: 0;
+
+    width: 35%;
+    height: 100%;
+
+    border-radius: inherit;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            #e8bd52,
+            #fff0a8,
+            #e8bd52
+        );
+
+    box-shadow:
+        0 0 9px rgba(235, 193, 82, 0.7);
+
+    animation:
+        loaderMove 1.45s
+        ease-in-out
+        infinite;
+}
+
+
+@keyframes loaderMove {
+    from {
+        left: -35%;
+    }
+
+    to {
+        left: 105%;
+    }
+}
+
+
+/* Loader text */
+
+.loader-text {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    margin-top: 8px;
+
+    color: rgba(255, 255, 255, 0.40);
+
+    font-family:
+        "Poppins",
+        "Outfit",
+        Arial,
+        sans-serif;
+
+    font-size: 0.45rem;
+
+    letter-spacing: 2px;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   LOADING DOTS
+   ========================================================= */
+
+.dots {
+    display: flex;
+
+    gap: 3px;
+
+    align-items: center;
+}
+
+
+.dots i {
     width: 3px;
     height: 3px;
 
     border-radius: 50%;
 
-    background: #dcb653;
+    background: #f1cb67;
 
-    animation: loadingDot 1.2s infinite ease-in-out;
+    animation: dotPulse 1.2s infinite;
 }
 
 
-.loader-dots i:nth-child(2) {
+.dots i:nth-child(2) {
     animation-delay: 0.15s;
 }
 
 
-.loader-dots i:nth-child(3) {
+.dots i:nth-child(3) {
     animation-delay: 0.3s;
 }
 
 
-@keyframes loadingDot {
+@keyframes dotPulse {
     0%,
     70%,
     100% {
@@ -822,170 +465,65 @@
 
     35% {
         opacity: 1;
-        transform: translateY(-3px);
+        transform: translateY(-2px);
     }
-}
-
-
-/* Loading track */
-
-.loading-bar-track {
-    position: relative;
-
-    width: 100%;
-    height: 4px;
-
-    overflow: hidden;
-
-    border-radius: 20px;
-
-    background: rgba(255, 255, 255, 0.07);
-
-    box-shadow:
-        inset 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-
-/* Progress */
-
-.loading-bar-progress {
-    position: absolute;
-
-    top: 0;
-    left: -45%;
-
-    width: 42%;
-    height: 100%;
-
-    border-radius: inherit;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            #b8892f,
-            #f1d16c,
-            #fff2b0,
-            #d2a943
-        );
-
-    box-shadow:
-        0 0 12px rgba(224, 183, 76, 0.55);
-
-    animation:
-        premiumLoading 1.6s
-        cubic-bezier(0.4, 0, 0.2, 1)
-        infinite;
-}
-
-
-.loading-bar-progress span {
-    position: absolute;
-
-    top: 0;
-    right: 0;
-
-    width: 18px;
-    height: 100%;
-
-    background: white;
-
-    filter: blur(4px);
-
-    opacity: 0.8;
-}
-
-
-@keyframes premiumLoading {
-    0% {
-        left: -45%;
-    }
-
-    100% {
-        left: 110%;
-    }
-}
-
-
-/* Bottom loader text */
-
-.loading-bottom {
-    display: flex;
-    justify-content: space-between;
-
-    margin-top: 9px;
-
-    color: rgba(147, 174, 202, 0.42);
-
-    font-family:
-        "Outfit",
-        "Inter",
-        sans-serif;
-
-    font-size: 0.5rem;
-
-    font-weight: 500;
-
-    letter-spacing: 2px;
-}
-
-
-.loading-percentage {
-    color: rgba(218, 181, 82, 0.65);
 }
 
 
 /* =========================================================
-   BOTTOM ACCENT
+   BOTTOM MARK
    ========================================================= */
 
-.preloader-bottom-line {
+.bottom-mark {
     position: absolute;
 
-    bottom: 0;
+    bottom: 20px;
     left: 50%;
 
-    width: 120px;
-    height: 1px;
+    z-index: 3;
+
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
 
     transform: translateX(-50%);
+}
+
+
+.bottom-mark span {
+    width: 28px;
+    height: 1px;
 
     background:
         linear-gradient(
             90deg,
             transparent,
-            rgba(220, 181, 78, 0.7),
-            transparent
+            rgba(255, 215, 105, 0.5)
         );
-
-    box-shadow:
-        0 0 14px rgba(220, 181, 78, 0.35);
 }
 
 
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
+.bottom-mark span:last-child {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 215, 105, 0.5),
+            transparent
+        );
+}
 
-@media (prefers-reduced-motion: reduce) {
 
-    .preloader-orb,
-    .preloader-particles span,
-    .logo-glow,
-    .logo-card,
-    .preloader-logo,
-    .logo-ring,
-    .orbit-dot,
-    .divider-diamond,
-    .loading-bar-progress,
-    .loader-dots i {
-        animation: none !important;
-    }
+.bottom-mark b {
+    width: 4px;
+    height: 4px;
 
-    .preloader-content,
-    .school-title {
-        animation: none;
-    }
+    border-radius: 50%;
+
+    background: #f0c75c;
+
+    box-shadow:
+        0 0 7px rgba(240, 199, 92, 0.65);
 }
 
 
@@ -993,85 +531,92 @@
    MOBILE
    ========================================================= */
 
-@media (max-width: 600px) {
+@media (max-width: 480px) {
 
-    .premium-logo-wrapper {
-        width: 160px;
-        height: 160px;
+    .preloader-card {
+        width: 270px;
 
-        margin-bottom: 23px;
+        padding:
+            24px
+            20px
+            22px;
+
+        border-radius: 16px;
     }
 
-    .logo-card {
-        width: 116px;
-        height: 116px;
+    .logo-wrapper {
+        width: 82px;
+        height: 82px;
+
+        margin-bottom: 14px;
+    }
+
+    .logo-halo {
+        width: 80px;
+        height: 80px;
     }
 
     .preloader-logo {
-        width: 94px;
-        height: 94px;
+        width: 70px;
+        height: 70px;
     }
 
-    .ring-one {
-        width: 134px;
-        height: 134px;
+    .school-info h1 {
+        font-size: 1.48rem;
     }
 
-    .ring-two {
-        width: 147px;
-        height: 147px;
+    .school-info p {
+        font-size: 0.58rem;
     }
 
-    .ring-three {
-        width: 160px;
-        height: 160px;
+    .location {
+        font-size: 0.43rem;
+        letter-spacing: 1.2px;
     }
 
-    .orbit-one {
-        transform-origin: 0 75px;
-    }
-
-    .orbit-two {
-        transform-origin: 0 -70px;
-    }
-
-    .school-title {
-        font-size: 1.45rem;
-    }
-
-    .school-subtitle {
-        font-size: 0.57rem;
-        letter-spacing: 2.2px;
-    }
-
-    .loader-section {
-        margin-top: 30px;
-        width: min(280px, 78vw);
+    .loader {
+        margin-top: 21px;
     }
 }
 
 
 /* =========================================================
-   VERY SMALL DEVICES
+   VERY SMALL SCREENS
    ========================================================= */
 
-@media (max-width: 360px) {
+@media (max-width: 340px) {
 
-    .premium-logo-wrapper {
-        transform: scale(0.9);
-        margin-bottom: 12px;
+    .preloader-card {
+        width: 250px;
+
+        padding: 21px 17px;
     }
 
-    .school-title {
-        font-size: 1.28rem;
+    .school-info h1 {
+        font-size: 1.35rem;
     }
 
-    .school-subtitle {
-        font-size: 0.52rem;
-        letter-spacing: 1.8px;
+    .school-info p {
+        font-size: 0.55rem;
     }
 
-    .loader-section {
-        margin-top: 24px;
+    .location {
+        font-size: 0.39rem;
+    }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .preloader-card,
+    .logo-halo,
+    .preloader-logo,
+    .loader-progress,
+    .dots i {
+        animation: none !important;
     }
 }

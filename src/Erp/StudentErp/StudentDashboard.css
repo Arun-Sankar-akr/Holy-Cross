@@ -73,7 +73,7 @@
 [data-theme='dark'] .empty-sub-card,
 [data-theme='dark'] td,
 [data-theme='dark'] .empty-state,
-[data-theme='dark'] .hall-ticket-card ,
+[data-theme='dark'] .hall-ticket-card,
 [data-theme='dark'] .staff-user-profile {
   background-color: #241f38 !important;
   color: #f2f1fb !important;
@@ -281,6 +281,7 @@ td {
   flex: 1;
   padding: 10px;
   background-color: #ffff;
+  margin-top: 20px;
   display: flex;
   border-radius: 24px;
   flex-direction: column;
@@ -899,11 +900,22 @@ td {
 
   .staff-mobile-toggle-bar {
     display: flex;
+    flex-direction: row-reverse;
+  }
+
+  .portal-status-pill {
+    text-align: center;
+    padding: 5px;
+    width: 100px;
+    background: #4273e6;
+    border-radius: 200px;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
   }
 
   .staff-sidebar {
     position: fixed;
-    top: 50px;
+    top: 59px;
     bottom: 0;
     left: 0;
     border-radius: 0;
@@ -1591,7 +1603,7 @@ td {
 
 @media (max-width: 400px) {
   .staff-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 3fr;
   }
 
   .ps-att-minicards {

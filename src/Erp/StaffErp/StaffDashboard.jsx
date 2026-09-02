@@ -118,6 +118,8 @@ export default function StaffDashboard() {
     const [scannerStatus, setScannerStatus] = useState('');
     const [scannerResult, setScannerResult] = useState(null);
     const hallTicketScannerRef = useRef(null);
+    const scanProcessingRef = useRef(false);
+    const scanPopupTimerRef = useRef(null);
 
     const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
     const [studentMarks, setStudentMarks] = useState({});
@@ -621,6 +623,21 @@ export default function StaffDashboard() {
         return idMatch || !assigned || !current || assigned === current || assigned.includes(current) || current.includes(assigned);
     });
 
+    // Live progress for the hall currently open in the scanner (re-derived every render
+    // from the Firestore-synced allocations, so it updates right after each verified scan).
+    const liveActiveExamDuty = activeExamDuty
+        ? (myExamHallDuties.find(d => d.id === activeExamDuty.id) || activeExamDuty)
+        : null;
+    const scanTotalAllocated = liveActiveExamDuty
+        ? (Array.isArray(liveActiveExamDuty.studentList) && liveActiveExamDuty.studentList.length > 0
+            ? liveActiveExamDuty.studentList.length
+            : (liveActiveExamDuty.studentIds?.length || liveActiveExamDuty.studentCount || 0))
+        : 0;
+    const scanVerifiedCount = liveActiveExamDuty && Array.isArray(liveActiveExamDuty.studentList)
+        ? liveActiveExamDuty.studentList.filter(s => s.verificationStatus === 'Verified').length
+        : 0;
+    const allStudentsScanned = scanTotalAllocated > 0 && scanVerifiedCount >= scanTotalAllocated;
+
     const parseHallTicketQr = (rawValue) => {
         const raw = String(rawValue || '').trim();
         if (!raw) return null;
@@ -631,8 +648,21 @@ export default function StaffDashboard() {
         try { const parsed = JSON.parse(decodeURIComponent(raw)); return { rollNo: parsed.rollNo || parsed.admissionNo || '', name: parsed.name || '', exam: parsed.exam || parsed.examName || '', raw }; } catch { return { rollNo: raw, name: '', exam: '', raw }; }
     };
 
-    const openHallTicketScanner = (duty) => { setActiveExamDuty(duty); setScannerResult(null); setScannerStatus('Starting camera...'); setShowHallTicketScanner(true); };
-    const closeHallTicketScanner = () => { setShowHallTicketScanner(false); setScannerStatus(''); setScannerResult(null); };
+    const openHallTicketScanner = (duty) => {
+        setActiveExamDuty(duty);
+        setScannerResult(null);
+        setScannerStatus('Starting camera...');
+        scanProcessingRef.current = false;
+        if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
+        setShowHallTicketScanner(true);
+    };
+    const closeHallTicketScanner = () => {
+        if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
+        scanProcessingRef.current = false;
+        setShowHallTicketScanner(false);
+        setScannerStatus('');
+        setScannerResult(null);
+    };
 
     const verifyHallTicketFromQr = async (decodedText) => {
         const qr = parseHallTicketQr(decodedText);
@@ -674,17 +704,48 @@ export default function StaffDashboard() {
 
     useEffect(() => {
         if (!showHallTicketScanner) return undefined;
+        if (allStudentsScanned) { setScannerStatus('All allocated students have already been verified for this hall.'); return undefined; }
         let cancelled = false; const scanner = new Html5Qrcode('hall-ticket-qr-reader'); hallTicketScannerRef.current = scanner;
         const startScanner = async () => {
             try { const cameras = await Html5Qrcode.getCameras(); if (!cameras?.length) throw new Error('No camera found'); const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0]; if (cancelled) return;
-                await scanner.start(preferred.id, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, async (decodedText) => { const verified = await verifyHallTicketFromQr(decodedText); try { if (verified && scanner.isScanning) await scanner.stop(); } catch {} }, () => {});
+                await scanner.start(preferred.id, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, async (decodedText) => {
+                    // Ignore extra decode callbacks while we're already processing / showing the result popup
+                    if (scanProcessingRef.current) return;
+                    scanProcessingRef.current = true;
+                    setScannerStatus('Verifying student...');
+                    await verifyHallTicketFromQr(decodedText);
+                    if (scanPopupTimerRef.current) clearTimeout(scanPopupTimerRef.current);
+                    scanPopupTimerRef.current = setTimeout(() => {
+                        scanPopupTimerRef.current = null;
+                        setScannerResult(null);
+                        scanProcessingRef.current = false;
+                        setScannerStatus('Point the camera at the next student\'s hall-ticket QR code');
+                    }, 1800);
+                }, () => {});
                 if (!cancelled) setScannerStatus('Point the camera at the student hall-ticket QR code');
             } catch (error) { console.error('Unable to start hall-ticket QR scanner:', error); if (!cancelled) setScannerStatus('Camera unavailable. Please allow camera permission and try again.'); }
         };
         const timer = setTimeout(startScanner, 100);
-        return () => { cancelled = true; clearTimeout(timer); const activeScanner = hallTicketScannerRef.current; hallTicketScannerRef.current = null; if (activeScanner) activeScanner.stop().catch(() => {}).finally(() => activeScanner.clear()); };
+        return () => {
+            cancelled = true; clearTimeout(timer);
+            if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
+            const activeScanner = hallTicketScannerRef.current; hallTicketScannerRef.current = null;
+            if (activeScanner) activeScanner.stop().catch(() => {}).finally(() => activeScanner.clear());
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showHallTicketScanner]);
+
+    // Once every allocated student for this hall has been verified, stop the camera
+    // and let the "All Students Verified" panel (with its Close button) take over.
+    useEffect(() => {
+        if (!showHallTicketScanner || !allStudentsScanned) return;
+        if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
+        scanProcessingRef.current = false;
+        setScannerResult(null);
+        setScannerStatus('All allocated students have been verified for this hall.');
+        const activeScanner = hallTicketScannerRef.current;
+        if (activeScanner && activeScanner.isScanning) activeScanner.stop().catch(() => {});
+    }, [allStudentsScanned, showHallTicketScanner]);
 
     const myLeaveRequests = staffLeaveList.filter(item =>
         (staffData.staffId && item.staffId === staffData.staffId) ||
@@ -4674,13 +4735,64 @@ export default function StaffDashboard() {
                         <div className="modal-overlay" onClick={closeHallTicketScanner}>
                             <div className="modal-content" style={{ maxWidth: '560px', width: '95%', padding: '20px' }} onClick={(e) => e.stopPropagation()}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                                    <div><h3 style={{ margin: 0 }}>Scan Student Hall Ticket</h3><p style={{ margin: '5px 0 0', color: 'var(--text-muted)' }}>{activeExamDuty?.examName || 'Examination'} · {activeExamDuty?.hallNo || 'Hall'}</p></div>
+                                    <div>
+                                        <h3 style={{ margin: 0 }}>Scan Student Hall Ticket</h3>
+                                        <p style={{ margin: '5px 0 0', color: 'var(--text-muted)' }}>
+                                            {activeExamDuty?.examName || 'Examination'} · {activeExamDuty?.hallNo || 'Hall'}
+                                            {scanTotalAllocated > 0 && <> · {scanVerifiedCount}/{scanTotalAllocated} Verified</>}
+                                        </p>
+                                    </div>
                                     <button type="button" className="btn-secondary" onClick={closeHallTicketScanner}><X size={16} /> Close</button>
                                 </div>
-                                <div id="hall-ticket-qr-reader" style={{ width: '100%', minHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#0f172a' }} />
+
+                                {!allStudentsScanned ? (
+                                    <div style={{ position: 'relative' }}>
+                                        <div id="hall-ticket-qr-reader" style={{ width: '100%', minHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#0f172a' }} />
+                                        {scannerResult && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    background: 'rgba(15, 23, 42, 0.82)', borderRadius: '12px', padding: '10px'
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        padding: '22px 30px', borderRadius: '14px', textAlign: 'center', minWidth: '220px',
+                                                        background: scannerResult.ok ? '#dcfce7' : '#fee2e2',
+                                                        color: scannerResult.ok ? '#166534' : '#991b1b',
+                                                        boxShadow: '0 10px 30px rgba(0,0,0,0.35)'
+                                                    }}
+                                                >
+                                                    {scannerResult.ok ? <CheckCircle size={40} /> : <X size={40} />}
+                                                    <div style={{ marginTop: '6px', fontSize: '1.1rem', fontWeight: 800, letterSpacing: '0.03em' }}>
+                                                        {scannerResult.ok ? 'VERIFIED' : 'NOT VERIFIED'}
+                                                    </div>
+                                                    <div style={{ marginTop: '4px', fontSize: '0.82rem', fontWeight: 500 }}>{scannerResult.message}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div
+                                        style={{
+                                            minHeight: '280px', borderRadius: '12px', display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', gap: '8px', textAlign: 'center',
+                                            background: '#dcfce7', color: '#166534', padding: '24px'
+                                        }}
+                                    >
+                                        <CheckCircle size={46} />
+                                        <h4 style={{ margin: '6px 0 0' }}>All Students Verified</h4>
+                                        <p style={{ margin: 0, fontSize: '0.85rem', maxWidth: '360px' }}>
+                                            Every student allocated to this hall ({scanVerifiedCount}/{scanTotalAllocated}) has been scanned and marked Present.
+                                        </p>
+                                        <button type="button" className="btn-primary" style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }} onClick={closeHallTicketScanner}>
+                                            <X size={16} /> Close Scanner
+                                        </button>
+                                    </div>
+                                )}
+
                                 <p style={{ textAlign: 'center', margin: '12px 0', fontSize: '0.85rem' }}>{scannerStatus}</p>
-                                {scannerResult && <div style={{ padding: '14px', borderRadius: '10px', background: scannerResult.ok ? '#dcfce7' : '#fee2e2', color: scannerResult.ok ? '#166534' : '#991b1b' }}><strong>{scannerResult.ok ? '✓ VERIFIED' : '✕ NOT VERIFIED'}</strong><div style={{ marginTop: '5px' }}>{scannerResult.message}</div></div>}
-                                <div style={{ marginTop: '14px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Only students included in this invigilation duty allocation can be verified. A successful scan marks the student <strong>Present</strong> and <strong>Verified</strong>.</div>
+                                <div style={{ marginTop: '14px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Only students included in this invigilation duty allocation can be verified. A successful scan marks the student <strong>Present</strong> and <strong>Verified</strong>, then the scanner automatically gets ready for the next student.</div>
                             </div>
                         </div>
                     )}

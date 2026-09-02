@@ -33,6 +33,9 @@ export default function OfficeDashboard() {
     const [timetableTime, setTimetableTime] = useState('09:30 AM - 12:30 PM');
     const [examTimetables, setExamTimetables] = useState([]);
 
+    const [selectedTimetableClass, setSelectedTimetableClass] = useState('all');
+
+
     // Sidebar Submenu Open/Close Toggle State for Exam Halls
     const [isExamMenuOpen, setIsExamMenuOpen] = useState(true);
 
@@ -332,7 +335,7 @@ export default function OfficeDashboard() {
         const stClass = student.className || student.grade || allocation.targetClass || '';
         const currentExam = allocation.examName || hallTicketExam || '1st Mid-Term Exam';
 
-        const matchedTimetable = examTimetables.filter(t => 
+        const matchedTimetable = examTimetables.filter(t =>
             t.className === stClass && t.examName === currentExam
         );
 
@@ -933,42 +936,279 @@ export default function OfficeDashboard() {
                                 </div>
                             </form>
 
-                            <h4>Published Exam Timetables ({examTimetables.length})</h4>
-                            <div className="table-responsive">
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Class</th>
-                                            <th>Exam</th>
-                                            <th>Subject Code</th>
-                                            <th>Subject</th>
-                                            <th>Date</th>
-                                            <th>Timing</th>
-                                            <th style={{ textAlign: 'right' }}>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {examTimetables.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No timetables published yet.</td>
-                                            </tr>
-                                        ) : (
-                                            examTimetables.map(item => (
-                                                <tr key={item.id}>
-                                                    <td><strong>{item.className}</strong></td>
-                                                    <td><span className="task-target-tag">{item.examName}</span></td>
-                                                    <td>{item.subjectCode || '—'}</td>
-                                                    <td><strong>{item.subject}</strong></td>
-                                                    <td>{item.examDate}</td>
-                                                    <td>{item.examTime || '09:30 AM - 12:30 PM'}</td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button className="delete-task-btn" onClick={() => handleDelete('exam_timetables', item.id)} title="Delete Entry"><X size={14} /></button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                            {/* CLASS-WISE EXAM TIMETABLE */}
+                            <div className="classwise-timetable-section">
+
+                                <div className="classwise-header">
+                                    <div>
+                                        <span className="classwise-kicker">
+                                            TIMETABLE OVERVIEW
+                                        </span>
+
+                                        <h4>
+                                            Class-wise Exam Timetable
+                                        </h4>
+
+                                        <p>
+                                            View examination schedules separately for each class.
+                                        </p>
+                                    </div>
+
+                                    <div className="classwise-count">
+                                        <strong>{examTimetables.length}</strong>
+                                        <span>Schedules</span>
+                                    </div>
+                                </div>
+
+
+                                {/* CLASS FILTER */}
+
+                                <div className="class-filter-bar">
+
+                                    <button
+                                        type="button"
+                                        className={`class-filter-btn ${selectedTimetableClass === 'all'
+                                            ? 'active'
+                                            : ''
+                                            }`}
+                                        onClick={() => setSelectedTimetableClass('all')}
+                                    >
+                                        <span>All Classes</span>
+                                        <b>{examTimetables.length}</b>
+                                    </button>
+
+
+                                    {uniqueClasses.map(cls => {
+
+                                        const classCount = examTimetables.filter(
+                                            item => item.className === cls
+                                        ).length;
+
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={cls}
+                                                className={`class-filter-btn ${selectedTimetableClass === cls
+                                                    ? 'active'
+                                                    : ''
+                                                    }`}
+                                                onClick={() =>
+                                                    setSelectedTimetableClass(cls)
+                                                }
+                                            >
+                                                <span>{cls}</span>
+                                                <b>{classCount}</b>
+                                            </button>
+                                        );
+                                    })}
+
+                                </div>
+
+
+                                {/* CLASS-WISE TIMETABLE */}
+
+                                {examTimetables.length === 0 ? (
+
+                                    <div className="classwise-empty">
+
+                                        <CalendarDays size={34} />
+
+                                        <h4>No Timetables Yet</h4>
+
+                                        <p>
+                                            Add an examination schedule above to
+                                            display the class-wise timetable.
+                                        </p>
+
+                                    </div>
+
+                                ) : (
+
+                                    <div className="classwise-timetable-list">
+
+                                        {uniqueClasses
+                                            .filter(cls =>
+                                                selectedTimetableClass === 'all' ||
+                                                selectedTimetableClass === cls
+                                            )
+                                            .map(cls => {
+
+                                                const classTimetables =
+                                                    examTimetables
+                                                        .filter(
+                                                            item =>
+                                                                item.className === cls
+                                                        )
+                                                        .sort(
+                                                            (a, b) =>
+                                                                new Date(a.examDate) -
+                                                                new Date(b.examDate)
+                                                        );
+
+                                                if (classTimetables.length === 0) {
+                                                    return null;
+                                                }
+
+                                                return (
+
+                                                    <div
+                                                        className="classwise-card"
+                                                        key={cls}
+                                                    >
+
+                                                        {/* CLASS HEADER */}
+
+                                                        <div className="classwise-card-header">
+
+                                                            <div className="class-title-area">
+
+                                                                <div className="class-icon">
+                                                                    <GraduationCap size={20} />
+                                                                </div>
+
+                                                                <div>
+                                                                    <span>
+                                                                        CLASS
+                                                                    </span>
+
+                                                                    <h3>
+                                                                        {cls}
+                                                                    </h3>
+                                                                </div>
+
+                                                            </div>
+
+
+                                                            <div className="class-exam-count">
+                                                                <strong>
+                                                                    {classTimetables.length}
+                                                                </strong>
+
+                                                                <span>
+                                                                    {classTimetables.length === 1
+                                                                        ? 'Exam'
+                                                                        : 'Exams'}
+                                                                </span>
+                                                            </div>
+
+                                                        </div>
+
+
+                                                        {/* EXAM TABLE */}
+
+                                                        <div className="table-responsive">
+
+                                                            <table className="custom-table classwise-exam-table">
+
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>#</th>
+                                                                        <th>Date</th>
+                                                                        <th>Exam</th>
+                                                                        <th>Subject Code</th>
+                                                                        <th>Subject</th>
+                                                                        <th>Timing</th>
+                                                                        <th>Action</th>
+                                                                    </tr>
+                                                                </thead>
+
+
+                                                                <tbody>
+
+                                                                    {classTimetables.map(
+                                                                        (item, index) => (
+
+                                                                            <tr key={item.id}>
+
+                                                                                <td>
+                                                                                    <span className="exam-number">
+                                                                                        {index + 1}
+                                                                                    </span>
+                                                                                </td>
+
+
+                                                                                <td>
+                                                                                    <strong className="exam-date">
+                                                                                        {item.examDate
+                                                                                            ? new Date(
+                                                                                                item.examDate
+                                                                                            ).toLocaleDateString(
+                                                                                                'en-GB'
+                                                                                            )
+                                                                                            : '—'}
+                                                                                    </strong>
+                                                                                </td>
+
+
+                                                                                <td>
+                                                                                    <span className="exam-name-badge">
+                                                                                        {item.examName ||
+                                                                                            'Examination'}
+                                                                                    </span>
+                                                                                </td>
+
+
+                                                                                <td>
+                                                                                    <code>
+                                                                                        {item.subjectCode ||
+                                                                                            '—'}
+                                                                                    </code>
+                                                                                </td>
+
+
+                                                                                <td>
+                                                                                    <strong>
+                                                                                        {item.subject}
+                                                                                    </strong>
+                                                                                </td>
+
+
+                                                                                <td>
+                                                                                    <span className="exam-time">
+                                                                                        {item.examTime ||
+                                                                                            '09:30 AM - 12:30 PM'}
+                                                                                    </span>
+                                                                                </td>
+
+
+                                                                                <td>
+
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="delete-task-btn"
+                                                                                        onClick={() =>
+                                                                                            handleDelete(
+                                                                                                'exam_timetables',
+                                                                                                item.id
+                                                                                            )
+                                                                                        }
+                                                                                        title="Delete Timetable"
+                                                                                    >
+                                                                                        <Trash2 size={14} />
+                                                                                    </button>
+
+                                                                                </td>
+
+                                                                            </tr>
+
+                                                                        )
+                                                                    )}
+
+                                                                </tbody>
+
+                                                            </table>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                );
+                                            })}
+
+                                    </div>
+
+                                )}
+
                             </div>
                         </div>
                     )}

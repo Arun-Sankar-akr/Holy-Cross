@@ -1039,7 +1039,7 @@ export default function StudentDashboard() {
                             <h4 style={{ fontSize: '0.8rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', marginBottom: '6px', color: '#334155' }}>Transaction Details</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.78rem' }}>
                                 <div><strong>Which Fees / Term:</strong> {selectedPrintReceipt.term || 'Term 1'}</div>
-                                <div><strong>Transaction ID:</strong> TXN-{Math.floor(100000000 + Math.random() * 900000000)}</div>
+                                {/* <div><strong>Transaction ID:</strong> TXN-{Math.floor(100000000 + Math.random() * 900000000)}</div> */}
                                 <div><strong>Payment Mode:</strong> Cash / Online Verified</div>
                                 <div><strong>Status:</strong> <span style={{ color: '#16a34a', fontWeight: 700 }}>SUCCESS</span></div>
                             </div>
@@ -1131,9 +1131,16 @@ export default function StudentDashboard() {
             )}
 
             <div className="staff-mobile-toggle-bar">
-                <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                {/* <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
                     <span>Student Portal</span>
+                </button> */}
+                <button
+                    className="menu-toggle-btn"
+                    aria-label="Toggle Sidebar"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                >
+                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
                 <div className="portal-status-pill">
                     <span className={`status-dot ${currentAttendanceStatus}`} />
@@ -1559,9 +1566,9 @@ export default function StudentDashboard() {
                                                     const status = attendanceByDate[dateKey];
                                                     const statusLabel =
                                                         attendanceClass === 'attendance-present' ? 'Present' :
-                                                        attendanceClass === 'attendance-absent' ? 'Absent' :
-                                                        attendanceClass === 'today' ? 'Today / Attendance not marked' :
-                                                        'Attendance not marked';
+                                                            attendanceClass === 'attendance-absent' ? 'Absent' :
+                                                                attendanceClass === 'today' ? 'Today / Attendance not marked' :
+                                                                    'Attendance not marked';
 
                                                     return (
                                                         <span
@@ -1930,38 +1937,38 @@ export default function StudentDashboard() {
                                         {Object.entries(syllabusBySubject)
                                             .filter(([subject]) => selectedSyllabusSubject === 'All' || subject === selectedSyllabusSubject)
                                             .map(([subject, items]) => (
-                                            <div key={subject} className="syllabus-subject-group">
-                                                <h4 className="syllabus-subject-heading">
-                                                    <BookMarked size={15} /> {subject}
-                                                </h4>
-                                                <div className="syllabus-items-list">
-                                                    {items.map(item => (
-                                                        <div key={item.id} className="syllabus-item-row">
-                                                            <div className="syllabus-item-icon">
-                                                                <FileText size={18} />
+                                                <div key={subject} className="syllabus-subject-group">
+                                                    <h4 className="syllabus-subject-heading">
+                                                        <BookMarked size={15} /> {subject}
+                                                    </h4>
+                                                    <div className="syllabus-items-list">
+                                                        {items.map(item => (
+                                                            <div key={item.id} className="syllabus-item-row">
+                                                                <div className="syllabus-item-icon">
+                                                                    <FileText size={18} />
+                                                                </div>
+                                                                <div className="syllabus-item-info">
+                                                                    <strong>{item.title}</strong>
+                                                                    {item.description && <p>{item.description}</p>}
+                                                                    <span className="syllabus-item-meta">
+                                                                        By {item.staffName || 'Teacher'}
+                                                                        {item.sectionName ? ` • Section ${item.sectionName}` : ''}
+                                                                    </span>
+                                                                </div>
+                                                                {item.pdfData && (
+                                                                    <a
+                                                                        href={item.pdfData}
+                                                                        download={item.fileName || `${item.title || 'Syllabus'}.pdf`}
+                                                                        className="view-pdf-link"
+                                                                    >
+                                                                        <Download size={13} /> Download
+                                                                    </a>
+                                                                )}
                                                             </div>
-                                                            <div className="syllabus-item-info">
-                                                                <strong>{item.title}</strong>
-                                                                {item.description && <p>{item.description}</p>}
-                                                                <span className="syllabus-item-meta">
-                                                                    By {item.staffName || 'Teacher'}
-                                                                    {item.sectionName ? ` • Section ${item.sectionName}` : ''}
-                                                                </span>
-                                                            </div>
-                                                            {item.pdfData && (
-                                                                <a
-                                                                    href={item.pdfData}
-                                                                    download={item.fileName || `${item.title || 'Syllabus'}.pdf`}
-                                                                    className="view-pdf-link"
-                                                                >
-                                                                    <Download size={13} /> Download
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 )}
                             </div>
@@ -2391,15 +2398,16 @@ export default function StudentDashboard() {
                                                     <div className="ht-notes">
                                                         <h4>Important Instructions</h4>
                                                         <ol>
-                                                            <li>For getting entry into the examination hall, candidate must bring the original Identity Card issued by the school along with the examination hall ticket and a valid photo identity proof.</li>
-                                                            <li>Carrying Mobile Phones, Cameras, bags, calculators and any other electronic gadgets etc. are not allowed in the Examination Center.</li>
-                                                            <li>Theory Examination timings and reporting time will be as communicated by the office. The candidates must report minimum one hour before the commencement of the exam.</li>
-                                                            <li>Candidate will not be allowed to appear in the exam if he/she reports after commencement of the exam.</li>
+                                                            <li>Students must bring their <strong>School Identity Card</strong> along with the Examination Hall Ticket to enter the examination hall.</li>
+                                                            <li>Students are <strong>not permitted</strong> to bring smart watches, calculators, electronic gadgets, bags, written materials, or any other unauthorized items into the examination hall.</li>
+                                                            <li>Students are <strong>only permitted</strong> to bring <strong>Hall Ticket, Pen, Pencils, Scientific Calculators (if needed)</strong> for respective exams items into the examination hall.</li>
+                                                            <li>Students must report to the examination venue at least <strong>15 minutes before</strong> the scheduled commencement of the examination.</li>
+                                                            <li>Students arriving after the commencement of the examination may <strong>not be permitted to enter</strong> the examination hall.</li>
                                                         </ol>
 
                                                         <h4 style={{ marginTop: 16 }}>Disclaimer</h4>
                                                         <p className="ht-disclaimer">
-                                                            {HALL_TICKET_SCHOOL_NAME} is not responsible for any inadvertent error that may have crept in the Hall Ticket.
+                                                            Students are requested to verify all details printed on the Hall Ticket. Any discrepancy should be reported to the school office immediately. The school will not be responsible for errors not brought to its notice in time.
                                                         </p>
 
                                                         <div className="ht-principal-row">

@@ -5,100 +5,70 @@ import "./Preloader.css";
 export default function Preloader({ fadeOut }) {
     return (
         <div className={`preloader-overlay ${fadeOut ? "fade-out" : ""}`}>
-            {/* Ambient background */}
-            <div className="preloader-orb orb-one"></div>
-            <div className="preloader-orb orb-two"></div>
+            <div className="preloader-card">
 
-            {/* Floating particles */}
-            <div className="preloader-particles">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+                {/* Logo */}
+                <div className="logo-wrapper">
+                    <div className="logo-halo"></div>
 
-            <div className="preloader-content">
-
-                {/* Premium Logo */}
-                <div className="premium-logo-wrapper">
-
-                    <div className="logo-ring ring-one"></div>
-                    <div className="logo-ring ring-two"></div>
-                    <div className="logo-ring ring-three"></div>
-
-                    <div className="logo-glow"></div>
-
-                    <div className="logo-card">
-                        <img
-                            src={logo}
-                            alt="Holy Cross Matriculation Higher Secondary School crest"
-                            className="preloader-logo"
-                        />
-                    </div>
-
-                    <div className="orbit-dot orbit-one"></div>
-                    <div className="orbit-dot orbit-two"></div>
+                    <img
+                        src={logo}
+                        alt="Holy Cross Matriculation Higher Secondary School"
+                        className="preloader-logo"
+                    />
                 </div>
 
-                {/* School Information */}
-                <div className="preloader-text">
+                {/* School Name */}
+                <div className="school-info">
 
-                    <div className="eyebrow">
-                        <span></span>
+                    <span className="welcome">
                         WELCOME
-                        <span></span>
-                    </div>
+                    </span>
 
-                    <h1 className="school-title">
+                    <h1>
                         Holy Cross
-                        <strong>Matric. Hr. Sec. School</strong>
                     </h1>
 
-                    <div className="title-divider">
-                        <span className="divider-line"></span>
-                        <span className="divider-diamond">◆</span>
-                        <span className="divider-line"></span>
+                    <p>
+                        Matric. Hr. Sec. School
+                    </p>
+
+                    <div className="location">
+                        Somarasampettai
+                        <span>•</span>
+                        Tiruchirappalli
                     </div>
 
-                    <p className="school-subtitle">
-                        Somarasampettai <b>•</b> Tiruchirappalli
-                    </p>
                 </div>
 
-                {/* Premium Loader */}
-                <div className="loader-section">
+                {/* Loader */}
+                <div className="loader">
 
-                    <div className="loader-status">
-                        <span>Preparing your experience</span>
-                        <span className="loader-dots">
-                            <i></i>
-                            <i></i>
-                            <i></i>
-                        </span>
+                    <div className="loader-track">
+                        <div className="loader-progress"></div>
                     </div>
 
-                    <div className="premium-loading-bar">
-                        <div className="loading-bar-track">
-                            <div className="loading-bar-progress">
-                                <span></span>
-                            </div>
+                    <div className="loader-text">
+                        <span>Loading</span>
+
+                        <div className="dots">
+                            <i></i>
+                            <i></i>
+                            <i></i>
                         </div>
                     </div>
 
-                    <div className="loading-bottom">
-                        <span>PLEASE WAIT</span>
-                        <span className="loading-percentage">LOADING</span>
-                    </div>
-
                 </div>
 
             </div>
 
-            <div className="preloader-bottom-line"></div>
+            {/* Small bottom accent */}
+            <div className="bottom-mark">
+                <span></span>
+                <b></b>
+                <span></span>
+            </div>
+
         </div>
     );
 }
