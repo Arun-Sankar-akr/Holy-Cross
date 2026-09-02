@@ -62,6 +62,7 @@ import StudentDashboard from './Erp/StudentErp/StudentDashboard';
 import ProgressReport from "./Erp/ProgressReport";
 
 import './App.css';
+import HallTicket from './components/HallTicket';
 
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
@@ -120,7 +121,8 @@ function AppContent({ loading, fadeOut }) {
           <Routes>
             {/* Public Pages */}
             <Route path="/" element={<Home />} />
-            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/school/toppers" element={<ExamToppers />} />
+            <Route path="/hallticket" element={<HallTicket />} />
             <Route path="/school/:pageId" element={<SchoolSections />} />
             <Route path="/school/progress-report" element={<ProgressReport />} />
             <Route path="/school/calendar" element={<Calendar />} />

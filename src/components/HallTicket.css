@@ -1,0 +1,3013 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --ht-primary: #173b6c;
+    --ht-primary-dark: #0d2850;
+    --ht-primary-light: #eaf2ff;
+
+    --ht-accent: #1d5fa7;
+    --ht-accent-light: #edf6ff;
+
+    --ht-success: #16835b;
+    --ht-success-light: #eaf9f2;
+
+    --ht-danger: #c43d3d;
+    --ht-danger-light: #fff0f0;
+
+    --ht-warning: #b7791f;
+    --ht-warning-light: #fff8e8;
+
+    --ht-text: #172033;
+    --ht-text-soft: #5d687b;
+    --ht-text-muted: #8791a3;
+
+    --ht-border: #dfe5ed;
+    --ht-border-dark: #c8d0dc;
+
+    --ht-bg: #f4f7fb;
+    --ht-card: #ffffff;
+
+    --ht-shadow-sm:
+        0 2px 8px rgba(19, 43, 76, 0.06);
+
+    --ht-shadow:
+        0 14px 40px rgba(20, 48, 86, 0.10);
+
+    --ht-shadow-lg:
+        0 24px 70px rgba(20, 48, 86, 0.16);
+
+    --ht-radius: 18px;
+    --ht-radius-sm: 12px;
+}
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+.hallticket-page {
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+
+    padding: 34px 20px 50px;
+
+    background:
+        radial-gradient(circle at 8% 8%,
+            rgba(42, 104, 174, 0.09),
+            transparent 28%),
+        radial-gradient(circle at 92% 88%,
+            rgba(29, 95, 167, 0.07),
+            transparent 30%),
+        #f4f7fb;
+
+    color: var(--ht-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.hallticket-page *,
+.hallticket-page *::before,
+.hallticket-page *::after {
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   BACKGROUND ORBS
+   ========================================================= */
+
+.hallticket-background-orb {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 999px;
+    filter: blur(1px);
+    opacity: 0.55;
+}
+
+.orb-one {
+    width: 360px;
+    height: 360px;
+
+    top: -180px;
+    right: -100px;
+
+    background:
+        radial-gradient(circle,
+            rgba(39, 102, 174, 0.15),
+            rgba(39, 102, 174, 0));
+}
+
+.orb-two {
+    width: 320px;
+    height: 320px;
+
+    bottom: -170px;
+    left: -100px;
+
+    background:
+        radial-gradient(circle,
+            rgba(21, 74, 132, 0.11),
+            rgba(21, 74, 132, 0));
+}
+
+/* =========================================================
+   MAIN SHELL
+   ========================================================= */
+
+.hallticket-shell {
+    position: relative;
+    z-index: 2;
+
+    width: min(1180px, 100%);
+    margin: 0 auto;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hallticket-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+
+    padding: 25px 28px;
+
+    color: #ffffff;
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(135deg,
+            #0e2d56 0%,
+            #174575 50%,
+            #1c5b94 100%);
+
+    box-shadow:
+        0 20px 50px rgba(13, 45, 83, 0.22);
+
+    position: relative;
+    overflow: hidden;
+}
+
+.hallticket-hero::before {
+    content: '';
+    position: absolute;
+
+    width: 260px;
+    height: 260px;
+
+    right: -80px;
+    top: -120px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.hallticket-hero::after {
+    content: '';
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    left: 38%;
+    bottom: -130px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.hero-icon {
+    width: 58px;
+    height: 58px;
+
+    flex: 0 0 58px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 16px;
+
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+
+    position: relative;
+    z-index: 2;
+}
+
+.hallticket-hero>div:nth-child(2) {
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+}
+
+.hero-kicker {
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.hallticket-hero h1 {
+    margin: 0;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 30px;
+    line-height: 1.1;
+
+    font-weight: 800;
+
+    letter-spacing: -0.6px;
+}
+
+.hallticket-hero p {
+    margin: 7px 0 0;
+
+    max-width: 600px;
+
+    color: rgba(255, 255, 255, 0.72);
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.hero-security {
+    margin-left: auto;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 14px;
+
+    border-radius: 999px;
+
+    color: #e9f7ff;
+    background: rgba(255, 255, 255, 0.09);
+
+    border: 1px solid rgba(255, 255, 255, 0.14);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.hallticket-loading {
+    min-height: 220px;
+
+    margin-top: 22px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: var(--ht-radius);
+
+    box-shadow: var(--ht-shadow-sm);
+
+    color: var(--ht-text-soft);
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.spin {
+    animation: hallticketSpin 0.9s linear infinite;
+}
+
+@keyframes hallticketSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   VERIFICATION CARD
+   ========================================================= */
+
+.verification-card {
+    margin-top: 22px;
+
+    padding: 30px;
+
+    background: rgba(255, 255, 255, 0.97);
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: var(--ht-radius);
+
+    box-shadow: var(--ht-shadow);
+
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.card-heading {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 14px;
+
+    margin-bottom: 25px;
+}
+
+.heading-icon {
+    width: 46px;
+    height: 46px;
+
+    flex: 0 0 46px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 13px;
+
+    color: var(--ht-primary);
+
+    background: var(--ht-primary-light);
+
+    border: 1px solid #dce9fb;
+}
+
+.card-heading span {
+    display: block;
+
+    color: var(--ht-accent);
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 1.4px;
+}
+
+.card-heading h2 {
+    margin: 4px 0 4px;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 25px;
+    line-height: 1.2;
+
+    color: var(--ht-text);
+
+    letter-spacing: -0.3px;
+}
+
+.card-heading p {
+    margin: 0;
+
+    color: var(--ht-text-soft);
+
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.verification-form {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 17px;
+}
+
+.field-group {
+    display: block;
+}
+
+.field-group>span {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+
+    margin-bottom: 7px;
+
+    color: #344054;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.field-group>span b {
+    color: var(--ht-danger);
+}
+
+.input-shell {
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 0 13px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ht-border-dark);
+
+    border-radius: 11px;
+
+    color: #718096;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.input-shell:focus-within {
+    border-color: var(--ht-accent);
+
+    box-shadow:
+        0 0 0 4px rgba(29, 95, 167, 0.09);
+
+    transform: translateY(-1px);
+}
+
+.input-shell input,
+.input-shell select {
+    width: 100%;
+    min-width: 0;
+
+    height: 100%;
+
+    border: 0;
+    outline: 0;
+
+    background: transparent;
+
+    color: var(--ht-text);
+
+    font-family: 'Inter', sans-serif;
+
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.input-shell input::placeholder {
+    color: #a3adba;
+}
+
+.input-shell select {
+    cursor: pointer;
+    appearance: none;
+}
+
+.select-shell {
+    position: relative;
+}
+
+.select-shell::after {
+    content: '';
+
+    position: absolute;
+
+    right: 13px;
+    top: 50%;
+
+    width: 7px;
+    height: 7px;
+
+    border-right: 1.5px solid #6b7280;
+    border-bottom: 1.5px solid #6b7280;
+
+    transform: translateY(-65%) rotate(45deg);
+
+    pointer-events: none;
+}
+
+.verification-form .verify-button {
+    grid-column: 1 / -1;
+}
+
+/* =========================================================
+   VERIFY BUTTON
+   ========================================================= */
+
+.verify-button {
+    min-height: 50px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 9px;
+
+    margin-top: 3px;
+
+    border: 0;
+    border-radius: 12px;
+
+    background:
+        linear-gradient(135deg,
+            #123b6c,
+            #1c62a2);
+
+    color: #ffffff;
+
+    font-family: 'Inter', sans-serif;
+
+    font-size: 12px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 9px 22px rgba(18, 59, 108, 0.22);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.verify-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 14px 28px rgba(18, 59, 108, 0.28);
+}
+
+.verify-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.verify-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+/* =========================================================
+   VERIFICATION NOTE
+   ========================================================= */
+
+.verification-note {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 8px;
+
+    margin-top: 17px;
+
+    padding: 11px 13px;
+
+    border-radius: 10px;
+
+    background: #f5f9ff;
+
+    border: 1px solid #e1ebf8;
+
+    color: #64748b;
+
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.hallticket-message {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    width: 100%;
+
+    margin-top: 18px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.hallticket-message.error {
+    background: var(--ht-danger-light);
+
+    border: 1px solid #f4caca;
+
+    color: #9e2f2f;
+}
+
+.hallticket-message.notice {
+    background: var(--ht-warning-light);
+
+    border: 1px solid #f1dfad;
+
+    color: #856313;
+}
+
+/* =========================================================
+   BLOCKED CARD
+   ========================================================= */
+
+.hallticket-blocked-card {
+    margin-top: 22px;
+
+    display: flex;
+    gap: 20px;
+
+    padding: 26px;
+
+    background: #ffffff;
+
+    border: 1px solid #f1d3d3;
+
+    border-radius: var(--ht-radius);
+
+    box-shadow: var(--ht-shadow-sm);
+}
+
+.blocked-icon {
+    width: 52px;
+    height: 52px;
+
+    flex: 0 0 52px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 15px;
+
+    color: var(--ht-danger);
+
+    background: var(--ht-danger-light);
+
+    border: 1px solid #f4cccc;
+}
+
+.blocked-content {
+    flex: 1;
+}
+
+.status-kicker {
+    display: block;
+
+    color: var(--ht-danger);
+
+    font-size: 9px;
+    font-weight: 900;
+
+    letter-spacing: 1.3px;
+}
+
+.blocked-content h2 {
+    margin: 5px 0 6px;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 22px;
+}
+
+.blocked-content>p {
+    margin: 0;
+
+    color: var(--ht-text-soft);
+
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.blocked-summary {
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+.blocked-summary>div {
+    padding: 12px;
+
+    border-radius: 10px;
+
+    background: #fafafa;
+
+    border: 1px solid #ececec;
+}
+
+.blocked-summary span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: var(--ht-text-muted);
+
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.blocked-summary strong {
+    display: block;
+
+    color: var(--ht-text);
+
+    font-size: 12px;
+}
+
+.office-contact-box {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-top: 15px;
+
+    padding: 13px;
+
+    border-radius: 11px;
+
+    background: #fff9ef;
+
+    border: 1px solid #f2dfb7;
+
+    color: #8b651a;
+}
+
+.office-contact-box strong,
+.office-contact-box span {
+    display: block;
+}
+
+.office-contact-box strong {
+    font-size: 11px;
+    margin-bottom: 2px;
+}
+
+.office-contact-box span {
+    font-size: 10px;
+}
+
+.secondary-button {
+    margin-top: 15px;
+
+    min-height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 14px;
+
+    border-radius: 10px;
+
+    border: 1px solid var(--ht-border-dark);
+
+    background: #ffffff;
+
+    color: var(--ht-text);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.secondary-button:hover {
+    border-color: var(--ht-primary);
+
+    color: var(--ht-primary);
+
+    background: var(--ht-primary-light);
+}
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+
+.results-section {
+    margin-top: 22px;
+}
+
+/* =========================================================
+   VERIFIED STUDENT PROFILE
+   ========================================================= */
+
+.student-profile-card {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 18px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: 16px;
+
+    box-shadow: var(--ht-shadow-sm);
+}
+
+.student-avatar {
+    width: 60px;
+    height: 60px;
+
+    flex: 0 0 60px;
+
+    display: grid;
+    place-items: center;
+
+    overflow: hidden;
+
+    border-radius: 16px;
+
+    background: var(--ht-primary-light);
+
+    border: 1px solid #d7e5f7;
+
+    color: var(--ht-primary);
+}
+
+.student-avatar img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+}
+
+.student-profile-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.student-profile-info>span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: var(--ht-success);
+
+    font-size: 9px;
+    font-weight: 900;
+
+    letter-spacing: 1.1px;
+}
+
+.student-profile-info h2 {
+    margin: 0;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 21px;
+
+    color: var(--ht-text);
+}
+
+.student-profile-info p {
+    margin: 4px 0 0;
+
+    color: var(--ht-text-soft);
+
+    font-size: 10px;
+}
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 8px 11px;
+
+    border-radius: 999px;
+
+    background: var(--ht-success-light);
+
+    border: 1px solid #ccebdc;
+
+    color: var(--ht-success);
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.logout-verification {
+    min-height: 36px;
+
+    padding: 0 12px;
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: var(--ht-text-soft);
+
+    font-size: 10px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.logout-verification:hover {
+    border-color: var(--ht-primary);
+
+    color: var(--ht-primary);
+
+    background: var(--ht-primary-light);
+}
+
+/* =========================================================
+   TICKET WORKSPACE
+   ========================================================= */
+
+.ticket-workspace {
+    display: grid;
+
+    grid-template-columns: 270px minmax(0, 1fr);
+
+    gap: 18px;
+
+    margin-top: 18px;
+
+    align-items: start;
+}
+
+/* =========================================================
+   TICKET LIST PANEL
+   ========================================================= */
+
+.ticket-list-panel {
+    position: sticky;
+    top: 20px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: 16px;
+
+    box-shadow: var(--ht-shadow-sm);
+
+    overflow: hidden;
+}
+
+.panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 16px;
+
+    border-bottom: 1px solid var(--ht-border);
+
+    background: #fbfcfe;
+}
+
+.panel-title span {
+    display: block;
+
+    color: var(--ht-accent);
+
+    font-size: 8px;
+    font-weight: 900;
+
+    letter-spacing: 1.2px;
+}
+
+.panel-title h3 {
+    margin: 3px 0 0;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 17px;
+}
+
+.panel-title>strong {
+    width: 30px;
+    height: 30px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    background: var(--ht-primary-light);
+
+    color: var(--ht-primary);
+
+    font-size: 11px;
+}
+
+.ticket-list {
+    padding: 8px;
+}
+
+.ticket-list-item {
+    width: 100%;
+
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    padding: 12px;
+
+    margin-bottom: 5px;
+
+    text-align: left;
+
+    border: 1px solid transparent;
+
+    border-radius: 11px;
+
+    background: transparent;
+
+    color: var(--ht-text);
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.ticket-list-item:hover {
+    background: #f5f8fc;
+
+    border-color: #e4eaf1;
+
+    transform: translateX(2px);
+}
+
+.ticket-list-item.active {
+    background: var(--ht-primary-light);
+
+    border-color: #cbdcf1;
+}
+
+.ticket-item-icon {
+    width: 34px;
+    height: 34px;
+
+    flex: 0 0 34px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    background: #eef3f9;
+
+    color: var(--ht-primary);
+}
+
+.ticket-list-item.active .ticket-item-icon {
+    background: var(--ht-primary);
+
+    color: #ffffff;
+}
+
+.ticket-list-item strong {
+    display: block;
+
+    font-size: 11px;
+
+    line-height: 1.4;
+}
+
+.ticket-list-item span,
+.ticket-list-item small {
+    display: block;
+
+    color: var(--ht-text-muted);
+
+    font-size: 9px;
+
+    margin-top: 2px;
+}
+
+/* =========================================================
+   TICKET PREVIEW CARD
+   ========================================================= */
+
+.ticket-preview-card {
+    min-width: 0;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ht-border);
+
+    border-radius: 16px;
+
+    box-shadow: var(--ht-shadow);
+
+    overflow: hidden;
+}
+
+.preview-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 16px 18px;
+
+    border-bottom: 1px solid var(--ht-border);
+
+    background: #fbfcfe;
+}
+
+.preview-topbar span {
+    display: block;
+
+    margin-bottom: 2px;
+
+    color: var(--ht-accent);
+
+    font-size: 8px;
+    font-weight: 900;
+
+    letter-spacing: 1.2px;
+}
+
+.preview-topbar h3 {
+    margin: 0;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 17px;
+
+    color: var(--ht-text);
+}
+
+.download-button {
+    min-height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 13px;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    background: var(--ht-primary);
+
+    color: #ffffff;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.download-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 18px rgba(23, 59, 108, 0.22);
+}
+
+/* =========================================================
+   A4 TICKET PAPER
+   ========================================================= */
+
+.ticket-paper {
+    width: 100%;
+
+    max-width: 794px;
+
+    margin: 28px auto;
+
+    background: #ffffff;
+
+    color: #172033;
+
+    border: 1px solid #b9c4d2;
+
+    box-shadow:
+        0 14px 38px rgba(20, 35, 55, 0.12);
+
+    font-family: 'Inter', sans-serif;
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.ticket-paper::after {
+    content: '';
+
+    position: absolute;
+
+    width: 270px;
+    height: 270px;
+
+    left: 50%;
+    top: 53%;
+
+    transform: translate(-50%, -50%);
+
+    border-radius: 50%;
+
+    border: 18px solid rgba(23, 59, 108, 0.025);
+
+    pointer-events: none;
+}
+
+/* =========================================================
+   PAPER HEADER
+   ========================================================= */
+
+.paper-header {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 17px 20px;
+
+    text-align: center;
+
+    border-bottom: 1px solid #172f50;
+
+    background: #ffffff;
+
+    position: relative;
+    z-index: 2;
+}
+
+.paper-logo {
+    width: 52px;
+    height: 52px;
+
+    flex: 0 0 52px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    color: var(--ht-primary);
+
+    border: 2px solid #244d7d;
+
+    background: #f8fbff;
+}
+
+.paper-header>div:nth-child(2) {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+}
+
+.paper-header span {
+    color: #183b6b;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 16px;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+}
+
+.paper-header strong {
+    margin-top: 3px;
+
+    color: #1d2c3f;
+
+    font-size: 13px;
+
+    letter-spacing: 0.5px;
+}
+
+.paper-header small {
+    margin-top: 4px;
+
+    color: #6b7482;
+
+    font-size: 8px;
+}
+
+/* =========================================================
+   PAPER EXAM TITLE
+   ========================================================= */
+
+.paper-exam-title {
+    padding: 9px 15px;
+
+    text-align: center;
+
+    background:
+        linear-gradient(90deg,
+            #112f54,
+            #1b4777,
+            #112f54);
+
+    color: #ffffff;
+
+    font-size: 11px;
+
+    font-weight: 900;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.6px;
+
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   STUDENT INFORMATION
+   ========================================================= */
+
+.paper-student-grid {
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr) 105px;
+
+    border-bottom: 1px solid #b8c5d4;
+
+    position: relative;
+    z-index: 2;
+}
+
+.paper-fields {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.paper-fields>div {
+    min-height: 52px;
+
+    padding: 8px 12px;
+
+    border-right: 1px solid #d3dce6;
+    border-bottom: 1px solid #d3dce6;
+}
+
+.paper-fields span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #637083;
+
+    font-size: 7px;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+}
+
+.paper-fields strong {
+    display: block;
+
+    color: #162b45;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    word-break: break-word;
+}
+
+.paper-photo {
+    min-height: 104px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 9px;
+
+    background: #fafcff;
+
+    color: #718096;
+}
+
+.paper-photo img {
+    width: 82px;
+    height: 95px;
+
+    object-fit: cover;
+
+    border: 1px solid #aebccc;
+
+    background: #ffffff;
+}
+
+/* =========================================================
+   ALLOCATION
+   ========================================================= */
+
+.allocation-highlight {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    margin: 12px 16px;
+
+    border: 1px solid #9fb0c4;
+
+    position: relative;
+    z-index: 2;
+}
+
+.allocation-highlight>div {
+    padding: 9px 13px;
+
+    text-align: center;
+
+    background: #f7faff;
+}
+
+.allocation-highlight>div+div {
+    border-left: 1px solid #9fb0c4;
+}
+
+.allocation-highlight span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #657386;
+
+    font-size: 7px;
+
+    font-weight: 900;
+
+    letter-spacing: 0.7px;
+}
+
+.allocation-highlight strong {
+    display: block;
+
+    color: #122e51;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 16px;
+
+    font-weight: 800;
+}
+
+/* =========================================================
+   SCHEDULE HEADING
+   ========================================================= */
+
+.schedule-heading {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    margin: 13px 16px 7px;
+
+    color: #183b67;
+
+    font-family: 'Outfit', sans-serif;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   SCHEDULE TABLE
+   ========================================================= */
+
+.schedule-table-wrap {
+    margin: 0 16px;
+
+    position: relative;
+    z-index: 2;
+
+    overflow-x: auto;
+}
+
+.schedule-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    table-layout: fixed;
+
+    font-size: 8px;
+}
+
+.schedule-table th {
+    padding: 8px 7px;
+
+    background: #edf2f7;
+
+    color: #30445d;
+
+    border: 1px solid #c7d1dd;
+
+    text-align: left;
+
+    font-size: 7px;
+
+    font-weight: 900;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.4px;
+}
+
+.schedule-table td {
+    padding: 8px 7px;
+
+    border: 1px solid #c7d1dd;
+
+    color: #344054;
+
+    background: rgba(255, 255, 255, 0.92);
+
+    vertical-align: middle;
+}
+
+.schedule-table tbody tr:nth-child(even) td {
+    background: #fbfcfe;
+}
+
+.schedule-table td strong {
+    color: #1d3048;
+
+    font-weight: 700;
+}
+
+.schedule-table th:nth-child(1),
+.schedule-table td:nth-child(1) {
+    width: 23%;
+}
+
+.schedule-table th:nth-child(2),
+.schedule-table td:nth-child(2) {
+    width: 16%;
+}
+
+.schedule-table th:nth-child(3),
+.schedule-table td:nth-child(3) {
+    width: 34%;
+}
+
+.schedule-table th:nth-child(4),
+.schedule-table td:nth-child(4) {
+    width: 27%;
+}
+
+/* =========================================================
+   TIME PILL
+   ========================================================= */
+
+.time-pill {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 4px;
+
+    padding: 4px 6px;
+
+    border-radius: 5px;
+
+    background: #edf5ff;
+
+    color: #24578c;
+
+    font-size: 7px;
+
+    font-weight: 700;
+}
+
+/* =========================================================
+   PAPER INSTRUCTIONS
+   ========================================================= */
+
+.paper-instructions {
+    margin: 16px;
+
+    padding: 11px 13px;
+
+    border-left: 3px solid #1b4f82;
+
+    background: #f7f9fc;
+
+    position: relative;
+    z-index: 2;
+}
+
+.paper-instructions>strong {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #183b67;
+
+    font-size: 9px;
+
+    font-weight: 900;
+
+    text-transform: uppercase;
+}
+
+.paper-instructions ul {
+    margin: 0;
+
+    padding-left: 16px;
+
+    color: #536174;
+
+    font-size: 7px;
+
+    line-height: 1.65;
+}
+
+.paper-instructions li {
+    margin-bottom: 2px;
+}
+
+/* =========================================================
+   PAPER FOOTER
+   ========================================================= */
+
+.paper-footer {
+    display: flex;
+    justify-content: space-between;
+
+    align-items: flex-end;
+
+    padding: 27px 18px 17px;
+
+    position: relative;
+    z-index: 2;
+}
+
+.paper-footer span {
+    min-width: 115px;
+
+    padding-top: 7px;
+
+    border-top: 1px solid #1b2635;
+
+    color: #26374c;
+
+    text-align: center;
+
+    font-size: 7px;
+
+    font-weight: 700;
+}
+
+/* =========================================================
+   MAIN FOOTER
+   ========================================================= */
+
+.hallticket-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-top: 20px;
+
+    padding: 14px 5px;
+
+    color: #7c8797;
+
+    font-size: 9px;
+}
+
+.hallticket-footer span {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+}
+
+/* =========================================================
+   DESKTOP LARGE
+   ========================================================= */
+
+@media (min-width: 1200px) {
+    .hallticket-page {
+        padding-top: 42px;
+    }
+
+    .verification-card {
+        padding: 34px;
+    }
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .hallticket-page {
+        padding: 22px 14px 35px;
+    }
+
+    .hallticket-hero {
+        padding: 21px;
+    }
+
+    .ticket-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-list-panel {
+        position: static;
+    }
+
+    .ticket-list {
+        display: grid;
+
+        grid-template-columns:
+            repeat(auto-fit, minmax(210px, 1fr));
+
+        gap: 6px;
+    }
+
+    .ticket-list-item {
+        margin-bottom: 0;
+    }
+
+    .ticket-paper {
+        margin: 20px auto;
+    }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .hallticket-page {
+        padding: 12px 9px 25px;
+    }
+
+    .hallticket-hero {
+        align-items: flex-start;
+
+        padding: 18px;
+
+        border-radius: 17px;
+
+        gap: 12px;
+    }
+
+    .hero-icon {
+        width: 45px;
+        height: 45px;
+
+        flex-basis: 45px;
+
+        border-radius: 12px;
+    }
+
+    .hallticket-hero h1 {
+        font-size: 23px;
+    }
+
+    .hallticket-hero p {
+        font-size: 10px;
+    }
+
+    .hero-security {
+        display: none;
+    }
+
+    .verification-card {
+        margin-top: 13px;
+
+        padding: 19px;
+
+        border-radius: 15px;
+    }
+
+    .card-heading {
+        gap: 10px;
+
+        margin-bottom: 20px;
+    }
+
+    .heading-icon {
+        width: 40px;
+        height: 40px;
+
+        flex-basis: 40px;
+    }
+
+    .card-heading h2 {
+        font-size: 21px;
+    }
+
+    .card-heading p {
+        font-size: 10px;
+    }
+
+    .verification-form {
+        grid-template-columns: 1fr;
+
+        gap: 13px;
+    }
+
+    .input-shell {
+        height: 46px;
+    }
+
+    .student-profile-card {
+        align-items: flex-start;
+
+        flex-wrap: wrap;
+
+        padding: 14px;
+    }
+
+    .student-profile-info {
+        width: calc(100% - 75px);
+    }
+
+    .verified-badge {
+        margin-left: 74px;
+    }
+
+    .logout-verification {
+        margin-left: auto;
+    }
+
+    .ticket-list {
+        display: block;
+    }
+
+    .ticket-list-item {
+        margin-bottom: 5px;
+    }
+
+    .preview-topbar {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .download-button {
+        width: 100%;
+    }
+
+    .ticket-paper {
+        margin: 12px auto;
+
+        border-left: 0;
+        border-right: 0;
+
+        box-shadow: none;
+    }
+
+    .paper-header {
+        padding: 13px 10px;
+
+        gap: 9px;
+    }
+
+    .paper-logo {
+        width: 40px;
+        height: 40px;
+
+        flex-basis: 40px;
+    }
+
+    .paper-header span {
+        font-size: 11px;
+    }
+
+    .paper-header strong {
+        font-size: 9px;
+    }
+
+    .paper-header small {
+        font-size: 6px;
+    }
+
+    .paper-student-grid {
+        grid-template-columns: minmax(0, 1fr) 82px;
+    }
+
+    .paper-fields>div {
+        min-height: 46px;
+
+        padding: 6px 8px;
+    }
+
+    .paper-fields span {
+        font-size: 6px;
+    }
+
+    .paper-fields strong {
+        font-size: 8px;
+    }
+
+    .paper-photo {
+        min-height: 92px;
+    }
+
+    .paper-photo img {
+        width: 62px;
+        height: 75px;
+    }
+
+    .allocation-highlight {
+        margin: 9px 10px;
+    }
+
+    .schedule-heading {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .schedule-table-wrap {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .schedule-table {
+        min-width: 500px;
+    }
+
+    .paper-instructions {
+        margin: 11px 10px;
+    }
+
+    .paper-footer {
+        padding: 23px 10px 13px;
+    }
+
+    .paper-footer span {
+        min-width: 90px;
+    }
+
+    .hallticket-footer {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        font-size: 8px;
+    }
+
+    .blocked-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .hallticket-blocked-card {
+        flex-direction: column;
+
+        padding: 18px;
+    }
+}
+
+/* =========================================================
+   VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 400px) {
+
+    .hallticket-hero {
+        padding: 15px;
+    }
+
+    .hallticket-hero h1 {
+        font-size: 21px;
+    }
+
+    .verification-card {
+        padding: 15px;
+    }
+
+    .student-avatar {
+        width: 50px;
+        height: 50px;
+
+        flex-basis: 50px;
+    }
+
+    .student-profile-info {
+        width: calc(100% - 64px);
+    }
+
+    .verified-badge {
+        margin-left: 64px;
+    }
+
+    .paper-header span {
+        font-size: 9px;
+    }
+
+    .paper-header strong {
+        font-size: 8px;
+    }
+
+    .paper-header small {
+        font-size: 5px;
+    }
+}
+
+/* =========================================================
+   PRINT / PDF
+   ========================================================= */
+
+@media print {
+
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    html,
+    body {
+        width: 210mm;
+        min-height: 297mm;
+
+        margin: 0 !important;
+        padding: 0 !important;
+
+        background: #ffffff !important;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .hallticket-page {
+        width: 210mm;
+        min-height: 297mm;
+
+        padding: 0 !important;
+
+        background: #ffffff !important;
+
+        overflow: visible !important;
+    }
+
+    .hallticket-background-orb,
+    .hallticket-hero,
+    .hallticket-footer,
+    .verification-card,
+    .student-profile-card,
+    .ticket-list-panel,
+    .preview-topbar,
+    .hallticket-message,
+    .hallticket-blocked-card {
+        display: none !important;
+    }
+
+    .hallticket-shell {
+        width: 210mm;
+
+        margin: 0 !important;
+    }
+
+    .results-section {
+        margin: 0 !important;
+    }
+
+    .ticket-workspace {
+        display: block !important;
+
+        margin: 0 !important;
+    }
+
+    .ticket-preview-card {
+        width: 210mm;
+
+        margin: 0 !important;
+
+        border: 0 !important;
+
+        border-radius: 0 !important;
+
+        box-shadow: none !important;
+
+        overflow: visible !important;
+    }
+
+    .ticket-paper {
+        width: 190mm;
+
+        min-height: 277mm;
+
+        max-width: none;
+
+        margin: 10mm auto !important;
+
+        border: 0.4mm solid #25374d !important;
+
+        border-radius: 0 !important;
+
+        box-shadow: none !important;
+
+        overflow: hidden !important;
+    }
+
+    .ticket-paper::after {
+        display: block !important;
+    }
+
+    .paper-header {
+        padding: 5mm 6mm;
+
+        border-bottom: 0.3mm solid #172f50;
+    }
+
+    .paper-logo {
+        width: 15mm;
+        height: 15mm;
+
+        flex-basis: 15mm;
+    }
+
+    .paper-header span {
+        font-size: 15px;
+    }
+
+    .paper-header strong {
+        font-size: 11px;
+    }
+
+    .paper-header small {
+        font-size: 7px;
+    }
+
+    .paper-exam-title {
+        padding: 3mm;
+
+        font-size: 10px;
+    }
+
+    .paper-fields>div {
+        min-height: 14mm;
+
+        padding: 2.5mm 3mm;
+    }
+
+    .paper-fields span {
+        font-size: 6px;
+    }
+
+    .paper-fields strong {
+        font-size: 9px;
+    }
+
+    .paper-photo {
+        min-height: 28mm;
+    }
+
+    .paper-photo img {
+        width: 22mm;
+        height: 26mm;
+    }
+
+    .allocation-highlight {
+        margin: 4mm 5mm;
+    }
+
+    .allocation-highlight>div {
+        padding: 3mm;
+    }
+
+    .allocation-highlight span {
+        font-size: 6px;
+    }
+
+    .allocation-highlight strong {
+        font-size: 13px;
+    }
+
+    .schedule-heading {
+        margin: 4mm 5mm 2mm;
+
+        font-size: 10px;
+    }
+
+    .schedule-table-wrap {
+        margin: 0 5mm;
+    }
+
+    .schedule-table {
+        min-width: 0;
+
+        font-size: 7px;
+    }
+
+    .schedule-table th {
+        padding: 2.3mm 2mm;
+
+        font-size: 6px;
+    }
+
+    .schedule-table td {
+        padding: 2.4mm 2mm;
+
+        font-size: 7px;
+    }
+
+    .time-pill {
+        padding: 1.2mm 1.5mm;
+
+        font-size: 6px;
+    }
+
+    .paper-instructions {
+        margin: 4mm 5mm;
+
+        padding: 3mm 3.5mm;
+    }
+
+    .paper-instructions>strong {
+        font-size: 7px;
+    }
+
+    .paper-instructions ul {
+        font-size: 6.5px;
+
+        line-height: 1.55;
+    }
+
+    .paper-footer {
+        padding: 10mm 5mm 4mm;
+    }
+
+    .paper-footer span {
+        min-width: 32mm;
+
+        font-size: 6px;
+    }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+.hallticket-page button:focus-visible,
+.hallticket-page input:focus-visible,
+.hallticket-page select:focus-visible {
+    outline: 3px solid rgba(29, 95, 167, 0.22);
+
+    outline-offset: 2px;
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* =====================================================================
+   Hall Ticket — redesigned printable card (.ht-*)
+   ===================================================================== */
+.ht-card {
+    position: relative;
+    margin: 20px;
+    background: #fff;
+    color: #0f172a;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+    line-height: 1.45;
+    border: 3px double #0f172a;
+    overflow: hidden;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, .14);
+}
+
+.ht-watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ht-watermark img {
+    width: 300px;
+    height: 300px;
+    object-fit: contain;
+    opacity: .05;
+    filter: grayscale(1);
+}
+
+.ht-content {
+    position: relative;
+    z-index: 1;
+}
+
+.ht-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 22px;
+    border-bottom: 2px solid #0f172a;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.ht-header-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.ht-header-text {
+    flex: 1;
+    text-align: center;
+}
+
+.ht-header-text h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1a3b8a;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+
+.ht-header-text p {
+    margin: 4px 0 0;
+    font-size: .72rem;
+    font-style: italic;
+    color: #475569;
+}
+
+.ht-header-spacer {
+    width: 60px;
+    flex-shrink: 0;
+}
+
+.ht-band {
+    display: flex;
+    background: linear-gradient(135deg, #10233f, #1e3a5f 55%, #10233f);
+    color: #fff;
+}
+
+.ht-band>div {
+    flex: 1;
+    padding: 11px 14px;
+    text-align: center;
+    font-weight: 800;
+    font-size: .8rem;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    border-right: 1px solid rgba(255, 255, 255, .22);
+}
+
+.ht-band>div:last-child {
+    border-right: 0;
+}
+
+.ht-info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 22px;
+    flex-wrap: wrap;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.ht-info-fields {
+    flex: 1;
+    min-width: 220px;
+}
+
+.ht-info-item {
+    display: flex;
+    margin-bottom: 9px;
+    font-size: .85rem;
+}
+
+.ht-info-item .label {
+    width: 110px;
+    font-weight: 700;
+    color: #1e293b;
+    flex-shrink: 0;
+}
+
+.ht-info-item .colon {
+    width: 14px;
+    flex-shrink: 0;
+}
+
+.ht-info-item .value {
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.ht-side {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.ht-qr-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.ht-qr-box img {
+    width: 96px;
+    height: 96px;
+    border: 1px solid #cbd5e1;
+    padding: 3px;
+    background: #fff;
+}
+
+.ht-qr-box span {
+    font-size: .6rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.ht-photo-box {
+    width: 90px;
+    height: 108px;
+    border: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+
+.ht-photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ht-meta-strip {
+    display: flex;
+    border-top: 1px solid #0f172a;
+    border-bottom: 1px solid #0f172a;
+}
+
+.ht-meta-cell {
+    flex: 1;
+    padding: 10px 18px;
+    border-right: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ht-meta-cell:last-child {
+    border-right: 0;
+}
+
+.ht-meta-cell .m-label {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: .3px;
+}
+
+.ht-meta-cell .m-value {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.ht-table-wrap {
+    padding: 18px 22px 0;
+}
+
+.ht-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .8rem;
+}
+
+.ht-table thead th {
+    background: #eef2f7;
+    color: #0f172a;
+    text-align: left;
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.ht-table tbody td {
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+}
+
+.ht-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.ht-sign-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 60px 22px 0;
+}
+
+.ht-sign-line {
+    width: 190px;
+    border-top: 1px solid #0f172a;
+    padding-top: 5px;
+    font-size: .74rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ht-notes {
+    padding: 20px 22px 24px;
+}
+
+.ht-notes h4 {
+    margin: 0 0 8px;
+    font-size: .86rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.ht-notes ol {
+    margin: 0;
+    padding-left: 18px;
+    font-size: .73rem;
+    color: #334155;
+    line-height: 1.7;
+}
+
+.ht-disclaimer {
+    margin: 6px 0 0;
+    font-size: .67rem;
+    color: #64748b;
+}
+
+.ht-principal-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 28px;
+}
+
+.ht-principal-block {
+    text-align: center;
+}
+
+.ht-principal-block img {
+    width: 130px;
+    height: 46px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 2px;
+}
+
+.ht-principal-block .p-name {
+    margin: 0;
+    font-size: .76rem;
+    font-weight: 800;
+    border-top: 1px solid #0f172a;
+    padding-top: 4px;
+    width: 190px;
+}
+
+.ht-principal-block .p-role {
+    font-size: .66rem;
+    color: #64748b;
+}
+
+@media (max-width: 640px) {
+    .ht-card {
+        margin: 12px;
+        font-size: 12px;
+    }
+
+    .ht-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .ht-header-spacer {
+        display: none;
+    }
+
+    .ht-band {
+        flex-direction: column;
+    }
+
+    .ht-band>div {
+        border-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, .22);
+    }
+
+    .ht-band>div:last-child {
+        border-bottom: 0;
+    }
+
+    .ht-info-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ht-side {
+        justify-content: center;
+    }
+
+    .ht-meta-strip {
+        flex-direction: column;
+    }
+
+    .ht-meta-cell {
+        border-right: 0;
+        border-bottom: 1px solid #cbd5e1;
+    }
+
+    .ht-meta-cell:last-child {
+        border-bottom: 0;
+    }
+
+    .ht-sign-row,
+    .ht-principal-row {
+        justify-content: center;
+    }
+}
+
+@media print {
+
+    .ht-table thead th,
+    .ht-band {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+
+
+/* =========================================================
+   THREE-STEP VERIFICATION FLOW
+   ========================================================= */
+.hallticket-steps {
+    width: min(760px, 100%);
+    margin: 20px auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.hallticket-step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--ht-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .8);
+    color: var(--ht-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.hallticket-step span {
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #eef2f7;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.hallticket-step.active {
+    color: var(--ht-primary);
+    border-color: #bcd1eb;
+    background: #f5f9ff;
+}
+
+.hallticket-step.active span,
+.hallticket-step.done span {
+    color: #fff;
+    background: var(--ht-primary);
+}
+
+.hallticket-step.done {
+    color: var(--ht-success);
+}
+
+.step-two-card {
+    margin: 22px auto 0;
+    max-width: 980px;
+    padding: 26px;
+    background: #fff;
+    border: 1px solid var(--ht-border);
+    border-radius: var(--ht-radius);
+    box-shadow: var(--ht-shadow);
+}
+
+.step-two-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ht-border);
+}
+
+.step-two-header>div>span {
+    color: var(--ht-accent);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+}
+
+.step-two-header h2 {
+    margin: 5px 0 4px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 25px;
+}
+
+.step-two-header p {
+    margin: 0;
+    color: var(--ht-text-soft);
+    font-size: 12px;
+}
+
+.step-two-header>svg {
+    color: var(--ht-success);
+    flex: 0 0 auto;
+}
+
+.verification-detail-grid {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 24px;
+    padding: 24px 0;
+}
+
+.verified-photo-large {
+    width: 150px;
+    height: 180px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: #f1f5f9;
+    color: #94a3b8;
+}
+
+.verified-photo-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.verified-detail-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.verified-detail-fields>div {
+    padding: 13px;
+    border: 1px solid #e6ebf1;
+    border-radius: 11px;
+    background: #fafcff;
+}
+
+.verified-detail-fields span,
+.clearance-box span {
+    display: block;
+    color: var(--ht-text-muted);
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.verified-detail-fields strong {
+    display: block;
+    color: var(--ht-text);
+    font-size: 12px;
+}
+
+.clearance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.clearance-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 15px;
+    border: 1px solid var(--ht-border);
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.clearance-box svg {
+    color: var(--ht-primary);
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.clearance-box.success {
+    background: var(--ht-success-light);
+    border-color: #ccebdc;
+}
+
+.clearance-box.success svg {
+    color: var(--ht-success);
+}
+
+.clearance-box strong {
+    display: block;
+    font-size: 14px;
+    color: var(--ht-text);
+}
+
+.clearance-box small {
+    display: block;
+    margin-top: 3px;
+    color: var(--ht-text-muted);
+    font-size: 9px;
+}
+
+.step-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.step-actions .verify-button {
+    margin-top: 0;
+    padding: 0 18px;
+}
+
+@media (max-width: 700px) {
+    .hallticket-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .hallticket-step {
+        justify-content: flex-start;
+    }
+
+    .verification-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .verified-photo-large {
+        width: 130px;
+        height: 156px;
+    }
+
+    .verified-detail-fields,
+    .clearance-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .step-two-card {
+        padding: 18px;
+    }
+
+    .step-two-header {
+        gap: 10px;
+    }
+
+    .step-two-header h2 {
+        font-size: 21px;
+    }
+
+    .step-actions {
+        flex-direction: column-reverse;
+    }
+
+    .step-actions button {
+        width: 100%;
+    }
+}
+
+@media print {
+
+    .no-print,
+    .hallticket-hero,
+    .hallticket-steps,
+    .hallticket-footer {
+        display: none !important;
+    }
+
+    .hallticket-page {
+        padding: 0 !important;
+        background: #fff !important;
+        min-height: auto;
+    }
+
+    .hallticket-shell {
+        width: 100%;
+        max-width: none;
+    }
+
+    .hall-ticket-preview {
+        margin: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .ht-card {
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: 3px double #0f172a !important;
+    }
+
+    .hallticket-background-orb {
+        display: none !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 8mm;
+    }
+}
