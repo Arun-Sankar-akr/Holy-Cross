@@ -64,7 +64,7 @@ export default function StudentDashboard() {
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
     const [isLast7StripScrolling, setIsLast7StripScrolling] = useState(false);
-    const [last7SpacerWidth, setLast7SpacerWidth] = useState(160);
+    const [selectedLast7Key, setSelectedLast7Key] = useState(null);
     const last7ScrollRef = useRef(null);
     const last7TodayRef = useRef(null);
     const last7ScrollTimeoutRef = useRef(null);
@@ -708,15 +708,12 @@ export default function StudentDashboard() {
     }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
     // Default the horizontally-scrollable day-chip strip so "today" sits centered
-    // in the visible area (a trailing spacer makes room to scroll that far),
-    // with the older days revealed by swiping left.
+    // in the visible area — now that real past AND upcoming days are both rendered,
+    // centering "today" naturally reveals days on either side without any spacer.
     useEffect(() => {
         if (last7AutoScrolledRef.current) return;
         const container = last7ScrollRef.current;
         if (!container) return;
-
-        const half = Math.round(container.clientWidth / 2);
-        setLast7SpacerWidth(half);
 
         requestAnimationFrame(() => {
             const todayEl = last7TodayRef.current;
@@ -840,6 +837,46 @@ export default function StudentDashboard() {
         if (holidayDateSet.has(dateKey)) return 'attendance-holiday';
         return 'attendance-unmarked';
     };
+
+    // Day-chip strip: 7 days before today, today, and 7 days after — built as plain
+    // data first so the strip and the "selected day" summary line below it can both
+    // read from the same list.
+    const LAST7_DAYS_BEFORE = 7;
+    const LAST7_DAYS_AFTER = 7;
+    const todayDateKeyForStrip = getLocalDateKey(new Date());
+
+    const last7DaysInfo = Array.from({ length: LAST7_DAYS_BEFORE + LAST7_DAYS_AFTER + 1 }).map((_, i) => {
+        const offset = i - LAST7_DAYS_BEFORE;
+        const dayDate = new Date();
+        dayDate.setDate(dayDate.getDate() + offset);
+        const dateKey = getLocalDateKey(dayDate);
+        const markedStatus = attendanceByDate[dateKey];
+        const isHoliday = holidayDateSet.has(dateKey);
+        const isToday = dateKey === todayDateKeyForStrip;
+        const isFuture = offset > 0;
+
+        const state =
+            markedStatus === 'present' ? 'present' :
+                markedStatus === 'absent' ? 'absent' :
+                    isHoliday ? 'holiday' : 'off';
+
+        const label = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
+        const statusText =
+            state === 'present' ? 'Present' :
+                state === 'absent' ? 'Absent' :
+                    state === 'holiday' ? 'Holiday' :
+                        isFuture ? 'Upcoming' : 'Attendance not marked';
+
+        const fullDateLabel = dayDate.toLocaleDateString('en-US', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+
+        return { dateKey, dayDate, label, state, statusText, isToday, isFuture, fullDateLabel };
+    });
+
+    const selectedLast7Info =
+        last7DaysInfo.find((d) => d.dateKey === selectedLast7Key) ||
+        last7DaysInfo.find((d) => d.isToday);
 
     const attendanceLogs = [...attendanceRecords].sort((a, b) => {
         const dateA = new Date(`${a.date || "1970-01-01"}T00:00:00`);
@@ -1610,49 +1647,36 @@ export default function StudentDashboard() {
                                                 onScroll={handleLast7Scroll}
                                             >
                                                 <div className="ps-last7-strip">
-                                                    {Array.from({ length: 14 }).map((_, i) => {
-                                                        const dayDate = new Date();
-                                                        dayDate.setDate(dayDate.getDate() - (13 - i));
-                                                        const dateKey = getLocalDateKey(dayDate);
-                                                        const markedStatus = attendanceByDate[dateKey];
-                                                        const isHoliday = holidayDateSet.has(dateKey);
-                                                        const isToday = dateKey === getLocalDateKey(new Date());
-
-                                                        const state =
-                                                            markedStatus === 'present' ? 'present' :
-                                                                markedStatus === 'absent' ? 'absent' :
-                                                                    isHoliday ? 'holiday' : 'off';
-
-                                                        const label = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
-                                                        const statusText =
-                                                            state === 'present' ? 'Present' :
-                                                                state === 'absent' ? 'Absent' :
-                                                                    state === 'holiday' ? 'Holiday' : 'Attendance not marked';
+                                                    {last7DaysInfo.map((d) => {
+                                                        const isSelected = d.dateKey === (selectedLast7Key || todayDateKeyForStrip);
 
                                                         return (
-                                                            <div
-                                                                key={dateKey}
-                                                                ref={isToday ? last7TodayRef : undefined}
-                                                                className={`ps-day-chip ${state} ${isToday ? 'today' : ''}`}
-                                                                title={`${dateKey} — ${statusText}${isToday ? ' (Today)' : ''}`}
-                                                                aria-label={`${dateKey} — ${statusText}${isToday ? ' (Today)' : ''}`}
+                                                            <button
+                                                                type="button"
+                                                                key={d.dateKey}
+                                                                ref={d.isToday ? last7TodayRef : undefined}
+                                                                className={`ps-day-chip ${d.state} ${d.isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''}`}
+                                                                onClick={() => setSelectedLast7Key(d.dateKey)}
+                                                                title={`${d.dateKey} — ${d.statusText}${d.isToday ? ' (Today)' : ''}`}
+                                                                aria-label={`${d.dateKey} — ${d.statusText}${d.isToday ? ' (Today)' : ''}`}
+                                                                aria-pressed={isSelected}
                                                             >
-                                                                <span className="ps-day-chip-label">{label}</span>
-                                                                {isToday && (
-                                                                    <span className="ps-day-chip-date">{dayDate.getDate()}</span>
+                                                                <span className="ps-day-chip-label">{d.label}</span>
+                                                                {d.isToday && (
+                                                                    <span className="ps-day-chip-date">{d.dayDate.getDate()}</span>
                                                                 )}
-                                                            </div>
+                                                            </button>
                                                         );
                                                     })}
-                                                    <div
-                                                        className="ps-last7-spacer"
-                                                        style={{ width: `${last7SpacerWidth}px` }}
-                                                        aria-hidden="true"
-                                                    />
                                                 </div>
                                             </div>
                                             <div className="ps-last7-month">
-                                                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                                {selectedLast7Info?.fullDateLabel}
+                                                {selectedLast7Info && (
+                                                    <span className={`ps-last7-month-status ${selectedLast7Info.state}`}>
+                                                        {selectedLast7Info.statusText}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

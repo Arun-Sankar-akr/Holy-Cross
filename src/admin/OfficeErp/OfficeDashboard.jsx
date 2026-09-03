@@ -13,7 +13,7 @@ import {
 import './OfficeDashboard.css';
 
 export default function OfficeDashboard() {
-    const [activeTab, setActiveTab] = useState('enquiries');
+    const [activeTab, setActiveTab] = useState('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const [hallTicketSearch, setHallTicketSearch] = useState("");
@@ -474,6 +474,14 @@ export default function OfficeDashboard() {
         navigate('/erp/office/login');
     };
 
+    const dashboardFeeTotal = feesList.reduce((sum, item) => sum + Number(item.totalFee || 0), 0);
+    const dashboardFeePaid = feesList.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+    const dashboardFeeBalance = feesList.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+    const dashboardPendingLeaves = leaveRequests.filter(item => String(item.status || 'Pending').toLowerCase() === 'pending').length;
+    const dashboardPendingTasks = officeTasks.filter(item => !['completed', 'done'].includes(String(item.status || '').toLowerCase())).length;
+    const dashboardPublishedTickets = hallTicketPublications.filter(item => item.published === true).length;
+    const dashboardPaidStudents = studentsList.filter(student => getStudentFeeStatus(student).paid).length;
+
     return (
         <div className="dashboard-containers">
             {/* Mobile Navigation Bar */}
@@ -515,6 +523,9 @@ export default function OfficeDashboard() {
                 </div>
 
                 <nav className="sidebar-nav">
+                    <button className={`nav-links ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}>
+                        <div className="nav-links-content"><LayoutGrid size={18} /><span>Dashboard Overview</span></div>
+                    </button>
                     <button className={`nav-links ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => { setActiveTab('enquiries'); setIsMobileMenuOpen(false); }}>
                         <div className="nav-links-content"><UserPlus size={18} /><span>Enquiries & Visitors</span></div>
                     </button>
@@ -579,6 +590,91 @@ export default function OfficeDashboard() {
                 </header>
 
                 <div className="dashboard-content">
+                    {activeTab === 'overview' && (
+                        <section className="office-overview">
+                            <div className="overview-hero">
+                                <div className="overview-hero-copy">
+                                    <span className="overview-kicker">FRONT-OFFICE CONTROL CENTER</span>
+                                    <h1>Good evening, Office Executive.</h1>
+                                    <p>One compact workspace for enquiries, fee operations, examinations, staff approvals and daily tasks.</p>
+                                    <div className="overview-hero-meta">
+                                        <span><CheckCircle size={14} /> Live Firestore sync</span>
+                                        <span>Academic Year 2026–2027</span>
+                                    </div>
+                                </div>
+                                <div className="overview-hero-orb"><LayoutGrid size={34} /></div>
+                            </div>
+
+                            <div className="overview-stat-grid">
+                                <button className="overview-stat stat-green" onClick={() => setActiveTab('enquiries')}>
+                                    <span className="overview-stat-icon"><UserPlus size={17} /></span>
+                                    <span className="overview-stat-copy"><small>ENQUIRIES</small><strong>{enquiries.length}</strong><em>Active records</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                                <button className="overview-stat stat-blue" onClick={() => setActiveTab('fees')}>
+                                    <span className="overview-stat-icon"><DollarSign size={17} /></span>
+                                    <span className="overview-stat-copy"><small>FEE BALANCE</small><strong>₹{dashboardFeeBalance.toLocaleString('en-IN')}</strong><em>₹{dashboardFeePaid.toLocaleString('en-IN')} collected</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                                <button className="overview-stat stat-purple" onClick={() => setActiveTab('exam-halls')}>
+                                    <span className="overview-stat-icon"><Users size={17} /></span>
+                                    <span className="overview-stat-copy"><small>EXAM HALLS</small><strong>{examHalls.length}</strong><em>{examHalls.reduce((n, h) => n + Number(h.studentCount || h.studentIds?.length || 0), 0)} students allocated</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                                <button className="overview-stat stat-amber" onClick={() => setActiveTab('hall-ticket-allocation')}>
+                                    <span className="overview-stat-icon"><Ticket size={17} /></span>
+                                    <span className="overview-stat-copy"><small>HALL TICKETS</small><strong>{dashboardPublishedTickets}</strong><em>Published tickets</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                                <button className="overview-stat stat-rose" onClick={() => setActiveTab('leaves')}>
+                                    <span className="overview-stat-icon"><Calendar size={17} /></span>
+                                    <span className="overview-stat-copy"><small>LEAVE REQUESTS</small><strong>{dashboardPendingLeaves}</strong><em>Awaiting approval</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                                <button className="overview-stat stat-slate" onClick={() => setActiveTab('tasks')}>
+                                    <span className="overview-stat-icon"><ClipboardList size={17} /></span>
+                                    <span className="overview-stat-copy"><small>TASK BOARD</small><strong>{dashboardPendingTasks}</strong><em>Open tasks</em></span>
+                                    <ArrowLeft className="overview-stat-arrow" size={15} />
+                                </button>
+                            </div>
+
+                            <div className="overview-main-grid">
+                                <div className="overview-panel">
+                                    <div className="overview-panel-head">
+                                        <div><span className="panel-kicker">QUICK ACCESS</span><h2>Office operations</h2></div>
+                                        <span className="panel-live"><span /> Live</span>
+                                    </div>
+                                    <div className="quick-action-grid">
+                                        <button onClick={() => setActiveTab('enquiries')}><span className="qa-icon qa-green"><UserPlus size={18} /></span><span><b>New enquiry</b><small>Log visitor / admission</small></span><ArrowLeft size={14} /></button>
+                                        <button onClick={() => setActiveTab('fees')}><span className="qa-icon qa-blue"><DollarSign size={18} /></span><span><b>Fee desk</b><small>Manage dues & receipts</small></span><ArrowLeft size={14} /></button>
+                                        <button onClick={() => setActiveTab('exam-timetable')}><span className="qa-icon qa-violet"><CalendarDays size={18} /></span><span><b>Exam timetable</b><small>Schedule subjects</small></span><ArrowLeft size={14} /></button>
+                                        <button onClick={() => setActiveTab('hall-ticket-allocation')}><span className="qa-icon qa-amber"><Ticket size={18} /></span><span><b>Publish tickets</b><small>Check fee eligibility</small></span><ArrowLeft size={14} /></button>
+                                        <button onClick={() => setActiveTab('leaves')}><span className="qa-icon qa-rose"><Calendar size={18} /></span><span><b>Leave approvals</b><small>{dashboardPendingLeaves} pending request{dashboardPendingLeaves === 1 ? '' : 's'}</small></span><ArrowLeft size={14} /></button>
+                                        <button onClick={() => setActiveTab('tasks')}><span className="qa-icon qa-slate"><ClipboardList size={18} /></span><span><b>Task board</b><small>Track office work</small></span><ArrowLeft size={14} /></button>
+                                    </div>
+                                </div>
+
+                                <div className="overview-panel">
+                                    <div className="overview-panel-head">
+                                        <div><span className="panel-kicker">AT A GLANCE</span><h2>Workspace health</h2></div>
+                                    </div>
+                                    <div className="health-list">
+                                        <div className="health-row"><span className="health-icon green"><Users size={15} /></span><div><b>Student records</b><small>Registered in office system</small></div><strong>{studentsList.length}</strong></div>
+                                        <div className="health-row"><span className="health-icon blue"><GraduationCap size={15} /></span><div><b>Fee-covered students</b><small>Eligible for hall ticket flow</small></div><strong>{dashboardPaidStudents}</strong></div>
+                                        <div className="health-row"><span className="health-icon violet"><CalendarDays size={15} /></span><div><b>Exam schedules</b><small>Timetable entries</small></div><strong>{examTimetables.length}</strong></div>
+                                        <div className="health-row"><span className="health-icon amber"><UserCheck size={15} /></span><div><b>Staff members</b><small>Office directory</small></div><strong>{staffList.length}</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overview-footer-strip">
+                                <div><span className="footer-dot" /><b>Office workspace is active</b><small>Real-time records are connected</small></div>
+                                <div><span>Total fee ledger</span><strong>₹{dashboardFeeTotal.toLocaleString('en-IN')}</strong></div>
+                                <button onClick={() => setActiveTab('hall-tickets')}>Open Hall Ticket Desk <ArrowLeft size={14} /></button>
+                            </div>
+                        </section>
+                    )}
+
                     {/* ENQUIRIES MODULE */}
                     {activeTab === 'enquiries' && (
                         <div className="dash-card full-width">

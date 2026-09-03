@@ -15,7 +15,8 @@ import {
     AlertTriangle, PhoneCall, BarChart2, Edit3, RotateCcw, SendHorizonal,
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
     Library, PartyPopper, Moon, CalendarClock, MoreVertical,
-    BookMarked, Upload, Loader2
+    BookMarked, Upload, Loader2,
+    PersonStanding
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -2231,9 +2232,9 @@ export default function StaffDashboard() {
                                             <div className="quick-link-icon bg-indigo"><Award size={20} /></div>
                                             <span>Marks Entry</span>
                                         </button>
-                                        <button className="quick-link-item" onClick={() => setActiveTab('library')}>
-                                            <div className="quick-link-icon bg-emerald"><Library size={20} /></div>
-                                            <span>Resources</span>
+                                        <button className="quick-link-item" onClick={() => setActiveTab('attendance')}>
+                                            <div className="quick-link-icon bg-emerald"><CheckCircle size={20} /> </div>
+                                            <span>Attendance</span>
                                         </button>
                                     </div>
                                 </div>
