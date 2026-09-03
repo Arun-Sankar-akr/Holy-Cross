@@ -173,6 +173,10 @@ export default function AnnouncementsBoard() {
                                         {item.content}
                                     </p>
 
+
+                                </div>
+
+                                <div className="card-footers">
                                     {hasNoticeLink(item) && (
                                         <a
                                             href={item.linkUrl}
@@ -186,20 +190,6 @@ export default function AnnouncementsBoard() {
                                             <ExternalLink size={13} />
                                         </a>
                                     )}
-                                </div>
-
-                                <div className="card-footer">
-                                    <button
-                                        type="button"
-                                        className="read-more"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            handleNoticeClick(item);
-                                        }}
-                                    >
-                                        Official Notice
-                                        <ChevronRight size={14} />
-                                    </button>
                                 </div>
                             </div>
                         ))}

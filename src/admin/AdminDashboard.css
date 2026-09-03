@@ -60,6 +60,7 @@ body {
 }
 
 .admin-containers.sidebar-collapsed .admin-main-content {
+  transition: all .3s ease-in-out;
   margin-left: var(--sidebar-w-collapsed);
 }
 
@@ -138,13 +139,16 @@ body {
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
+  transition: all .3s ease-in-out;
   z-index: 200;
   overflow: hidden;
   transition: width .25s ease, transform .25s ease;
 }
 
 .sidebar-collapsed .admin-sidebar {
+  transition: all .3s ease-in-out;
   width: 0px;
+  margin-left: -50px;
 }
 
 /* first child wraps brand + nav; must be a flex column that can shrink
@@ -1948,6 +1952,7 @@ body {
   }
 
   .admin-containers.sidebar-collapsed .admin-main-content {
+    transition: all .3s ease-in-out;
     margin-left: 0;
   }
 
@@ -2124,6 +2129,7 @@ body {
 }
 
 .admin-containers.sidebar-collapsed .admin-main-content {
+  transition: all .3s ease-in-out;
   margin-left: var(--sidebar-w-collapsed);
 }
 
@@ -2208,6 +2214,7 @@ body {
 }
 
 .sidebar-collapsed .admin-sidebar {
+  transition: all .3s ease-in-out;
   width: 0px;
 }
 
@@ -4156,6 +4163,7 @@ body {
   }
 
   .admin-containers.sidebar-collapsed .admin-main-content {
+    transition: all .3s ease-in-out;
     margin-left: 0;
   }
 

@@ -1205,6 +1205,9 @@ export default function AdminDashboard() {
                             </button>
                             {updatesOpen && (
                                 <div className="submenu-container">
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'announcements' ? 'active' : ''}`} onClick={() => handleTabClick('announcements')}>
+                                        <Bell size={15} /> Announcements
+                                    </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'upcoming_events' ? 'active' : ''}`} onClick={() => handleTabClick('upcoming_events')}>
                                         <Calendar size={15} /> Upcoming Events & Activities
                                     </button>
@@ -1222,9 +1225,6 @@ export default function AdminDashboard() {
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'holidays' ? 'active' : ''}`} onClick={() => handleTabClick('holidays')}>
                                         <Sun size={15} /> School Holidays
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'announcements' ? 'active' : ''}`} onClick={() => handleTabClick('announcements')}>
-                                        <Bell size={15} /> Announcements
                                     </button>
                                 </div>
                             )}
@@ -1244,7 +1244,7 @@ export default function AdminDashboard() {
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
                                         <Award size={15} /> Results & Publish
                                     </button>
-                                  
+
                                 </div>
                             )}
 

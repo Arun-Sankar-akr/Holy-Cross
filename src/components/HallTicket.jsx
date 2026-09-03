@@ -10,34 +10,20 @@ import {
     AlertCircle,
     CalendarDays,
     CheckCircle2,
-    Clock3,
-    Download,
+    ChevronRight,
     FileText,
     LockKeyhole,
     LogIn,
     MapPin,
+    Printer,
     RefreshCw,
-    Search,
     ShieldCheck,
     Ticket,
-    UserRound,
-    XCircle,
     User,
-    Printer,
-    ChevronRight
+    UserRound,
+    XCircle
 } from 'lucide-react';
 import './HallTicket.css';
-
-const EXAM_OPTIONS = [
-    '1st Mid-Term Exam',
-    'Quarterly Exam',
-    '2nd Mid-Term Exam',
-    'Half-yearly Exam',
-    '3rd Mid-Term Exam',
-    'Annual Exam'
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
 
 const normalize = (value = '') =>
     String(value)
@@ -197,14 +183,6 @@ const getFeeStatus = (student, feeRecords) => {
     };
 };
 
-const escapeHtml = (value = '') =>
-    String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-
 export default function Hallticket({
     schoolName = 'EduPulse Matric Higher Secondary School',
     academicYear = '2026 - 2027',
@@ -212,8 +190,8 @@ export default function Hallticket({
 }) {
     const [admissionNo, setAdmissionNo] = useState('');
     const [dob, setDob] = useState('');
-    const [selectedExam, setSelectedExam] = useState('');
-    const [selectedYear, setSelectedYear] = useState(String(CURRENT_YEAR));
+    const [selectedExam] = useState('');
+    const [selectedYear] = useState('');
 
     const [students, setStudents] = useState([]);
     const [erpStudents, setErpStudents] = useState([]);
@@ -230,11 +208,6 @@ export default function Hallticket({
     const [availableTickets, setAvailableTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
-
-    const years = useMemo(
-        () => Array.from({ length: 6 }, (_, index) => String(CURRENT_YEAR - 2 + index)),
-        []
-    );
 
     useEffect(() => {
         setLoading(true);
@@ -616,325 +589,17 @@ export default function Hallticket({
         setCurrentStep(1);
     };
 
-    const buildPrintableHallTicket = (ticket) => {
-        if (!verifiedStudent || !ticket) return;
-
-        const student = verifiedStudent;
-        const publication = ticket.publication;
-        const allocation = ticket.allocation;
-        const timetable = ticket.timetable || [];
-
-        const examName =
-            publication.exam ||
-            allocation.examName ||
-            'Examination';
-
-        const className =
-            getStudentClass(student) ||
-            allocation.targetClass ||
-            '—';
-
-        const section =
-            getStudentSection(student) ||
-            allocation.targetSection ||
-            '—';
-
-        const admission = getStudentAdmissionNo(student) || '—';
-        const rollNo = getStudentRollNo(student) || '—';
-        const seatNo = ticket.seatNo || '—';
-        const hallNo = publication.hallNo || allocation.hallNo || '—';
-
-        const timetableRows = timetable.length
-            ? timetable
-                .map(
-                    (item) => `
-                        <tr>
-                            <td>${escapeHtml(formatDate(item.examDate))}</td>
-                            <td>${escapeHtml(item.subjectCode || '—')}</td>
-                            <td>${escapeHtml(item.subject || '—')}</td>
-                            <td>${escapeHtml(item.examTime || '—')}</td>
-                        </tr>
-                    `
-                )
-                .join('')
-            : `
-                <tr>
-                    <td colspan="4" style="text-align:center;">
-                        Exam timetable is not published yet.
-                    </td>
-                </tr>
-            `;
-
-        const photo = student.photo
-            ? `<img class="student-photo" src="${escapeHtml(student.photo)}" alt="Student" />`
-            : `<div class="student-photo placeholder">PHOTO</div>`;
-
-        const printWindow = window.open(
-            '',
-            '_blank',
-            'width=1000,height=850'
-        );
-
-        if (!printWindow) {
-            alert(
-                'The browser blocked the print window. Please allow pop-ups for this website.'
-            );
-            return;
-        }
-
-        printWindow.document.write(`
-            <!doctype html>
-            <html>
-            <head>
-                <meta charset="utf-8" />
-                <title>${escapeHtml(admission)} - Hall Ticket</title>
-                <style>
-                    * { box-sizing: border-box; }
-                    body {
-                        margin: 0;
-                        padding: 24px;
-                        background: #f3f4f6;
-                        color: #111827;
-                        font-family: Arial, Helvetica, sans-serif;
-                    }
-                    .ticket {
-                        max-width: 850px;
-                        margin: 0 auto;
-                        background: #fff;
-                        border: 2px solid #111827;
-                        border-radius: 14px;
-                        overflow: hidden;
-                    }
-                    .header {
-                        padding: 24px 28px 18px;
-                        border-bottom: 2px solid #111827;
-                        text-align: center;
-                    }
-                    .school {
-                        font-size: 24px;
-                        font-weight: 800;
-                        margin-bottom: 5px;
-                    }
-                    .academic {
-                        font-size: 13px;
-                        color: #4b5563;
-                    }
-                    .title {
-                        margin-top: 14px;
-                        font-size: 20px;
-                        font-weight: 900;
-                        letter-spacing: 1.5px;
-                    }
-                    .exam {
-                        margin-top: 5px;
-                        font-size: 14px;
-                        font-weight: 700;
-                    }
-                    .identity {
-                        display: grid;
-                        grid-template-columns: 1fr 110px;
-                        gap: 18px;
-                        padding: 22px 28px;
-                    }
-                    .info {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 10px 22px;
-                    }
-                    .field {
-                        border-bottom: 1px solid #d1d5db;
-                        padding: 7px 0;
-                    }
-                    .label {
-                        display: block;
-                        font-size: 9px;
-                        color: #6b7280;
-                        text-transform: uppercase;
-                        font-weight: 800;
-                        letter-spacing: .5px;
-                    }
-                    .value {
-                        display: block;
-                        margin-top: 3px;
-                        font-size: 13px;
-                        font-weight: 700;
-                    }
-                    .student-photo {
-                        width: 100px;
-                        height: 120px;
-                        object-fit: cover;
-                        border: 1px solid #9ca3af;
-                        border-radius: 6px;
-                    }
-                    .placeholder {
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #6b7280;
-                        font-size: 11px;
-                        background: #f3f4f6;
-                    }
-                    .allocation {
-                        margin: 0 28px 20px;
-                        padding: 15px;
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 10px;
-                        background: #f3f4f6;
-                        border: 1px solid #d1d5db;
-                        border-radius: 10px;
-                    }
-                    .allocation strong {
-                        font-size: 16px;
-                    }
-                    .section-title {
-                        padding: 0 28px 8px;
-                        font-size: 12px;
-                        font-weight: 900;
-                        letter-spacing: .8px;
-                    }
-                    table {
-                        width: calc(100% - 56px);
-                        margin: 0 28px;
-                        border-collapse: collapse;
-                        font-size: 11px;
-                    }
-                    th, td {
-                        padding: 9px;
-                        border: 1px solid #d1d5db;
-                        text-align: left;
-                    }
-                    th {
-                        background: #f3f4f6;
-                        font-weight: 800;
-                    }
-                    .instructions {
-                        margin: 20px 28px;
-                        padding: 12px 14px;
-                        border: 1px solid #d1d5db;
-                        border-radius: 8px;
-                        font-size: 10px;
-                        line-height: 1.6;
-                    }
-                    .footer {
-                        display: flex;
-                        justify-content: space-between;
-                        padding: 28px;
-                        font-size: 10px;
-                    }
-                    @media print {
-                        body {
-                            padding: 0;
-                            background: white;
-                        }
-                        .ticket {
-                            border-radius: 0;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="ticket">
-                    <div class="header">
-                        <div class="school">${escapeHtml(schoolName)}</div>
-                        <div class="academic">Academic Year ${escapeHtml(academicYear)}</div>
-                        <div class="title">EXAMINATION HALL TICKET</div>
-                        <div class="exam">${escapeHtml(examName)}</div>
-                    </div>
-
-                    <div class="identity">
-                        <div class="info">
-                            <div class="field">
-                                <span class="label">Student Name</span>
-                                <span class="value">${escapeHtml(student.name || 'Student')}</span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Admission Number</span>
-                                <span class="value">${escapeHtml(admission)}</span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Roll Number</span>
-                                <span class="value">${escapeHtml(rollNo)}</span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Date of Birth</span>
-                                <span class="value">${escapeHtml(formatDate(student.dob))}</span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Class</span>
-                                <span class="value">${escapeHtml(className)}</span>
-                            </div>
-                            <div class="field">
-                                <span class="label">Section</span>
-                                <span class="value">${escapeHtml(section)}</span>
-                            </div>
-                        </div>
-                        ${photo}
-                    </div>
-
-                    <div class="allocation">
-                        <div>
-                            <span class="label">Examination Hall</span>
-                            <strong>${escapeHtml(hallNo)}</strong>
-                        </div>
-                        <div>
-                            <span class="label">Seat Number</span>
-                            <strong>${escapeHtml(seatNo)}</strong>
-                        </div>
-                    </div>
-
-                    <div class="section-title">EXAMINATION SCHEDULE</div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Code</th>
-                                <th>Subject</th>
-                                <th>Timing</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${timetableRows}
-                        </tbody>
-                    </table>
-
-                    <div class="instructions">
-                        <strong>Instructions:</strong><br />
-                        1. Bring this Hall Ticket to every examination.<br />
-                        2. Report to the allotted examination hall before the scheduled time.<br />
-                        3. Follow all examination rules and instructions issued by the school.
-                    </div>
-
-                    <div class="footer">
-                        <div>Student Signature</div>
-                        <div>Authorized Signatory</div>
-                    </div>
-                </div>
-
-                <script>
-                    window.onload = function () {
-                        window.print();
-                    };
-                </script>
-            </body>
-            </html>
-        `);
-
-        printWindow.document.close();
-    };
-
     const renderError = () => {
         if (error === 'HALL_TICKET_BLOCKED') {
             const fee = verifiedStudent?.fee;
 
             return (
-                <div className="hallticket-blocked-card">
+                <div className="blocked-card">
                     <div className="blocked-icon">
-                        <LockKeyhole size={30} />
+                        <LockKeyhole size={28} />
                     </div>
 
-                    <div className="blocked-content">
+                    <div>
                         <span className="status-kicker">ACCESS BLOCKED</span>
                         <h2>Hall Ticket is currently blocked</h2>
                         <p>
@@ -960,7 +625,7 @@ export default function Hallticket({
                         </div>
 
                         <div className="office-contact-box">
-                            <MapPin size={19} />
+                            <MapPin size={18} />
                             <div>
                                 <strong>Please contact the school office</strong>
                                 <span>{officeRoom} to clear the pending fee.</span>
@@ -969,7 +634,7 @@ export default function Hallticket({
 
                         <button
                             type="button"
-                            className="secondary-button"
+                            className="btn-secondary"
                             onClick={resetVerification}
                         >
                             <RefreshCw size={16} />
@@ -983,7 +648,7 @@ export default function Hallticket({
         if (!error) return null;
 
         return (
-            <div className="hallticket-message error">
+            <div className="form-alert error">
                 <AlertCircle size={18} />
                 <span>{error}</span>
             </div>
@@ -1016,12 +681,12 @@ export default function Hallticket({
         const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&margin=0&data=${qrData}`;
 
         return (
-            <div className="hall-ticket-preview">
-                <div className="hall-ticket-preview-header no-print">
-                    <div><h4>Hall Ticket Preview</h4><span>Official examination details</span></div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" onClick={printHallTicket} title="Print / Download" style={{ width: 34, height: 34, border: '1px solid #e2e8f0', borderRadius: 9, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Printer size={16} /></button>
-                        <button type="button" onClick={() => setCurrentStep(2)} aria-label="Back to verification"><XCircle size={18} /></button>
+            <div className="ticket-stage">
+                <div className="ticket-toolbar no-print">
+                    <div><h4>Hall Ticket</h4><span>Official examination details</span></div>
+                    <div className="toolbar-actions">
+                        <button type="button" onClick={printHallTicket} title="Print / Download" className="icon-btn"><Printer size={16} /></button>
+                        <button type="button" onClick={() => setCurrentStep(2)} title="Back" aria-label="Back to verification" className="icon-btn"><XCircle size={16} /></button>
                     </div>
                 </div>
                 <div className="ht-card">
@@ -1086,51 +751,102 @@ export default function Hallticket({
     };
 
     return (
-        <div className="hallticket-page">
-            <div className="hallticket-background-orb orb-one" /><div className="hallticket-background-orb orb-two" />
-            <div className="hallticket-shell">
-                <header className="hallticket-hero">
-                    <div className="hero-icon"><Ticket size={28} /></div>
-                    <div><span className="hero-kicker">STUDENT EXAMINATION PORTAL</span><h1>Hall Ticket</h1><p>Securely verify your student details, confirm eligibility, and access the official examination Hall Ticket.</p></div>
-                    <div className="hero-security"><ShieldCheck size={16} /> Secure Verification</div>
-                </header>
-                <div className="hallticket-steps no-print">
-                    {[['1','Student Login'],['2','Verify Details'],['3','Hall Ticket']].map(([num,label], index) => <div key={num} className={`hallticket-step ${currentStep === index + 1 ? 'active' : ''} ${currentStep > index + 1 ? 'done' : ''}`}><span>{num}</span><strong>{label}</strong></div>)}
+        <div className="hallticket-app">
+            {loading ? (
+                <div className="app-loading">
+                    <RefreshCw size={22} className="spin" />
+                    <span>Connecting to Student ERP...</span>
                 </div>
-                {loading ? <div className="hallticket-loading"><RefreshCw size={22} className="spin" /><span>Connecting to Student ERP...</span></div> : <>
-                    {currentStep === 1 && !verifiedStudent && <section className="verification-card">
-                        <div className="card-heading"><div className="heading-icon"><Search size={21} /></div><div><span>STEP 1 • VERIFY IDENTITY</span><h2>Student Login</h2><p>Enter your Admission Number and Date of Birth from the Student ERP.</p></div></div>
-                        <form onSubmit={verifyStudent} className="verification-form">
-                            <label className="field-group"><span>Admission Number <b>*</b></span><div className="input-shell"><FileText size={17} /><input type="text" value={admissionNo} onChange={e => setAdmissionNo(e.target.value)} placeholder="Enter Admission Number" required /></div></label>
-                            <label className="field-group"><span>Date of Birth <b>*</b></span><div className="input-shell"><CalendarDays size={17} /><input type="date" value={dob} onChange={e => setDob(e.target.value)} required /></div></label>
-                            <label className="field-group"><span>Exam</span><div className="input-shell select-shell"><Ticket size={17} /><select value={selectedExam} onChange={e => setSelectedExam(e.target.value)}><option value="">All Published Exams</option>{EXAM_OPTIONS.map(exam => <option key={exam} value={exam}>{exam}</option>)}</select></div></label>
-                            <label className="field-group"><span>Academic Year</span><div className="input-shell select-shell"><CalendarDays size={17} /><select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>{years.map(year => <option key={year} value={year}>{year}</option>)}</select></div></label>
-                            <button type="submit" className="verify-button" disabled={loginLoading}>{loginLoading ? <><RefreshCw size={18} className="spin" /> Verifying...</> : <><LogIn size={18} /> Verify & Continue</>}</button>
-                        </form>
-                        <div className="verification-note"><ShieldCheck size={16} /><span>Your Date of Birth is used only to verify your Student ERP record.</span></div>
-                    </section>}
-                    {renderError()}
-                    {currentStep === 2 && verifiedStudent && error !== 'HALL_TICKET_BLOCKED' && <section className="step-two-card">
-                        <div className="step-two-header"><div><span>STEP 2 • VERIFICATION COMPLETE</span><h2>Confirm Student & Hall Details</h2><p>Review your photo, student information, fee clearance and allotted examination seat.</p></div><CheckCircle2 size={34} /></div>
-                        <div className="verification-detail-grid">
-                            <div className="verified-photo-large">{verifiedStudent.photo ? <img src={verifiedStudent.photo} alt={verifiedStudent.name || 'Student'} /> : <UserRound size={42} />}</div>
-                            <div className="verified-detail-fields">
-                                <div><span>Student Name</span><strong>{verifiedStudent.name || '—'}</strong></div><div><span>Admission Number</span><strong>{getStudentAdmissionNo(verifiedStudent) || '—'}</strong></div><div><span>Roll Number</span><strong>{getStudentRollNo(verifiedStudent) || '—'}</strong></div><div><span>Class / Section</span><strong>{getStudentClass(verifiedStudent) || '—'} / {getStudentSection(verifiedStudent) || '—'}</strong></div><div><span>Date of Birth</span><strong>{formatDate(verifiedStudent.dob)}</strong></div><div><span>Exam</span><strong>{selectedTicket?.publication?.exam || selectedTicket?.allocation?.examName || selectedExam || 'Examination'}</strong></div>
+            ) : (
+                <>
+                    {currentStep === 1 && !verifiedStudent && (
+                        <div className="auth-stage">
+                            <div className="auth-card">
+                                <div className="auth-card-icon"><UserRound size={26} /></div>
+                                <h1>Student Hall Ticket</h1>
+                                <p>Enter your Admission Number and Date of Birth to verify your record.</p>
+                                <form onSubmit={verifyStudent} className="auth-form">
+                                    <label className="field">
+                                        <span>Admission Number</span>
+                                        <div className="field-input">
+                                            <FileText size={16} />
+                                            <input type="text" value={admissionNo} onChange={e => setAdmissionNo(e.target.value)} placeholder="Enter Admission Number" required />
+                                        </div>
+                                    </label>
+                                    <label className="field">
+                                        <span>Date of Birth</span>
+                                        <div className="field-input">
+                                            <CalendarDays size={16} />
+                                            <input type="date" value={dob} onChange={e => setDob(e.target.value)} required />
+                                        </div>
+                                    </label>
+                                    <button type="submit" className="btn-primary" disabled={loginLoading}>
+                                        {loginLoading ? <><RefreshCw size={17} className="spin" /> Verifying...</> : <><LogIn size={17} /> Verify & Continue</>}
+                                    </button>
+                                </form>
+                                <div className="auth-note">
+                                    <ShieldCheck size={15} />
+                                    <span>Your Date of Birth is used only to verify your Student ERP record.</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="clearance-grid">
-                            <div className="clearance-box success"><CheckCircle2 size={20} /><div><span>Fee Clearance</span><strong>Fees Cleared</strong><small>No outstanding balance</small></div></div>
-                            <div className="clearance-box"><MapPin size={20} /><div><span>Examination Hall</span><strong>{selectedTicket?.publication?.hallNo || selectedTicket?.allocation?.hallNo || '—'}</strong><small>Hall allocation confirmed</small></div></div>
-                            <div className="clearance-box"><Ticket size={20} /><div><span>Seat Number</span><strong>{selectedTicket?.seatNo || '—'}</strong><small>Seat assigned to you</small></div></div>
+                    )}
+
+                    {renderError()}
+
+                    {currentStep === 2 && verifiedStudent && error !== 'HALL_TICKET_BLOCKED' && (
+                        <div className="confirm-stage">
+                            <div className="confirm-card">
+                                <div className="confirm-header">
+                                    <div>
+                                        <span>STEP 2 • VERIFICATION COMPLETE</span>
+                                        <h2>Confirm Student & Hall Details</h2>
+                                        <p>Review your photo, student information, fee clearance and allotted examination seat.</p>
+                                    </div>
+                                    <CheckCircle2 size={32} />
+                                </div>
+                                <div className="confirm-body">
+                                    <div className="confirm-photo">
+                                        {verifiedStudent.photo ? <img src={verifiedStudent.photo} alt={verifiedStudent.name || 'Student'} /> : <UserRound size={40} />}
+                                    </div>
+                                    <div className="confirm-fields">
+                                        <div><span>Student Name</span><strong>{verifiedStudent.name || '—'}</strong></div>
+                                        <div><span>Admission Number</span><strong>{getStudentAdmissionNo(verifiedStudent) || '—'}</strong></div>
+                                        <div><span>Roll Number</span><strong>{getStudentRollNo(verifiedStudent) || '—'}</strong></div>
+                                        <div><span>Class / Section</span><strong>{getStudentClass(verifiedStudent) || '—'} / {getStudentSection(verifiedStudent) || '—'}</strong></div>
+                                        <div><span>Date of Birth</span><strong>{formatDate(verifiedStudent.dob)}</strong></div>
+                                        <div><span>Exam</span><strong>{selectedTicket?.publication?.exam || selectedTicket?.allocation?.examName || 'Examination'}</strong></div>
+                                    </div>
+                                </div>
+                                <div className="status-grid">
+                                    <div className="status-item success">
+                                        <CheckCircle2 size={19} />
+                                        <div><span>Fee Clearance</span><strong>Fees Cleared</strong><small>No outstanding balance</small></div>
+                                    </div>
+                                    <div className="status-item">
+                                        <MapPin size={19} />
+                                        <div><span>Examination Hall</span><strong>{selectedTicket?.publication?.hallNo || selectedTicket?.allocation?.hallNo || '—'}</strong><small>Hall allocation confirmed</small></div>
+                                    </div>
+                                    <div className="status-item">
+                                        <Ticket size={19} />
+                                        <div><span>Seat Number</span><strong>{selectedTicket?.seatNo || '—'}</strong><small>Seat assigned to you</small></div>
+                                    </div>
+                                </div>
+                                <div className="confirm-actions">
+                                    <button type="button" className="btn-secondary" onClick={resetVerification}><RefreshCw size={15} /> Verify Another</button>
+                                    <button type="button" className="btn-primary slim" disabled={!selectedTicket} onClick={goToPreview}><FileText size={16} /> Continue to Hall Ticket <ChevronRight size={16} /></button>
+                                </div>
+                            </div>
                         </div>
-                        <div className="step-actions"><button type="button" className="secondary-button" onClick={resetVerification}><RefreshCw size={16} /> Verify Another</button><button type="button" className="verify-button next-button" disabled={!selectedTicket} onClick={goToPreview}><FileText size={17} /> Continue to Hall Ticket <ChevronRight size={17} /></button></div>
-                    </section>}
+                    )}
+
                     {currentStep === 3 && selectedTicket && verifiedStudent && error !== 'HALL_TICKET_BLOCKED' && renderExactHallTicket()}
-                    {notice && verifiedStudent && currentStep !== 3 && <div className="hallticket-message notice"><AlertCircle size={18} /><span>{notice}</span></div>}
-                </>}
-                <footer className="hallticket-footer no-print"><span><ShieldCheck size={14} /> Student ERP • Fee Verification • Hall Allocation</span><span>For assistance, contact {officeRoom}.</span></footer>
-            </div>
+
+                    {notice && verifiedStudent && currentStep !== 3 && (
+                        <div className="form-alert notice"><AlertCircle size={16} /><span>{notice}</span></div>
+                    )}
+                </>
+            )}
         </div>
     );
-
-}
+} 
