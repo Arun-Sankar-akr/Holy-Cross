@@ -26,6 +26,8 @@
   --accent-cyan-bg: #e9f6fa;
   --accent-purple: #9b6fea;
   --accent-purple-bg: #f4eefd;
+  --accent-pink: #ec4899;
+  --accent-pink-bg: #fce7f3;
 
   /* Airy Radius & Feather-soft Shadows */
   --dash-shadow-sm: 0 1px 3px rgba(34, 34, 58, 0.04);
@@ -52,6 +54,7 @@
   --accent-amber-bg: rgba(217, 147, 50, 0.16);
   --accent-cyan-bg: rgba(43, 166, 201, 0.16);
   --accent-purple-bg: rgba(155, 111, 234, 0.16);
+  --accent-pink-bg: rgba(236, 72, 153, 0.16);
 
   --dash-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45);
 }
@@ -1288,6 +1291,10 @@ td {
   background: var(--accent-amber);
 }
 
+.dot.holiday {
+  background: var(--accent-pink);
+}
+
 .ps-ring-wrap {
   position: relative;
   width: 150px;
@@ -1352,24 +1359,59 @@ td {
   font-weight: 700;
   color: var(--dash-text-main);
   margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: opacity 0.25s ease, max-height 0.25s ease, margin 0.25s ease;
+  opacity: 1;
+  max-height: 20px;
+}
+
+.ps-last7-header.is-scrolling {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
+}
+
+.ps-last7-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ps-last7-scroll-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 .ps-last7-strip {
   display: flex;
-  justify-content: space-between;
-  gap: 0.3rem;
+  gap: 0.35rem;
+  width: max-content;
 }
 
 .ps-day-chip {
-  flex: 1;
-  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 0.68rem;
   font-weight: 800;
   color: #fff;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ps-day-chip-label {
+  line-height: 1;
+}
+
+.ps-day-chip-date {
+  line-height: 1;
+  font-size: 0.72rem;
+  margin-top: 2px;
 }
 
 .ps-day-chip.present {
@@ -1381,18 +1423,107 @@ td {
 }
 
 .ps-day-chip.off {
-  background: var(--dash-bg);
+  background: var(--dash-surface);
   color: var(--dash-text-muted);
   border: 1px solid var(--dash-border);
 }
 
+.ps-day-chip.holiday {
+  background: var(--accent-pink);
+  color: #fff;
+}
+
+.ps-day-chip.today {
+  width: 50px;
+  height: 50px;
+  transform: scale(1.05);
+  border: 2px solid var(--dash-primary);
+  box-shadow: 0 6px 14px rgba(87, 72, 221, 0.28);
+  font-size: 0.72rem;
+  z-index: 1;
+}
+
+.ps-last7-spacer {
+  flex: 0 0 auto;
+  height: 1px;
+}
+
+.ps-last7-month {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--dash-text-muted);
+  margin-top: 0.6rem;
+}
+
 /* Mini calendar */
 .ps-mini-cal-head {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
   font-size: 0.8rem;
   font-weight: 800;
   color: var(--dash-text-main);
   margin-bottom: 0.65rem;
+}
+
+.ps-mini-cal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid var(--dash-border);
+  border-radius: 7px;
+  background: var(--dash-surface);
+  color: var(--dash-text-main);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ps-mini-cal-nav-btn:hover:not(:disabled) {
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+}
+
+.ps-mini-cal-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ps-mini-cal-head-selects {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ps-mini-cal-select {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dash-text-main);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 6px;
+  padding: 3px 4px;
+  min-width: 0;
+  max-width: 84px;
+}
+
+.ps-mini-cal-year-input {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dash-text-main);
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 6px;
+  padding: 3px 4px;
+  width: 62px;
+  text-align: center;
 }
 
 .ps-mini-cal-grid {
@@ -1418,12 +1549,6 @@ td {
   padding: 5px 0;
   border-radius: 8px;
   cursor: default;
-}
-
-.ps-cal-day.today {
-  background: var(--dash-primary-grad);
-  color: #fff;
-  font-weight: 800;
 }
 
 .ps-exams-header {
@@ -3431,6 +3556,13 @@ td {
   font-weight: 800;
 }
 
+.ps-mini-cal-day.attendance-holiday {
+  background: #FCE7F3 !important;
+  color: #9D174D !important;
+  border-color: #F9A8D4 !important;
+  font-weight: 800;
+}
+
 .ps-mini-cal-day.attendance-unmarked,
 .ps-mini-cal-day.today {
   background: #FFFFFF !important;
@@ -3446,6 +3578,7 @@ td {
 
 .ps-mini-cal-day.attendance-present:hover,
 .ps-mini-cal-day.attendance-absent:hover,
+.ps-mini-cal-day.attendance-holiday:hover,
 .ps-mini-cal-day.attendance-unmarked:hover,
 .ps-mini-cal-day.today:hover {
   transform: translateY(-1px);

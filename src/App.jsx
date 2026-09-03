@@ -71,6 +71,7 @@ function AppContent({ loading, fadeOut }) {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isStaffRoute = location.pathname.startsWith('/erp/staff/dashboard');
   const isOfficeRoute = location.pathname.startsWith('/erp/office/dashboard');
+  const isHall = location.pathname.startsWith('/hallticket');
 
   // Initialize Lenis Smooth Scrolling
   useEffect(() => {
@@ -123,6 +124,7 @@ function AppContent({ loading, fadeOut }) {
             <Route path="/" element={<Home />} />
             <Route path="/school/toppers" element={<ExamToppers />} />
             <Route path="/hallticket" element={<HallTicket />} />
+            <Route path="/gallery" element={<Gallery />} />
             <Route path="/school/:pageId" element={<SchoolSections />} />
             <Route path="/school/progress-report" element={<ProgressReport />} />
             <Route path="/school/calendar" element={<Calendar />} />
@@ -199,7 +201,7 @@ function AppContent({ loading, fadeOut }) {
         </main>
 
         {/* Render Footer only on non-admin routes */}
-        {!isAdminRoute && !isStaffRoute && !isOfficeRoute && <Footer />}
+        {!isAdminRoute && !isStaffRoute && !isOfficeRoute && !isHall && <Footer />}
       </div>
     </>
   );

@@ -430,7 +430,7 @@
     position: relative;
     width: 90%;
     left: 5%;
-    height: 500px;
+    height: 510px;
     overflow: hidden;
     display: flex;
 }
@@ -1168,7 +1168,7 @@
     display: flex;
     align-items: center;
     gap: 20px;
-    height: fit-content;
+    height: 120px;
     min-height: unset;
     padding: 18px 24px;
     background: transparent;
@@ -1243,6 +1243,7 @@
 }
 
 .event-type {
+    display: none;
     color: var(--hc-gold);
     font-size: 9px;
     font-weight: 800;

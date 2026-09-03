@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -6,7 +6,7 @@ import {
     BookOpen, Calendar, Award, CheckCircle, Bell, Search, LogOut,
     Menu, X, Clock, FileText, User, Ticket, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
-    ChevronRight, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
+    ChevronRight, ChevronLeft, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
     Download, Sparkles, Eye, ChevronDown, BookMarked
 } from 'lucide-react';
 import './StudentDashboard.css';
@@ -15,6 +15,26 @@ import principalSignature from "../../assets/signature.png"
 
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
 const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
+
+// Keep in sync with HolidayList.jsx — same manual Government Public Holidays list,
+// used here so "holiday" days can be colored pink in the attendance widgets
+// even before the live Firestore 'holidays' collection has loaded.
+const MANUAL_GOVT_HOLIDAYS = [
+    { id: 'm-1', date: '2026-01-26', day: 'Monday', occasion: 'Republic Day', type: 'National Holiday' },
+    { id: 'm-2', date: '2026-03-03', day: 'Tuesday', occasion: 'Holi', type: 'Gazetted Holiday' },
+    { id: 'm-3', date: '2026-03-21', day: 'Saturday', occasion: 'Id-ul-Fitr', type: 'Gazetted Holiday' },
+    { id: 'm-4', date: '2026-04-03', day: 'Friday', occasion: 'Good Friday', type: 'Gazetted Holiday' },
+    { id: 'm-5', date: '2026-04-14', day: 'Tuesday', occasion: 'Ambedkar Jayanti', type: 'Government Holiday' },
+    { id: 'm-6', date: '2026-05-01', day: 'Friday', occasion: 'May Day / Labor Day', type: 'Government Holiday' },
+    { id: 'm-7', date: '2026-05-27', day: 'Wednesday', occasion: 'Bakrid / Id-ul-Zuha', type: 'Gazetted Holiday' },
+    { id: 'm-8', date: '2026-08-15', day: 'Saturday', occasion: 'Independence Day', type: 'National Holiday' },
+    { id: 'm-9', date: '2026-08-26', day: 'Wednesday', occasion: 'Milad-un-Nabi', type: 'Gazetted Holiday' },
+    { id: 'm-10', date: '2026-10-02', day: 'Friday', occasion: 'Mahatma Gandhi Jayanti', type: 'National Holiday' },
+    { id: 'm-11', date: '2026-10-20', day: 'Tuesday', occasion: 'Dussehra / Vijayadashami', type: 'Gazetted Holiday' },
+    { id: 'm-12', date: '2026-11-08', day: 'Sunday', occasion: 'Diwali / Deepavali', type: 'Gazetted Holiday' },
+    { id: 'm-13', date: '2026-11-24', day: 'Tuesday', occasion: 'Guru Nanak Jayanti', type: 'Gazetted Holiday' },
+    { id: 'm-14', date: '2026-12-25', day: 'Friday', occasion: 'Christmas Day', type: 'National Holiday' }
+];
 
 export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
@@ -32,6 +52,7 @@ export default function StudentDashboard() {
     const [syllabusList, setSyllabusList] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
+    const [holidaysList, setHolidaysList] = useState(MANUAL_GOVT_HOLIDAYS);
     const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
     const [hallTicketPublications, setHallTicketPublications] = useState([]);
     const [examTimetableList, setExamTimetableList] = useState([]);
@@ -42,6 +63,13 @@ export default function StudentDashboard() {
 
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+    const [isLast7StripScrolling, setIsLast7StripScrolling] = useState(false);
+    const [last7SpacerWidth, setLast7SpacerWidth] = useState(160);
+    const last7ScrollRef = useRef(null);
+    const last7TodayRef = useRef(null);
+    const last7ScrollTimeoutRef = useRef(null);
+    const last7AutoScrolledRef = useRef(false);
+    const [scheduleCalDate, setScheduleCalDate] = useState(() => new Date());
 
     const [uploadingTaskId, setUploadingTaskId] = useState(null);
     const [pdfBase64Map, setPdfBase64Map] = useState({});
@@ -536,6 +564,18 @@ export default function StudentDashboard() {
             setExamTimetableList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snap) => {
+            const liveHolidays = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+            // Combine manual government holidays with live Firestore entries (same merge logic as HolidayList.jsx)
+            const combinedMap = new Map();
+            [...MANUAL_GOVT_HOLIDAYS, ...liveHolidays].forEach((item) => {
+                if (item.date) combinedMap.set(`${item.date}-${item.occasion}`, item);
+            });
+
+            setHolidaysList(Array.from(combinedMap.values()));
+        });
+
         return () => {
             unsubStudents();
             unsubAttendance();
@@ -543,6 +583,7 @@ export default function StudentDashboard() {
             unsubAssignments();
             unsubSyllabus();
             unsubSubmissions();
+            unsubHolidays();
             unsubFees();
             unsubExamHalls();
             unsubHallTicketPublications();
@@ -666,6 +707,76 @@ export default function StudentDashboard() {
         }
     }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
+    // Default the horizontally-scrollable day-chip strip so "today" sits centered
+    // in the visible area (a trailing spacer makes room to scroll that far),
+    // with the older days revealed by swiping left.
+    useEffect(() => {
+        if (last7AutoScrolledRef.current) return;
+        const container = last7ScrollRef.current;
+        if (!container) return;
+
+        const half = Math.round(container.clientWidth / 2);
+        setLast7SpacerWidth(half);
+
+        requestAnimationFrame(() => {
+            const todayEl = last7TodayRef.current;
+            if (container && todayEl) {
+                const target = todayEl.offsetLeft + todayEl.offsetWidth / 2 - container.clientWidth / 2;
+                container.scrollLeft = Math.max(0, target);
+                last7AutoScrolledRef.current = true;
+            }
+        });
+    }, [attendanceRecords, holidaysList]);
+
+    const handleLast7Scroll = () => {
+        setIsLast7StripScrolling(true);
+        if (last7ScrollTimeoutRef.current) clearTimeout(last7ScrollTimeoutRef.current);
+        last7ScrollTimeoutRef.current = setTimeout(() => {
+            setIsLast7StripScrolling(false);
+        }, 700);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (last7ScrollTimeoutRef.current) clearTimeout(last7ScrollTimeoutRef.current);
+        };
+    }, []);
+
+    // Schedules mini-calendar navigation — browsable from Jan 2024 onward, with no upper bound.
+    const SCHEDULE_CAL_MIN_YEAR = 2024;
+    const scheduleMonthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const scheduleCalYear = scheduleCalDate.getFullYear();
+    const scheduleCalMonth = scheduleCalDate.getMonth();
+    const isScheduleCalAtMinMonth = scheduleCalYear === SCHEDULE_CAL_MIN_YEAR && scheduleCalMonth === 0;
+
+    const handleSchedulePrevMonth = () => {
+        setScheduleCalDate((prev) => {
+            const year = prev.getFullYear();
+            const month = prev.getMonth();
+            if (year === SCHEDULE_CAL_MIN_YEAR && month === 0) return prev;
+            return new Date(year, month - 1, 1);
+        });
+    };
+
+    const handleScheduleNextMonth = () => {
+        setScheduleCalDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    };
+
+    const handleScheduleMonthChange = (e) => {
+        const monthIndex = parseInt(e.target.value, 10);
+        setScheduleCalDate((prev) => new Date(prev.getFullYear(), monthIndex, 1));
+    };
+
+    const handleScheduleYearChange = (e) => {
+        const rawYear = parseInt(e.target.value, 10);
+        if (Number.isNaN(rawYear)) return;
+        const year = Math.max(rawYear, SCHEDULE_CAL_MIN_YEAR);
+        setScheduleCalDate((prev) => new Date(year, prev.getMonth(), 1));
+    };
+
     const getLocalDateKey = (date = new Date()) => {
         const d = date instanceof Date ? date : new Date(date);
         if (Number.isNaN(d.getTime())) return '';
@@ -684,16 +795,22 @@ export default function StudentDashboard() {
             return getLocalDateKey(value.toDate());
         }
 
-        const isoMatch = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+        const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
 
-        const dmyMatch = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/);
+        const dmyMatch = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
         if (dmyMatch) {
             return `${dmyMatch[3]}-${String(dmyMatch[2]).padStart(2, '0')}-${String(dmyMatch[1]).padStart(2, '0')}`;
         }
 
         return '';
     };
+
+    const holidayDateSet = new Set(
+        holidaysList
+            .map((h) => normalizeAttendanceDate(h.date))
+            .filter(Boolean)
+    );
 
     const attendanceByDate = attendanceRecords.reduce((map, record) => {
         const dateKey = normalizeAttendanceDate(record.date);
@@ -720,6 +837,7 @@ export default function StudentDashboard() {
         if (dateKey === todayKey) return 'today';
         if (status === 'present') return 'attendance-present';
         if (status === 'absent') return 'attendance-absent';
+        if (holidayDateSet.has(dateKey)) return 'attendance-holiday';
         return 'attendance-unmarked';
     };
 
@@ -1481,20 +1599,60 @@ export default function StudentDashboard() {
                                             <div className="ps-ring-legend">
                                                 <span><i className="dot present" />Present</span>
                                                 <span><i className="dot absent" />Absent</span>
-                                                <span><i className="dot halfday" />Late</span>
                                                 <span><i className="dot halfday" />Half Day</span>
+                                                <span><i className="dot holiday" />Holiday</span>
                                             </div>
 
-                                            <div className="ps-last7-header">Last 7 Days</div>
-                                            <div className="ps-last7-strip">
-                                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => {
-                                                    const state = i < 5 ? 'present' : i === 5 ? 'absent' : 'off';
-                                                    return (
-                                                        <div key={i} className={`ps-day-chip ${state}`}>
-                                                            {d}
-                                                        </div>
-                                                    );
-                                                })}
+                                            <div className={`ps-last7-header ${isLast7StripScrolling ? 'is-scrolling' : ''}`}>Last 7 Days</div>
+                                            <div
+                                                className="ps-last7-scroll-wrap"
+                                                ref={last7ScrollRef}
+                                                onScroll={handleLast7Scroll}
+                                            >
+                                                <div className="ps-last7-strip">
+                                                    {Array.from({ length: 14 }).map((_, i) => {
+                                                        const dayDate = new Date();
+                                                        dayDate.setDate(dayDate.getDate() - (13 - i));
+                                                        const dateKey = getLocalDateKey(dayDate);
+                                                        const markedStatus = attendanceByDate[dateKey];
+                                                        const isHoliday = holidayDateSet.has(dateKey);
+                                                        const isToday = dateKey === getLocalDateKey(new Date());
+
+                                                        const state =
+                                                            markedStatus === 'present' ? 'present' :
+                                                                markedStatus === 'absent' ? 'absent' :
+                                                                    isHoliday ? 'holiday' : 'off';
+
+                                                        const label = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
+                                                        const statusText =
+                                                            state === 'present' ? 'Present' :
+                                                                state === 'absent' ? 'Absent' :
+                                                                    state === 'holiday' ? 'Holiday' : 'Attendance not marked';
+
+                                                        return (
+                                                            <div
+                                                                key={dateKey}
+                                                                ref={isToday ? last7TodayRef : undefined}
+                                                                className={`ps-day-chip ${state} ${isToday ? 'today' : ''}`}
+                                                                title={`${dateKey} — ${statusText}${isToday ? ' (Today)' : ''}`}
+                                                                aria-label={`${dateKey} — ${statusText}${isToday ? ' (Today)' : ''}`}
+                                                            >
+                                                                <span className="ps-day-chip-label">{label}</span>
+                                                                {isToday && (
+                                                                    <span className="ps-day-chip-date">{dayDate.getDate()}</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <div
+                                                        className="ps-last7-spacer"
+                                                        style={{ width: `${last7SpacerWidth}px` }}
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="ps-last7-month">
+                                                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                             </div>
                                         </div>
                                     </div>
@@ -1507,19 +1665,58 @@ export default function StudentDashboard() {
                                             </div>
 
                                             <div className="ps-mini-cal-head">
-                                                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                                <button
+                                                    type="button"
+                                                    className="ps-mini-cal-nav-btn"
+                                                    onClick={handleSchedulePrevMonth}
+                                                    disabled={isScheduleCalAtMinMonth}
+                                                    title="Previous Month"
+                                                    aria-label="Previous Month"
+                                                >
+                                                    <ChevronLeft size={14} />
+                                                </button>
+
+                                                <div className="ps-mini-cal-head-selects">
+                                                    <select
+                                                        className="ps-mini-cal-select"
+                                                        value={scheduleCalMonth}
+                                                        onChange={handleScheduleMonthChange}
+                                                        title="Select Month"
+                                                    >
+                                                        {scheduleMonthNames.map((name, idx) => (
+                                                            <option key={name} value={idx}>{name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <input
+                                                        type="number"
+                                                        className="ps-mini-cal-year-input"
+                                                        min={SCHEDULE_CAL_MIN_YEAR}
+                                                        value={scheduleCalYear}
+                                                        onChange={handleScheduleYearChange}
+                                                        title="Select Year"
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    className="ps-mini-cal-nav-btn"
+                                                    onClick={handleScheduleNextMonth}
+                                                    title="Next Month"
+                                                    aria-label="Next Month"
+                                                >
+                                                    <ChevronRight size={14} />
+                                                </button>
                                             </div>
                                             <div className="ps-mini-cal-grid">
                                                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
                                                     <span key={i} className="ps-cal-dow">{d}</span>
                                                 ))}
-                                                {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, i) => (
+                                                {Array.from({ length: new Date(scheduleCalYear, scheduleCalMonth, 1).getDay() }).map((_, i) => (
                                                     <span key={`blank-${i}`} />
                                                 ))}
-                                                {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }).map((_, i) => {
-                                                    const now = new Date();
-                                                    const year = now.getFullYear();
-                                                    const monthIndex = now.getMonth();
+                                                {Array.from({ length: new Date(scheduleCalYear, scheduleCalMonth + 1, 0).getDate() }).map((_, i) => {
+                                                    const year = scheduleCalYear;
+                                                    const monthIndex = scheduleCalMonth;
                                                     const dayNum = i + 1;
                                                     const attendanceClass = getCalendarAttendanceClass(year, monthIndex, dayNum);
                                                     const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
@@ -1527,13 +1724,14 @@ export default function StudentDashboard() {
                                                     const statusLabel =
                                                         attendanceClass === 'attendance-present' ? 'Present' :
                                                             attendanceClass === 'attendance-absent' ? 'Absent' :
-                                                                attendanceClass === 'today' ? 'Today / Attendance not marked' :
-                                                                    'Attendance not marked';
+                                                                attendanceClass === 'attendance-holiday' ? 'Holiday' :
+                                                                    attendanceClass === 'today' ? 'Today / Attendance not marked' :
+                                                                        'Attendance not marked';
 
                                                     return (
                                                         <span
-                                                            key={dayNum}
-                                                            className={`ps-cal-day ${attendanceClass}`}
+                                                            key={dateKey}
+                                                            className={`ps-mini-cal-day ${attendanceClass}`}
                                                             title={`${dateKey} — ${statusLabel}`}
                                                             aria-label={`${dateKey} — ${statusLabel}`}
                                                         >

@@ -762,8 +762,8 @@ export default function Hallticket({
                     {currentStep === 1 && !verifiedStudent && (
                         <div className="auth-stage">
                             <div className="auth-card">
-                                <div className="auth-card-icon"><UserRound size={26} /></div>
-                                <h1>Student Hall Ticket</h1>
+                                <div className="auth-card-icon"><img src={logo} alt="" /> <div className="sname"><p>Holy Cross Matric. Hr. Sec. School</p><span>Somarasampettai, Trichy 102.</span></div></div>
+                                <h1>Hall Ticket Login</h1>
                                 <p>Enter your Admission Number and Date of Birth to verify your record.</p>
                                 <form onSubmit={verifyStudent} className="auth-form">
                                     <label className="field">
