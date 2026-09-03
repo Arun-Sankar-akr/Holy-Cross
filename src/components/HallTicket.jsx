@@ -26,38 +26,7 @@ import {
     Printer,
     ChevronRight
 } from 'lucide-react';
-import './Hallticket.css';
-
-/*
- * Hallticket.jsx
- *
- * Firestore collections used by this component:
- *   1. students_records
- *      admissionNo, rollNumber, name, dob, photo, className/grade,
- *      sectionName/section, guardianName, gender, status
- *
- *   2. students_erp
- *      admissionNo, name, className/grade, sectionName/section, status
- *
- *   3. fee_collections  <-- same fee source used by OfficeDashboard
- *      admissionNo/rollNo, studentName/name, totalFee, paidAmount,
- *      balance, status
- *
- *   4. hall_ticket_publications
- *      studentId, studentName, admissionNo, exam, year, allocationId,
- *      hallNo, seatNo, published, publishedAt
- *
- *   5. exam_hall_allocations
- *      studentIds, studentList, hallNo, examName, targetClass,
- *      targetSection
- *
- *   6. exam_timetables
- *      className, examName, subjectCode, subject, examDate, examTime
- *
- * The component deliberately re-checks fees at login/view time.
- * Therefore a previously published hall ticket is blocked if the
- * student's fee is later changed to Pending/Partial or has a balance.
- */
+import './HallTicket.css';
 
 const EXAM_OPTIONS = [
     '1st Mid-Term Exam',
