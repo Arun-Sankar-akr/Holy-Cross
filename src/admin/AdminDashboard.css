@@ -6653,3 +6653,139 @@ body {
     box-sizing: border-box;
   }
 }
+
+/* ============================================================
+   ANNOUNCEMENT LINK ATTACHMENT
+   ============================================================ */
+.publish-announcement-section .announcement-editor-field,
+.publish-announcement-section .announcement-link-box {
+  grid-column: 1 / -1;
+}
+
+.publish-announcement-section .announcement-editor-field,
+.publish-announcement-section .announcement-link-grid>div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.publish-announcement-section .announcement-editor-field label,
+.publish-announcement-section .announcement-link-grid label {
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.publish-announcement-section .announcement-link-box {
+  padding: 14px;
+  border: 1px solid #dcefe7;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fffc 0%, #f1fbf7 100%);
+}
+
+.publish-announcement-section .announcement-link-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.publish-announcement-section .announcement-link-heading span {
+  font-size: .8rem;
+  font-weight: 800;
+  color: var(--section-accent, #059669);
+}
+
+.publish-announcement-section .announcement-link-heading small {
+  color: var(--text-muted);
+  font-size: .68rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.publish-announcement-section .announcement-link-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+
+.publish-announcement-section .announcement-link-grid input {
+  width: 100%;
+}
+
+.publish-announcement-section .announcement-link-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px dashed #b8ddce;
+  font-size: .73rem;
+  color: var(--text-muted);
+}
+
+.publish-announcement-section .announcement-link-preview a,
+.publish-announcement-section .announcement-attached-link {
+  color: #047857;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.publish-announcement-section .announcement-link-preview a:hover,
+.publish-announcement-section .announcement-attached-link:hover {
+  color: #065f46;
+}
+
+.publish-announcement-section .announcement-publish-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.publish-announcement-section .announcement-list-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.publish-announcement-section .announcement-list-content>span {
+  line-height: 1.5;
+}
+
+.publish-announcement-section .announcement-attached-link {
+  width: fit-content;
+  font-size: .73rem;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #e8faf3;
+  text-decoration: none;
+}
+
+@media (max-width:700px) {
+  .publish-announcement-section .announcement-link-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .publish-announcement-section .announcement-link-heading {
+    flex-direction: column;
+  }
+
+  .publish-announcement-section .announcement-link-heading small {
+    text-align: left;
+  }
+
+  .publish-announcement-section .announcement-publish-actions {
+    justify-content: stretch;
+  }
+
+  .publish-announcement-section .announcement-publish-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

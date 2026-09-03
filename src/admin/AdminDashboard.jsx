@@ -121,6 +121,8 @@ export default function AdminDashboard() {
     const [galleryUpdating, setGalleryUpdating] = useState(false);
     const [holidayForm, setHolidayForm] = useState({ date: '', day: '', occasion: '', type: 'National Holiday' });
     const [noticeText, setNoticeText] = useState('');
+    const [announcementLinkText, setAnnouncementLinkText] = useState('');
+    const [announcementLinkUrl, setAnnouncementLinkUrl] = useState('');
 
     // Global Search and System Settings State
     const [globalSearch, setGlobalSearch] = useState('');
@@ -2291,10 +2293,68 @@ export default function AdminDashboard() {
                             <h3>Publish Announcement</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
-                                handlePublish('announcements', { content: noticeText }, () => setNoticeText(''));
+
+                                const linkText = announcementLinkText.trim();
+                                const linkUrl = announcementLinkUrl.trim();
+
+                                if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
+                                    alert('Please enter a valid link beginning with http:// or https://');
+                                    return;
+                                }
+
+                                handlePublish(
+                                    'announcements',
+                                    {
+                                        content: noticeText.trim(),
+                                        linkText: linkText || '',
+                                        linkUrl: linkUrl || ''
+                                    },
+                                    () => {
+                                        setNoticeText('');
+                                        setAnnouncementLinkText('');
+                                        setAnnouncementLinkUrl('');
+                                    }
+                                );
                             }}>
-                                <textarea rows="3" placeholder="Enter notice content..." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Announcement</button>
+                                <div className="announcement-editor-field full-width">
+                                    <label>Announcement Message</label>
+                                    <textarea rows="3" placeholder="Example: Hall Ticket has been released. Students can download it using the link below." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
+                                </div>
+
+                                <div className="announcement-link-box full-width">
+                                    <div className="announcement-link-heading">
+                                        <span>Attach Link to Words</span>
+                                        <small>Make a word/phrase clickable — perfect for Hall Ticket, Results, Timetable, etc.</small>
+                                    </div>
+
+                                    <div className="announcement-link-grid">
+                                        <div>
+                                            <label>Clickable Words</label>
+                                            <input type="text" placeholder="Example: Download Hall Ticket" value={announcementLinkText} onChange={e => setAnnouncementLinkText(e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label>Link URL</label>
+                                            <input type="url" placeholder="https://your-site.com/hall-ticket" value={announcementLinkUrl} onChange={e => setAnnouncementLinkUrl(e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    {(announcementLinkText.trim() || announcementLinkUrl.trim()) && (
+                                        <div className="announcement-link-preview">
+                                            <span>Preview:</span>
+                                            {announcementLinkUrl.trim() ? (
+                                                <a href={announcementLinkUrl.trim()} target="_blank" rel="noopener noreferrer">
+                                                    {announcementLinkText.trim() || announcementLinkUrl.trim()}
+                                                </a>
+                                            ) : (
+                                                <strong>{announcementLinkText.trim() || 'Your clickable words'}</strong>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="announcement-publish-actions full-width">
+                                    <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Announcement</button>
+                                </div>
                             </form>
 
                             <h4>Published Announcements <span className="count-badge">{announcements.length}</span></h4>
@@ -2302,7 +2362,14 @@ export default function AdminDashboard() {
                                 <ul>
                                     {announcements.map(item => (
                                         <li key={item.id}>
-                                            <span>{item.content}</span>
+                                            <div className="announcement-list-content">
+                                                <span>{item.content}</span>
+                                                {item.linkUrl && (
+                                                    <a className="announcement-attached-link" href={item.linkUrl} target="_blank" rel="noopener noreferrer">
+                                                        {item.linkText || 'Open Link'}
+                                                    </a>
+                                                )}
+                                            </div>
                                             <button onClick={() => handleDelete('announcements', item.id)}><Trash2 size={14} /></button>
                                         </li>
                                     ))}
