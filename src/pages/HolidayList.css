@@ -35,8 +35,7 @@
     padding: 34px 38px;
     border-radius: 28px;
     background:
-        radial-gradient(circle at 85% 10%, rgba(143, 124, 255, .35), transparent 28%),
-        linear-gradient(135deg, #171b3b 0%, #30276b 48%, #5b4bdb 100%);
+        linear-gradient(135deg, #16836a 0%, #163e35 48%, #053c2f 100%);
     color: #fff;
     display: flex;
     align-items: center;
