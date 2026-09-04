@@ -73,16 +73,12 @@ const heroImage = [
     campusBg10,
     campusBg4,
     campusBg5,
-    // campusBg6,
-    // campusBg7,
-    // campusBg8,
-    // campusBg9,
 ];
 
 function SectionHeading({ eyebrow, title, description, action }) {
     return (
         <div className="section-heading">
-            <div>
+            <div className="section-heading-copy">
                 <span className="section-kicker">{eyebrow}</span>
                 <h2>{title}</h2>
                 {description && <p>{description}</p>}
@@ -92,7 +88,7 @@ function SectionHeading({ eyebrow, title, description, action }) {
     );
 }
 
-function IconBadge({ children, tone = 'green' }) {
+function IconBadge({ children, tone = 'blue' }) {
     return <span className={`icon-badge icon-badge-${tone}`}>{children}</span>;
 }
 
@@ -159,7 +155,6 @@ export default function Home({ setActivePage }) {
         };
     }, []);
 
-    // Gentle continuous auto-scroll through the upcoming events list
     useEffect(() => {
         const el = eventsScrollRef.current;
         if (!el) return;
@@ -186,16 +181,13 @@ export default function Home({ setActivePage }) {
         return () => cancelAnimationFrame(rafId);
     }, [upcomingEvents]);
 
-    // Once the events board scrolls out of view, clear the pause so it auto-scrolls again next time it's visible
     useEffect(() => {
         const node = eventsSectionRef.current;
         if (!node) return;
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (!entry.isIntersecting) {
-                    eventsPausedRef.current = false;
-                }
+                if (!entry.isIntersecting) eventsPausedRef.current = false;
             },
             { threshold: 0 }
         );
@@ -208,7 +200,6 @@ export default function Home({ setActivePage }) {
         eventsPausedRef.current = true;
     };
 
-    // Gentle continuous auto-scroll carousel through the toppers & achievers cards
     useEffect(() => {
         const el = achieversScrollRef.current;
         if (!el) return;
@@ -235,16 +226,13 @@ export default function Home({ setActivePage }) {
         return () => cancelAnimationFrame(rafId);
     }, [toppersList]);
 
-    // Once the achievers carousel scrolls out of view, clear the pause so it auto-scrolls again next time it's visible
     useEffect(() => {
         const node = achieversSectionRef.current;
         if (!node) return;
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (!entry.isIntersecting) {
-                    achieversPausedRef.current = false;
-                }
+                if (!entry.isIntersecting) achieversPausedRef.current = false;
             },
             { threshold: 0 }
         );
@@ -269,8 +257,9 @@ export default function Home({ setActivePage }) {
 
     return (
         <main className="home-page">
+            {/* NEW HERO: editorial split layout */}
             <section className="home-hero">
-                <div className="hero-media">
+                <div className="hero-background">
                     {heroImages.map((image, index) => (
                         <div
                             key={index}
@@ -278,94 +267,101 @@ export default function Home({ setActivePage }) {
                             style={{ backgroundImage: `url(${image})` }}
                         />
                     ))}
-                    <div className="hero-overlay" />
-                    <div className="hero-glow hero-glow-one" />
-                    <div className="hero-glow hero-glow-two" />
+                    <div className="hero-wash" />
                 </div>
 
-                <div className="hero-inner">
+                <div className="hero-layout">
                     <div className="hero-copy">
-                        <div className="hero-pill">
-                            <Sparkles size={14} />
-                            <span>Established 2002 · Trichy</span>
-                        </div>
-
+                        <div className="hero-index">01 / 10</div>
+                        <p className="hero-eyebrow">A place to learn, belong &amp; become</p>
                         <h1>
-                            Welcome to
-                            <span>Holy Cross Matriculation Higher Secondary School.</span>
+                            Holy Cross Matriculation
+                            <span>Higher Secondary School .</span>
                         </h1>
-                        <p id='place'>Somarasampettai</p>
-
-                        <p>
-                            A value-based learning community nurturing every child
-                            towards a bright future.
+                        <span id='locs'>Somarasampettai</span>
+                        <p className="hero-description">
+                            A value-based learning community nurturing every child towards a bright,
+                            purposeful future.
                         </p>
 
                         <div className="hero-actions">
                             <button className="hero-primary" onClick={goToGallery}>
-                                Explore Campus <ArrowRight size={17} />
+                                Explore the campus <ArrowRight size={17} />
                             </button>
-
                         </div>
 
-                        <div className="hero-trust">
-                            <span><CheckCircle2 size={15} /> Holistic education</span>
-                            <span><CheckCircle2 size={15} /> Value-based learning</span>
-                            <span><CheckCircle2 size={15} /> Student excellence</span>
+                        <div className="hero-mini-proof">
+                            <div><strong>2002</strong><span>Founded</span></div>
+                            <div><strong>2.7+</strong><span>Acres</span></div>
+                            <div><strong>X–XII</strong><span>Senior grades</span></div>
                         </div>
                     </div>
 
-                    <div className="hero-side-card">
-                        <span className="side-card-label">Our philosophy</span>
-                        <Quote size={28} />
-                        <p>Education of mind and heart.</p>
-                        <small>Inspired by Blessed Basil Antony Moreau</small>
+                    <div className="hero-visual-column">
+                        <div className="hero-feature-image">
+                            <img src={heroImages[currentSlide]} alt="Holy Cross campus" />
+                            <div className="hero-image-caption">
+                                <span>Campus view</span>
+                                <strong>Where every day begins with possibility.</strong>
+                            </div>
+                        </div>
+
+                        <div className="hero-philosophy">
+                            <Quote size={22} />
+                            <p>Education of mind and heart.</p>
+                            <small>Inspired by Blessed Basil Antony Moreau</small>
+                        </div>
                     </div>
                 </div>
 
-                <div className="hero-stats">
-                    <div><strong>2002</strong><span>Founded</span></div>
-                    <div><strong>2.7+</strong><span>Acres campus</span></div>
-                    <div><strong>X–XII</strong><span>Senior grades</span></div>
-                    <div><strong>360°</strong><span>Student growth</span></div>
-                </div>
-
-                <div className="hero-dots">
-                    {heroImages.slice(0, 6).map((_, index) => (
-                        <button
-                            key={index}
-                            className={index === currentSlide ? 'active' : ''}
-                            onClick={() => setCurrentSlide(index)}
-                            aria-label={`Show campus image ${index + 1}`}
-                        />
-                    ))}
+                <div className="hero-slide-controls">
+                    <span>Scroll to explore</span>
+                    <div className="hero-progress">
+                        {heroImages.slice(0, 10).map((_, index) => (
+                            <button
+                                key={index}
+                                className={index === currentSlide ? 'active' : ''}
+                                onClick={() => setCurrentSlide(index)}
+                                aria-label={`Show campus image ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                    <span>{String(currentSlide + 1).padStart(2, '0')}</span>
                 </div>
             </section>
 
+            {/* NOTICE + EVENTS: magazine dashboard composition */}
             <div className="home-content">
-                <div className="notice">
-                    <section className="notice-section scroll-animate">
+                <section className="opening-board scroll-animate">
+                    {/* <div className="opening-intro">
+                        <span className="section-kicker">School pulse</span>
+                        <h2>What’s happening<br /><em>right now.</em></h2>
+                        <p>Announcements, notices and upcoming moments gathered in one place.</p>
+                    </div> */}
+
+                    <div className="notice-panel">
+                        <div className="notice-panel-head">
+                            <span><Megaphone size={16} /> Notice board</span>
+                            <span className="panel-dot"><i /> Live</span>
+                        </div>
                         <HomeNoticeBoard onNavigate={setActivePage} />
-                    </section>
-                    <section className="section-block events-section scroll-animate" ref={eventsSectionRef}>
-                        <div className="announcements-header">
-                            <div className="header-title">
-                                <div className="bell-icon-wrapper">
-                                    <Calendar size={22} />
-                                </div>
-                                <h2>Upcoming Events</h2>
+                    </div>
+
+                    <div className="events-panel" ref={eventsSectionRef}>
+                        <div className="events-panel-head">
+                            <div>
+                                <span className="section-kicker">Calendar</span>
+                                <h3>Upcoming events</h3>
                             </div>
-                            <span className="live-badge">Live Updates</span>
+                            <Calendar size={20} />
                         </div>
 
-                        <div className="events-subheading">
-                            {/* <p>Stay connected with activities, programmes and important moments on campus.</p> */}
-                            {/* <button className="outline-action" onClick={() => setActivePage('calendar')}>
-                                View calendar <ArrowRight size={15} />
-                            </button> */}
-                        </div>
-
-                        <div className="events-grid" ref={eventsScrollRef}>
+                        <div
+                            className="events-grid"
+                            ref={eventsScrollRef}
+                            onMouseEnter={() => { eventsPausedRef.current = true; }}
+                            onMouseLeave={() => { eventsPausedRef.current = false; }}
+                        >
                             {upcomingEvents.length === 0 ? (
                                 <div className="empty-state">No upcoming events published at the moment.</div>
                             ) : (
@@ -379,63 +375,83 @@ export default function Home({ setActivePage }) {
                                             <span className="event-type">School activity</span>
                                             <h3>{event.title}</h3>
                                             <p>{event.description}</p>
+                                            <span className="event-time"><Clock size={13} /> {event.time}</span>
                                         </div>
-                                        <div className="event-footer">
-                                            <span className="event-time"><Clock size={14} /> {event.time}</span>
-                                        </div>
+                                        <ArrowRight className="event-arrow" size={17} />
                                     </article>
                                 ))
                             )}
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                </div>
+                {/* VALUES: asymmetric bento */}
+                <section className="values-section section-block scroll-animate">
+                    <div className="values-title">
+                        <span className="section-kicker">Our foundation</span>
+                        <h2>Three ideas.<br /><em>One complete education.</em></h2>
+                    </div>
 
-                <section className="section-block scroll-animate">
-                    <SectionHeading
-                        eyebrow="What guides us"
-                        title="A school built around strong values"
-                        description="Our learning environment brings academics, character, service and personal excellence together."
-                    />
-
-                    <div className="value-grid">
-                        <article className="value-card">
-                            <IconBadge><HeartHandshake size={22} /></IconBadge>
-                            <span className="card-number">01</span>
-                            <h3>Love &amp; Service</h3>
-                            <p>Quality education rooted in mutual respect, compassion and service to humanity.</p>
+                    <div className="values-bento">
+                        <article className="value-card value-card-large">
+                            <div className="value-card-top">
+                                <span className="value-number">01</span>
+                                <IconBadge><HeartHandshake size={21} /></IconBadge>
+                            </div>
+                            <div>
+                                <h3>Love &amp; Service</h3>
+                                <p>Quality education rooted in mutual respect, compassion and service to humanity.</p>
+                            </div>
+                            <span className="value-watermark">01</span>
                         </article>
 
                         <article className="value-card value-card-featured">
-                            <IconBadge tone="light"><Compass size={22} /></IconBadge>
-                            <span className="card-number">02</span>
-                            <h3>Mind &amp; Heart</h3>
-                            <p>Developing students intellectually, morally and spiritually for a purposeful life.</p>
+                            <div className="value-card-top">
+                                <span className="value-number">02</span>
+                                <IconBadge tone="purple"><Compass size={21} /></IconBadge>
+                            </div>
+                            <div>
+                                <h3>Mind &amp; Heart</h3>
+                                <p>Developing students intellectually, morally and spiritually for a purposeful life.</p>
+                            </div>
+                            <span className="value-watermark">02</span>
                         </article>
 
-                        <article className="value-card">
-                            <IconBadge tone="gold"><Target size={22} /></IconBadge>
-                            <span className="card-number">03</span>
-                            <h3>Bright Future</h3>
-                            <p>Encouraging excellence through academics, culture, sports and enrichment.</p>
+                        <article className="value-card value-card-accent">
+                            <div className="value-card-top">
+                                <span className="value-number">03</span>
+                                <IconBadge tone="gold"><Target size={21} /></IconBadge>
+                            </div>
+                            <div>
+                                <h3>Bright Future</h3>
+                                <p>Encouraging excellence through academics, culture, sports and enrichment.</p>
+                            </div>
+                            <span className="value-watermark">03</span>
                         </article>
                     </div>
                 </section>
 
-                <section className="principal-section principal-editorial scroll-animate">
-
-                    <div className="principal-copy">
-                        <div className="principal-topline">
-                            <span className="principal-label">Principal's message</span>
-                            <span className="principal-rule" />
-                            <span className="principal-year">2026</span>
+                {/* PRINCIPAL: photo-led editorial layout */}
+                <section className="principal-section scroll-animate">
+                    <div className="principal-image-side">
+                        <img src={photo} alt="Principal, Holy Cross Matriculation Higher Secondary School" />
+                        <div className="principal-image-tag">
+                            <span>Principal's Desk</span>
+                            <strong>2026</strong>
                         </div>
+                        <div className="principal-image-stamp">HCMS</div>
+                    </div>
 
+                    <div className="principal-content">
+                        <div className="principal-heading-line">
+                            <span className="section-kicker">A message from our principal</span>
+                            <span>02</span>
+                        </div>
                         <h2>Preparing children<br /><em>for life, not only exams.</em></h2>
 
-                        <div className="principal-message-grid">
-                            <Quote className="quote-icon" size={38} />
-                            <p className="principal-quote">
+                        <div className="principal-quote-row">
+                            <Quote className="quote-icon" size={42} />
+                            <p>
                                 Education is not merely about preparing for a living, but building a foundation
                                 for life. At Holy Cross, we strive to cultivate intellectual curiosity, emotional
                                 strength, and spiritual grounding in every child. We invite you to partner with us
@@ -443,31 +459,19 @@ export default function Home({ setActivePage }) {
                             </p>
                         </div>
 
-                        <div className="principal-bottom">
-                            <div className="principal-sign">
-                                <strong>Fr. A. Arokia Sahayaraj</strong>
-                                <span><br />Principal <br /> Holy Cross Matriculation Higher Secondary School</span>
-                            </div>
-
+                        <div className="principal-signature">
+                            <strong>Fr. A. Arokia Sahayaraj</strong>
+                            <span>Principal · Holy Cross Matriculation Higher Secondary School</span>
                         </div>
-                    </div>
-
-                    <div className="principal-photo">
-                        <div className="principal-photo-frame">
-                            <img src={photo} alt="Principal, Holy Cross Matriculation Higher Secondary School" />
-                        </div>
-                        <div className="photo-label">
-                            <strong>Principal's Desk</strong>
-                        </div>
-                        <div className="photo-accent" />
                     </div>
                 </section>
 
-                <section className="section-block about-section scroll-animate">
+                {/* ABOUT + JOURNEY */}
+                <section className="about-section section-block scroll-animate">
                     <div className="about-layout">
                         <div className="about-copy">
-                            <span className="section-kicker">About Holy Cross</span>
-                            <h2>A journey of growth since 2002.</h2>
+                            <span className="section-kicker">Since 2002</span>
+                            <h2>A journey that keeps moving forward.</h2>
                             <p className="about-lead">
                                 Holy Cross Matriculation Hr. Sec. School at Somarasampettai is committed
                                 to value-based education and is open to all pupils in the pursuit of good,
@@ -484,28 +488,30 @@ export default function Home({ setActivePage }) {
                             </p>
                         </div>
 
-                        <div className="journey-card">
-                            <div className="journey-header">
-                                <Globe2 size={20} />
+                        <div className="journey-timeline">
+                            <div className="journey-title">
+                                <Globe2 size={18} />
                                 <span>Our journey</span>
                             </div>
                             <div className="journey-item">
-                                <strong>2002</strong>
-                                <div><span>01</span><p>Started with a thatched roof</p></div>
+                                <span className="journey-year">2002</span>
+                                <div><b>01</b><p>Started with a thatched roof</p></div>
                             </div>
                             <div className="journey-item">
-                                <strong>2011</strong>
-                                <div><span>02</span><p>Upgraded to High School</p></div>
+                                <span className="journey-year">2011</span>
+                                <div><b>02</b><p>Upgraded to High School</p></div>
                             </div>
                             <div className="journey-item">
-                                <strong>2014</strong>
-                                <div><span>03</span><p>Upgraded to Higher Secondary</p></div>
+                                <span className="journey-year">2014</span>
+                                <div><b>03</b><p>Upgraded to Higher Secondary</p></div>
                             </div>
                         </div>
                     </div>
                 </section>
 
+                {/* MISSION: horizontal manifesto */}
                 <section className="mission-section scroll-animate">
+                    <div className="mission-number">03</div>
                     <div className="mission-main">
                         <span className="section-kicker">Mission &amp; vision</span>
                         <h2>Growing capable minds with compassionate hearts.</h2>
@@ -515,15 +521,16 @@ export default function Home({ setActivePage }) {
                         </p>
                     </div>
                     <div className="mission-points">
-                        <span><CheckCircle2 size={17} /> Value-based education</span>
-                        <span><CheckCircle2 size={17} /> Respect for all religions</span>
-                        <span><CheckCircle2 size={17} /> Focus on Grades X, XI &amp; XII</span>
-                        <span><CheckCircle2 size={17} /> Holistic talent development</span>
-                        <span><CheckCircle2 size={17} /> Soaring towards Bright Future</span>
+                        <span><CheckCircle2 size={16} /> Value-based education</span>
+                        <span><CheckCircle2 size={16} /> Respect for all religions</span>
+                        <span><CheckCircle2 size={16} /> Focus on Grades X, XI &amp; XII</span>
+                        <span><CheckCircle2 size={16} /> Holistic talent development</span>
+                        <span><CheckCircle2 size={16} /> Soaring towards Bright Future</span>
                     </div>
                 </section>
 
-                <section className="section-block achievers-section scroll-animate" ref={achieversSectionRef}>
+                {/* ACHIEVERS */}
+                <section className="achievers-section section-block scroll-animate" ref={achieversSectionRef}>
                     <SectionHeading
                         eyebrow="Excellence"
                         title="Board exam toppers & achievers"
@@ -582,8 +589,8 @@ export default function Home({ setActivePage }) {
                                             ) : (
                                                 <IconBadge tone="gold"><Trophy size={21} /></IconBadge>
                                             )}
+                                            <span className="achiever-grade">{topper.streamOrGrade}</span>
                                             <h3>{topper.name}</h3>
-                                            <span>{topper.streamOrGrade}</span>
                                             <strong>{topper.scoreOrPercentage}</strong>
                                         </article>
                                     ))}
@@ -601,109 +608,119 @@ export default function Home({ setActivePage }) {
                     )}
                 </section>
 
-                <section className="campus-showcase scroll-animate">
-                    <div className="campus-showcase-top">
-                        <div className="campus-showcase-intro">
+                {/* CAMPUS: full-width visual strip */}
+                <section className="campus-section scroll-animate">
+                    <div className="campus-heading">
+                        <div>
                             <span className="section-kicker">Campus life</span>
-                            <h2>Explore our campus.</h2>
-                            <p>Take a look at the school buildings, spaces and surroundings.</p>
+                            <h2>Spaces that make<br /><em>school feel alive.</em></h2>
                         </div>
                         <button className="campus-gallery-button" onClick={goToGallery}>
-                            <span>Explore full gallery</span>
-                            <ArrowRight size={16} />
+                            Explore full gallery <ArrowRight size={16} />
                         </button>
                     </div>
 
-                    <div className="campus-all-images">
+                    <div className="campus-mosaic">
                         {heroImage.map((image, index) => (
-                            <div className={`campus-all-image campus-all-image-${index + 1}`} key={index}>
+                            <div className={`campus-mosaic-item campus-mosaic-${index + 1}`} key={index}>
                                 <img src={image} alt={`Holy Cross campus view ${index + 1}`} loading={index > 2 ? 'lazy' : 'eager'} />
+                                <span>{String(index + 1).padStart(2, '0')}</span>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                <section className="section-block scroll-animate">
+                {/* STUDENT LIFE */}
+                <section className="student-life section-block scroll-animate">
                     <SectionHeading
                         eyebrow="Student life"
-                        title="Discover, participate, excel."
+                        title="Discover. Participate. Excel."
                         description="Co-curricular opportunities help students build confidence beyond the classroom."
                     />
 
                     <div className="clubs-grid">
-                        <article className="club-card">
+                        <article className="club-card club-blue">
+                            <div className="club-card-number">01</div>
                             <IconBadge><BookOpen size={20} /></IconBadge>
                             <h3>Science &amp; IT Club</h3>
                             <p>Hands-on experiments, robotics models and foundational computer coding training.</p>
                         </article>
-                        <article className="club-card">
+                        <article className="club-card club-gold">
+                            <div className="club-card-number">02</div>
                             <IconBadge tone="gold"><Trophy size={20} /></IconBadge>
                             <h3>Sports &amp; Athletics</h3>
                             <p>Football, cricket, basketball, track events and indoor games with coaching.</p>
                         </article>
-                        <article className="club-card">
+                        <article className="club-card club-purple">
+                            <div className="club-card-number">03</div>
                             <IconBadge tone="purple"><Sparkles size={20} /></IconBadge>
                             <h3>Cultural &amp; Arts</h3>
                             <p>Dance, instrumental music, choir, dramatics and fine arts activities.</p>
                         </article>
-                        <article className="club-card">
-                            <IconBadge tone="blue"><Users size={20} /></IconBadge>
+                        <article className="club-card club-coral">
+                            <div className="club-card-number">04</div>
+                            <IconBadge tone="coral"><Users size={20} /></IconBadge>
                             <h3>Eco &amp; Service Corps</h3>
                             <p>Green drives, community outreach and value education for social responsibility.</p>
                         </article>
                     </div>
                 </section>
 
-                <section className="section-block faq-section scroll-animate">
-                    <SectionHeading
-                        eyebrow="Need to know"
-                        title="Frequently asked questions"
-                        description="A few quick answers for parents and students."
-                    />
+                {/* FAQ */}
+                <section className="faq-section section-block scroll-animate">
+                    <div className="faq-heading">
+                        <span className="section-kicker">Need to know</span>
+                        <h2>Questions,<br /><em>answered simply.</em></h2>
+                    </div>
 
                     <div className="faq-list">
                         <details open>
-                            <summary><span>01</span> What curricula and grades are offered?<Plus size={18} /></summary>
+                            <summary><span>01</span><b>What curricula and grades are offered?</b><Plus size={18} /></summary>
                             <p>We offer State Board and Matriculation syllabi, focused on high-performance training for Grades X, XI and XII.</p>
                         </details>
                         <details>
-                            <summary><span>02</span> Where is the school located?<Plus size={18} /></summary>
+                            <summary><span>02</span><b>Where is the school located?</b><Plus size={18} /></summary>
                             <p>Our campus is in Somarasampettai, Tiruchirappalli (Trichy), Tamil Nadu — peaceful and easy to reach.</p>
                         </details>
                         <details>
-                            <summary><span>03</span> Are transport facilities available?<Plus size={18} /></summary>
+                            <summary><span>03</span><b>Are transport facilities available?</b><Plus size={18} /></summary>
                             <p>No — local vans and vehicles are arranged for student convenience and the school bus initiating soon.</p>
                         </details>
                     </div>
                 </section>
 
-                <section className="section-block visit-section scroll-animate">
-                    <SectionHeading
-                        eyebrow="Visit us"
-                        title="Find your way to campus"
-                        description="Come and experience the Holy Cross learning environment."
-                        action={
+                {/* VISIT */}
+                <section className="visit-section section-block scroll-animate">
+                    <div className="visit-card">
+                        <div className="visit-info">
+                            <div className="visit-top">
+                                <span className="section-kicker">Visit us</span>
+                                <Navigation size={18} />
+                            </div>
+                            <h2>Come see where<br /><em>the journey happens.</em></h2>
+                            <p>Come and experience the Holy Cross learning environment.</p>
+
+                            <div className="visit-address">
+                                <MapPin size={19} />
+                                <div>
+                                    <strong>Holy Cross Matriculation Higher Secondary School</strong>
+                                    <span>Somarasampettai, Tiruchirappalli, Tamil Nadu 620102</span>
+                                </div>
+                            </div>
+
+                            <div className="contact-lines">
+                                <span><Phone size={14} /> Admissions helpdesk active</span>
+                                <span><Clock size={14} /> Mon – Sat, 8:30 AM – 4:00 PM</span>
+                            </div>
+
                             <a
                                 href="https://www.google.com/maps/place/Holy+Cross+Matriculation+Higher+Secondary+School/@10.8121744,78.6360259,280m"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="outline-action"
+                                className="map-direction"
                             >
-                                <Navigation size={14} /> Get directions
+                                Get directions <ArrowRight size={15} />
                             </a>
-                        }
-                    />
-
-                    <div className="visit-layout">
-                        <div className="address-card">
-                            <div className="address-icon"><MapPin size={24} /></div>
-                            <span className="address-label">Campus address</span>
-                            <h3>Holy Cross Matriculation Higher Secondary School</h3>
-                            <p>Somarasampettai, Tiruchirappalli, Tamil Nadu 620102</p>
-                            <div className="contact-lines">
-                                <span><Phone size={15} /> Admissions helpdesk active</span>
-                                <span><Clock size={15} /> Mon – Sat, 8:30 AM – 4:00 PM</span>
-                            </div>
                         </div>
 
                         <div className="map-frame">

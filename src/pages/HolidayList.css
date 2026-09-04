@@ -1,149 +1,420 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
+:root {
+    --holiday-ink: #172033;
+    --holiday-muted: #718096;
+    --holiday-border: #e8edf5;
+    --holiday-bg: #f6f8fc;
+    --holiday-card: #ffffff;
+    --holiday-primary: #5b4bdb;
+    --holiday-primary-dark: #4435b6;
+    --holiday-purple-soft: #efedff;
+    --holiday-green: #16836a;
+    --holiday-green-soft: #e7f7f2;
+    --holiday-orange: #d97706;
+    --holiday-orange-soft: #fff3df;
+}
+
+* {
+    box-sizing: border-box;
+}
+
 .holidays-container {
-    max-width: 950px;
-    margin: 30px auto;
-    padding: 0 16px;
+    width: min(1240px, calc(100% - 32px));
+    margin: 24px auto 50px;
     font-family: 'Outfit', sans-serif;
-    color: #2d3748;
+    color: var(--holiday-ink);
 }
 
-.page-header {
-    text-align: center;
-    margin-bottom: 24px;
-}
+/* ---------- HERO ---------- */
 
-.page-header h2 {
-    color: #8004c7;
-    font-size: 1.8rem;
-    font-weight: 800;
+.holiday-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 205px;
+    padding: 34px 38px;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 85% 10%, rgba(143, 124, 255, .35), transparent 28%),
+        linear-gradient(135deg, #171b3b 0%, #30276b 48%, #5b4bdb 100%);
+    color: #fff;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 0 0 4px 0;
+    justify-content: space-between;
+    box-shadow: 0 22px 55px rgba(54, 43, 139, .18);
 }
 
-.page-header p {
-    color: #64748b;
-    font-size: 0.9rem;
+.hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, .13);
+}
+
+.orb-one {
+    width: 280px;
+    height: 280px;
+    right: 8%;
+    top: -145px;
+}
+
+.orb-two {
+    width: 190px;
+    height: 190px;
+    right: 1%;
+    bottom: -125px;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 720px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, .17);
+    background: rgba(255, 255, 255, .10);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.holiday-hero h1 {
+    margin: 14px 0 8px;
+    font-size: clamp(1.75rem, 4vw, 2.65rem);
+    line-height: 1.05;
+    letter-spacing: -.04em;
+}
+
+.holiday-hero p {
     margin: 0;
+    max-width: 650px;
+    color: rgba(255, 255, 255, .76);
+    line-height: 1.65;
+    font-size: .92rem;
 }
 
-/* Two-column responsive layout */
+.hero-icon {
+    position: relative;
+    z-index: 2;
+    width: 105px;
+    height: 105px;
+    flex: 0 0 auto;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .11);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+.hero-icon span {
+    font-size: 12px;
+    font-weight: 800;
+    opacity: .75;
+}
+
+/* ---------- STATS ---------- */
+
+.holiday-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: -30px 28px 20px;
+    position: relative;
+    z-index: 3;
+}
+
+.stat-card {
+    min-height: 76px;
+    padding: 13px 16px;
+    border: 1px solid rgba(232, 237, 245, .95);
+    background: rgba(255, 255, 255, .96);
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(34, 43, 71, .08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+}
+
+.stat-icon.government {
+    color: var(--holiday-primary);
+    background: var(--holiday-purple-soft);
+}
+
+.stat-icon.private {
+    color: var(--holiday-green);
+    background: var(--holiday-green-soft);
+}
+
+.stat-icon.month {
+    color: var(--holiday-orange);
+    background: var(--holiday-orange-soft);
+}
+
+.stat-card strong,
+.stat-card span {
+    display: block;
+}
+
+.stat-card strong {
+    font-size: 1.25rem;
+    line-height: 1.1;
+}
+
+.stat-card span {
+    margin-top: 3px;
+    color: var(--holiday-muted);
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+/* ---------- TOOLBAR ---------- */
+
+.holiday-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.filter-pills {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.filter-pill {
+    border: 1px solid var(--holiday-border);
+    background: #fff;
+    color: #64748b;
+    padding: 9px 13px;
+    border-radius: 11px;
+    font: 700 .74rem 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.filter-pill:hover {
+    border-color: #cfc9ff;
+    color: var(--holiday-primary);
+}
+
+.filter-pill.active {
+    color: #fff;
+    border-color: var(--holiday-primary);
+    background: var(--holiday-primary);
+    box-shadow: 0 7px 18px rgba(91, 75, 219, .2);
+}
+
+.holiday-search {
+    min-width: min(370px, 100%);
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--holiday-border);
+    background: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+}
+
+.holiday-search:focus-within {
+    border-color: #b9b0ff;
+    box-shadow: 0 0 0 4px rgba(91, 75, 219, .07);
+}
+
+.holiday-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--holiday-ink);
+    font: 600 .78rem 'Outfit', sans-serif;
+}
+
+.holiday-search button {
+    width: 25px;
+    height: 25px;
+    border: 0;
+    border-radius: 7px;
+    background: #f1f3f8;
+    color: #64748b;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+/* ---------- FIREBASE NOTE ---------- */
+
+.firebase-note {
+    margin: -4px 0 15px;
+    padding: 10px 13px;
+    border-radius: 12px;
+    border: 1px solid #fde7bd;
+    background: #fff9ed;
+    color: #8a5a08;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: .74rem;
+}
+
+.firebase-note span {
+    font-weight: 800;
+}
+
+.firebase-note p {
+    margin: 0;
+    color: #9a742d;
+}
+
+/* ---------- MAIN LAYOUT ---------- */
+
 .holidays-layout {
     display: grid;
-    grid-template-columns: 310px 1fr;
-    gap: 20px;
+    grid-template-columns: 330px minmax(0, 1fr);
+    gap: 18px;
     align-items: start;
 }
 
-@media (max-width: 768px) {
-    .holidays-layout {
-        grid-template-columns: 1fr;
-    }
+.calendar-card,
+.holidays-card {
+    background: var(--holiday-card);
+    border: 1px solid var(--holiday-border);
+    border-radius: 22px;
+    box-shadow: 0 12px 36px rgba(25, 35, 60, .055);
 }
 
-/* Compact Calendar Box */
-.calendar-card.compact {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 16px;
-    border: 1px solid rgba(128, 4, 199, 0.15);
-    box-shadow: 0 6px 18px -4px rgba(128, 4, 199, 0.06);
+/* ---------- CALENDAR ---------- */
+
+.calendar-card {
+    padding: 20px;
+    position: sticky;
+    top: 18px;
 }
 
-/* Year & Month Dropdown Selectors */
-.calendar-controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.select-dropdown {
-    flex: 1;
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background-color: #f8fafc;
-    font-family: 'Outfit', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #334155;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-}
-
-.select-dropdown:focus {
-    border-color: #8004c7;
-}
-
-.calendar-header {
+.calendar-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
 }
 
-.calendar-header h3 {
-    margin: 0;
-    color: #1e293b;
-    font-weight: 700;
-    font-size: 0.95rem;
+.calendar-top>div:first-child span,
+.list-kicker {
+    color: #9aa5b8;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
 }
 
-.nav-btn {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 4px;
-    cursor: pointer;
+.calendar-top h2 {
+    margin: 4px 0 0;
+    font-size: 1.2rem;
+    letter-spacing: -.03em;
+}
+
+.calendar-actions {
     display: flex;
-    align-items: center;
-    color: #475569;
-    transition: background 0.2s ease;
+    gap: 5px;
 }
 
-.nav-btn:hover {
-    background: #f3e5fa;
-    color: #8004c7;
-}
-
-.weekdays-grid {
+.calendar-actions button {
+    width: 31px;
+    height: 31px;
+    border: 1px solid var(--holiday-border);
+    border-radius: 9px;
+    background: #f9fafc;
+    color: #596579;
+    cursor: pointer;
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    font-weight: 700;
-    color: #94a3b8;
-    font-size: 0.75rem;
-    margin-bottom: 6px;
+    place-items: center;
+    transition: .18s ease;
 }
 
+.calendar-actions button:hover {
+    color: var(--holiday-primary);
+    border-color: #cfc9ff;
+    background: var(--holiday-purple-soft);
+}
+
+.select-row {
+    display: grid;
+    grid-template-columns: 1.25fr .75fr;
+    gap: 7px;
+    margin: 16px 0 17px;
+}
+
+.select-row select {
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--holiday-border);
+    border-radius: 10px;
+    outline: none;
+    background: #f9fafc;
+    color: #455166;
+    font: 700 .74rem 'Outfit', sans-serif;
+}
+
+.select-row select:focus {
+    border-color: #bcb4ff;
+}
+
+.weekdays-grid,
 .days-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+}
+
+.weekdays-grid {
+    margin-bottom: 7px;
+}
+
+.weekdays-grid span {
+    text-align: center;
+    color: #a5afbf;
+    font-size: .68rem;
+    font-weight: 800;
+}
+
+.days-grid {
     gap: 4px;
 }
 
-/* Centered & Clickable Day Cells */
 .day-cell {
-    width: 32px;
-    height: 32px;
-    margin: 0 auto;
-    border: none;
-    border-radius: 8px;
-    background: #f8fafc;
+    position: relative;
+    min-width: 0;
+    height: 42px;
+    border: 0;
+    border-radius: 11px;
+    background: #f8f9fc;
+    color: #3d485b;
+    cursor: pointer;
+    font: 700 .76rem 'Outfit', sans-serif;
+    transition: transform .16s ease, background .16s ease, color .16s ease;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #334155;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.15s ease;
 }
 
 .day-cell.empty {
@@ -152,158 +423,394 @@
 }
 
 .day-cell:not(.empty):hover {
-    background: #f3e5fa;
-    color: #8004c7;
+    transform: translateY(-1px);
+    background: var(--holiday-purple-soft);
+    color: var(--holiday-primary);
 }
 
 .day-cell.today {
-    border: 1.5px solid #8004c7;
-    color: #8004c7;
-    font-weight: 800;
-}
-
-.day-cell.has-holiday {
-    background: #fbf3ff;
+    box-shadow: inset 0 0 0 1.5px var(--holiday-primary);
+    color: var(--holiday-primary);
 }
 
 .day-cell.selected {
-    background: #8004c7 !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(128, 4, 199, 0.3);
+    background: var(--holiday-primary);
+    color: #fff;
+    box-shadow: 0 7px 16px rgba(91, 75, 219, .23);
 }
 
-.day-number {
-    line-height: 1;
+.day-cell.has-holiday {
+    background: #faf9ff;
 }
 
-.holiday-dots {
+.day-cell.selected.has-holiday {
+    background: var(--holiday-primary);
+}
+
+.day-dot-wrap {
+    position: absolute;
+    bottom: 4px;
     display: flex;
     gap: 2px;
-    position: absolute;
-    bottom: 3px;
 }
 
-.dot.holiday-dot {
+.gov-dot,
+.private-dot {
+    display: inline-block;
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: #8004c7;
 }
 
-.day-cell.selected .dot.holiday-dot {
-    background: #ffffff !important;
+.gov-dot {
+    background: var(--holiday-primary);
 }
 
-/* Table Design */
+.private-dot {
+    background: var(--holiday-green);
+}
+
+.day-cell.selected .gov-dot,
+.day-cell.selected .private-dot {
+    background: #fff;
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 17px;
+    padding-top: 13px;
+    border-top: 1px solid #f0f2f6;
+}
+
+.calendar-legend span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #8490a3;
+    font-size: .63rem;
+    font-weight: 700;
+}
+
+/* ---------- LIST ---------- */
+
 .holidays-card {
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid rgba(128, 4, 199, 0.15);
-    box-shadow: 0 6px 18px -4px rgba(128, 4, 199, 0.06);
     overflow: hidden;
 }
 
-.table-header-bar {
+.list-head {
+    padding: 20px 22px 17px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    background: #faf5fc;
-    border-bottom: 1px solid #f0dcf7;
+    border-bottom: 1px solid #eff1f5;
 }
 
-.table-header-bar h3 {
-    margin: 0;
-    font-size: 0.92rem;
-    color: #8004c7;
-    font-weight: 700;
-    display: flex;
+.list-head h2 {
+    margin: 4px 0 0;
+    font-size: 1.18rem;
+    letter-spacing: -.025em;
+}
+
+.clear-selection {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-}
-
-.clear-btn {
-    background: #8004c7;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    gap: 6px;
+    border: 1px solid #ddd9ff;
+    background: var(--holiday-purple-soft);
+    color: var(--holiday-primary);
+    border-radius: 9px;
+    padding: 8px 10px;
     cursor: pointer;
+    font: 700 .7rem 'Outfit', sans-serif;
 }
 
-.holidays-table {
+.holiday-list {
+    padding: 5px 10px 10px;
+}
+
+.holiday-item {
     width: 100%;
-    border-collapse: collapse;
-}
-
-.holidays-table th,
-.holidays-table td {
-    padding: 12px 18px;
+    min-height: 78px;
+    padding: 11px 12px;
+    border: 0;
+    border-bottom: 1px solid #f0f2f6;
+    background: transparent;
     text-align: left;
-    border-bottom: 1px solid #f2f2f2;
-}
-
-.holidays-table th {
-    background-color: #8004c7;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.holiday-row {
     cursor: pointer;
-    transition: background 0.15s ease;
+    display: grid;
+    grid-template-columns: 55px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 14px;
+    border-radius: 13px;
+    transition: .18s ease;
 }
 
-.holiday-row:hover,
-.holiday-row.row-active {
-    background: #fbf3ff;
+.holiday-item:last-child {
+    border-bottom: 0;
 }
 
-.holiday-date {
-    font-weight: 700;
-    color: #8004c7;
-    font-size: 0.88rem;
+.holiday-item:hover {
+    background: #fafaff;
 }
 
-.holiday-day {
-    color: #64748b;
-    font-size: 0.85rem;
+.date-tile {
+    width: 55px;
+    height: 55px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
-.holiday-occasion {
+.date-tile.gov {
+    color: var(--holiday-primary);
+    background: var(--holiday-purple-soft);
+}
+
+.date-tile.private {
+    color: var(--holiday-green);
+    background: var(--holiday-green-soft);
+}
+
+.date-tile strong {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.date-tile span {
+    margin-top: 4px;
+    font-size: .62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.holiday-info {
+    min-width: 0;
+}
+
+.holiday-name-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 600;
-    color: #222;
-    font-size: 0.88rem;
+    flex-wrap: wrap;
 }
 
-.holiday-icon {
-    color: #8004c7;
-}
-
-.holiday-type {
-    background: #f3e5fa;
-    color: #8004c7;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 0.72rem;
-    font-weight: 700;
-}
-
-.holiday-type.national {
-    background: #fff0f0;
-    color: #d9363e;
-}
-
-.no-holidays {
-    padding: 30px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 0.85rem;
+.holiday-name-row h3 {
     margin: 0;
+    color: #202a3b;
+    font-size: .83rem;
+    font-weight: 750;
+}
+
+.category-badge {
+    white-space: nowrap;
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: .57rem;
+    font-weight: 800;
+}
+
+.category-badge.government {
+    color: var(--holiday-primary);
+    background: var(--holiday-purple-soft);
+}
+
+.category-badge.private {
+    color: var(--holiday-green);
+    background: var(--holiday-green-soft);
+}
+
+.holiday-info p {
+    margin: 5px 0 0;
+    color: #8a95a7;
+    font-size: .68rem;
+    font-weight: 600;
+}
+
+.holiday-info p span {
+    padding: 0 6px;
+    color: #c2c8d2;
+}
+
+.item-arrow {
+    color: #c3c9d4;
+    transition: .18s ease;
+}
+
+.holiday-item:hover .item-arrow {
+    color: var(--holiday-primary);
+    transform: translateX(2px);
+}
+
+/* ---------- EMPTY + DISCLAIMER ---------- */
+
+.empty-state {
+    min-height: 270px;
+    padding: 35px 20px;
+    color: #a1aaba;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.empty-state h3 {
+    margin: 12px 0 4px;
+    color: #4c586c;
+    font-size: .95rem;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: .72rem;
+}
+
+.empty-state button {
+    margin-top: 15px;
+    border: 0;
+    border-radius: 9px;
+    padding: 8px 12px;
+    background: var(--holiday-primary);
+    color: #fff;
+    cursor: pointer;
+    font: 700 .7rem 'Outfit', sans-serif;
+}
+
+.holiday-disclaimer {
+    margin: 10px 20px 20px;
+    padding: 13px;
+    border: 1px solid #e9edf3;
+    background: #fafbfc;
+    border-radius: 13px;
+    display: flex;
+    gap: 10px;
+}
+
+.disclaimer-icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: var(--holiday-primary);
+    background: var(--holiday-purple-soft);
+}
+
+.holiday-disclaimer strong {
+    color: #445066;
+    font-size: .7rem;
+}
+
+.holiday-disclaimer p {
+    margin: 3px 0 0;
+    color: #8a95a7;
+    font-size: .64rem;
+    line-height: 1.5;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 900px) {
+    .holidays-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-card {
+        position: static;
+    }
+
+    .holiday-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .holiday-search {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+@media (max-width: 650px) {
+    .holidays-container {
+        width: min(100% - 20px, 1240px);
+        margin-top: 12px;
+    }
+
+    .holiday-hero {
+        min-height: 220px;
+        padding: 25px 22px;
+        border-radius: 22px;
+    }
+
+    .hero-icon {
+        display: none;
+    }
+
+    .holiday-stats {
+        grid-template-columns: 1fr;
+        margin: -20px 12px 17px;
+        gap: 8px;
+    }
+
+    .stat-card {
+        min-height: 62px;
+    }
+
+    .filter-pills {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .filter-pill {
+        padding-inline: 5px;
+        font-size: .65rem;
+    }
+
+    .calendar-card,
+    .holidays-card {
+        border-radius: 17px;
+    }
+
+    .holiday-item {
+        grid-template-columns: 48px minmax(0, 1fr) 18px;
+        gap: 10px;
+        padding-inline: 6px;
+    }
+
+    .date-tile {
+        width: 48px;
+        height: 50px;
+        border-radius: 13px;
+    }
+
+    .category-badge {
+        font-size: .53rem;
+    }
+
+    .holiday-name-row h3 {
+        font-size: .76rem;
+    }
+
+    .holiday-info p {
+        font-size: .62rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .calendar-card {
+        padding: 15px;
+    }
+
+    .day-cell {
+        height: 38px;
+    }
+
+    .holiday-disclaimer {
+        margin-inline: 12px;
+    }
 }
