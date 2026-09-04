@@ -211,9 +211,9 @@ export default function HolidaysList() {
 
                 <div className="hero-copy">
                     <span className="eyebrow">
-                        <Sparkles size={14} /> TAMIL NADU • 2026
+                        <CalendarDays size={14} /> ACADEMIC • 2026 - 27
                     </span>
-                    <h1>Tamil Nadu Holiday Calendar</h1>
+                    <h1>School Holiday Calendar</h1>
                     <p>
                         Government public holidays plus a separate private / institutional
                         view — designed for schools, staff and administration.
