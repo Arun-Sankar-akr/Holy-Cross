@@ -203,7 +203,7 @@
 }
 
 .announcement-link {
-    display: inline-flex;
+    display: inline;
     align-items: center;
     gap: 0.4rem;
     width: fit-content;
@@ -211,7 +211,7 @@
     padding: 0.34rem 0.65rem;
     border-radius: 7px;
     color: #4338ca;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     line-height: 1.25;
     text-decoration: none;
     transition: all 0.3s ease-in-out;
@@ -441,7 +441,7 @@
     }
 
     .announcement-link {
-        font-size: 0.74rem;
+        font-size: 1rem;
     }
 }
 

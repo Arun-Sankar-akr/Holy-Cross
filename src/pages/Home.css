@@ -48,8 +48,7 @@
     margin: 0;
 }
 
-.home-page button,
-.home-page a {
+.home-page button {
     font: inherit;
 }
 
@@ -1934,7 +1933,7 @@
     }
 
     .home-hero {
-        min-height: 875px;
+        min-height: 975px;
     }
 
     .hero-layout {
