@@ -6,7 +6,7 @@ import {
     Award, TrendingUp, ClipboardList, Users, Sparkles,
     CalendarCheck, Wallet, ClipboardCheck
 } from 'lucide-react';
-import './StudentPreviewModal.css';
+import './Previewmodal.css';
 
 const EXAM_TYPES = [
     '1st Mid-Term exam',
