@@ -37,8 +37,6 @@ const getGradeLabel = (score) => {
     return { label: 'F', tone: 'grade-poor' };
 };
 
-// Loose string matcher used to link attendance/fee/assignment docs back to
-// this student when a record was saved without a reliable studentId.
 const cleanStr = (v) => String(v || '').trim().toLowerCase();
 
 const belongsToStudent = (record, student) => {
