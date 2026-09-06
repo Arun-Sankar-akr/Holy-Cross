@@ -16,7 +16,7 @@ import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
 import logo from "../assets/logo.png";
 
-import StudentPreviewModal from './Studentpreviewmodal';
+// import StudentPreviewModal from './Studentpreviewmodal';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
