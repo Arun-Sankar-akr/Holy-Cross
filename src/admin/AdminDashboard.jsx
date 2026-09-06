@@ -15,6 +15,7 @@ import {
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
 import logo from "../assets/logo.png";
+import StudentPreviewModal from './Studentpreviewmodal';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -89,6 +90,7 @@ export default function AdminDashboard() {
     const [studentsList, setStudentsList] = useState([]);
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
+    const [previewStudent, setPreviewStudent] = useState(null);
 
     // Results & Publish Drill-down States
     const [selectedClassResults, setSelectedClassResults] = useState(null);
@@ -2857,6 +2859,7 @@ export default function AdminDashboard() {
                                                         </div>
 
                                                         <div className="student-card-actions">
+                                                            <button onClick={() => setPreviewStudent(st)} title="Preview Student"><Eye size={14} /></button>
                                                             <button onClick={() => startEditingStudent(st)} title="Edit Student Record"><Edit2 size={14} /></button>
                                                             <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={14} /></button>
                                                         </div>
@@ -2866,6 +2869,22 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
                                 </>
+                            )}
+
+                            {previewStudent && (
+                                <StudentPreviewModal
+                                    student={previewStudent}
+                                    className={previewStudent.className || selectedClass}
+                                    sectionName={
+                                        selectedSection?.name ||
+                                        sectionsList.find(sec => sec.id === previewStudent.sectionId)?.name
+                                    }
+                                    onClose={() => setPreviewStudent(null)}
+                                    onEdit={(st) => {
+                                        setPreviewStudent(null);
+                                        startEditingStudent(st);
+                                    }}
+                                />
                             )}
                         </div>
                     )}

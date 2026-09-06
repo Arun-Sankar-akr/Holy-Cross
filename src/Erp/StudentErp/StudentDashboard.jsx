@@ -65,10 +65,14 @@ export default function StudentDashboard() {
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
     const [isLast7StripScrolling, setIsLast7StripScrolling] = useState(false);
     const [selectedLast7Key, setSelectedLast7Key] = useState(null);
+    const [focalLast7Key, setFocalLast7Key] = useState(null);
     const last7ScrollRef = useRef(null);
     const last7TodayRef = useRef(null);
     const last7ScrollTimeoutRef = useRef(null);
     const last7AutoScrolledRef = useRef(false);
+    const last7ChipRefsMap = useRef({});
+    const last7RafRef = useRef(null);
+    const last7FocalKeyRef = useRef(null);
     const [scheduleCalDate, setScheduleCalDate] = useState(() => new Date());
 
     const [uploadingTaskId, setUploadingTaskId] = useState(null);
@@ -707,6 +711,78 @@ export default function StudentDashboard() {
         }
     }, [showNotifDrawer, activeTab, announcementsList.length, lastSeenAnnouncementsCount]);
 
+    // Registers each day-chip DOM node so the magnification + centering logic
+    // below can measure real on-screen positions without extra re-renders.
+    const registerLast7ChipRef = (dateKey, isToday) => (el) => {
+        if (isToday) last7TodayRef.current = el;
+        if (el) {
+            last7ChipRefsMap.current[dateKey] = el;
+        } else {
+            delete last7ChipRefsMap.current[dateKey];
+        }
+    };
+
+    // Scrolls the strip so a given chip sits centered in the container —
+    // powers the initial "today" centering and clicking any chip to bring it
+    // front-and-center. Uses the browser's own scrollIntoView (with our
+    // scroll-snap-align: center on each chip) instead of hand-computing an
+    // offset, so it always lands exactly on the same center point the
+    // native snap physics settle on — no fighting between JS math and the
+    // browser's own scrolling during touch/trackpad momentum.
+    const centerLast7Chip = (el, smooth = true) => {
+        if (!el || typeof el.scrollIntoView !== 'function') return;
+        el.scrollIntoView({
+            behavior: smooth ? 'smooth' : 'auto',
+            inline: 'center',
+            block: 'nearest',
+        });
+    };
+
+    // Mac-Taskbar/Dock-style magnification: on every scroll frame, scale each
+    // chip up the closer its center sits to the strip's visual center, using a
+    // smooth cosine falloff so neighboring chips ease in/out instead of
+    // popping — and tracks which chip is currently "focal" (front-and-center)
+    // so it can pick up the same glow/ring treatment "today" gets by default.
+    const magnifyLast7Strip = () => {
+        const container = last7ScrollRef.current;
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+        if (!containerRect.width) return;
+        const centerX = containerRect.left + containerRect.width / 2;
+        const RADIUS = Math.max(containerRect.width * 0.3, 90);
+        const MAX_SCALE = 1.22;
+        const MIN_SCALE = 1;
+
+        let nearestKey = null;
+        let nearestDist = Infinity;
+
+        Object.entries(last7ChipRefsMap.current).forEach(([key, el]) => {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const chipCenter = rect.left + rect.width / 2;
+            const dist = Math.abs(chipCenter - centerX);
+
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestKey = key;
+            }
+
+            const t = Math.min(dist / RADIUS, 1);
+            const eased = (Math.cos(t * Math.PI) + 1) / 2; // 1 at center → 0 at radius edge
+            const scale = MIN_SCALE + (MAX_SCALE - MIN_SCALE) * eased;
+            const lift = eased * 8;
+
+            el.style.transform = `translateY(${-lift.toFixed(2)}px) scale(${scale.toFixed(3)})`;
+            el.style.zIndex = String(Math.round(eased * 10) + 1);
+            el.dataset.magnify = eased > 0.82 ? 'peak' : eased > 0.4 ? 'near' : 'far';
+        });
+
+        if (nearestKey && nearestKey !== last7FocalKeyRef.current) {
+            last7FocalKeyRef.current = nearestKey;
+            setFocalLast7Key(nearestKey);
+        }
+    };
+
     // Default the horizontally-scrollable day-chip strip so "today" sits centered
     // in the visible area — now that real past AND upcoming days are both rendered,
     // centering "today" naturally reveals days on either side without any spacer.
@@ -715,27 +791,61 @@ export default function StudentDashboard() {
         const container = last7ScrollRef.current;
         if (!container) return;
 
+        // Double rAF: the first frame lets the browser commit the strip's
+        // layout (including the calc(50% - ...) edge padding that makes
+        // centering possible at all); only on the second frame do we measure
+        // and jump — otherwise the very first paint can still be mid-layout
+        // and the "center" we compute lands slightly off.
         requestAnimationFrame(() => {
-            const todayEl = last7TodayRef.current;
-            if (container && todayEl) {
-                const target = todayEl.offsetLeft + todayEl.offsetWidth / 2 - container.clientWidth / 2;
-                container.scrollLeft = Math.max(0, target);
-                last7AutoScrolledRef.current = true;
-            }
+            requestAnimationFrame(() => {
+                const todayEl = last7TodayRef.current;
+                if (container && todayEl) {
+                    centerLast7Chip(todayEl, false);
+                    magnifyLast7Strip();
+                    last7AutoScrolledRef.current = true;
+                }
+            });
         });
     }, [attendanceRecords, holidaysList]);
 
+    // Keeps the dock effect and centering aligned when the layout changes
+    // (window resize, orientation change, sidebar collapse, etc.).
+    useEffect(() => {
+        const onResize = () => {
+            if (last7RafRef.current) cancelAnimationFrame(last7RafRef.current);
+            last7RafRef.current = requestAnimationFrame(magnifyLast7Strip);
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    // While scrolling: just keep the dock-magnify effect tracking the live
+    // scroll position every frame. Landing on an exact chip is entirely the
+    // browser's job now (CSS scroll-snap-align: center) — we never issue a
+    // second, competing scroll here, which is what used to make the strip
+    // overshoot past the day the user actually meant to stop on.
     const handleLast7Scroll = () => {
         setIsLast7StripScrolling(true);
+
+        if (last7RafRef.current) cancelAnimationFrame(last7RafRef.current);
+        last7RafRef.current = requestAnimationFrame(magnifyLast7Strip);
+
         if (last7ScrollTimeoutRef.current) clearTimeout(last7ScrollTimeoutRef.current);
         last7ScrollTimeoutRef.current = setTimeout(() => {
             setIsLast7StripScrolling(false);
-        }, 700);
+            // Once native snap has settled, whichever chip is focal (centered)
+            // becomes the "selected" one too, so the date/status line beneath
+            // the strip always matches what's actually centered on screen.
+            if (last7FocalKeyRef.current) {
+                setSelectedLast7Key(last7FocalKeyRef.current);
+            }
+        }, 120);
     };
 
     useEffect(() => {
         return () => {
             if (last7ScrollTimeoutRef.current) clearTimeout(last7ScrollTimeoutRef.current);
+            if (last7RafRef.current) cancelAnimationFrame(last7RafRef.current);
         };
     }, []);
 
@@ -1649,14 +1759,18 @@ export default function StudentDashboard() {
                                                 <div className="ps-last7-strip">
                                                     {last7DaysInfo.map((d) => {
                                                         const isSelected = d.dateKey === (selectedLast7Key || todayDateKeyForStrip);
+                                                        const isFocal = d.dateKey === focalLast7Key;
 
                                                         return (
                                                             <button
                                                                 type="button"
                                                                 key={d.dateKey}
-                                                                ref={d.isToday ? last7TodayRef : undefined}
-                                                                className={`ps-day-chip ${d.state} ${d.isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${d.isFuture ? 'future' : ''}`}
-                                                                onClick={() => setSelectedLast7Key(d.dateKey)}
+                                                                ref={registerLast7ChipRef(d.dateKey, d.isToday)}
+                                                                className={`ps-day-chip ${d.state} ${d.isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isFocal ? 'is-focal' : ''} ${d.isFuture ? 'future' : ''}`}
+                                                                onClick={(e) => {
+                                                                    setSelectedLast7Key(d.dateKey);
+                                                                    centerLast7Chip(e.currentTarget, true);
+                                                                }}
                                                                 title={`${d.dateKey} — ${d.statusText}${d.isToday ? ' (Today)' : ''}`}
                                                                 aria-label={`${d.dateKey} — ${d.statusText}${d.isToday ? ' (Today)' : ''}`}
                                                                 aria-pressed={isSelected}
