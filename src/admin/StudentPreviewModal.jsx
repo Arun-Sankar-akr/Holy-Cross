@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-// NOTE: adjust this relative path if your project structure differs —
-// it matches the path AdminDashboard.jsx uses to import `db`.
 import { db } from '../service/firebase';
 import {
     X, Edit2, KeyRound, Mail, Phone, MapPin, GraduationCap,
@@ -10,8 +8,6 @@ import {
 } from 'lucide-react';
 import './StudentPreviewModal.css';
 
-// Keep these in sync with the Exam Term / Subject options used on the
-// "Results & Publish" tab in AdminDashboard.jsx.
 const EXAM_TYPES = [
     '1st Mid-Term exam',
     'Quarterly Exam',
@@ -50,11 +46,7 @@ const belongsToStudent = (record, student) => {
 };
 
 export default function StudentPreviewModal({ student, sectionName, className, onClose, onEdit }) {
-    // ---- Live Firestore-backed records (attendance / fees / assignments) ----
-    // Each of these subscribes directly to Firestore so the modal always
-    // reflects the current state of the database in real time, regardless of
-    // which dashboard (Admin or Staff) opened it or whether that dashboard
-    // already has this data loaded.
+    
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
     const [classAssignments, setClassAssignments] = useState([]);

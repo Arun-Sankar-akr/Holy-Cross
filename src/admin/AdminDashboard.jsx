@@ -15,7 +15,7 @@ import {
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
 import logo from "../assets/logo.png";
-import StudentPreviewModal from './Studentpreviewmodal';
+import Studentpreviewmodal from './Studentpreviewmodal';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -2872,7 +2872,7 @@ export default function AdminDashboard() {
                             )}
 
                             {previewStudent && (
-                                <StudentPreviewModal
+                                <Studentpreviewmodal
                                     student={previewStudent}
                                     className={previewStudent.className || selectedClass}
                                     sectionName={
