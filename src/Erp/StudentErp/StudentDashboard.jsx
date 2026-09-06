@@ -63,6 +63,7 @@ export default function StudentDashboard() {
 
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('all');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+    const [selectedAttendanceMonth, setSelectedAttendanceMonth] = useState('');
     const [isLast7StripScrolling, setIsLast7StripScrolling] = useState(false);
     const [selectedLast7Key, setSelectedLast7Key] = useState(null);
     const [focalLast7Key, setFocalLast7Key] = useState(null);
@@ -988,10 +989,15 @@ export default function StudentDashboard() {
         last7DaysInfo.find((d) => d.dateKey === selectedLast7Key) ||
         last7DaysInfo.find((d) => d.isToday);
 
+    const sessionOrder = { forenoon: 0, afternoon: 1 };
     const attendanceLogs = [...attendanceRecords].sort((a, b) => {
         const dateA = new Date(`${a.date || "1970-01-01"}T00:00:00`);
         const dateB = new Date(`${b.date || "1970-01-01"}T00:00:00`);
-        return dateB - dateA;
+        if (dateB - dateA !== 0) return dateB - dateA;
+
+        const sessionA = sessionOrder[String(a.session || "").toLowerCase()] ?? 99;
+        const sessionB = sessionOrder[String(b.session || "").toLowerCase()] ?? 99;
+        return sessionA - sessionB;
     });
 
     const hasStaffSubmittedAttendance = attendanceLogs.length > 0;
@@ -1020,6 +1026,80 @@ export default function StudentDashboard() {
         const matchesDate = !attendanceDateFilter || log.date === attendanceDateFilter;
         return matchesStatus && matchesDate;
     });
+
+    // Month-wise attendance: group logs by month, and within a month by date,
+    // with Forenoon and Afternoon kept as separate columns.
+    const getAttendanceMonthKey = (dateStr) => (dateStr ? String(dateStr).slice(0, 7) : '');
+
+    const getAttendanceMonthLabel = (monthKey) => {
+        if (!monthKey) return '';
+        const [y, m] = monthKey.split('-');
+        return new Date(Number(y), Number(m) - 1, 1)
+            .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
+
+    const attendanceMonthOptions = [...new Set(
+        attendanceLogs.map((log) => getAttendanceMonthKey(log.date)).filter(Boolean)
+    )].sort((a, b) => b.localeCompare(a));
+
+    useEffect(() => {
+        if (attendanceMonthOptions.length === 0) {
+            if (selectedAttendanceMonth) setSelectedAttendanceMonth('');
+            return;
+        }
+
+        if (!attendanceMonthOptions.includes(selectedAttendanceMonth)) {
+            const currentMonthKey = new Date().toISOString().slice(0, 7);
+            setSelectedAttendanceMonth(
+                attendanceMonthOptions.includes(currentMonthKey)
+                    ? currentMonthKey
+                    : attendanceMonthOptions[0]
+            );
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attendanceMonthOptions.join(',')]);
+
+    const monthAttendanceLogs = attendanceLogs.filter(
+        (log) => getAttendanceMonthKey(log.date) === selectedAttendanceMonth
+    );
+
+    const monthPresentCount = monthAttendanceLogs.filter(
+        (log) => String(log.status || "").toLowerCase() === "present"
+    ).length;
+
+    const monthAbsentCount = monthAttendanceLogs.filter(
+        (log) => String(log.status || "").toLowerCase() === "absent"
+    ).length;
+
+    const monthTotalSessions = monthAttendanceLogs.length;
+
+    const monthAttendanceRate = monthTotalSessions > 0
+        ? Math.round((monthPresentCount / monthTotalSessions) * 100)
+        : 0;
+
+    const monthIsDefaulter = monthTotalSessions > 0 && monthAttendanceRate < 75;
+
+    const monthAttendanceByDate = monthAttendanceLogs.reduce((map, log) => {
+        const key = log.date || 'unknown';
+        if (!map[key]) map[key] = { date: key, forenoon: null, afternoon: null };
+        const sessionKey = String(log.session || '').toLowerCase() === 'afternoon' ? 'afternoon' : 'forenoon';
+        map[key][sessionKey] = log;
+        return map;
+    }, {});
+
+    const monthAttendanceRows = Object.values(monthAttendanceByDate)
+        .filter((row) => {
+            const matchesDate = !attendanceDateFilter || row.date === attendanceDateFilter;
+
+            const selectedStatus = String(attendanceStatusFilter || 'all').toLowerCase();
+            const matchesStatus =
+                selectedStatus === 'all' ||
+                String(row.forenoon?.status || '').toLowerCase() === selectedStatus ||
+                String(row.afternoon?.status || '').toLowerCase() === selectedStatus;
+
+            return matchesDate && matchesStatus;
+        })
+        .sort((a, b) => new Date(`${b.date}T00:00:00`) - new Date(`${a.date}T00:00:00`));
 
     const pendingFeesList = feeRecords.filter(f => f.status !== 'Paid');
     const paidFeesList = feeRecords.filter(f => f.status === 'Paid');
@@ -1957,36 +2037,47 @@ export default function StudentDashboard() {
                         )}
 
                         {activeTab === 'attendance' && (
-                            <div className="staff-card full">
-                                <div className="card-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div className="staff-card full attendance-section">
+                                <div className="attendance-head">
                                     <div>
-                                        <h3>Attendance Summary & Period Logs</h3>
-                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--staff-text-muted)' }}>
-                                            Real-time attendance record and daily roll call logs for {studentData.name} (#{studentData.rollNo})
+                                        <h3>Attendance Summary & Session Logs</h3>
+                                        <p className="attendance-subtitle">
+                                            Month-wise attendance record for {studentData.name} (#{studentData.rollNo})
                                         </p>
                                     </div>
 
                                     {hasStaffSubmittedAttendance && (
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Filter size={14} color="var(--staff-text-muted)" />
-                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--staff-text-muted)' }}>Filters:</span>
+                                        <div className="attendance-filters">
+                                            <div className="attendance-filters-label">
+                                                <Filter size={13} />
+                                                <span>Filters</span>
                                             </div>
+
+                                            <select
+                                                className="custom-select attendance-select"
+                                                value={selectedAttendanceMonth}
+                                                onChange={(e) => setSelectedAttendanceMonth(e.target.value)}
+                                                title="Select Month"
+                                            >
+                                                {attendanceMonthOptions.map((monthKey) => (
+                                                    <option key={monthKey} value={monthKey}>
+                                                        {getAttendanceMonthLabel(monthKey)}
+                                                    </option>
+                                                ))}
+                                            </select>
 
                                             <input
                                                 type="date"
-                                                className="custom-select"
+                                                className="custom-select attendance-select"
                                                 value={attendanceDateFilter}
                                                 onChange={(e) => setAttendanceDateFilter(e.target.value)}
                                                 title="Filter by Date"
-                                                style={{ padding: '5px 8px', fontSize: '0.76rem' }}
                                             />
 
                                             <select
-                                                className="custom-select"
+                                                className="custom-select attendance-select"
                                                 value={attendanceStatusFilter}
                                                 onChange={(e) => setAttendanceStatusFilter(e.target.value)}
-                                                style={{ padding: '5px 8px', fontSize: '0.76rem' }}
                                             >
                                                 <option value="all">All Statuses</option>
                                                 <option value="present">Present Only</option>
@@ -1995,8 +2086,9 @@ export default function StudentDashboard() {
 
                                             {(attendanceDateFilter || attendanceStatusFilter !== 'all') && (
                                                 <button
+                                                    type="button"
+                                                    className="attendance-reset-btn"
                                                     onClick={() => { setAttendanceDateFilter(''); setAttendanceStatusFilter('all'); }}
-                                                    style={{ background: 'none', border: 'none', color: 'var(--staff-primary)', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
                                                 >
                                                     Reset
                                                 </button>
@@ -2013,70 +2105,107 @@ export default function StudentDashboard() {
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="staff-stats-grid" style={{ marginTop: '1rem', marginBottom: '1.25rem' }}>
-                                            <div className="staff-stat-box">
-                                                <span className="stat-title">Overall Percentage</span>
-                                                <h3 className="stat-val" style={{ color: isDefaulter ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
-                                                    {rawAttendanceRate}%
-                                                </h3>
-                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>
-                                                    {isDefaulter ? 'Below 75% minimum requirement' : 'Meets standards'}
-                                                </span>
-                                            </div>
-                                            <div className="staff-stat-box">
-                                                <span className="stat-title">Current Status</span>
-                                                <h3 className="stat-val">
-                                                    <span className={`status-badge status-${currentAttendanceStatus}`} style={{ fontSize: '0.9rem', padding: '4px 10px' }}>
-                                                        {currentAttendanceStatus.toUpperCase()}
+                                        <h4 className="attendance-month-label">
+                                            {getAttendanceMonthLabel(selectedAttendanceMonth) || 'Selected Month'}
+                                        </h4>
+
+                                        <div className="attendance-overview">
+                                            <div className={`attendance-ring-card ${monthTotalSessions === 0 ? 'is-neutral' : (monthIsDefaulter ? 'is-low' : 'is-good')}`}>
+                                                <div
+                                                    className="attendance-ring"
+                                                    style={{ '--pct': monthTotalSessions > 0 ? monthAttendanceRate : 0 }}
+                                                >
+                                                    <span className="attendance-ring-value">
+                                                        {monthTotalSessions > 0 ? `${monthAttendanceRate}%` : '--'}
                                                     </span>
-                                                </h3>
-                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>Latest faculty roll call</span>
+                                                </div>
+                                                <div className="attendance-ring-meta">
+                                                    <span className="attendance-ring-title">Month Percentage</span>
+                                                    <span className="attendance-ring-note">
+                                                        {monthTotalSessions === 0
+                                                            ? 'No sessions this month'
+                                                            : (monthIsDefaulter ? 'Below 75% minimum requirement' : 'Meets standards')}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="staff-stat-box">
-                                                <span className="stat-title">Total Logs Recorded</span>
-                                                <h3 className="stat-val" style={{ fontSize: '1.1rem', fontWeight: 800 }}>
-                                                    {attendanceLogs.length} Periods
-                                                </h3>
-                                                <span style={{ fontSize: '0.68rem', color: 'var(--staff-text-muted)' }}>Filtered: {filteredAttendanceLogs.length} rows</span>
+
+                                            <div className="attendance-mini-stats">
+                                                <div className="attendance-mini-stat stat-good">
+                                                    <CheckCircle size={16} />
+                                                    <div>
+                                                        <span className="mini-stat-value">{monthPresentCount}</span>
+                                                        <span className="mini-stat-label">Present</span>
+                                                    </div>
+                                                </div>
+                                                <div className="attendance-mini-stat stat-bad">
+                                                    <XCircle size={16} />
+                                                    <div>
+                                                        <span className="mini-stat-value">{monthAbsentCount}</span>
+                                                        <span className="mini-stat-label">Absent</span>
+                                                    </div>
+                                                </div>
+                                                <div className="attendance-mini-stat stat-neutral">
+                                                    <BarChart2 size={16} />
+                                                    <div>
+                                                        <span className="mini-stat-value">{monthTotalSessions}</span>
+                                                        <span className="mini-stat-label">Total Sessions</span>
+                                                    </div>
+                                                </div>
+                                                <div className="attendance-mini-stat stat-neutral">
+                                                    <Filter size={16} />
+                                                    <div>
+                                                        <span className="mini-stat-value">{monthAttendanceRows.length}</span>
+                                                        <span className="mini-stat-label">Filtered Dates</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <h4 style={{ fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.5rem' }}>Period-by-Period Roll Call Logs</h4>
+                                        <h4 className="attendance-log-heading">Forenoon / Afternoon Roll Call Logs</h4>
 
-                                        <div className="table-responsive" style={{ borderRadius: 'var(--staff-radius)', border: '1px solid var(--staff-border)' }}>
-                                            <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                        <div className="attendance-table-wrap">
+                                            <table className="attendance-log-table">
                                                 <thead>
                                                     <tr>
-                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>DATE</th>
-                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>PERIOD / TIME</th>
-                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>SUBJECT</th>
-                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>TEACHER NAME</th>
-                                                        <th style={{ background: '#f8fafc', padding: '0.65rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, color: 'var(--staff-text-muted)' }}>STATUS</th>
+                                                        <th>Date</th>
+                                                        <th>Forenoon</th>
+                                                        <th>Afternoon</th>
+                                                        <th>Class Incharge</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {filteredAttendanceLogs.length === 0 ? (
+                                                    {monthAttendanceRows.length === 0 ? (
                                                         <tr>
-                                                            <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--staff-text-muted)' }}>
+                                                            <td colSpan="4" className="attendance-empty-row">
                                                                 No attendance logs found matching the selected filters.
                                                             </td>
                                                         </tr>
                                                     ) : (
-                                                        filteredAttendanceLogs.map((log) => (
-                                                            <tr key={log.id} style={{ borderBottom: '1px solid var(--staff-border)' }}>
-                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', fontWeight: 700 }}>{log.date}</td>
-                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
-                                                                    <span className="task-target-tag">{log.period}</span>
+                                                        monthAttendanceRows.map((row) => (
+                                                            <tr key={row.date}>
+                                                                <td className="attendance-date-cell">{row.date}</td>
+                                                                <td>
+                                                                    {row.forenoon ? (
+                                                                        <span className={`status-badge status-${row.forenoon.status}`}>
+                                                                            {row.forenoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                            {row.forenoon.status.toUpperCase()}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="attendance-not-marked">Not marked</span>
+                                                                    )}
                                                                 </td>
-                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
-                                                                    <span className="topic-badge">{log.subject}</span>
+                                                                <td>
+                                                                    {row.afternoon ? (
+                                                                        <span className={`status-badge status-${row.afternoon.status}`}>
+                                                                            {row.afternoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                            {row.afternoon.status.toUpperCase()}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="attendance-not-marked">Not marked</span>
+                                                                    )}
                                                                 </td>
-                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: 'var(--staff-text-muted)' }}>{log.teacherName}</td>
-                                                                <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem' }}>
-                                                                    <span className={`status-badge status-${log.status}`}>
-                                                                        {log.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
-                                                                        {log.status.toUpperCase()}
-                                                                    </span>
+                                                                <td className="attendance-teacher-cell">
+                                                                    {row.forenoon?.teacherName || row.afternoon?.teacherName || '—'}
                                                                 </td>
                                                             </tr>
                                                         ))

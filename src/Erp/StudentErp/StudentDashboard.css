@@ -904,12 +904,22 @@ td {
   .staff-mobile-toggle-bar {
     display: flex;
     flex-direction: row-reverse;
+    position: sticky;
+    top: 0;
+    z-index: 160;
   }
 
   .portal-status-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     text-align: center;
-    padding: 5px;
-    width: 100px;
+    padding: 6px 14px;
+    width: auto;
+    min-width: 100px;
+    white-space: nowrap;
+    font-size: 0.7rem;
     background: #4273e6;
     border-radius: 200px;
     color: #fff;
@@ -921,10 +931,14 @@ td {
     top: 59px;
     bottom: 0;
     left: 0;
+    width: 78vw;
+    max-width: 280px;
     border-radius: 0;
-    z-index: 150;
+    z-index: 170;
+    box-shadow: 12px 0 32px rgba(15, 23, 42, 0.25);
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
   }
 
   .staff-sidebar.mobile-open {
@@ -3835,4 +3849,542 @@ td {
 .syllabus-item-row .view-pdf-link {
   align-self: center;
   white-space: nowrap;
+}
+/* =========================================================
+   Attendance Summary & Session Logs — dedicated restyle
+   Everything below is scoped under .attendance-section so it
+   cannot affect any other tab/section of the dashboard.
+   ========================================================= */
+
+.attendance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.15rem;
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.attendance-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.attendance-subtitle {
+  margin: 3px 0 0;
+  font-size: 0.76rem;
+  color: var(--dash-text-muted);
+}
+
+.attendance-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border);
+  padding: 0.4rem 0.6rem;
+  border-radius: 999px;
+}
+
+.attendance-filters-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--dash-text-muted);
+  padding-right: 0.5rem;
+  margin-right: 0.1rem;
+  border-right: 1px solid var(--dash-border);
+  white-space: nowrap;
+}
+
+.attendance-select {
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  border-radius: 999px;
+}
+
+.attendance-reset-btn {
+  background: none;
+  border: none;
+  color: var(--dash-primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.attendance-reset-btn:hover {
+  text-decoration: underline;
+}
+
+.attendance-month-label {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+  margin: 0 0 0.85rem;
+}
+
+/* Overview row: percentage ring + mini stat tiles */
+.attendance-overview {
+  display: grid;
+  grid-template-columns: minmax(210px, 270px) 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-ring-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--dash-bg);
+  border: 1.5px solid var(--dash-border);
+  border-radius: var(--dash-radius);
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.attendance-ring-card.is-good { border-color: rgba(25, 169, 116, 0.3); }
+.attendance-ring-card.is-low { border-color: rgba(232, 76, 118, 0.3); }
+
+.attendance-ring {
+  --pct: 0;
+  --ring-color: var(--dash-primary);
+  position: relative;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), var(--dash-border) 0);
+}
+
+.attendance-ring::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--dash-surface);
+}
+
+.attendance-ring-value {
+  position: relative;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.attendance-ring-card.is-good .attendance-ring { --ring-color: var(--accent-emerald); }
+.attendance-ring-card.is-low .attendance-ring { --ring-color: var(--accent-rose); }
+.attendance-ring-card.is-neutral .attendance-ring { --ring-color: var(--dash-text-muted); }
+
+.attendance-ring-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attendance-ring-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dash-text-muted);
+}
+
+.attendance-ring-note {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--dash-text-main);
+}
+
+.attendance-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.attendance-mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem;
+  box-shadow: var(--dash-shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.attendance-mini-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dash-shadow);
+}
+
+.attendance-mini-stat svg { flex-shrink: 0; }
+.attendance-mini-stat.stat-good svg { color: var(--accent-emerald); }
+.attendance-mini-stat.stat-bad svg { color: var(--accent-rose); }
+.attendance-mini-stat.stat-neutral svg { color: var(--dash-primary); }
+
+.attendance-mini-stat > div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.mini-stat-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+}
+
+.mini-stat-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--dash-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.attendance-log-heading {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--dash-text-main);
+  margin: 0 0 0.6rem;
+}
+
+.attendance-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--dash-border);
+  border-radius: var(--dash-radius);
+}
+
+.attendance-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.attendance-log-table thead tr {
+  background: var(--dash-primary-light);
+}
+
+.attendance-log-table th {
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dash-primary);
+  white-space: nowrap;
+}
+
+.attendance-log-table td {
+  padding: 0.65rem 0.9rem;
+  border-top: 1px solid var(--dash-border);
+  color: var(--dash-text-main);
+  vertical-align: middle;
+}
+
+.attendance-log-table tbody tr:hover {
+  background: var(--dash-bg);
+}
+
+.attendance-date-cell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.attendance-teacher-cell {
+  color: var(--dash-text-muted);
+  font-size: 0.78rem;
+}
+
+.attendance-not-marked {
+  color: var(--dash-text-muted);
+  font-size: 0.76rem;
+  font-style: italic;
+}
+
+.attendance-empty-row {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--dash-text-muted);
+}
+
+@media (max-width: 720px) {
+  .attendance-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-mini-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .attendance-filters {
+    border-radius: 16px;
+  }
+}
+
+/* =========================================================
+   GLOBAL MOBILE POLISH — full-dashboard responsive pass
+   Fills in a few pieces that were referenced in the markup but
+   never styled (sidebar overlay, hamburger button, status dot,
+   Active Coursework list, print button), then tightens spacing,
+   tap targets and table scrolling across every tab for phones
+   and small tablets. Desktop layout is untouched outside the
+   existing breakpoints above.
+   ========================================================= */
+
+/* --- Previously-unstyled pieces used across the dashboard ------ */
+.staff-sidebar-overlay {
+  display: none;
+}
+
+.menu-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-bg);
+  color: var(--dash-text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.menu-toggle-btn:hover,
+.menu-toggle-btn:active {
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  border-color: var(--dash-primary-border);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.status-dot.absent {
+  background: var(--accent-rose);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+/* Active Coursework list (Overview tab) */
+.student-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.student-task-item {
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-task-item:hover {
+  background: var(--dash-primary-light);
+  transform: translateX(3px);
+}
+
+.student-task-item h5 {
+  margin: 0.4rem 0 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--dash-text-main);
+}
+
+.task-top-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.task-sub {
+  font-size: 0.68rem;
+  color: var(--dash-text-muted);
+  font-weight: 600;
+}
+
+.submitted-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: var(--accent-emerald-bg);
+  padding: 2px 8px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.print-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  border: 1px solid var(--dash-primary-border);
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.print-schedule-btn:hover {
+  background: var(--dash-primary-border);
+}
+
+/* Smoother momentum scrolling for every horizontally scrollable
+   table on iOS/Android */
+.table-responsive,
+.marks-table-wrapper,
+.student-timetable-wrapper,
+.attendance-table-wrap,
+.ht-table-wrap {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  /* Darkened backdrop behind the sliding sidebar drawer */
+  .staff-sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 165;
+    animation: mobileOverlayFadeIn 0.2s ease;
+  }
+
+  /* Bigger, easier-to-tap targets on touch screens */
+  .topbar-icon-btn,
+  .ps-mini-cal-nav-btn,
+  .quick-preview-close,
+  .fee-alert-close-btn,
+  .reminder-close-btn,
+  .hall-ticket-preview-header button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .staff-nav-item {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .submit-pdf-btn,
+  .view-pdf-link,
+  .ps-header-btn,
+  .hall-ticket-action-btn,
+  .attendance-reset-btn,
+  .custom-select,
+  .attendance-select {
+    min-height: 36px;
+  }
+}
+
+@keyframes mobileOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Notification drawer: keep it inside the viewport on phones */
+@media (max-width: 480px) {
+  .notif-drawer-dropdown {
+    position: fixed;
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+/* Syllabus rows: let long titles/links wrap instead of
+   overflowing the card on narrow screens */
+@media (max-width: 480px) {
+  .syllabus-item-row {
+    flex-wrap: wrap;
+  }
+
+  .syllabus-item-row .view-pdf-link {
+    align-self: flex-start;
+    margin-left: 46px;
+  }
+}
+
+/* Card padding & header stacking on very small phones */
+@media (max-width: 400px) {
+  .staff-card {
+    padding: 0.85rem;
+    border-radius: 16px;
+  }
+
+  .card-header h3 {
+    font-size: 0.86rem;
+  }
+
+  .ps-header-btn span {
+    display: none;
+  }
+
+  .ps-header-btn {
+    padding: 8px;
+    border-radius: 10px;
+  }
+}
+
+/* =========================================================
+   Attendance Summary & Session Logs — extra small-screen tweaks
+   (layered on top of the dedicated restyle above)
+   ========================================================= */
+@media (max-width: 480px) {
+  .attendance-head {
+    gap: 0.75rem;
+  }
+
+  .attendance-filters {
+    width: 100%;
+  }
+
+  .attendance-select {
+    flex: 1 1 auto;
+  }
+
+  .attendance-ring-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .attendance-mini-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

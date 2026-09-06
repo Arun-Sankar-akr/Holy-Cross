@@ -149,6 +149,13 @@ export default function AdminDashboard() {
     const [editingSectionId, setEditingSectionId] = useState(null);
     const [editSectionForm, setEditSectionForm] = useState({ name: '', roomNo: '' });
 
+    // Class Incharge Teachers States
+    const [selectedInchargeClass, setSelectedInchargeClass] = useState('');
+    const [selectedInchargeSectionId, setSelectedInchargeSectionId] = useState('');
+    const [selectedInchargeTeacherId, setSelectedInchargeTeacherId] = useState('');
+    const [inchargeAssigning, setInchargeAssigning] = useState(false);
+    const [inchargeSavedMsg, setInchargeSavedMsg] = useState(false);
+
     const sidebarRef = useRef(null);
     const studentFormRef = useRef(null);
 
@@ -851,6 +858,25 @@ export default function AdminDashboard() {
         }
     };
 
+    // Class Incharge Teachers: assign (or reassign/clear) a teacher as a class section's incharge
+    const handleAssignClassIncharge = async () => {
+        if (!selectedInchargeSectionId) return;
+        const selectedStaffMember = staffList.find(s => s.id === selectedInchargeTeacherId);
+        setInchargeAssigning(true);
+        try {
+            await updateDoc(doc(db, 'class_sections', selectedInchargeSectionId), {
+                classInchargeId: selectedInchargeTeacherId || '',
+                classIncharge: selectedStaffMember ? selectedStaffMember.name : ''
+            });
+            setInchargeSavedMsg(true);
+            setTimeout(() => setInchargeSavedMsg(false), 2000);
+        } catch (error) {
+            console.error("Error assigning class incharge: ", error);
+        } finally {
+            setInchargeAssigning(false);
+        }
+    };
+
     const handleAddStudent = async (e) => {
         e.preventDefault();
         if (!studentForm.name.trim() || !studentForm.admissionNo.trim()) return;
@@ -1243,6 +1269,9 @@ export default function AdminDashboard() {
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass(null); setSelectedSection(null); })}>
                                         <GraduationCap size={15} /> Students ERP
+                                    </button>
+                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'class_incharge' ? 'active' : ''}`} onClick={() => handleTabClick('class_incharge', () => { setSelectedInchargeClass(''); setSelectedInchargeSectionId(''); setSelectedInchargeTeacherId(''); })}>
+                                        <UserCheck size={15} /> Class Incharge
                                     </button>
                                     <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
                                         <Award size={15} /> Results & Publish
@@ -2886,6 +2915,107 @@ export default function AdminDashboard() {
                                         startEditingStudent(st);
                                     }}
                                 />
+                            )}
+                        </div>
+                    )}
+
+                    {/* CLASS INCHARGE TEACHERS TAB */}
+                    {activeTab === 'class_incharge' && (
+                        <div className="applications-management-card premium-section students-directory-premium">
+                            <div className="premium-section-heading">
+                                <div className="premium-section-title-wrap">
+                                    <div className="premium-section-icon"><UserCheck size={19} /></div>
+                                    <div>
+                                        <h3>Class Incharge Teachers</h3>
+                                        <p>Select a class and section, then assign a teacher as its class incharge.</p>
+                                    </div>
+                                </div>
+                                <span className="premium-section-count">{sectionsList.filter(s => s.classIncharge).length} Assigned</span>
+                            </div>
+
+                            <form onSubmit={(e) => { e.preventDefault(); handleAssignClassIncharge(); }}>
+                                <div>
+                                    <label>Select Class</label>
+                                    <select
+                                        value={selectedInchargeClass}
+                                        onChange={e => {
+                                            setSelectedInchargeClass(e.target.value);
+                                            setSelectedInchargeSectionId('');
+                                            setSelectedInchargeTeacherId('');
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Select Class</option>
+                                        {classList.map((cls) => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Select Section</label>
+                                    <select
+                                        value={selectedInchargeSectionId}
+                                        onChange={e => {
+                                            const sectionId = e.target.value;
+                                            setSelectedInchargeSectionId(sectionId);
+                                            const sec = sectionsList.find(s => s.id === sectionId);
+                                            setSelectedInchargeTeacherId(sec?.classInchargeId || '');
+                                        }}
+                                        required
+                                        disabled={!selectedInchargeClass}
+                                    >
+                                        <option value="">Select Section</option>
+                                        {getSectionsForClass(selectedInchargeClass).map((sec) => (
+                                            <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Assign Teacher</label>
+                                    <select
+                                        value={selectedInchargeTeacherId}
+                                        onChange={e => setSelectedInchargeTeacherId(e.target.value)}
+                                        disabled={!selectedInchargeSectionId}
+                                    >
+                                        <option value="">No Teacher Assigned</option>
+                                        {staffList.map(stf => (
+                                            <option key={stf.id} value={stf.id}>{stf.name} ({stf.department || 'Staff'})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button type="submit" className="add-notice-btn" disabled={!selectedInchargeSectionId || inchargeAssigning}>
+                                    <UserCheck size={15} /> {inchargeAssigning ? 'Saving...' : 'Assign Class Incharge'}
+                                </button>
+                                {inchargeSavedMsg && <span style={{ color: 'var(--primary)', fontSize: '0.8rem', marginLeft: '10px' }}>Saved successfully</span>}
+                            </form>
+
+                            <h4>
+                                {selectedInchargeClass ? `${selectedInchargeClass} Sections` : 'All Class Sections'}{' '}
+                                <span className="count-badge">
+                                    {(selectedInchargeClass ? getSectionsForClass(selectedInchargeClass) : sectionsList).length}
+                                </span>
+                            </h4>
+
+                            {(selectedInchargeClass ? getSectionsForClass(selectedInchargeClass) : sectionsList).length === 0 ? (
+                                <div className="empty-state">No class sections found. Create sections first under Students ERP.</div>
+                            ) : (
+                                <div className="sections-grid">
+                                    {(selectedInchargeClass ? getSectionsForClass(selectedInchargeClass) : sectionsList).map(sec => (
+                                        <div key={sec.id} className="section-card">
+                                            <div className="section-card-body" onClick={() => {
+                                                setSelectedInchargeClass(sec.className);
+                                                setSelectedInchargeSectionId(sec.id);
+                                                setSelectedInchargeTeacherId(sec.classInchargeId || '');
+                                            }}>
+                                                <UserCheck size={18} className="section-folder-icon" />
+                                                <div>
+                                                    <h5>{sec.className} — {sec.name}</h5>
+                                                    <p>{sec.classIncharge ? `Incharge: ${sec.classIncharge}` : 'No teacher assigned'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     )}

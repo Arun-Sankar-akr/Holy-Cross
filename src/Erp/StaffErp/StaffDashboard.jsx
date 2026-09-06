@@ -90,8 +90,8 @@ export default function StaffDashboard() {
     const [selectedSection, setSelectedSection] = useState(null);
 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-    const [attendancePeriod, setAttendancePeriod] = useState('');
-    const [attendanceSlotId, setAttendanceSlotId] = useState('');
+    const [attendanceSession, setAttendanceSession] = useState('Forenoon');
+    const [attendanceSectionId, setAttendanceSectionId] = useState('');
 
     const [subClassFilter, setSubClassFilter] = useState(null);
     const [subSectionFilter, setSubSectionFilter] = useState(null);
@@ -421,147 +421,59 @@ export default function StaffDashboard() {
             (!a.sectionName || !sectionName || cleanString(a.sectionName) === cleanString(sectionName))
         );
 
-    const attendanceWeekday = attendanceDate
-        ? new Date(`${attendanceDate}T00:00:00`)
-            .toLocaleDateString('en-US', {
-                weekday: 'long'
-            })
-        : '';
+    // Class Incharge Teachers: attendance can only be marked by the teacher assigned as
+    // Class Incharge for a section (assigned by the admin), split into Forenoon / Afternoon sessions.
+    const myStaffRecord = allStaffMembers.find(s => s.staffId === staffData.staffId);
+    const myStaffDocId = myStaffRecord?.id || '';
 
-    const normalizeTimetableSlot = (slot) => ({
-        ...slot,
+    const myInchargeSections = sectionsList.filter((sec) => {
+        const idMatch =
+            Boolean(sec.classInchargeId) &&
+            Boolean(myStaffDocId) &&
+            sec.classInchargeId === myStaffDocId;
 
-        timetableClass:
-            slot.className ||
-            slot.class ||
-            '',
+        const nameMatch =
+            Boolean(sec.classIncharge) &&
+            Boolean(staffData.name) &&
+            cleanString(sec.classIncharge) === cleanString(staffData.name);
 
-        timetableSection:
-            slot.sectionName ||
-            slot.section ||
-            '',
-
-        timetableTime:
-            slot.timeSlot ||
-            slot.period ||
-            slot.time ||
-            '',
-
-        timetableDay:
-            slot.day ||
-            slot.weekday ||
-            ''
+        return idMatch || nameMatch;
     });
-    const scheduledPeriodsForAttendance = mySchedule
-        .map(normalizeTimetableSlot)
 
-        .filter((slot) => {
+    const isClassIncharge = myInchargeSections.length > 0;
 
-            const sameDay =
-                cleanString(slot.timetableDay) ===
-                cleanString(attendanceWeekday);
+    const myInchargeSectionsKey = myInchargeSections.map((sec) => sec.id).join(',');
 
-            const hasClass =
-                Boolean(slot.timetableClass);
-
-            const hasSection =
-                Boolean(slot.timetableSection);
-
-            return sameDay && hasClass && hasSection;
-        })
-
-        .sort((a, b) => {
-
-            const ai =
-                timeSlotOrder.indexOf(
-                    a.timetableTime
-                );
-
-            const bi =
-                timeSlotOrder.indexOf(
-                    b.timetableTime
-                );
-
-            return (
-                (ai === -1 ? 999 : ai) -
-                (bi === -1 ? 999 : bi)
-            );
-        });
-
-    const scheduledPeriodKey =
-        scheduledPeriodsForAttendance
-            .map((slot) =>
-                `${slot.id}-${slot.timetableTime}`
-            )
-            .join(',');
-
-    const hasAttendanceSchedule =
-        scheduledPeriodsForAttendance.length > 0;
-
-    const selectedAttendanceSlot =
-        scheduledPeriodsForAttendance.find(
-            (slot) =>
-                String(slot.id) ===
-                String(attendanceSlotId)
-        ) || null;
+    const selectedInchargeSection =
+        myInchargeSections.find(
+            (sec) => String(sec.id) === String(attendanceSectionId)
+        ) ||
+        myInchargeSections[0] ||
+        null;
 
     useEffect(() => {
 
-        if (
-            scheduledPeriodsForAttendance.length === 0
-        ) {
-
-            setAttendanceSlotId('');
-            setAttendancePeriod('');
+        if (myInchargeSections.length === 0) {
+            setAttendanceSectionId('');
             setAttendanceSubmitted(false);
-
             return;
         }
 
-        const slotStillExists =
-            scheduledPeriodsForAttendance.some(
-                (slot) =>
-                    String(slot.id) ===
-                    String(attendanceSlotId)
-            );
+        const stillExists = myInchargeSections.some(
+            (sec) => String(sec.id) === String(attendanceSectionId)
+        );
 
-        if (!slotStillExists) {
-
-            const firstSlot =
-                scheduledPeriodsForAttendance[0];
-
-            setAttendanceSlotId(
-                String(firstSlot.id)
-            );
-
-            setAttendancePeriod(
-                firstSlot.timetableTime
-            );
-
+        if (!stillExists) {
+            setAttendanceSectionId(String(myInchargeSections[0].id));
             setAttendanceSubmitted(false);
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-
-    }, [
-        attendanceWeekday,
-        scheduledPeriodKey
-    ]);
+    }, [myInchargeSectionsKey]);
 
     useEffect(() => {
-
-        if (!selectedAttendanceSlot) return;
-
-        setAttendancePeriod(
-            selectedAttendanceSlot.timetableTime
-        );
-
         setAttendanceSubmitted(false);
-
-    }, [
-        attendanceSlotId,
-        scheduledPeriodKey
-    ]);
+    }, [attendanceSectionId, attendanceSession, attendanceDate]);
     const myExamHallDuties = staffExamHallAllocations.filter(item => {
         const assigned = cleanString(item.staffName);
         const current = cleanString(staffData.name);
@@ -768,17 +680,17 @@ export default function StaffDashboard() {
         return '';
     };
 
-    const attendanceStudents = selectedAttendanceSlot &&
-        selectedAttendanceSlot.timetableClass &&
-        selectedAttendanceSlot.timetableSection
+    const attendanceStudents = selectedInchargeSection &&
+        selectedInchargeSection.className &&
+        selectedInchargeSection.name
         ? allStudents.filter(student => {
             const classMatches =
                 normalizeClassKey(getStudentClassValue(student)) ===
-                normalizeClassKey(selectedAttendanceSlot.timetableClass);
+                normalizeClassKey(selectedInchargeSection.className);
 
             const sectionMatches =
                 normalizeSectionKey(getStudentSectionValue(student)) ===
-                normalizeSectionKey(selectedAttendanceSlot.timetableSection);
+                normalizeSectionKey(selectedInchargeSection.name);
 
             return classMatches && sectionMatches;
         })
@@ -805,10 +717,10 @@ export default function StaffDashboard() {
         navigate('/');
     };
 
-    const getMatchedTimetableSlot = () => {
-        if (!selectedAttendanceSlot) return null;
-        if (!selectedAttendanceSlot.timetableClass || !selectedAttendanceSlot.timetableSection) return null;
-        return selectedAttendanceSlot;
+    const getMatchedInchargeSection = () => {
+        if (!selectedInchargeSection) return null;
+        if (!selectedInchargeSection.className || !selectedInchargeSection.name) return null;
+        return selectedInchargeSection;
     };
 
     const toggleAttendance = async (studentDocId, currentStatus) => {
@@ -828,16 +740,16 @@ export default function StaffDashboard() {
     };
 
     const handleSubmitAttendance = async () => {
-        const matchedSlot = getMatchedTimetableSlot();
+        const matchedSection = getMatchedInchargeSection();
 
-        if (!matchedSlot) {
-            alert('Attendance is locked because no exact timetable slot is selected.');
+        if (!matchedSection) {
+            alert('Attendance is locked because you are not assigned as the Class Incharge for any section.');
             return;
         }
 
         if (attendanceStudents.length === 0) {
             alert(
-                `No students found for ${matchedSlot.timetableClass} - ${matchedSlot.timetableSection}. ` +
+                `No students found for ${matchedSection.className} - ${matchedSection.name}. ` +
                 'Please verify the student class and section records.'
             );
             return;
@@ -861,21 +773,15 @@ export default function StaffDashboard() {
                 batch.update(studentRef, {
                     status: attendanceStatus,
                     lastAttendanceDate: attendanceDate,
-                    lastAttendancePeriod: attendancePeriod,
-                    lastAttendanceTimetableId:
-                        matchedSlot?.id || null,
-                    lastAttendanceSubject:
-                        matchedSlot?.subject ||
-                        selectedSubject ||
-                        'General',
-                    lastAttendanceRoom:
-                        matchedSlot?.roomNo || null,
+                    lastAttendanceSession: attendanceSession,
+                    lastAttendanceSectionId:
+                        matchedSection?.id || null,
                     lastAttendanceTeacher:
                         staffData.name || null,
                     lastAttendanceClass:
-                        matchedSlot.timetableClass,
+                        matchedSection.className,
                     lastAttendanceSection:
-                        matchedSlot.timetableSection
+                        matchedSection.name
                 });
 
                 const attendanceHistoryRef = doc(
@@ -894,20 +800,15 @@ export default function StaffDashboard() {
                         '',
 
                     className:
-                        matchedSlot.timetableClass,
+                        matchedSection.className,
 
                     sectionName:
-                        matchedSlot.timetableSection,
+                        matchedSection.name,
 
                     date: attendanceDate,
 
-                    period:
-                        attendancePeriod,
-
-                    subject:
-                        matchedSlot?.subject ||
-                        selectedSubject ||
-                        'General',
+                    session:
+                        attendanceSession,
 
                     teacherId:
                         staffData.staffId || '',
@@ -915,11 +816,8 @@ export default function StaffDashboard() {
                     teacherName:
                         staffData.name || '',
 
-                    timetableId:
-                        matchedSlot?.id || null,
-
-                    roomNo:
-                        matchedSlot?.roomNo || '',
+                    sectionId:
+                        matchedSection?.id || null,
 
                     status:
                         attendanceStatus,
@@ -934,7 +832,7 @@ export default function StaffDashboard() {
             setAttendanceSubmitted(true);
 
             alert(
-                `Attendance submitted successfully for ${attendanceStudents.length} student(s).`
+                `Attendance submitted successfully for ${attendanceStudents.length} student(s) — ${attendanceSession} session.`
             );
 
         } catch (error) {
@@ -2651,19 +2549,19 @@ export default function StaffDashboard() {
                                     <div>
                                         <h3>Mark Attendance</h3>
                                         <p className="subtitle">
-                                            {hasAttendanceSchedule && selectedAttendanceSlot
-                                                ? `${selectedAttendanceSlot.subject || 'Scheduled Class'} • ${selectedAttendanceSlot.timetableClass || 'Class'} ${selectedAttendanceSlot.timetableSection ? `(${formatSectionTitle(selectedAttendanceSlot.timetableSection)})` : ''}`
-                                                : `No class scheduled for you on ${attendanceWeekday || 'this date'}`}
+                                            {isClassIncharge && selectedInchargeSection
+                                                ? `${selectedInchargeSection.className || 'Class'} ${selectedInchargeSection.name ? `(${formatSectionTitle(selectedInchargeSection.name)})` : ''} • Class Incharge`
+                                                : 'You are not the Class Incharge for any section'}
                                         </p>
                                         <p className="subtitle" style={{ marginTop: '2px', fontSize: '0.72rem' }}>
-                                            {hasAttendanceSchedule ? (
+                                            {isClassIncharge ? (
                                                 <span style={{ color: 'var(--primary)' }}>
                                                     <CalendarClock size={12} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                                                    Attendance is locked to your {attendanceWeekday} Weekly Timetable
+                                                    Only the assigned Class Incharge can mark attendance for this section
                                                 </span>
                                             ) : (
                                                 <span style={{ color: '#b42318', fontWeight: 600 }}>
-                                                    Attendance locked — no timetable class is assigned to you.
+                                                    Attendance locked — you have not been assigned as Class Incharge for any section.
                                                 </span>
                                             )}
                                         </p>
@@ -2678,41 +2576,49 @@ export default function StaffDashboard() {
                                             title="Attendance Date"
                                         />
 
-                                        {hasAttendanceSchedule ? (
+                                        {isClassIncharge ? (
                                             <>
+                                                {myInchargeSections.length > 1 && (
+                                                    <select
+                                                        className="custom-select"
+                                                        value={attendanceSectionId}
+                                                        onChange={(e) => setAttendanceSectionId(e.target.value)}
+                                                        title="Select the class section you are Incharge of"
+                                                    >
+                                                        {myInchargeSections.map(sec => (
+                                                            <option key={sec.id} value={String(sec.id)}>
+                                                                {sec.className} — {formatSectionTitle(sec.name)}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+
                                                 <select
                                                     className="custom-select"
-                                                    value={attendanceSlotId}
-                                                    onChange={(e) => {
-                                                        const slot = scheduledPeriodsForAttendance.find(item => String(item.id) === e.target.value);
-                                                        setAttendanceSlotId(e.target.value);
-                                                        setAttendancePeriod(slot?.timetableTime || '');
-                                                    }}
-                                                    title={`Only periods assigned to you on ${attendanceWeekday}`}
+                                                    value={attendanceSession}
+                                                    onChange={(e) => setAttendanceSession(e.target.value)}
+                                                    title="Select Forenoon or Afternoon session"
                                                 >
-                                                    {scheduledPeriodsForAttendance.map(slot => (
-                                                        <option key={slot.id} value={String(slot.id)}>
-                                                            {slot.timetableTime} — {slot.subject} ({slot.timetableClass}{slot.timetableSection ? ` • ${formatSectionTitle(slot.timetableSection)}` : ''})
-                                                        </option>
-                                                    ))}
+                                                    <option value="Forenoon">Forenoon</option>
+                                                    <option value="Afternoon">Afternoon</option>
                                                 </select>
 
                                                 <div
                                                     className="custom-select"
                                                     style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
-                                                    title="Class is automatically taken from your timetable"
+                                                    title="Class is taken from your Class Incharge assignment"
                                                 >
-                                                    {selectedAttendanceSlot?.timetableClass || 'Scheduled Class'}
+                                                    {selectedInchargeSection?.className || 'Class'}
                                                 </div>
 
                                                 <div
                                                     className="custom-select"
                                                     style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
-                                                    title="Section is automatically taken from your timetable"
+                                                    title="Section is taken from your Class Incharge assignment"
                                                 >
-                                                    {selectedAttendanceSlot?.timetableSection
-                                                        ? formatSectionTitle(selectedAttendanceSlot.timetableSection)
-                                                        : 'Scheduled Section'}
+                                                    {selectedInchargeSection?.name
+                                                        ? formatSectionTitle(selectedInchargeSection.name)
+                                                        : 'Section'}
                                                 </div>
                                             </>
                                         ) : (
@@ -2729,11 +2635,11 @@ export default function StaffDashboard() {
 
                             {attendanceSubmitted && (
                                 <div style={{ color: 'var(--primary)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Check size={18} /> Attendance submitted successfully for {attendanceDate} ({attendancePeriod})!
+                                    <Check size={18} /> Attendance submitted successfully for {attendanceDate} ({attendanceSession})!
                                 </div>
                             )}
 
-                            {hasAttendanceSchedule && selectedAttendanceSlot ? (
+                            {isClassIncharge && selectedInchargeSection ? (
                                 <>
                                     <div className="table-responsive">
                                         <table className="custom-table">
@@ -2782,9 +2688,9 @@ export default function StaffDashboard() {
                                         <button
                                             className="btn-primary"
                                             onClick={handleSubmitAttendance}
-                                            disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedAttendanceSlot}
+                                            disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedInchargeSection}
                                         >
-                                            {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
+                                            {isSubmitting ? 'Submitting...' : `Submit ${attendanceSession} Attendance`}
                                         </button>
                                     </div>
                                 </>
@@ -2792,8 +2698,8 @@ export default function StaffDashboard() {
                                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                                     <h4 style={{ marginBottom: '0.5rem' }}>Attendance is locked</h4>
                                     <p style={{ margin: 0 }}>
-                                        You do not have any class scheduled on {attendanceWeekday || 'the selected date'}.
-                                        Attendance will become available only when an admin timetable is assigned to you.
+                                        Only the teacher assigned as Class Incharge for a section can mark attendance.
+                                        Ask an admin to assign you as Class Incharge from the admin dashboard.
                                     </p>
                                 </div>
                             )}
