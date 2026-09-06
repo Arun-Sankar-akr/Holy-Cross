@@ -4,7 +4,7 @@ import { db } from '../service/firebase';
 import {
     X, Edit2, KeyRound, Mail, Phone, MapPin, GraduationCap,
     Award, TrendingUp, ClipboardList, Users, Sparkles,
-    CalendarCheck, Wallet, ClipboardCheck
+    CalendarCheck, Wallet, ClipboardCheck, ChevronDown
 } from 'lucide-react';
 import './Previewmodal.css';
 
@@ -51,6 +51,7 @@ export default function StudentPreviewModal({ student, sectionName, className, o
     const [feeRecords, setFeeRecords] = useState([]);
     const [classAssignments, setClassAssignments] = useState([]);
     const [assignmentSubmissions, setAssignmentSubmissions] = useState([]);
+    const [detailsOpen, setDetailsOpen] = useState(false);
 
     const studentId = student?.id;
 
@@ -179,45 +180,61 @@ export default function StudentPreviewModal({ student, sectionName, className, o
                             alt={student.name}
                             className="sp-avatar"
                         />
-                        <h3>{student.name}</h3>
-                        <div className="sp-badges">
-                            {student.bloodGroup && <span className="blood-badge">{student.bloodGroup}</span>}
-                            <span className={`status-pill ${(student.status || 'Active').toLowerCase() === 'active' ? 'status-present' : 'status-absent'}`}>
-                                {student.status || 'Active'}
-                            </span>
+                        <div className="sp-identity-text">
+                            <h3>{student.name}</h3>
+                            <div className="sp-badges">
+                                {student.bloodGroup && <span className="blood-badge">{student.bloodGroup}</span>}
+                                <span className={`status-pill ${(student.status || 'Active').toLowerCase() === 'active' ? 'status-present' : 'status-absent'}`}>
+                                    {student.status || 'Active'}
+                                </span>
+                            </div>
+                            <p className="sp-class-line">
+                                <GraduationCap size={13} /> {className || student.className || 'N/A'}{sectionName ? ` — Section ${sectionName}` : ''}
+                            </p>
                         </div>
-                        <p className="sp-class-line">
-                            <GraduationCap size={13} /> {className || student.className || 'N/A'}{sectionName ? ` — Section ${sectionName}` : ''}
-                        </p>
                     </div>
 
-                    <div className="sp-sidebar-section">
-                        <span className="sp-sidebar-label">Identity</span>
-                        <p><strong>Adm No:</strong> <code>{student.admissionNo || 'N/A'}</code></p>
-                        <p><strong>Roll No:</strong> {student.rollNumber || 'N/A'}</p>
-                        <p><strong>Gender:</strong> {student.gender || 'N/A'}</p>
-                        <p><strong>Adm Date:</strong> {student.admissionDate || 'N/A'}</p>
-                        <p><strong>DOB:</strong> {student.dob || 'N/A'}</p>
-                    </div>
+                    <button
+                        type="button"
+                        className="sp-details-toggle"
+                        onClick={() => setDetailsOpen((v) => !v)}
+                        aria-expanded={detailsOpen}
+                    >
+                        <span>{detailsOpen ? 'Hide Full Details' : 'View Full Details'}</span>
+                        <ChevronDown size={16} className={`sp-toggle-arrow ${detailsOpen ? 'open' : ''}`} />
+                    </button>
 
-                    <div className="sp-sidebar-section">
-                        <span className="sp-sidebar-label">Guardian & Contact</span>
-                        <p><Users size={13} /> {student.guardianName || 'N/A'} <em>({student.relationship || 'Guardian'})</em></p>
-                        <p><Phone size={13} /> {student.phone || 'N/A'}{student.parentPhone ? ` / ${student.parentPhone}` : ''}</p>
-                        {student.email && <p><Mail size={13} /> {student.email}</p>}
-                        {student.address && <p className="sp-address"><MapPin size={13} /> {student.address}</p>}
-                    </div>
+                    <div className={`sp-sidebar-details ${detailsOpen ? 'open' : ''}`}>
+                        <div className="sp-sidebar-details-inner">
+                            <div className="sp-sidebar-section">
+                                <span className="sp-sidebar-label">Identity</span>
+                                <p><strong>Adm No:</strong> <code>{student.admissionNo || 'N/A'}</code></p>
+                                <p><strong>Roll No:</strong> {student.rollNumber || 'N/A'}</p>
+                                <p><strong>Gender:</strong> {student.gender || 'N/A'}</p>
+                                <p><strong>Adm Date:</strong> {student.admissionDate || 'N/A'}</p>
+                                <p><strong>DOB:</strong> {student.dob || 'N/A'}</p>
+                            </div>
 
-                    <div className="sp-credentials-box">
-                        <KeyRound size={14} />
-                        <span>ERP Login — User: <strong>{student.admissionNo}</strong> | Pass: <strong>{student.dob}</strong></span>
-                    </div>
+                            <div className="sp-sidebar-section">
+                                <span className="sp-sidebar-label">Guardian & Contact</span>
+                                <p><Users size={13} /> {student.guardianName || 'N/A'} <em>({student.relationship || 'Guardian'})</em></p>
+                                <p><Phone size={13} /> {student.phone || 'N/A'}{student.parentPhone ? ` / ${student.parentPhone}` : ''}</p>
+                                {student.email && <p><Mail size={13} /> {student.email}</p>}
+                                {student.address && <p className="sp-address"><MapPin size={13} /> {student.address}</p>}
+                            </div>
 
-                    {onEdit && (
-                        <button className="sp-edit-btn" onClick={() => onEdit(student)}>
-                            <Edit2 size={14} /> Edit Student Record
-                        </button>
-                    )}
+                            <div className="sp-credentials-box">
+                                <KeyRound size={14} />
+                                <span>ERP Login — User: <strong>{student.admissionNo}</strong> | Pass: <strong>{student.dob}</strong></span>
+                            </div>
+
+                            {onEdit && (
+                                <button className="sp-edit-btn" onClick={() => onEdit(student)}>
+                                    <Edit2 size={14} /> Edit Student Record
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </aside>
 
                 {/* MAIN — Stats + Academic Progress + Attendance + Fees + Assignments */}

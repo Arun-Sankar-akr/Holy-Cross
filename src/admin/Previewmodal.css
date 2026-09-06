@@ -1,23 +1,1201 @@
-/* ============================================================
-   STUDENT PREVIEW MODAL
-   Reuses the color tokens (--primary, --border, --text, etc.)
-   already defined in AdminDashboard.css :root
-   ============================================================ */
-
 .sp-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(20, 24, 38, 0.55);
-    backdrop-filter: blur(3px);
+    z-index: 9999;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+
     padding: 24px;
-    animation: sp-fade-in 0.15s ease;
+
+    background:
+        radial-gradient(circle at 50% 20%,
+            rgba(99, 102, 241, 0.10),
+            transparent 35%),
+        rgba(8, 12, 24, 0.72);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    animation: spBackdropIn 0.2s ease-out;
 }
 
-@keyframes sp-fade-in {
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+
+.sp-modal {
+    position: relative;
+
+    width: min(1180px, 100%);
+    max-height: min(900px, 92vh);
+
+    display: flex;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(145deg,
+            rgba(255, 255, 255, 0.98),
+            rgba(248, 250, 252, 0.98));
+
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+
+    box-shadow:
+        0 40px 100px rgba(15, 23, 42, 0.30),
+        0 12px 35px rgba(15, 23, 42, 0.14),
+        0 0 0 1px rgba(15, 23, 42, 0.04);
+
+    animation: spModalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* ============================================================
+   CLOSE BUTTON
+   ============================================================ */
+
+.sp-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 20;
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, 0.88);
+    color: #64748b;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 6px 18px rgba(15, 23, 42, 0.10);
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.sp-close-btn:hover {
+    transform: rotate(4deg) scale(1.04);
+
+    background: #fff1f2;
+    color: #e11d48;
+
+    border-color: rgba(225, 29, 72, 0.20);
+
+    box-shadow:
+        0 8px 22px rgba(225, 29, 72, 0.14);
+}
+
+.sp-close-btn:active {
+    transform: scale(0.94);
+}
+
+
+/* ============================================================
+   SIDEBAR / STUDENT PROFILE
+   ============================================================ */
+
+.sp-sidebar {
+    position: relative;
+
+    width: 310px;
+    min-width: 310px;
+
+    padding: 28px 22px 22px;
+
+    overflow-y: auto;
+
+    background:
+        radial-gradient(circle at 20% 0%,
+            rgba(99, 102, 241, 0.20),
+            transparent 34%),
+        linear-gradient(180deg,
+            #f5f7ff 0%,
+            #ffffff 48%,
+            #f8fafc 100%);
+
+    border-right: 1px solid rgba(148, 163, 184, 0.16);
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.sp-sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sp-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sp-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
+}
+
+
+/* ============================================================
+   PROFILE HEADER
+   ============================================================ */
+
+.sp-sidebar-top {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    text-align: center;
+
+    padding: 8px 4px 22px;
+
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+
+    margin-bottom: 18px;
+}
+
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+
+.sp-avatar {
+    position: relative;
+
+    width: 94px;
+    height: 94px;
+
+    object-fit: cover;
+
+    margin-bottom: 14px;
+
+    border-radius: 26px;
+
+    border: 4px solid #ffffff;
+
+    background: #eef2ff;
+
+    box-shadow:
+        0 12px 28px rgba(79, 70, 229, 0.18),
+        0 0 0 5px rgba(99, 102, 241, 0.08);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.sp-avatar:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 16px 34px rgba(79, 70, 229, 0.22),
+        0 0 0 6px rgba(99, 102, 241, 0.10);
+}
+
+
+/* ============================================================
+   IDENTITY TEXT
+   ============================================================ */
+
+.sp-identity-text {
+    width: 100%;
+    min-width: 0;
+}
+
+.sp-sidebar-top h3 {
+    margin: 0 34px 8px 0;
+
+    color: #0f172a;
+
+    font-size: 1.08rem;
+    line-height: 1.3;
+
+    font-weight: 800;
+    letter-spacing: -0.025em;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+
+.sp-badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+    flex-wrap: wrap;
+
+    margin-bottom: 8px;
+}
+
+.sp-badges .blood-badge,
+.blood-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 24px;
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    background: #fff1f2;
+    color: #be123c;
+
+    border: 1px solid rgba(244, 63, 94, 0.14);
+
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.sp-badges .status-pill,
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 24px;
+    padding: 4px 10px;
+
+    border-radius: 999px;
+
+    font-size: 0.68rem;
+    font-weight: 800;
+
+    border: 1px solid transparent;
+}
+
+
+/* Preserve existing status classes */
+
+.sp-badges .status-present,
+.status-present {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.sp-badges .status-absent,
+.status-absent {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: rgba(244, 63, 94, 0.15);
+}
+
+
+/* ============================================================
+   CLASS LINE
+   ============================================================ */
+
+.sp-class-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 0.75rem;
+    line-height: 1.45;
+
+    font-weight: 600;
+
+    flex-wrap: wrap;
+}
+
+
+/* ============================================================
+   DETAILS TOGGLE
+   ============================================================ */
+
+.sp-details-toggle {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    padding: 11px 13px;
+
+    border: 1px solid rgba(99, 102, 241, 0.14);
+    border-radius: 13px;
+
+    background: rgba(255, 255, 255, 0.78);
+
+    color: #4f46e5;
+
+    font-size: 0.74rem;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.04);
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.sp-details-toggle:hover {
+    transform: translateY(-1px);
+
+    background: #eef2ff;
+
+    border-color: rgba(99, 102, 241, 0.28);
+
+    box-shadow:
+        0 7px 18px rgba(79, 70, 229, 0.09);
+}
+
+.sp-details-toggle:active {
+    transform: translateY(0);
+}
+
+
+/* Arrow */
+
+.sp-toggle-arrow {
+    flex-shrink: 0;
+
+    transition: transform 0.22s ease;
+}
+
+.sp-toggle-arrow.open {
+    transform: rotate(180deg);
+}
+
+
+/* ============================================================
+   COLLAPSIBLE DETAILS
+   ============================================================ */
+
+.sp-sidebar-details {
+    display: grid;
+    grid-template-rows: 0fr;
+
+    transition:
+        grid-template-rows 0.28s ease,
+        opacity 0.2s ease;
+
+    opacity: 0;
+}
+
+.sp-sidebar-details.open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.sp-sidebar-details-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sp-sidebar-details.open .sp-sidebar-details-inner {
+    padding-top: 16px;
+}
+
+
+/* ============================================================
+   SIDEBAR SECTIONS
+   ============================================================ */
+
+.sp-sidebar-section {
+    margin-bottom: 18px;
+}
+
+.sp-sidebar-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    margin-bottom: 9px;
+
+    color: #6366f1;
+
+    font-size: 0.64rem;
+    font-weight: 900;
+
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.sp-sidebar-label::before {
+    content: "";
+
+    width: 4px;
+    height: 13px;
+
+    flex-shrink: 0;
+
+    border-radius: 999px;
+
+    background: #6366f1;
+}
+
+
+/* ============================================================
+   SIDEBAR INFO
+   ============================================================ */
+
+.sp-sidebar-section p {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 7px;
+
+    margin: 0 0 9px;
+
+    color: #334155;
+
+    font-size: 0.76rem;
+    line-height: 1.45;
+
+    font-weight: 500;
+
+    overflow-wrap: anywhere;
+}
+
+.sp-sidebar-section p svg {
+    flex-shrink: 0;
+
+    margin-top: 2px;
+
+    color: #94a3b8;
+}
+
+.sp-sidebar-section p strong {
+    color: #475569;
+    font-weight: 750;
+}
+
+.sp-sidebar-section p em {
+    color: #94a3b8;
+    font-style: normal;
+}
+
+
+/* Admission number */
+
+.sp-sidebar-section code {
+    display: inline-flex;
+
+    max-width: 100%;
+
+    padding: 3px 7px;
+
+    border-radius: 6px;
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    font-size: 0.69rem;
+    font-weight: 700;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* Address */
+
+.sp-address {
+    align-items: flex-start !important;
+}
+
+
+/* ============================================================
+   CREDENTIAL BOX
+   ============================================================ */
+
+.sp-credentials-box {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 9px;
+
+    margin: 2px 0 14px;
+
+    padding: 11px 12px;
+
+    border: 1px solid rgba(245, 158, 11, 0.18);
+    border-radius: 13px;
+
+    background:
+        linear-gradient(135deg,
+            #fffbeb,
+            #fff7ed);
+
+    color: #92400e;
+
+    font-size: 0.68rem;
+    line-height: 1.45;
+
+    font-weight: 600;
+
+    box-shadow:
+        0 5px 14px rgba(245, 158, 11, 0.06);
+}
+
+.sp-credentials-box svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.sp-credentials-box strong {
+    color: #78350f;
+    font-weight: 800;
+}
+
+
+/* ============================================================
+   EDIT BUTTON
+   ============================================================ */
+
+.sp-edit-btn {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 11px 14px;
+
+    border: 1px solid #6366f1;
+    border-radius: 12px;
+
+    background:
+        linear-gradient(135deg,
+            #6366f1,
+            #4f46e5);
+
+    color: #ffffff;
+
+    font-size: 0.75rem;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 20px rgba(79, 70, 229, 0.20);
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+}
+
+.sp-edit-btn:hover {
+    transform: translateY(-1px);
+
+    filter: brightness(1.03);
+
+    box-shadow:
+        0 12px 26px rgba(79, 70, 229, 0.26);
+}
+
+.sp-edit-btn:active {
+    transform: translateY(0) scale(0.99);
+}
+
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+
+.sp-main {
+    flex: 1;
+    min-width: 0;
+
+    padding: 30px 30px 34px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    background:
+        radial-gradient(circle at 100% 0%,
+            rgba(99, 102, 241, 0.045),
+            transparent 30%),
+        #ffffff;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+}
+
+.sp-main::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sp-main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sp-main::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+}
+
+
+/* ============================================================
+   MAIN HEADING
+   ============================================================ */
+
+.sp-main-heading {
+    padding-right: 48px;
+    margin-bottom: 20px;
+}
+
+.sp-main-heading h3 {
+    margin: 0 0 5px;
+
+    color: #0f172a;
+
+    font-size: 1.18rem;
+    line-height: 1.3;
+
+    font-weight: 850;
+    letter-spacing: -0.025em;
+}
+
+.sp-main-heading p {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 0.76rem;
+    line-height: 1.5;
+
+    font-weight: 500;
+}
+
+
+/* ============================================================
+   STATISTICS GRID
+   ============================================================ */
+
+.sp-stats-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-bottom: 26px;
+}
+
+
+/* ============================================================
+   STAT CARD
+   ============================================================ */
+
+.sp-stat-card {
+    position: relative;
+
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 12px;
+
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 15px;
+
+    background: rgba(255, 255, 255, 0.90);
+
+    box-shadow:
+        0 5px 16px rgba(15, 23, 42, 0.045);
+
+    overflow: hidden;
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.sp-stat-card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 55px;
+    height: 55px;
+
+    right: -25px;
+    bottom: -28px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+
+    opacity: 0.035;
+
+    pointer-events: none;
+}
+
+.sp-stat-card:hover {
+    transform: translateY(-2px);
+
+    border-color: rgba(99, 102, 241, 0.16);
+
+    box-shadow:
+        0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+
+/* ============================================================
+   STAT ICON
+   ============================================================ */
+
+.sp-stat-icon {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 11px;
+
+    transition: transform 0.18s ease;
+}
+
+.sp-stat-card:hover .sp-stat-icon {
+    transform: scale(1.04);
+}
+
+
+/* Existing color variants */
+
+.sp-stat-card.indigo {
+    color: #6366f1;
+}
+
+.sp-stat-card.indigo .sp-stat-icon {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.sp-stat-card.emerald {
+    color: #10b981;
+}
+
+.sp-stat-card.emerald .sp-stat-icon {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.sp-stat-card.amber {
+    color: #f59e0b;
+}
+
+.sp-stat-card.amber .sp-stat-icon {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.sp-stat-card.rose {
+    color: #f43f5e;
+}
+
+.sp-stat-card.rose .sp-stat-icon {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+.sp-stat-card.sky {
+    color: #0ea5e9;
+}
+
+.sp-stat-card.sky .sp-stat-icon {
+    background: #f0f9ff;
+    color: #0284c7;
+}
+
+
+/* ============================================================
+   STAT TEXT
+   ============================================================ */
+
+.sp-stat-card>div:last-child {
+    min-width: 0;
+}
+
+.sp-stat-card span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #94a3b8;
+
+    font-size: 0.59rem;
+    line-height: 1.25;
+
+    font-weight: 800;
+
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-stat-card h4 {
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: 0.94rem;
+    line-height: 1.2;
+
+    font-weight: 850;
+    letter-spacing: -0.015em;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ============================================================
+   CONTENT SECTIONS
+   ============================================================ */
+
+.sp-progress-section {
+    margin-bottom: 24px;
+}
+
+.sp-progress-section:last-child {
+    margin-bottom: 0;
+}
+
+.sp-progress-section h4 {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    margin: 0 0 10px;
+
+    color: #1e293b;
+
+    font-size: 0.84rem;
+    line-height: 1.3;
+
+    font-weight: 850;
+
+    letter-spacing: -0.01em;
+}
+
+.sp-progress-section h4::before {
+    content: "";
+
+    width: 4px;
+    height: 15px;
+
+    flex-shrink: 0;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(180deg,
+            #6366f1,
+            #8b5cf6);
+}
+
+
+/* ============================================================
+   TABLE CONTAINER
+   ============================================================ */
+
+.sp-progress-table-wrap {
+    width: 100%;
+
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    -webkit-overflow-scrolling: touch;
+
+    box-shadow:
+        0 5px 18px rgba(15, 23, 42, 0.035);
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+}
+
+.sp-progress-table-wrap::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.sp-progress-table-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sp-progress-table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.sp-progress-table {
+    width: 100%;
+    min-width: 520px;
+
+    border-collapse: separate;
+    border-spacing: 0;
+
+    color: #334155;
+
+    font-size: 0.72rem;
+}
+
+
+/* Table cells */
+
+.sp-progress-table th,
+.sp-progress-table td {
+    padding: 10px 12px;
+
+    border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+
+    text-align: left;
+
+    white-space: nowrap;
+
+    vertical-align: middle;
+}
+
+
+/* Header */
+
+.sp-progress-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+
+    background: #f8fafc;
+
+    color: #64748b;
+
+    font-size: 0.61rem;
+    line-height: 1.25;
+
+    font-weight: 850;
+
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+
+/* First header cell */
+
+.sp-progress-table thead th:first-child {
+    border-top-left-radius: 13px;
+}
+
+
+/* Last header cell */
+
+.sp-progress-table thead th:last-child {
+    border-top-right-radius: 13px;
+}
+
+
+/* Body */
+
+.sp-progress-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.sp-progress-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.sp-progress-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* First column */
+
+.sp-progress-table tbody td:first-child {
+    color: #1e293b;
+}
+
+.sp-progress-table tbody td strong {
+    font-weight: 750;
+}
+
+
+/* ============================================================
+   GRADE / STATUS CHIPS
+   ============================================================ */
+
+.sp-grade-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 42px;
+    min-height: 23px;
+
+    padding: 4px 8px;
+
+    border-radius: 7px;
+
+    font-size: 0.63rem;
+    line-height: 1;
+
+    font-weight: 850;
+
+    letter-spacing: 0.015em;
+
+    white-space: nowrap;
+
+    border: 1px solid transparent;
+}
+
+
+/* Excellent / success */
+
+.sp-grade-chip.grade-excellent {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.12);
+}
+
+
+/* Good */
+
+.sp-grade-chip.grade-good {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: rgba(59, 130, 246, 0.12);
+}
+
+
+/* Average */
+
+.sp-grade-chip.grade-average {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: rgba(245, 158, 11, 0.13);
+}
+
+
+/* Poor */
+
+.sp-grade-chip.grade-poor {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: rgba(244, 63, 94, 0.13);
+}
+
+
+/* Empty score */
+
+.sp-no-score {
+    color: #94a3b8;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 78px;
+
+    padding: 16px;
+
+    text-align: center;
+
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    border-radius: 13px;
+
+    background:
+        linear-gradient(180deg,
+            #fafafa,
+            #ffffff);
+
+    color: #94a3b8;
+
+    font-size: 0.74rem;
+    line-height: 1.45;
+
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes spBackdropIn {
     from {
         opacity: 0;
     }
@@ -27,23 +1205,10 @@
     }
 }
 
-.sp-modal {
-    position: relative;
-    width: 100%;
-    max-width: 980px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-pop);
-    animation: sp-pop-in 0.18s ease;
-}
-
-@keyframes sp-pop-in {
+@keyframes spModalIn {
     from {
         opacity: 0;
-        transform: translateY(8px) scale(0.98);
+        transform: translateY(14px) scale(0.975);
     }
 
     to {
@@ -52,327 +1217,800 @@
     }
 }
 
-.sp-close-btn {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 5;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--border-strong);
-    background: var(--card-bg);
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
 
-.sp-close-btn:hover {
-    background: var(--rose-light);
-    color: var(--rose);
-    border-color: var(--rose);
-}
+/* ============================================================
+   LARGE LAPTOP / TABLET
+   ============================================================ */
 
-/* ---------- SIDEBAR ---------- */
-.sp-sidebar {
-    width: 300px;
-    flex-shrink: 0;
-    background: linear-gradient(180deg, var(--primary-light) 0%, var(--card-bg) 140px);
-    border-right: 1px solid var(--border);
-    padding: 32px 22px 22px;
-    overflow-y: auto;
-}
+@media (max-width: 1100px) {
 
-.sp-sidebar-top {
-    text-align: center;
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
-}
+    .sp-backdrop {
+        padding: 18px;
+    }
 
-.sp-avatar {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid var(--card-bg);
-    box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-card);
-    margin-bottom: 10px;
-}
-
-.sp-sidebar-top h3 {
-    margin: 4px 0 8px;
-    font-size: 1.05rem;
-    color: var(--text);
-}
-
-.sp-badges {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-}
-
-.sp-class-line {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin: 0;
-}
-
-.sp-sidebar-section {
-    margin-bottom: 16px;
-}
-
-.sp-sidebar-label {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--primary);
-    margin-bottom: 8px;
-}
-
-.sp-sidebar-section p {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    font-size: 0.8rem;
-    color: var(--text);
-    margin: 0 0 8px;
-    line-height: 1.4;
-}
-
-.sp-sidebar-section p svg {
-    margin-top: 2px;
-    flex-shrink: 0;
-    color: var(--text-muted);
-}
-
-.sp-sidebar-section p strong {
-    color: var(--text-soft);
-    font-weight: 700;
-    margin-right: 2px;
-}
-
-.sp-sidebar-section p em {
-    font-style: normal;
-    color: var(--text-muted);
-}
-
-.sp-address {
-    align-items: flex-start;
-}
-
-.sp-credentials-box {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--amber-light);
-    color: #92600a;
-    border: 1px dashed var(--amber);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    margin-bottom: 14px;
-}
-
-.sp-edit-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--primary);
-    background: var(--primary-light);
-    color: var(--primary-dark);
-    font-weight: 700;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.sp-edit-btn:hover {
-    background: var(--primary);
-    color: #fff;
-}
-
-/* ---------- MAIN ---------- */
-.sp-main {
-    flex: 1;
-    min-width: 0;
-    padding: 32px 28px;
-    overflow-y: auto;
-}
-
-.sp-main-heading h3 {
-    margin: 0 0 4px;
-    font-size: 1.15rem;
-    color: var(--text);
-}
-
-.sp-main-heading p {
-    margin: 0 0 22px;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.sp-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 28px;
-}
-
-.sp-stat-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    box-shadow: var(--shadow-card);
-}
-
-.sp-stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.sp-stat-card.indigo .sp-stat-icon {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-
-.sp-stat-card.emerald .sp-stat-icon {
-    background: var(--green-light);
-    color: var(--green);
-}
-
-.sp-stat-card.amber .sp-stat-icon {
-    background: var(--amber-light);
-    color: var(--amber);
-}
-
-.sp-stat-card.rose .sp-stat-icon {
-    background: var(--rose-light);
-    color: var(--rose);
-}
-
-.sp-stat-card.sky .sp-stat-icon {
-    background: var(--blue-light);
-    color: var(--blue);
-}
-
-.sp-stat-card span {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 2px;
-}
-
-.sp-stat-card h4 {
-    margin: 0;
-    font-size: 1.05rem;
-    color: var(--text);
-    font-weight: 800;
-}
-
-.sp-progress-section h4 {
-    margin: 0 0 12px;
-    font-size: 0.95rem;
-    color: var(--text);
-}
-
-.sp-progress-table-wrap {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    overflow: auto;
-}
-
-.sp-progress-table th,
-.sp-progress-table td {
-    white-space: nowrap;
-}
-
-.sp-grade-chip {
-    display: inline-block;
-    padding: 3px 9px;
-    border-radius: 20px;
-    font-weight: 800;
-    font-size: 0.75rem;
-}
-
-.sp-grade-chip.grade-excellent {
-    background: var(--green-light);
-    color: var(--green);
-}
-
-.sp-grade-chip.grade-good {
-    background: var(--blue-light);
-    color: var(--blue);
-}
-
-.sp-grade-chip.grade-average {
-    background: var(--amber-light);
-    color: #92600a;
-}
-
-.sp-grade-chip.grade-poor {
-    background: var(--rose-light);
-    color: var(--rose);
-}
-
-.sp-no-score {
-    color: var(--text-muted);
-}
-
-/* ---------- RESPONSIVE ---------- */
-@media (max-width: 820px) {
     .sp-modal {
-        flex-direction: column;
+        width: min(1050px, 100%);
         max-height: 94vh;
     }
 
     .sp-sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-    }
+        width: 280px;
+        min-width: 280px;
 
-    .sp-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .sp-stats-grid {
-        grid-template-columns: 1fr;
+        padding: 24px 18px 20px;
     }
 
     .sp-main {
-        padding: 25px 17px;
+        padding: 26px 22px 28px;
     }
+
+    .sp-stats-grid {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap: 8px;
+    }
+
+    .sp-stat-card {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .sp-stat-icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .sp-stat-card span {
+        font-size: 0.56rem;
+    }
+
+    .sp-stat-card h4 {
+        font-size: 0.88rem;
+    }
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .sp-modal {
+        border-radius: 20px;
+    }
+
+    .sp-sidebar {
+        width: 250px;
+        min-width: 250px;
+
+        padding: 22px 16px;
+    }
+
+    .sp-main {
+        padding: 24px 18px 26px;
+    }
+
+    .sp-avatar {
+        width: 78px;
+        height: 78px;
+        border-radius: 22px;
+    }
+
+    .sp-sidebar-top h3 {
+        font-size: 0.98rem;
+    }
+
+    .sp-stats-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 9px;
+
+        margin-bottom: 22px;
+    }
+
+    .sp-stat-card {
+        min-height: 62px;
+    }
+
+    .sp-stat-card span {
+        font-size: 0.58rem;
+    }
+
+    .sp-stat-card h4 {
+        font-size: 0.9rem;
+    }
+}
+
+
+/* ============================================================
+   MOBILE — BOTTOM SHEET
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+    .sp-backdrop {
+        align-items: flex-end;
+
+        padding: 0;
+    }
+
+    .sp-modal {
+        width: 100%;
+        max-width: 100%;
+
+        height: auto;
+        max-height: 94vh;
+
+        flex-direction: column;
+
+        border-radius: 24px 24px 0 0;
+
+        box-shadow:
+            0 -20px 60px rgba(15, 23, 42, 0.25);
+
+        animation:
+            spSheetIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+
+    /* Mobile drag handle */
+
+    .sp-modal::before {
+        content: "";
+
+        position: absolute;
+
+        top: 8px;
+        left: 50%;
+
+        width: 42px;
+        height: 4px;
+
+        transform: translateX(-50%);
+
+        border-radius: 999px;
+
+        background: #cbd5e1;
+
+        z-index: 30;
+    }
+
+
+    /* Close */
+
+    .sp-close-btn {
+        top: 15px;
+        right: 14px;
+
+        width: 34px;
+        height: 34px;
+
+        border-radius: 11px;
+    }
+
+
+    /* Profile section */
+
+    .sp-sidebar {
+        width: 100%;
+        min-width: 0;
+
+        max-height: 38vh;
+
+        flex-shrink: 0;
+
+        padding:
+            26px 16px 14px;
+
+        border-right: none;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+
+        background:
+            radial-gradient(circle at 20% 0%,
+                rgba(99, 102, 241, 0.13),
+                transparent 42%),
+            #ffffff;
+    }
+
+
+    /* Compact identity */
+
+    .sp-sidebar-top {
+        flex-direction: row;
+
+        align-items: center;
+
+        text-align: left;
+
+        gap: 12px;
+
+        padding: 4px 42px 13px 2px;
+
+        margin-bottom: 10px;
+    }
+
+    .sp-avatar {
+        width: 58px;
+        height: 58px;
+
+        flex-shrink: 0;
+
+        margin: 0;
+
+        border-radius: 17px;
+
+        border-width: 3px;
+    }
+
+    .sp-identity-text {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sp-sidebar-top h3 {
+        margin: 0 0 5px;
+
+        font-size: 0.98rem;
+
+        text-align: left;
+    }
+
+    .sp-badges {
+        justify-content: flex-start;
+
+        margin-bottom: 5px;
+    }
+
+    .sp-class-line {
+        justify-content: flex-start;
+
+        text-align: left;
+
+        font-size: 0.69rem;
+    }
+
+
+    /* Details */
+
+    .sp-details-toggle {
+        padding: 9px 12px;
+
+        font-size: 0.7rem;
+    }
+
+
+    /* Main */
+
+    .sp-main {
+        width: 100%;
+        min-width: 0;
+
+        padding:
+            18px 14px calc(20px + env(safe-area-inset-bottom, 0px));
+
+        overflow-y: auto;
+    }
+
+    .sp-main-heading {
+        padding-right: 40px;
+
+        margin-bottom: 15px;
+    }
+
+    .sp-main-heading h3 {
+        font-size: 1rem;
+    }
+
+    .sp-main-heading p {
+        font-size: 0.7rem;
+    }
+
+
+    /* Stats */
+
+    .sp-stats-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 8px;
+
+        margin-bottom: 20px;
+    }
+
+    .sp-stat-card {
+        min-height: 58px;
+
+        padding: 9px;
+
+        gap: 8px;
+
+        border-radius: 13px;
+    }
+
+    .sp-stat-icon {
+        width: 34px;
+        height: 34px;
+
+        border-radius: 10px;
+    }
+
+    .sp-stat-icon svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    .sp-stat-card span {
+        font-size: 0.54rem;
+    }
+
+    .sp-stat-card h4 {
+        font-size: 0.84rem;
+    }
+
+
+    /* Sections */
+
+    .sp-progress-section {
+        margin-bottom: 20px;
+    }
+
+    .sp-progress-section h4 {
+        font-size: 0.78rem;
+
+        margin-bottom: 9px;
+    }
+
+    .sp-progress-table-wrap {
+        border-radius: 12px;
+    }
+
+    .sp-progress-table {
+        min-width: 500px;
+
+        font-size: 0.68rem;
+    }
+
+    .sp-progress-table th,
+    .sp-progress-table td {
+        padding: 8px 9px;
+    }
+
+    .sp-progress-table thead th {
+        font-size: 0.57rem;
+    }
+
+    .sp-grade-chip {
+        min-height: 21px;
+
+        padding: 3px 7px;
+
+        font-size: 0.58rem;
+    }
+}
+
+
+@keyframes spSheetIn {
+    from {
+        opacity: 0;
+        transform: translateY(35px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ============================================================
+   SMALL PHONE
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+    .sp-modal {
+        max-height: 95vh;
+
+        border-radius: 21px 21px 0 0;
+    }
+
+    .sp-sidebar {
+        max-height: 36vh;
+
+        padding:
+            25px 12px 11px;
+    }
+
+    .sp-sidebar-top {
+        gap: 10px;
+
+        padding-right: 38px;
+    }
+
+    .sp-avatar {
+        width: 52px;
+        height: 52px;
+
+        border-radius: 15px;
+    }
+
+    .sp-sidebar-top h3 {
+        font-size: 0.9rem;
+    }
+
+    .sp-class-line {
+        font-size: 0.64rem;
+    }
+
+    .sp-badges .blood-badge,
+    .blood-badge,
+    .sp-badges .status-pill,
+    .status-pill {
+        min-height: 21px;
+
+        padding: 3px 7px;
+
+        font-size: 0.6rem;
+    }
+
+    .sp-details-toggle {
+        padding: 8px 10px;
+
+        border-radius: 11px;
+
+        font-size: 0.66rem;
+    }
+
+    .sp-main {
+        padding:
+            15px 11px calc(18px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .sp-main-heading {
+        padding-right: 36px;
+
+        margin-bottom: 13px;
+    }
+
+    .sp-main-heading h3 {
+        font-size: 0.94rem;
+    }
+
+    .sp-main-heading p {
+        font-size: 0.65rem;
+    }
+
+
+    /* Stats become very compact */
+
+    .sp-stats-grid {
+        gap: 7px;
+
+        margin-bottom: 18px;
+    }
+
+    .sp-stat-card {
+        min-height: 54px;
+
+        padding: 8px;
+
+        gap: 7px;
+
+        border-radius: 12px;
+    }
+
+    .sp-stat-icon {
+        width: 30px;
+        height: 30px;
+
+        border-radius: 9px;
+    }
+
+    .sp-stat-icon svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .sp-stat-card span {
+        font-size: 0.49rem;
+
+        letter-spacing: 0.035em;
+    }
+
+    .sp-stat-card h4 {
+        font-size: 0.78rem;
+    }
+
+
+    /* Tables */
+
+    .sp-progress-section {
+        margin-bottom: 18px;
+    }
+
+    .sp-progress-section h4 {
+        font-size: 0.74rem;
+    }
+
+    .sp-progress-table {
+        min-width: 470px;
+
+        font-size: 0.64rem;
+    }
+
+    .sp-progress-table th,
+    .sp-progress-table td {
+        padding: 7px 8px;
+    }
+
+    .sp-progress-table thead th {
+        font-size: 0.53rem;
+    }
+
+    .sp-grade-chip {
+        min-width: 38px;
+
+        padding: 3px 6px;
+
+        font-size: 0.54rem;
+    }
+
+    .empty-state {
+        min-height: 65px;
+
+        padding: 12px;
+
+        font-size: 0.67rem;
+    }
+}
+
+
+/* ============================================================
+   VERY SMALL PHONE
+   ============================================================ */
+
+@media (max-width: 360px) {
+
+    .sp-modal {
+        max-height: 96vh;
+    }
+
+    .sp-sidebar {
+        padding:
+            24px 10px 9px;
+    }
+
+    .sp-sidebar-top {
+        gap: 8px;
+
+        padding-right: 35px;
+    }
+
+    .sp-avatar {
+        width: 46px;
+        height: 46px;
+
+        border-radius: 13px;
+    }
+
+    .sp-sidebar-top h3 {
+        font-size: 0.84rem;
+    }
+
+    .sp-class-line {
+        font-size: 0.6rem;
+    }
+
+    .sp-details-toggle {
+        font-size: 0.62rem;
+    }
+
+    .sp-main {
+        padding:
+            13px 9px calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .sp-main-heading h3 {
+        font-size: 0.88rem;
+    }
+
+    .sp-main-heading p {
+        font-size: 0.61rem;
+    }
+
+    .sp-stats-grid {
+        gap: 6px;
+    }
+
+    .sp-stat-card {
+        min-height: 50px;
+
+        padding: 7px;
+
+        gap: 6px;
+
+        border-radius: 10px;
+    }
+
+    .sp-stat-icon {
+        width: 27px;
+        height: 27px;
+
+        border-radius: 8px;
+    }
+
+    .sp-stat-icon svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .sp-stat-card span {
+        font-size: 0.44rem;
+    }
+
+    .sp-stat-card h4 {
+        font-size: 0.72rem;
+    }
+
+    .sp-progress-table {
+        min-width: 440px;
+    }
+
+    .sp-progress-table th,
+    .sp-progress-table td {
+        padding: 6px 7px;
+    }
+
+    .sp-grade-chip {
+        min-width: 35px;
+
+        font-size: 0.5rem;
+    }
+}
+
+
+/* ============================================================
+   LANDSCAPE PHONE
+   ============================================================ */
+
+@media (max-height: 520px) and (orientation: landscape) {
+
+    .sp-backdrop {
+        align-items: center;
+
+        padding: 10px;
+    }
+
+    .sp-modal {
+        max-height: 96vh;
+
+        flex-direction: row;
+
+        border-radius: 18px;
+    }
+
+    .sp-modal::before {
+        display: none;
+    }
+
+    .sp-sidebar {
+        width: 225px;
+        min-width: 225px;
+
+        max-height: none;
+
+        padding: 18px 14px;
+    }
+
+    .sp-sidebar-top {
+        display: block;
+
+        text-align: center;
+
+        padding: 0 0 12px;
+    }
+
+    .sp-avatar {
+        width: 58px;
+        height: 58px;
+
+        margin: 0 auto 8px;
+    }
+
+    .sp-sidebar-top h3 {
+        margin-right: 0;
+
+        text-align: center;
+
+        font-size: 0.86rem;
+    }
+
+    .sp-badges {
+        justify-content: center;
+    }
+
+    .sp-class-line {
+        justify-content: center;
+
+        text-align: center;
+    }
+
+    .sp-main {
+        padding: 18px 16px;
+    }
+
+    .sp-stats-grid {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap: 7px;
+    }
+
+    .sp-stat-card {
+        padding: 8px;
+    }
+
+    .sp-stat-icon {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+.sp-close-btn:focus-visible,
+.sp-details-toggle:focus-visible,
+.sp-edit-btn:focus-visible {
+    outline: 3px solid rgba(99, 102, 241, 0.25);
+    outline-offset: 2px;
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .sp-backdrop,
+    .sp-modal,
+    .sp-toggle-arrow,
+    .sp-stat-card,
+    .sp-stat-icon,
+    .sp-avatar,
+    .sp-close-btn,
+    .sp-edit-btn,
+    .sp-details-toggle {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+
+/* ============================================================
+   PREVENT BODY-LEVEL VISUAL ISSUES
+   ============================================================ */
+
+.sp-modal *,
+.sp-modal *::before,
+.sp-modal *::after {
+    box-sizing: border-box;
+}
+
+
+/* Keep content readable even with long names/data */
+
+.sp-modal h3,
+.sp-modal h4,
+.sp-modal p,
+.sp-modal span,
+.sp-modal td,
+.sp-modal th {
+    overflow-wrap: anywhere;
 }
