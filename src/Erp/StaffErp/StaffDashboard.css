@@ -1584,15 +1584,6 @@ body,
     z-index: 50;
 }
 
-.dashboard-sidebar::-webkit-scrollbar {
-    width: 5px;
-}
-
-.dashboard-sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 20px;
-}
-
 .dashboard-main {
     flex: 1 !important;
     width: calc(100% - 280px);
@@ -3736,10 +3727,6 @@ body {
     padding: 22px 16px !important;
 }
 
-.dashboard-sidebar::-webkit-scrollbar-thumb {
-    background: #dfe4f5;
-}
-
 .sidebar-header {
     border-bottom: 1px solid var(--sidebar-border);
     padding: 0 6px 18px !important;
@@ -4192,7 +4179,15 @@ body {
     flex: 0 0 250px !important;
     padding: 20px 14px !important;
     overflow-y: auto;
-    scrollbar-width: thin;
+    overflow-x: hidden;
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* old Edge / IE */
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+    display: none;              /* Chrome / Edge / Safari */
+    width: 0;
+    height: 0;
 }
 
 .sidebar-header {
@@ -5429,23 +5424,6 @@ body {
     min-height: 620px
 }
 
-.chat-layout {
-    display: grid;
-    grid-template-columns: 310px minmax(0, 1fr);
-    min-height: 560px;
-    border: 1px solid var(--border-color, #e3e8f0);
-    border-radius: 18px;
-    overflow: hidden
-}
-
-.chat-sidebar {
-    border-right: 1px solid var(--border-color, #e3e8f0);
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px
-}
-
 .chat-list {
     display: flex;
     flex-direction: column;
@@ -5472,37 +5450,6 @@ body {
     border-color: rgba(67, 97, 238, .12)
 }
 
-.chat-list-copy {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px
-}
-
-.chat-list-copy strong,
-.chat-list-copy span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis
-}
-
-.chat-list-copy span {
-    font-size: .76rem;
-    color: var(--text-muted, #738096)
-}
-
-.chat-main {
-    display: flex;
-    flex-direction: column;
-    min-width: 0
-}
-
-.chat-main-header {
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--border-color, #e3e8f0)
-}
-
-.chat-message-feed,
 .staffroom-feed {
     flex: 1;
     min-height: 360px;
@@ -5514,7 +5461,6 @@ body {
     gap: 12px
 }
 
-.chat-message-row,
 .staffroom-message-row {
     display: flex;
     align-items: flex-start;
@@ -5522,26 +5468,22 @@ body {
     max-width: 78%
 }
 
-.chat-message-row.mine,
 .staffroom-message-row.mine {
     align-self: flex-end;
     flex-direction: row-reverse
 }
 
-.chat-message-body,
 .staffroom-message-body {
     padding: 10px 13px;
     border-radius: 14px;
     background: #f4f6fa
 }
 
-.chat-message-row.mine .chat-message-body,
 .staffroom-message-row.mine .staffroom-message-body {
     background: #4361ee;
     color: #fff
 }
 
-.chat-message-body p,
 .staffroom-message-body p {
     margin: 5px 0 0;
     font-size: .88rem;
@@ -5623,26 +5565,7 @@ body {
     margin: 0 2px
 }
 
-.empty-chat-state {
-    flex: 1;
-    display: grid;
-    place-items: center;
-    padding: 40px;
-    text-align: center;
-    color: var(--text-muted, #738096)
-}
-
 @media(max-width:850px) {
-    .chat-layout {
-        grid-template-columns: 1fr
-    }
-
-    .chat-sidebar {
-        border-right: 0;
-        border-bottom: 1px solid var(--border-color, #e3e8f0);
-        max-height: 260px
-    }
-
     .dept-staff-row {
         align-items: flex-start;
         flex-direction: column
@@ -5656,7 +5579,6 @@ body {
         flex: 1
     }
 
-    .chat-message-row,
     .staffroom-message-row {
         max-width: 92%
     }
@@ -5675,7 +5597,6 @@ body {
         padding: 10px
     }
 
-    .chat-message-feed,
     .staffroom-feed {
         padding: 12px
     }
@@ -6331,4 +6252,296 @@ body {
     border-top: 1px dashed var(--line, #e8ebf6);
     font-size: 0.78rem;
     color: var(--muted, #868faa);
+}
+
+/* =========================================================
+   SIDEBAR — restyled to match the Student Dashboard look
+   (glass card, rounded corners, purple/pink accent, soft
+   shadows). Appended last so it wins over the older sidebar
+   theme blocks earlier in this file.
+   ========================================================= */
+
+.dashboard-sidebar {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(247, 250, 255, .70)) !important;
+    border: 1px solid rgba(214, 219, 240, .6) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 22px 55px rgba(82, 103, 150, .13) !important;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    color: #24324a !important;
+}
+
+.sidebar-header {
+    border-bottom: none !important;
+}
+
+.brand-titles {
+    color: #24324a !important;
+}
+
+.sidebar-user {
+    background: rgba(255, 255, 255, .70) !important;
+    border: 1px solid rgba(255, 255, 255, .9) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 24px rgba(93, 110, 150, .08);
+    backdrop-filter: blur(16px);
+}
+
+.user-avatar {
+    background: linear-gradient(135deg, #7c73ff, #28a9d6, #ef65ad) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 18px rgba(108, 99, 255, .22);
+}
+
+.user-name {
+    color: #24324a !important;
+}
+
+.user-role {
+    color: #868faa !important;
+}
+
+.sidebar-group-label {
+    color: #a3abc2 !important;
+    font-size: .66rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin: 16px 10px 8px !important;
+}
+
+.nav-links {
+    color: #697994 !important;
+    background: transparent !important;
+    border-radius: 14px !important;
+    border-left: 3px solid transparent !important;
+    transition: transform .22s ease, background .22s ease, box-shadow .22s ease, color .22s ease;
+}
+
+.nav-links:hover {
+    transform: translateX(4px) !important;
+    color: #5c53e8 !important;
+    background: rgba(240, 239, 255, .78) !important;
+    border-left-color: rgba(108, 99, 255, .25) !important;
+}
+
+.nav-links.active,
+.nav-links.active-parent {
+    color: #5c53e8 !important;
+    background: linear-gradient(100deg, #f0efff, #f8f7ff) !important;
+    border-left: 3px solid #6c63ff !important;
+    box-shadow: 0 9px 22px rgba(108, 99, 255, .10) !important;
+    font-weight: 700 !important;
+}
+
+.chevron,
+.nav-arrow {
+    color: #9aa4bd !important;
+}
+
+.nav-links.active .nav-arrow,
+.nav-links:hover .nav-arrow,
+.nav-links.expanded .chevron,
+.nav-links.active-parent .chevron {
+    color: #5c53e8 !important;
+}
+
+.sub-menu {
+    border-left: 1px solid rgba(108, 99, 255, .15) !important;
+}
+
+.sub-link {
+    color: #697994 !important;
+    border-radius: 10px !important;
+}
+
+.sub-link:hover {
+    background: rgba(240, 239, 255, .78) !important;
+    color: #5c53e8 !important;
+}
+
+.sub-link.active {
+    background: linear-gradient(100deg, #f0efff, #f8f7ff) !important;
+    color: #5c53e8 !important;
+    font-weight: 700 !important;
+}
+
+.sidebar-footer {
+    border-top: 1px solid rgba(118, 136, 177, .15) !important;
+}
+
+.logout-btn {
+    color: #e95b79 !important;
+    background: #fff4f7 !important;
+    border: 1px solid #ffd9e2 !important;
+    border-radius: 13px !important;
+}
+
+.logout-btn:hover {
+    color: #fff !important;
+    background: linear-gradient(135deg, #f36b88, #ef65ad) !important;
+}
+
+
+/* =========================================================
+   PAGE BACKGROUND + MAIN CONTENT — glassmorphism to match
+   the Student Dashboard look. Appended last so it wins over
+   the older solid-color theme blocks earlier in this file.
+   ========================================================= */
+
+body {
+    background:
+        radial-gradient(circle at 4% 8%, rgba(124, 115, 255, 0.16), transparent 24%),
+        radial-gradient(circle at 95% 8%, rgba(40, 169, 214, 0.15), transparent 22%),
+        radial-gradient(circle at 80% 88%, rgba(239, 101, 173, 0.12), transparent 25%),
+        radial-gradient(circle at 18% 82%, rgba(25, 184, 137, 0.10), transparent 22%),
+        linear-gradient(145deg, #f9fbff 0%, #f3f7ff 48%, #fbf7ff 100%) !important;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    border-radius: 999px;
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+body::before {
+    width: 360px;
+    height: 360px;
+    top: 8%;
+    right: -150px;
+    background: rgba(124, 115, 255, 0.10);
+}
+
+body::after {
+    width: 300px;
+    height: 300px;
+    bottom: 5%;
+    left: -130px;
+    background: rgba(40, 169, 214, 0.10);
+}
+
+.dashboard-containers {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    gap: 18px;
+}
+
+.dashboard-main {
+    background: rgba(255, 255, 255, .48) !important;
+    border: 1px solid rgba(255, 255, 255, .82) !important;
+    border-radius: 30px !important;
+    box-shadow: 0 18px 55px rgba(83, 103, 148, .08) !important;
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    overflow: hidden;
+}
+
+.dashboard-topbar {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(119, 139, 180, .12) !important;
+}
+
+.search-bar {
+    background: rgba(255, 255, 255, .78) !important;
+    border: 1px solid rgba(125, 143, 181, .16) !important;
+    box-shadow: 0 8px 22px rgba(85, 106, 151, .07) !important;
+    backdrop-filter: blur(15px);
+}
+
+.search-bar:focus-within {
+    border-color: #bdb8ff !important;
+    box-shadow: 0 0 0 4px rgba(108, 99, 255, .08), 0 10px 25px rgba(85, 106, 151, .08) !important;
+}
+
+.icon-btn,
+.menu-toggle-btn {
+    background: rgba(255, 255, 255, .80) !important;
+    border: 1px solid rgba(125, 143, 181, .15) !important;
+    border-radius: 13px !important;
+    color: #687894 !important;
+    box-shadow: 0 7px 18px rgba(85, 106, 151, .07);
+}
+
+.icon-btn:hover,
+.menu-toggle-btn:hover {
+    color: #5c53e8 !important;
+    background: #f2f0ff !important;
+    border-color: #d8d4ff !important;
+}
+
+.topbar-profile {
+    background: rgba(255, 255, 255, .70) !important;
+    border: 1px solid rgba(255, 255, 255, .9) !important;
+    box-shadow: 0 8px 24px rgba(93, 110, 150, .08);
+    backdrop-filter: blur(16px);
+}
+
+.welcome-banner {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 92% 15%, rgba(255, 255, 255, .35), transparent 22%),
+        radial-gradient(circle at 72% 100%, rgba(239, 101, 173, .20), transparent 30%),
+        linear-gradient(120deg, #746bff 0%, #7188ff 48%, #54b9d7 100%) !important;
+    border: 1px solid rgba(255, 255, 255, .72) !important;
+    box-shadow: 0 20px 45px rgba(100, 104, 220, .20) !important;
+}
+
+.welcome-banner::after {
+    content: "";
+    position: absolute;
+    width: 190px;
+    height: 190px;
+    right: 13%;
+    top: -100px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .30);
+    box-shadow: 0 0 0 22px rgba(255, 255, 255, .05), 0 0 0 45px rgba(255, 255, 255, .04);
+}
+
+.welcome-banner h2,
+.welcome-banner h2::first-letter {
+    color: #fff !important;
+}
+
+.welcome-banner p,
+.welcome-banner strong {
+    color: rgba(255, 255, 255, .9) !important;
+}
+
+.dash-card {
+    background: rgba(255, 255, 255, .76) !important;
+    border: 1px solid rgba(255, 255, 255, .84) !important;
+    border-radius: 23px !important;
+    box-shadow: 0 12px 32px rgba(84, 105, 150, .075) !important;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+}
+
+.dash-card:hover {
+    box-shadow: 0 17px 38px rgba(84, 105, 150, .10) !important;
+}
+
+.stat-card {
+    position: relative;
+    background: rgba(255, 255, 255, .76) !important;
+    border: 1px solid rgba(255, 255, 255, .85) !important;
+    border-radius: 21px !important;
+    box-shadow: 0 12px 28px rgba(84, 105, 150, .08) !important;
+    backdrop-filter: blur(15px);
+    overflow: hidden;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 18px 35px rgba(84, 105, 150, .12) !important;
 }

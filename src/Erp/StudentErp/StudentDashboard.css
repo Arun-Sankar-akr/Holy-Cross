@@ -506,8 +506,9 @@ td {
 /* Compact Stat Cards Grid */
 .staff-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 35px;
 }
 
 .staff-stat-box {
@@ -4386,5 +4387,892 @@ td {
 
   .attendance-mini-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+
+
+
+/* ============================================================
+   PREMIUM GLASSMORPHISM REDESIGN
+   Light / colorful only — no dark surfaces
+   Keeps all existing JSX class names and functionality intact.
+   ============================================================ */
+
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  color-scheme: light;
+
+  --dash-bg: #f7faff;
+  --dash-surface: rgba(255, 255, 255, 0.78);
+  --dash-border: rgba(111, 133, 181, 0.18);
+
+  --dash-text-main: #24324a;
+  --dash-text-muted: #7886a0;
+
+  --dash-primary: #6c63ff;
+  --dash-primary-grad: linear-gradient(135deg, #7c73ff 0%, #6c63ff 48%, #8f7cff 100%);
+  --dash-primary-light: #f0efff;
+  --dash-primary-border: #dcd8ff;
+
+  --accent-emerald: #19b889;
+  --accent-emerald-bg: #e8fbf4;
+  --accent-rose: #f15b7a;
+  --accent-rose-bg: #fff0f4;
+  --accent-amber: #f0a33a;
+  --accent-amber-bg: #fff6e8;
+  --accent-cyan: #28a9d6;
+  --accent-cyan-bg: #e9f8fd;
+  --accent-purple: #9a72ed;
+  --accent-purple-bg: #f5efff;
+  --accent-pink: #ef65ad;
+  --accent-pink-bg: #fff0f8;
+
+  --dash-shadow-sm: 0 8px 22px rgba(91, 111, 153, 0.08);
+  --dash-shadow: 0 18px 45px rgba(91, 111, 153, 0.12);
+  --dash-shadow-lg: 0 24px 60px rgba(108, 99, 255, 0.18);
+  --dash-radius: 24px;
+
+  --glass-white: rgba(255, 255, 255, 0.72);
+  --glass-strong: rgba(255, 255, 255, 0.88);
+  --glass-line: rgba(255, 255, 255, 0.78);
+}
+
+/* Force the light palette even if the existing theme toggle is active. */
+[data-theme="dark"] .staff-style-dashboard,
+[data-theme="dark"] .staff-main-workspace,
+[data-theme="dark"] .staff-sidebar,
+[data-theme="dark"] .staff-card,
+[data-theme="dark"] .staff-stat-box,
+[data-theme="dark"] .assignment-display-card,
+[data-theme="dark"] .student-notice-item,
+[data-theme="dark"] .student-task-item,
+[data-theme="dark"] .student-timetable-wrapper,
+[data-theme="dark"] .student-timetable-table th,
+[data-theme="dark"] .day-col-header,
+[data-theme="dark"] .day-name-cell,
+[data-theme="dark"] .slot-td,
+[data-theme="dark"] .custom-marks-table th,
+[data-theme="dark"] .bulletin-card,
+[data-theme="dark"] .empty-sub-card,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .hall-ticket-card,
+[data-theme="dark"] .staff-user-profile,
+[data-theme="dark"] .staff-search-input-group {
+  color: var(--dash-text-main) !important;
+  background-color: transparent !important;
+  border-color: var(--dash-border) !important;
+}
+
+/* ---------- Page canvas ---------- */
+
+html,
+body {
+  background: #f7faff !important;
+}
+
+.staff-style-dashboard {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  padding: 26px 0 50px;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 4% 8%, rgba(124, 115, 255, 0.16), transparent 24%),
+    radial-gradient(circle at 95% 8%, rgba(40, 169, 214, 0.15), transparent 22%),
+    radial-gradient(circle at 80% 88%, rgba(239, 101, 173, 0.12), transparent 25%),
+    radial-gradient(circle at 18% 82%, rgba(25, 184, 137, 0.10), transparent 22%),
+    linear-gradient(145deg, #f9fbff 0%, #f3f7ff 48%, #fbf7ff 100%) !important;
+}
+
+.staff-style-dashboard::before,
+.staff-style-dashboard::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.staff-style-dashboard::before {
+  width: 360px;
+  height: 360px;
+  top: 8%;
+  right: -150px;
+  background: rgba(124, 115, 255, 0.10);
+}
+
+.staff-style-dashboard::after {
+  width: 300px;
+  height: 300px;
+  bottom: 5%;
+  left: -130px;
+  background: rgba(40, 169, 214, 0.10);
+}
+
+/* ---------- Main shell ---------- */
+
+.staff-layout-grid {
+  width: min(1500px, calc(100% - 36px));
+  min-height: calc(100vh - 80px);
+  margin: 0 auto;
+  padding: 0;
+  gap: 18px;
+  align-items: stretch;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Glass sidebar ---------- */
+
+.staff-sidebar {
+  position: sticky;
+  top: 18px;
+  width: 248px;
+  min-width: 248px;
+  height: fit-content;
+  padding: 18px 14px;
+  border: 1px solid var(--glass-line) !important;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.88), rgba(247,250,255,.70)) !important;
+  box-shadow: 0 22px 55px rgba(82, 103, 150, 0.13) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  color: var(--dash-text-main) !important;
+  overflow: hidden;
+}
+
+.staff-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 92px;
+  background: linear-gradient(135deg, rgba(124,115,255,.18), rgba(40,169,214,.12), rgba(239,101,173,.10));
+  pointer-events: none;
+}
+
+.staff-user-profile {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.9) !important;
+  border-radius: 20px;
+  background: rgba(255,255,255,.70) !important;
+  box-shadow: 0 8px 24px rgba(93,110,150,.08);
+  backdrop-filter: blur(16px);
+}
+
+.staff-avatar-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #7c73ff, #28a9d6, #ef65ad) !important;
+  box-shadow: 0 8px 18px rgba(108,99,255,.22);
+}
+
+.staff-user-info h4 {
+  color: #24324a !important;
+  font-size: .84rem;
+}
+
+.staff-user-info p,
+.roll-no-tag {
+  color: var(--dash-text-muted) !important;
+}
+
+.roll-no-tag {
+  background: #f0efff;
+  padding: 2px 7px;
+  border-radius: 7px;
+}
+
+.staff-nav-list {
+  position: relative;
+  z-index: 1;
+  gap: 6px;
+}
+
+.staff-nav-item {
+  position: relative;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: #697994 !important;
+  font-size: .80rem;
+  transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
+}
+
+.staff-nav-item svg {
+  flex: 0 0 auto;
+}
+
+.staff-nav-item:hover {
+  transform: translateX(4px);
+  color: var(--dash-primary) !important;
+  background: rgba(240,239,255,.78) !important;
+  border-color: rgba(108,99,255,.10);
+}
+
+.staff-nav-item.active {
+  color: #5c53e8 !important;
+  background: linear-gradient(100deg, #f0efff, #f8f7ff) !important;
+  border-color: #dedbff !important;
+  box-shadow: 0 9px 22px rgba(108,99,255,.10);
+}
+
+.staff-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #6c63ff, #ef65ad);
+}
+
+.staff-sidebar-footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid rgba(118,136,177,.15);
+}
+
+.staff-signout-btn {
+  border: 1px solid #ffd9e2 !important;
+  color: #e95b79 !important;
+  background: #fff4f7 !important;
+  border-radius: 13px;
+}
+
+.staff-signout-btn:hover {
+  color: #fff !important;
+  background: linear-gradient(135deg,#f36b88,#ef65ad) !important;
+}
+
+/* ---------- Workspace ---------- */
+
+.staff-main-workspace {
+  min-width: 0;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.82) !important;
+  border-radius: 30px;
+  background: rgba(255,255,255,.48) !important;
+  box-shadow: 0 18px 55px rgba(83,103,148,.08) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.staff-top-header {
+  min-height: 52px;
+  height: auto;
+  margin-bottom: 16px;
+  padding: 0 2px;
+}
+
+.staff-search-input-group {
+  width: min(360px, 42vw);
+  padding: 10px 14px;
+  border: 1px solid rgba(125,143,181,.16) !important;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78) !important;
+  box-shadow: 0 8px 22px rgba(85,106,151,.07) !important;
+  backdrop-filter: blur(15px);
+}
+
+.staff-search-input-group:focus-within {
+  border-color: #bdb8ff !important;
+  box-shadow: 0 0 0 4px rgba(108,99,255,.08), 0 10px 25px rgba(85,106,151,.08) !important;
+}
+
+.staff-search-input-group input {
+  color: #263550 !important;
+}
+
+.topbar-actions {
+  gap: 8px;
+}
+
+.sync-badge {
+  padding: 7px 11px;
+  border: 1px solid #ccefe3;
+  background: #effcf7;
+  border-radius: 12px;
+}
+
+.topbar-icon-btn,
+.menu-toggle-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(125,143,181,.15) !important;
+  border-radius: 13px;
+  background: rgba(255,255,255,.80) !important;
+  color: #687894 !important;
+  box-shadow: 0 7px 18px rgba(85,106,151,.07);
+}
+
+.topbar-icon-btn:hover,
+.menu-toggle-btn:hover {
+  color: var(--dash-primary) !important;
+  background: #f2f0ff !important;
+  border-color: #d8d4ff !important;
+}
+
+/* ---------- Welcome hero ---------- */
+
+.staff-content-container {
+  gap: 16px;
+}
+
+.staff-welcome-card {
+  min-height: 150px;
+  padding: 24px 26px;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 92% 15%, rgba(255,255,255,.35), transparent 22%),
+    radial-gradient(circle at 72% 100%, rgba(239,101,173,.20), transparent 30%),
+    linear-gradient(120deg, #746bff 0%, #7188ff 48%, #54b9d7 100%) !important;
+  box-shadow: 0 20px 45px rgba(100,104,220,.20) !important;
+}
+
+.staff-welcome-card::after {
+  content: "";
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  right: 13%;
+  top: -100px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.30);
+  box-shadow: 0 0 0 22px rgba(255,255,255,.05), 0 0 0 45px rgba(255,255,255,.04);
+}
+
+.staff-welcome-card h2 {
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  letter-spacing: -.3px;
+}
+
+.staff-welcome-card p {
+  font-size: .84rem;
+}
+
+.attendance-pill-box {
+  position: relative;
+  z-index: 2;
+  padding: 10px 14px;
+  border-radius: 15px;
+  background: rgba(255,255,255,.20);
+  border: 1px solid rgba(255,255,255,.38);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+/* ---------- Colorful stat cards ---------- */
+
+.staff-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 2px;
+}
+
+.staff-stat-box {
+  position: relative;
+  min-height: 126px;
+  padding: 17px;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.85) !important;
+  border-radius: 21px;
+  background: rgba(255,255,255,.76) !important;
+  box-shadow: 0 12px 28px rgba(84,105,150,.08) !important;
+  overflow: hidden;
+  backdrop-filter: blur(15px);
+}
+
+.staff-stat-box::after {
+  content: "";
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  right: -20px;
+  top: -20px;
+  border-radius: 50%;
+  opacity: .65;
+}
+
+.staff-stat-box:nth-child(1)::after { background: #dff9ef; }
+.staff-stat-box:nth-child(2)::after { background: #e9e7ff; }
+.staff-stat-box:nth-child(3)::after { background: #fff0df; }
+.staff-stat-box:nth-child(4)::after { background: #e5f7fd; }
+
+.staff-stat-box:nth-child(1) { border-top: 3px solid #20ba8a !important; }
+.staff-stat-box:nth-child(2) { border-top: 3px solid #7168ff !important; }
+.staff-stat-box:nth-child(3) { border-top: 3px solid #f0a33a !important; }
+.staff-stat-box:nth-child(4) { border-top: 3px solid #28a9d6 !important; }
+
+.staff-stat-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 35px rgba(84,105,150,.12) !important;
+}
+
+.stat-head {
+  justify-content: flex-start;
+}
+
+.stat-icon-bg {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+}
+
+.stat-title {
+  margin-top: 7px;
+  font-size: .68rem;
+  letter-spacing: .7px;
+}
+
+.stat-val {
+  font-size: 1.38rem;
+  color: #253550 !important;
+}
+
+/* ---------- Cards ---------- */
+
+.student-two-col-grid {
+  grid-template-columns: minmax(0, 1.65fr) minmax(290px, .9fr);
+  gap: 16px;
+}
+
+.staff-card {
+  padding: 17px;
+  border: 1px solid rgba(255,255,255,.84) !important;
+  border-radius: 23px;
+  background: rgba(255,255,255,.76) !important;
+  box-shadow: 0 12px 32px rgba(84,105,150,.075) !important;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.staff-card:hover {
+  box-shadow: 0 17px 38px rgba(84,105,150,.10) !important;
+}
+
+.card-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(119,139,180,.12);
+}
+
+.card-header h3 {
+  font-size: .96rem;
+  color: #263650 !important;
+}
+
+.muted-icon {
+  width: 31px;
+  height: 31px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--dash-primary);
+  background: #f0efff;
+}
+
+/* ---------- Course / assignment cards ---------- */
+
+.student-assignments-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.assignment-display-card {
+  position: relative;
+  min-height: 145px;
+  padding: 15px;
+  border: 1px solid rgba(108,99,255,.13) !important;
+  border-radius: 19px;
+  background: linear-gradient(145deg, rgba(244,242,255,.92), rgba(255,255,255,.78)) !important;
+  box-shadow: 0 8px 22px rgba(84,105,150,.06);
+}
+
+.assignment-display-card:nth-child(3n+2) {
+  background: linear-gradient(145deg, rgba(233,249,253,.94), rgba(255,255,255,.78)) !important;
+  border-color: rgba(40,169,214,.15) !important;
+}
+
+.assignment-display-card:nth-child(3n+3) {
+  background: linear-gradient(145deg, rgba(255,243,247,.94), rgba(255,255,255,.78)) !important;
+  border-color: rgba(239,101,173,.15) !important;
+}
+
+.assignment-display-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 30px rgba(84,105,150,.11);
+}
+
+.assignment-display-card h4 {
+  font-size: .84rem;
+}
+
+.submit-pdf-btn,
+.view-pdf-link {
+  padding: 8px 12px;
+  border-radius: 11px;
+  background: linear-gradient(135deg,#6c63ff,#8c79ff) !important;
+  box-shadow: 0 7px 15px rgba(108,99,255,.18) !important;
+}
+
+/* ---------- Notice / task cards ---------- */
+
+.student-notice-list,
+.student-tasks-list {
+  gap: 8px;
+}
+
+.student-notice-item,
+.student-task-item {
+  border: 1px solid rgba(119,139,180,.13) !important;
+  border-left: 4px solid #6c63ff !important;
+  border-radius: 14px;
+  background: rgba(248,250,255,.72) !important;
+  box-shadow: 0 6px 16px rgba(84,105,150,.045);
+}
+
+.student-notice-item:nth-child(2n) {
+  border-left-color: #28a9d6 !important;
+}
+
+.student-notice-item:nth-child(3n) {
+  border-left-color: #ef65ad !important;
+}
+
+.student-notice-item:hover,
+.student-task-item:hover {
+  transform: translateX(4px);
+  background: #f3f2ff !important;
+}
+
+/* ---------- Tables ---------- */
+
+.student-timetable-wrapper,
+.table-responsive,
+.marks-table-wrapper,
+.attendance-table-wrap,
+.ht-table-wrap {
+  border: 1px solid rgba(119,139,180,.14) !important;
+  border-radius: 18px;
+  background: rgba(255,255,255,.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+}
+
+.student-timetable-table th,
+.custom-marks-table th,
+.attendance-log-table th {
+  background: #f4f5fb !important;
+  color: #687894 !important;
+  border-color: rgba(119,139,180,.12) !important;
+}
+
+.student-timetable-table td,
+.student-timetable-table th,
+.custom-marks-table td,
+.custom-marks-table th,
+.attendance-log-table td,
+.attendance-log-table th {
+  border-color: rgba(119,139,180,.11) !important;
+}
+
+.slot-td {
+  background: rgba(255,255,255,.62) !important;
+}
+
+.student-slot-card {
+  border-top: 3px solid #6c63ff;
+  border-radius: 10px;
+  background: linear-gradient(145deg,#f0efff,#fafaff) !important;
+}
+
+/* ---------- Buttons / pills / controls ---------- */
+
+.custom-select,
+.attendance-select,
+.attendance-reset-btn,
+.ps-header-btn,
+.hall-ticket-action-btn {
+  border-radius: 12px !important;
+  border-color: rgba(119,139,180,.18) !important;
+  background: rgba(255,255,255,.82) !important;
+  color: #52627d !important;
+}
+
+.custom-select:focus,
+.attendance-select:focus {
+  border-color: #bcb7ff !important;
+  box-shadow: 0 0 0 4px rgba(108,99,255,.08) !important;
+}
+
+.status-present {
+  color: #149a70 !important;
+  background: #e9fbf4 !important;
+  border-color: #c6f0e1 !important;
+}
+
+.status-absent {
+  color: #df526f !important;
+  background: #fff0f4 !important;
+  border-color: #ffd5df !important;
+}
+
+/* ---------- Floating action ---------- */
+
+.floating-action-fab {
+  right: 26px;
+  bottom: 26px;
+  padding: 11px 17px;
+  border-radius: 16px;
+  background: linear-gradient(135deg,#6c63ff,#28a9d6) !important;
+  box-shadow: 0 14px 30px rgba(91,99,210,.22) !important;
+}
+
+/* ---------- Notification glass ---------- */
+
+.notif-drawer-dropdown {
+  border: 1px solid rgba(255,255,255,.86) !important;
+  border-radius: 20px;
+  background: rgba(255,255,255,.90) !important;
+  box-shadow: 0 22px 55px rgba(69,88,132,.15) !important;
+  backdrop-filter: blur(24px);
+}
+
+.notif-drawer-item {
+  background: #f6f8fd !important;
+  border: 1px solid rgba(119,139,180,.08);
+}
+
+/* ---------- Modal / overlay surfaces ---------- */
+
+.staff-sidebar-overlay {
+  background: rgba(120,135,170,.20) !important;
+  backdrop-filter: blur(5px);
+}
+
+.empty-state,
+.empty-sub-card,
+.bulletin-card,
+.hall-ticket-card {
+  background: rgba(255,255,255,.80) !important;
+  border-color: rgba(119,139,180,.14) !important;
+  color: var(--dash-text-main) !important;
+}
+
+/* ---------- Responsive redesign ---------- */
+
+@media (max-width: 1200px) {
+  .staff-layout-grid {
+    width: min(100% - 24px, 1120px);
+  }
+
+  .staff-sidebar {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .staff-main-workspace {
+    padding: 15px;
+  }
+
+  .staff-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .staff-layout-grid {
+    width: calc(100% - 20px);
+  }
+
+  .student-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-sidebar {
+    width: 250px;
+    min-width: 210px;
+  }
+
+  .staff-welcome-card {
+    padding: 21px;
+  }
+}
+
+@media (max-width: 768px) {
+  .staff-style-dashboard {
+    padding: 10px 0 30px;
+    min-height: 100vh;
+  }
+
+  .staff-layout-grid {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    gap: 0;
+  }
+
+  .staff-main-workspace {
+    width: 100%;
+    margin-top: -800px;
+    min-height: 100vh;
+    padding: 12px;
+    border-radius: 0;
+    background: rgba(255,255,255,.42) !important;
+    box-shadow: none !important;
+  }
+
+  .staff-top-header {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .staff-search-input-group {
+    order: 3;
+    width: 100%;
+  }
+
+  .staff-welcome-card {
+    min-height: 165px;
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .staff-stats-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+  }
+
+  .staff-stat-box {
+    min-height: 112px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .student-assignments-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .staff-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 540px) {
+  .staff-style-dashboard {
+    background:
+      radial-gradient(circle at 100% 0, rgba(124,115,255,.13), transparent 28%),
+      linear-gradient(160deg,#f9fbff,#f5f8ff 60%,#fff8fc) !important;
+  }
+
+  .staff-main-workspace {
+    padding: 10px;
+  }
+
+  .staff-welcome-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .staff-welcome-card h2 {
+    font-size: 1.18rem;
+  }
+
+  .staff-welcome-card p {
+    max-width: 95%;
+    font-size: .76rem;
+  }
+
+  .attendance-pill-box {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .staff-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .staff-stat-box {
+    min-height: 105px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .stat-icon-bg {
+    width: 37px;
+    height: 37px;
+  }
+
+  .stat-val {
+    font-size: 1.18rem;
+  }
+
+  .student-assignments-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-display-card {
+    min-height: 125px;
+  }
+
+  .card-header h3 {
+    font-size: .88rem;
+  }
+
+  .floating-action-fab {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .staff-main-workspace {
+    padding: 8px;
+  }
+
+  .staff-stats-grid {
+    gap: 7px;
+  }
+
+  .staff-stat-box {
+    min-height: 98px;
+    padding: 10px;
+  }
+
+  .stat-title {
+    font-size: .62rem;
+  }
+
+  .stat-val {
+    font-size: 1.05rem;
+  }
+
+  .staff-card {
+    padding: 12px;
+  }
+}
+
+/* Respect reduced-motion accessibility preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
   }
 }
