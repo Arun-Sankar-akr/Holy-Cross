@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
-    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal
 } from 'lucide-react';
 import './OfficeDashboard.css';
 
@@ -501,7 +501,7 @@ export default function OfficeDashboard() {
 
             {isMobileMenuOpen && (
                 <button
-                    className="mobile-overlay"
+                    className="mobile-overlays"
                     onClick={() => setIsMobileMenuOpen(false)}
                     aria-label="Close navigation"
                 />
@@ -515,11 +515,17 @@ export default function OfficeDashboard() {
                 </div>
 
                 <div className="sidebar-user">
-                    <div className="user-avatar" style={{ background: '#059669' }}>O</div>
+                    <div className="user-avatar" style={{ background: '#6d5dfc' }}>O</div>
                     <div className="user-info">
                         <span className="user-name">Office Executive</span>
                         <span className="user-role">Front-Desk Admin</span>
                     </div>
+                </div>
+
+                <div className="sidebar-command-card">
+                    <div className="command-icon"><Sparkles size={15} /></div>
+                    <div><b>Today at a glance</b><span>Everything looks synced</span></div>
+                    <span className="command-status"><i /></span>
                 </div>
 
                 <nav className="sidebar-nav">
@@ -583,9 +589,18 @@ export default function OfficeDashboard() {
             {/* Main Workspace Area */}
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
-                    <div className="academic-badge">Academic Year 2026 - 2027</div>
+                    <div className="topbar-title-wrap">
+                        <div className="topbar-breadcrumb"><span>Workspace</span><b>/</b><strong>{activeTab === 'overview' ? 'Overview' : activeTab.replaceAll('-', ' ')}</strong></div>
+                        <div className="academic-badge">Academic Year 2026 - 2027</div>
+                    </div>
                     <div className="topbar-actions">
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>Authorized Front-Desk Workspace</span>
+                        <button className="topbar-search" type="button" onClick={() => document.querySelector('.dashboard-content')?.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <Search size={15} /><span>Search workspace</span><kbd>⌘ K</kbd>
+                        </button>
+                        <button className="topbar-icon-btn notification-trigger" type="button" title="Notifications">
+                            <Bell size={17} /><i />
+                        </button>
+                        <div className="topbar-profile"><span className="topbar-avatar">O</span><div><b>Office Executive</b><small>Administrator</small></div><ChevronDown size={14} /></div>
                     </div>
                 </header>
 
@@ -636,6 +651,28 @@ export default function OfficeDashboard() {
                                     <span className="overview-stat-copy"><small>TASK BOARD</small><strong>{dashboardPendingTasks}</strong><em>Open tasks</em></span>
                                     <ArrowLeft className="overview-stat-arrow" size={15} />
                                 </button>
+                            </div>
+
+                            <div className="overview-insight-row">
+                                <div className="insight-card insight-primary">
+                                    <div className="insight-head"><div><span>OPERATIONS FLOW</span><b>Today’s activity</b></div><Activity size={16} /></div>
+                                    <div className="mini-bars">{[42,58,48,72,64,82,68,91,76,88,70,96].map((v,i)=><span key={i} style={{height:`${v}%`}} />)}</div>
+                                    <div className="insight-foot"><strong>+18.4%</strong><small>vs. previous activity window</small></div>
+                                </div>
+                                <div className="insight-card">
+                                    <div className="insight-head"><div><span>COLLECTION SNAPSHOT</span><b>Fee performance</b></div><TrendingUp size={16} /></div>
+                                    <div className="insight-metric"><strong>₹{dashboardFeePaid.toLocaleString('en-IN')}</strong><span>collected</span></div>
+                                    <div className="progress-track"><span style={{width:`${dashboardFeeTotal ? Math.min(100,(dashboardFeePaid/dashboardFeeTotal)*100) : 0}%`}} /></div>
+                                    <div className="insight-foot"><strong>{dashboardFeeTotal ? Math.round((dashboardFeePaid/dashboardFeeTotal)*100) : 0}%</strong><small>of total fee ledger</small></div>
+                                </div>
+                                <div className="notification-panel">
+                                    <div className="notification-head"><div><span>NOTIFICATIONS</span><b>Needs attention</b></div><button type="button"><MoreHorizontal size={16}/></button></div>
+                                    <div className="notification-list">
+                                        <button type="button" onClick={() => setActiveTab('leaves')}><span className="notice-dot notice-amber"/><div><b>{dashboardPendingLeaves} leave request{dashboardPendingLeaves === 1 ? '' : 's'}</b><small>Awaiting approval</small></div><ArrowLeft size={13}/></button>
+                                        <button type="button" onClick={() => setActiveTab('tasks')}><span className="notice-dot notice-violet"/><div><b>{dashboardPendingTasks} open task{dashboardPendingTasks === 1 ? '' : 's'}</b><small>Internal work queue</small></div><ArrowLeft size={13}/></button>
+                                        <button type="button" onClick={() => setActiveTab('hall-ticket-allocation')}><span className="notice-dot notice-blue"/><div><b>{dashboardPublishedTickets} tickets published</b><small>Hall ticket desk status</small></div><ArrowLeft size={13}/></button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="overview-main-grid">
@@ -717,7 +754,7 @@ export default function OfficeDashboard() {
                                     <textarea rows="2" className="custom-textarea" placeholder="Enquiry details..." value={enquiryForm.notes} onChange={e => setEnquiryForm({ ...enquiryForm, notes: e.target.value })} />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
                                         <PlusCircle size={15} /> Log New Enquiry Entry
                                     </button>
                                 </div>
@@ -793,9 +830,9 @@ export default function OfficeDashboard() {
                                                 onClick={() => { setSelectedFeeClass(clsName); setFeeViewMode('sections'); }}
                                                 style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                                             >
-                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#059669' }}></div>
+                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#6d5dfc' }}></div>
                                                 <div style={{ display: 'flex', items: 'center', gap: '10px', marginBottom: '10px' }}>
-                                                    <div style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669', padding: '8px', borderRadius: '8px' }}>
+                                                    <div style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#6d5dfc', padding: '8px', borderRadius: '8px' }}>
                                                         <GraduationCap size={20} />
                                                     </div>
                                                     <h4 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>{clsName}</h4>
@@ -893,7 +930,7 @@ export default function OfficeDashboard() {
                                             alert("Fee dues assigned successfully! Student dashboard alert triggered.");
                                         });
                                     }} className="form-grid" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-                                        <h4 style={{ gridColumn: '1 / -1', margin: '0 0 5px 0' }}>Set Dues for: <span style={{ color: '#059669' }}>{feeForm.studentName || 'None Selected'}</span></h4>
+                                        <h4 style={{ gridColumn: '1 / -1', margin: '0 0 5px 0' }}>Set Dues for: <span style={{ color: '#6d5dfc' }}>{feeForm.studentName || 'None Selected'}</span></h4>
                                         <div>
                                             <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Admission No</label>
                                             <input type="text" className="table-input full-width-input" value={feeForm.admissionNo} onChange={e => setFeeForm({ ...feeForm, admissionNo: e.target.value })} required />
@@ -915,7 +952,7 @@ export default function OfficeDashboard() {
                                             <input type="number" className="table-input full-width-input" placeholder="Total Amount" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
                                         </div>
                                         <div style={{ gridColumn: '1 / -1' }}>
-                                            <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                            <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
                                                 <PlusCircle size={15} /> Publish Fee Dues to Student
                                             </button>
                                         </div>
@@ -1026,7 +1063,7 @@ export default function OfficeDashboard() {
                                 </div>
 
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
                                         <PlusCircle size={15} /> Add Subject Exam Schedule
                                     </button>
                                 </div>
@@ -1316,24 +1353,24 @@ export default function OfficeDashboard() {
                                 .hall-ticket-allocation-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0;padding:18px;border:1px solid #dbe7e2;border-radius:16px;background:#f8fbfa}
                                 .hall-ticket-allocation-filters label{display:flex;flex-direction:column;gap:7px;font-size:.75rem;font-weight:800;color:#475569}
                                 .hall-ticket-allocation-filters select,.hall-ticket-allocation-filters input{height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:.8rem;outline:none}
-                                .hall-ticket-allocation-filters select:focus,.hall-ticket-allocation-filters input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+                                .hall-ticket-allocation-filters select:focus,.hall-ticket-allocation-filters input:focus{border-color:#7c6df6;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
                                 .hall-ticket-search-field{grid-column:span 1}
                                 .hall-ticket-summary-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
                                 .hall-ticket-count{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:10px;font-size:.75rem}
                                 .hall-ticket-count strong{font-size:1rem}
-                                .hall-ticket-count.paid{background:#dcfce7;color:#047857}
+                                .hall-ticket-count.paid{background:#dcfce7;color:#5847e8}
                                 .hall-ticket-count.blocked{background:#fee2e2;color:#b91c1c}
-                                .hall-ticket-publish-selected{background:#059669!important;color:#fff!important}
+                                .hall-ticket-publish-selected{background:#6d5dfc!important;color:#fff!important}
                                 .hall-ticket-publish-selected:disabled,.hall-ticket-summary-row .exam-primary-btn:disabled{opacity:.45;cursor:not-allowed}
                                 .hall-ticket-allocation-table td{vertical-align:middle}
-                                .hall-ticket-allocation-table input[type="checkbox"]{width:16px;height:16px;accent-color:#059669}
+                                .hall-ticket-allocation-table input[type="checkbox"]{width:16px;height:16px;accent-color:#6d5dfc}
                                 .hall-ticket-fee-badge,.hall-ticket-published-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;font-size:.68rem;font-weight:900}
-                                .hall-ticket-fee-badge.paid{background:#dcfce7;color:#047857}
+                                .hall-ticket-fee-badge.paid{background:#dcfce7;color:#5847e8}
                                 .hall-ticket-fee-badge.not-paid{background:#fee2e2;color:#b91c1c}
-                                .hall-ticket-published-badge{background:#d1fae5;color:#047857}
+                                .hall-ticket-published-badge{background:#e6e0ff;color:#5847e8}
                                 .hall-ticket-publish-btn,.hall-ticket-block-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:9px;padding:9px 12px;font-size:.72rem;font-weight:800;cursor:pointer}
-                                .hall-ticket-publish-btn{background:#059669;color:#fff}
-                                .hall-ticket-publish-btn:hover{background:#047857}
+                                .hall-ticket-publish-btn{background:#6d5dfc;color:#fff}
+                                .hall-ticket-publish-btn:hover{background:#5847e8}
                                 .hall-ticket-block-btn{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
                                 .hall-ticket-row-blocked{background:rgba(248,113,113,.035)}
                                 .hall-ticket-no-allocation{color:#94a3b8;font-size:.72rem}
@@ -1795,7 +1832,7 @@ export default function OfficeDashboard() {
                                                         </span>
                                                     </td>
                                                     <td style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')} style={{ background: '#059669', padding: '4px 8px' }}>
+                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')} style={{ background: '#6d5dfc', padding: '4px 8px' }}>
                                                             <Check size={12} /> Approve
                                                         </button>
                                                         <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Rejected')} style={{ background: '#dc2626', padding: '4px 8px' }}>
@@ -1848,7 +1885,7 @@ export default function OfficeDashboard() {
                                     <input type="date" className="table-input full-width-input" value={taskForm.deadline} onChange={e => setTaskForm({ ...taskForm, deadline: e.target.value })} required />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#059669' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
                                         <PlusCircle size={15} /> Create Task Item
                                     </button>
                                 </div>

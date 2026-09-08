@@ -5101,8 +5101,11 @@ body {
   }
 
   .staff-sidebar {
+    position: fixed;
     width: 250px;
     min-width: 210px;
+    min-height: 90vh;
+    margin-top: 70px;
   }
 
   .staff-welcome-card {
@@ -5125,7 +5128,7 @@ body {
 
   .staff-main-workspace {
     width: 100%;
-    margin-top: -800px;
+    margin-top: 000px;
     min-height: 100vh;
     padding: 12px;
     border-radius: 0;

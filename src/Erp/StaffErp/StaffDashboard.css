@@ -4180,12 +4180,15 @@ body {
     padding: 20px 14px !important;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: none;      /* Firefox */
-    -ms-overflow-style: none;   /* old Edge / IE */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* old Edge / IE */
 }
 
 .dashboard-sidebar::-webkit-scrollbar {
-    display: none;              /* Chrome / Edge / Safari */
+    display: none;
+    /* Chrome / Edge / Safari */
     width: 0;
     height: 0;
 }
