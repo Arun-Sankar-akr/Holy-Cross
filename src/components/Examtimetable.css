@@ -1,0 +1,905 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+.etv-shell {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+    --green: #10b981;
+
+    --text: #172033;
+    --muted: #718096;
+    --soft: #f6f7ff;
+    --border: rgba(99, 102, 241, 0.12);
+
+    width: 100%;
+    min-height: 100%;
+    padding: 28px;
+    font-family: 'Outfit', sans-serif;
+    color: var(--text);
+
+    background:
+        radial-gradient(circle at 5% 5%, rgba(99, 102, 241, 0.12), transparent 26%),
+        radial-gradient(circle at 95% 8%, rgba(236, 72, 153, 0.10), transparent 25%),
+        radial-gradient(circle at 80% 90%, rgba(6, 182, 212, 0.08), transparent 25%),
+        #f8faff;
+}
+
+.etv-page {
+    width: min(1380px, 100%);
+    margin: 0 auto;
+}
+
+/* =========================================================
+   ANIMATION
+   ========================================================= */
+
+.etv-fade-in {
+    animation: etvFadeIn 0.45s ease both;
+}
+
+@keyframes etvFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.etv-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 42px 46px;
+    margin-bottom: 28px;
+    border-radius: 28px;
+
+    background:
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.94),
+            rgba(244, 245, 255, 0.90));
+
+    border: 1px solid rgba(255, 255, 255, 0.9);
+
+    box-shadow:
+        0 20px 55px rgba(75, 85, 180, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.etv-hero::before {
+    content: '';
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -55px;
+    top: -75px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.12);
+    filter: blur(2px);
+}
+
+.etv-hero::after {
+    content: '';
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    right: 110px;
+    bottom: -90px;
+    border-radius: 50%;
+    background: rgba(236, 72, 153, 0.09);
+}
+
+.etv-hero-glow {
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    left: -100px;
+    bottom: -190px;
+    border-radius: 50%;
+    background: rgba(6, 182, 212, 0.10);
+}
+
+.etv-hero>* {
+    position: relative;
+    z-index: 2;
+}
+
+.etv-hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 7px 12px;
+    border-radius: 999px;
+
+    color: var(--primary-dark);
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.12);
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+}
+
+.etv-hero-kicker svg {
+    color: var(--secondary);
+}
+
+.etv-hero h2 {
+    margin: 15px 0 6px;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -1px;
+
+    background: linear-gradient(90deg,
+            #312e81,
+            #6366f1,
+            #8b5cf6);
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.etv-hero p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Compact hero */
+
+.etv-hero-compact {
+    padding: 30px 36px;
+}
+
+.etv-hero-compact h2 {
+    font-size: clamp(26px, 3vw, 34px);
+}
+
+/* =========================================================
+   CLASS CARDS
+   ========================================================= */
+
+.etv-class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 17px;
+}
+
+.etv-class-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    width: 100%;
+    min-height: 105px;
+    padding: 18px;
+
+    border: 1px solid rgba(99, 102, 241, 0.10);
+    border-radius: 21px;
+
+    background: rgba(255, 255, 255, 0.78);
+
+    box-shadow:
+        0 12px 35px rgba(40, 50, 120, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    text-align: left;
+    cursor: pointer;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+.etv-class-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 4px;
+    border-radius: 0 5px 5px 0;
+
+    background: linear-gradient(180deg,
+            var(--primary),
+            var(--secondary));
+
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.etv-class-card:hover {
+    transform: translateY(-5px);
+
+    border-color: rgba(99, 102, 241, 0.22);
+
+    box-shadow:
+        0 20px 45px rgba(79, 70, 229, 0.13),
+        0 5px 15px rgba(99, 102, 241, 0.06);
+}
+
+.etv-class-card:hover::before {
+    opacity: 1;
+}
+
+.etv-class-card:active {
+    transform: translateY(-2px);
+}
+
+.etv-class-icon {
+    flex: 0 0 48px;
+
+    width: 48px;
+    height: 48px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 15px;
+
+    color: white;
+
+    background:
+        linear-gradient(135deg,
+            #6366f1,
+            #8b5cf6);
+
+    box-shadow:
+        0 10px 22px rgba(99, 102, 241, 0.25);
+}
+
+.etv-class-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.etv-class-info h4 {
+    margin: 0 0 5px;
+
+    color: #20263a;
+    font-size: 17px;
+    font-weight: 750;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.etv-class-meta {
+    display: block;
+
+    color: #7b8499;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.etv-class-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin-top: 7px;
+    padding: 4px 8px;
+
+    border-radius: 7px;
+
+    color: #047857;
+    background: rgba(16, 185, 129, 0.08);
+
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.etv-class-arrow {
+    flex-shrink: 0;
+    color: #a0a8ba;
+
+    transition:
+        transform 0.25s ease,
+        color 0.25s ease;
+}
+
+.etv-class-card:hover .etv-class-arrow {
+    color: var(--primary);
+    transform: translateX(4px);
+}
+
+/* =========================================================
+   VIEW HEADER
+   ========================================================= */
+
+.etv-viewhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+
+    margin-bottom: 18px;
+}
+
+.etv-back,
+.etv-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    min-height: 42px;
+    padding: 0 15px;
+
+    border-radius: 12px;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 650;
+
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.etv-back {
+    border: 1px solid rgba(99, 102, 241, 0.12);
+    color: #59627a;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 7px 20px rgba(40, 50, 120, 0.05);
+}
+
+.etv-back:hover {
+    color: var(--primary-dark);
+    border-color: rgba(99, 102, 241, 0.25);
+    transform: translateX(-2px);
+}
+
+.etv-download {
+    border: 0;
+    color: white;
+
+    background:
+        linear-gradient(135deg,
+            #6366f1,
+            #7c3aed);
+
+    box-shadow:
+        0 9px 22px rgba(99, 102, 241, 0.25);
+}
+
+.etv-download:hover:not(:disabled) {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 13px 28px rgba(99, 102, 241, 0.32);
+}
+
+.etv-download:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* =========================================================
+   FILTER BAR
+   ========================================================= */
+
+.etv-filters {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+
+    margin-bottom: 18px;
+    padding: 16px;
+
+    border: 1px solid rgba(99, 102, 241, 0.10);
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.72);
+
+    box-shadow:
+        0 10px 30px rgba(40, 50, 120, 0.05);
+
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+}
+
+.etv-field {
+    min-width: 240px;
+}
+
+.etv-field label {
+    display: block;
+    margin: 0 0 7px 3px;
+
+    color: #727b90;
+    font-size: 11px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.etv-select {
+    width: 100%;
+    height: 43px;
+
+    padding: 0 38px 0 13px;
+
+    border: 1px solid rgba(99, 102, 241, 0.13);
+    border-radius: 11px;
+
+    outline: none;
+
+    color: #30384d;
+    background-color: #fff;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.etv-select:focus {
+    border-color: rgba(99, 102, 241, 0.45);
+
+    box-shadow:
+        0 0 0 4px rgba(99, 102, 241, 0.08);
+}
+
+.etv-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    min-height: 43px;
+    padding: 0 14px;
+
+    border-radius: 11px;
+
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.10);
+}
+
+.etv-count strong {
+    color: var(--primary-dark);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.etv-count span {
+    color: #747d91;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   TABLE CONTAINER
+   ========================================================= */
+
+.etv-table-wrap {
+    width: 100%;
+
+    overflow-x: auto;
+
+    border: 1px solid rgba(99, 102, 241, 0.10);
+    border-radius: 20px;
+
+    background: rgba(255, 255, 255, 0.82);
+
+    box-shadow:
+        0 18px 45px rgba(40, 50, 120, 0.07);
+
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+
+    scrollbar-width: thin;
+    scrollbar-color: #c7c9e8 transparent;
+}
+
+.etv-table-wrap::-webkit-scrollbar {
+    height: 7px;
+}
+
+.etv-table-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.etv-table-wrap::-webkit-scrollbar-thumb {
+    background: #c8c9e9;
+    border-radius: 99px;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.etv-table {
+    width: 100%;
+    min-width: 850px;
+
+    border-collapse: separate;
+    border-spacing: 0;
+
+    font-size: 13px;
+}
+
+.etv-table thead th {
+    padding: 14px 15px;
+
+    color: #69728a;
+
+    background:
+        linear-gradient(180deg,
+            #fafaff,
+            #f5f5fd);
+
+    border-bottom: 1px solid rgba(99, 102, 241, 0.10);
+
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+
+    white-space: nowrap;
+}
+
+.etv-table thead th:first-child {
+    border-radius: 20px 0 0 0;
+}
+
+.etv-table thead th:last-child {
+    border-radius: 0 20px 0 0;
+}
+
+.etv-table tbody td {
+    padding: 15px;
+
+    color: #515b70;
+
+    border-bottom: 1px solid rgba(99, 102, 241, 0.07);
+
+    white-space: nowrap;
+
+    transition: background 0.2s ease;
+}
+
+.etv-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.etv-table tbody tr:hover td {
+    background: rgba(99, 102, 241, 0.035);
+}
+
+.etv-table tbody td:first-child {
+    color: #9aa2b5;
+    font-weight: 700;
+}
+
+.etv-table tbody td strong {
+    color: #252d40;
+    font-weight: 700;
+}
+
+.etv-date {
+    color: #4f46e5 !important;
+    font-weight: 700 !important;
+}
+
+.etv-badge {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 25px;
+    padding: 4px 9px;
+
+    border-radius: 7px;
+
+    color: #5b21b6;
+    background: linear-gradient(135deg,
+            rgba(139, 92, 246, 0.10),
+            rgba(99, 102, 241, 0.08));
+
+    border: 1px solid rgba(139, 92, 246, 0.12);
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.etv-table code {
+    display: inline-block;
+
+    padding: 4px 7px;
+
+    border-radius: 6px;
+
+    color: #475569;
+    background: #f3f5f9;
+
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.etv-time {
+    display: table-cell;
+
+    color: #475569 !important;
+    font-weight: 600;
+}
+
+.etv-time svg {
+    margin-right: 6px;
+    vertical-align: -2px;
+    color: #6366f1;
+}
+
+/* =========================================================
+   EMPTY / LOADING
+   ========================================================= */
+
+.etv-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 270px;
+    padding: 40px;
+
+    border: 1px dashed rgba(99, 102, 241, 0.18);
+    border-radius: 22px;
+
+    background:
+        rgba(255, 255, 255, 0.72);
+
+    text-align: center;
+
+    box-shadow:
+        0 12px 35px rgba(40, 50, 120, 0.04);
+}
+
+.etv-empty svg {
+    width: 46px;
+    height: 46px;
+
+    margin-bottom: 13px;
+    padding: 11px;
+
+    border-radius: 14px;
+
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.etv-empty h4 {
+    margin: 0 0 6px;
+
+    color: #30384b;
+    font-size: 17px;
+    font-weight: 750;
+}
+
+.etv-empty p {
+    max-width: 430px;
+    margin: 0;
+
+    color: #7c8498;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .etv-shell {
+        padding: 20px;
+    }
+
+    .etv-hero {
+        padding: 32px 28px;
+        border-radius: 23px;
+    }
+
+    .etv-class-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .etv-table-wrap {
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 650px) {
+    .etv-shell {
+        padding: 14px;
+    }
+
+    .etv-hero {
+        padding: 27px 21px;
+        margin-bottom: 18px;
+        border-radius: 19px;
+    }
+
+    .etv-hero h2 {
+        margin-top: 12px;
+        font-size: 29px;
+    }
+
+    .etv-hero p {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .etv-hero-kicker {
+        padding: 6px 9px;
+        font-size: 9px;
+        letter-spacing: 1px;
+    }
+
+    .etv-hero-compact {
+        padding: 24px 20px;
+    }
+
+    .etv-viewhead {
+        margin-bottom: 13px;
+    }
+
+    .etv-back,
+    .etv-download {
+        min-height: 39px;
+        padding: 0 11px;
+        font-size: 12px;
+    }
+
+    .etv-back {
+        flex: 1;
+    }
+
+    .etv-download {
+        flex: 1;
+    }
+
+    .etv-class-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .etv-class-card {
+        min-height: 91px;
+        padding: 14px;
+        border-radius: 17px;
+    }
+
+    .etv-class-icon {
+        width: 43px;
+        height: 43px;
+        flex-basis: 43px;
+        border-radius: 13px;
+    }
+
+    .etv-class-info h4 {
+        font-size: 15px;
+    }
+
+    .etv-class-meta {
+        font-size: 11px;
+    }
+
+    .etv-filters {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 11px;
+        padding: 13px;
+        border-radius: 16px;
+    }
+
+    .etv-field {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .etv-count {
+        justify-content: center;
+    }
+
+    .etv-table {
+        min-width: 820px;
+    }
+
+    .etv-table thead th,
+    .etv-table tbody td {
+        padding: 12px;
+    }
+
+    .etv-empty {
+        min-height: 230px;
+        padding: 28px 18px;
+        border-radius: 17px;
+    }
+}
+
+/* =========================================================
+   SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 390px) {
+    .etv-shell {
+        padding: 10px;
+    }
+
+    .etv-viewhead {
+        gap: 8px;
+    }
+
+    .etv-back,
+    .etv-download {
+        padding: 0 8px;
+        gap: 5px;
+        font-size: 11px;
+    }
+
+    .etv-hero {
+        padding: 23px 17px;
+    }
+
+    .etv-hero h2 {
+        font-size: 26px;
+    }
+
+    .etv-class-card {
+        padding: 12px;
+    }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+.etv-class-card:focus-visible,
+.etv-back:focus-visible,
+.etv-download:focus-visible,
+.etv-select:focus-visible {
+    outline: 3px solid rgba(99, 102, 241, 0.22);
+    outline-offset: 2px;
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .etv-fade-in,
+    .etv-class-card,
+    .etv-class-arrow,
+    .etv-download,
+    .etv-back {
+        animation: none;
+        transition: none;
+    }
+}

@@ -63,6 +63,7 @@ import ProgressReport from "./Erp/ProgressReport";
 
 import './App.css';
 import HallTicket from './components/HallTicket';
+import ExamTimetableViewer from './components/Examtimetableviewer';
 
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
@@ -124,6 +125,7 @@ function AppContent({ loading, fadeOut }) {
             <Route path="/" element={<Home />} />
             <Route path="/school/toppers" element={<ExamToppers />} />
             <Route path="/hallticket" element={<HallTicket />} />
+            <Route path="/timetable" element={<ExamTimetableViewer />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/school/:pageId" element={<SchoolSections />} />
             <Route path="/school/progress-report" element={<ProgressReport />} />
