@@ -65,7 +65,8 @@ const MAX_PDF_BYTES = 180 * 1024;
 const DOCUMENT_KEYS = {
     aadharFile: 'aadhar',
     communityFile: 'community',
-    tcFile: 'tc'
+    tcFile: 'tc',
+    studentPhoto: 'studentPhoto'
 };
 
 const isPdf = (value) => typeof value === 'string' && value.startsWith('data:application/pdf');
@@ -102,6 +103,8 @@ export const getAdmissionDocuments = async (admissionDocId) => {
             result.communityFile = data.base64 || null;
         } else if (key === 'tc' || key === 'tcFile') {
             result.tcFile = data.base64 || null;
+        } else if (key === 'studentPhoto') {
+            result.studentPhoto = data.base64 || null;
         }
     });
 
@@ -128,9 +131,17 @@ export default function AdmissionForm({
         middleName: initialData?.middleName || '',
         lastName: initialData?.lastName || '',
         grade: initialData?.grade || 'LKG',
+        dob: initialData?.dob || '',
+        bloodGroup: initialData?.bloodGroup || '',
+        gender: initialData?.gender || '',
+        rollNumber: initialData?.rollNumber || '',
+        email: initialData?.email || '',
         parentName: initialData?.parentName || '',
         phone: initialData?.phone || '',
+        parentPhone: initialData?.parentPhone || '',
+        parentRelationship: initialData?.parentRelationship || '',
         address: initialData?.address || '',
+        studentPhoto: initialData?.studentPhoto || null,
         religion: initialData?.religion || '',
         caste: initialData?.caste || '',
         subCaste: initialData?.subCaste || '',
@@ -163,7 +174,8 @@ export default function AdmissionForm({
                         ...prev,
                         aadharFile: files.aadharFile || prev.aadharFile || null,
                         communityFile: files.communityFile || prev.communityFile || null,
-                        tcFile: files.tcFile || prev.tcFile || null
+                        tcFile: files.tcFile || prev.tcFile || null,
+                        studentPhoto: files.studentPhoto || prev.studentPhoto || null
                     }));
                 }
             } catch (error) {
@@ -534,6 +546,7 @@ export default function AdmissionForm({
 
     const validateFilesBeforeSubmit = () => {
         const files = [
+            ['Student Photo', formData.studentPhoto],
             ['Official Identity Document', formData.aadharFile],
             ['Community Certificate', formData.communityFile]
         ];
@@ -596,9 +609,16 @@ export default function AdmissionForm({
             middleName: formData.middleName,
             lastName: formData.lastName,
             grade: formData.grade,
+            dob: formData.dob,
+            bloodGroup: formData.bloodGroup,
+            gender: formData.gender,
+            email: formData.email,
             parentName: formData.parentName,
             phone: formData.phone,
+            parentPhone: formData.parentPhone,
+            parentRelationship: formData.parentRelationship,
             address: formData.address,
+            studentPhotoStored: !!formData.studentPhoto,
             religion: formData.religion,
             caste: formData.caste,
             subCaste: formData.subCaste,
@@ -679,6 +699,13 @@ export default function AdmissionForm({
                 existingDocumentIds
             );
 
+            await saveBase64Document(
+                admissionId,
+                'studentPhoto',
+                formData.studentPhoto,
+                existingDocumentIds
+            );
+
             if (
                 [
                     'UKG',
@@ -752,9 +779,8 @@ export default function AdmissionForm({
                 );
             } else {
                 alert(
-                    `Submission failed: ${
-                        error?.message ||
-                        'Unknown error'
+                    `Submission failed: ${error?.message ||
+                    'Unknown error'
                     }`
                 );
             }
@@ -825,9 +851,16 @@ export default function AdmissionForm({
                             firstName: '',
                             middleName: '',
                             lastName: '',
+                            dob: '',
+                            bloodGroup: '',
+                            gender: '',
+                            email: '',
                             parentName: '',
                             phone: '',
+                            parentPhone: '',
+                            parentRelationship: '',
                             address: '',
+                            studentPhoto: null,
                             religion: '',
                             caste: '',
                             subCaste: '',
@@ -861,11 +894,9 @@ export default function AdmissionForm({
                         return (
                             <div
                                 key={s.key}
-                                className={`adm-reg-navitem ${
-                                    isActive ? 'active' : ''
-                                } ${
-                                    isDone ? 'completed' : ''
-                                }`}
+                                className={`adm-reg-navitem ${isActive ? 'active' : ''
+                                    } ${isDone ? 'completed' : ''
+                                    }`}
                             >
                                 <div className="adm-reg-navnum">
                                     {isDone ? (
@@ -933,15 +964,13 @@ export default function AdmissionForm({
                             return (
                                 <React.Fragment key={s.key}>
                                     <div
-                                        className={`adm-reg-step-node ${
-                                            isActive
+                                        className={`adm-reg-step-node ${isActive
                                                 ? 'active'
                                                 : ''
-                                        } ${
-                                            isDone
+                                            } ${isDone
                                                 ? 'done'
                                                 : ''
-                                        }`}
+                                            }`}
                                     >
                                         <div className="adm-reg-step-circle">
                                             {isDone ? (
@@ -956,14 +985,13 @@ export default function AdmissionForm({
 
                                     {idx <
                                         STEP_META.length - 1 && (
-                                        <div
-                                            className={`adm-reg-step-line ${
-                                                step > s.key
-                                                    ? 'filled'
-                                                    : ''
-                                            }`}
-                                        />
-                                    )}
+                                            <div
+                                                className={`adm-reg-step-line ${step > s.key
+                                                        ? 'filled'
+                                                        : ''
+                                                    }`}
+                                            />
+                                        )}
                                 </React.Fragment>
                             );
                         })}
@@ -994,86 +1022,39 @@ export default function AdmissionForm({
                         </div>
 
                         {step === 1 && (
-                            <div className="form-grid fade-in-section">
-                                <div className="form-group">
-                                    <label>
-                                        First Name *
-                                    </label>
+                            <div className="form-grid fade-in-section admission-personal-step">
+                                <div className="form-section-label full-width">
+                                    <span className="form-section-kicker">STUDENT PROFILE</span>
+                                    <h5>Personal Details</h5>
+                                    <p>Enter the student's official details exactly as they should appear in school records.</p>
+                                </div>
 
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Alex"
-                                        value={
-                                            formData.firstName
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                firstName:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
+                                <div className="form-group full-width student-name-row">
+                                    <label>Student Name *</label>
+                                    <div className="name-fields">
+                                        <input type="text" required placeholder="First Name"
+                                            value={formData.firstName}
+                                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
+                                        <input type="text" placeholder="Middle Name"
+                                            value={formData.middleName}
+                                            onChange={(e) => setFormData({ ...formData, middleName: e.target.value })} />
+                                        <input type="text" required placeholder="Last Name"
+                                            value={formData.lastName}
+                                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} />
+                                    </div>
                                 </div>
 
                                 <div className="form-group">
-                                    <label>
-                                        Middle Name
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Kumar"
-                                        value={
-                                            formData.middleName
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                middleName:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
+                                    <label>DOB (Password) *</label>
+                                    <input type="date" required value={formData.dob}
+                                        onChange={(e) => setFormData({ ...formData, dob: e.target.value })} />
+                                    <small className="field-help">Date of birth is used as the student's initial password.</small>
                                 </div>
 
                                 <div className="form-group">
-                                    <label>
-                                        Last Name *
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Johnson"
-                                        value={
-                                            formData.lastName
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                lastName:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>
-                                        Grade Applying For *
-                                    </label>
-
-                                    <select
-                                        value={formData.grade}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                grade: e.target.value
-                                            })
-                                        }
-                                    >
+                                    <label>Grade Applying For *</label>
+                                    <select required value={formData.grade}
+                                        onChange={(e) => setFormData({ ...formData, grade: e.target.value })}>
                                         <option value="LKG">LKG</option>
                                         <option value="UKG">UKG</option>
                                         <option value="1st Std">1st Std</option>
@@ -1092,134 +1073,78 @@ export default function AdmissionForm({
                                 </div>
 
                                 <div className="form-group">
-                                    <label>
-                                        Parent / Guardian Name *
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Robert Johnson"
-                                        value={
-                                            formData.parentName
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                parentName:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
+                                    <label>Blood Group *</label>
+                                    <select required value={formData.bloodGroup}
+                                        onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}>
+                                        <option value="">Select Blood Group</option>
+                                        {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((group) => (
+                                            <option key={group} value={group}>{group}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div className="form-group">
-                                    <label>
-                                        Phone Number *
-                                    </label>
+                                    <label>Gender *</label>
+                                    <select required value={formData.gender}
+                                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
 
-                                    <input
-                                        type="tel"
-                                        required
-                                        placeholder="+91 98765 43210"
-                                        value={
-                                            formData.phone
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                phone:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
+                              
+                                <div className="form-group full-width">
+                                    <label>Email Address *</label>
+                                    <input type="email" required placeholder="student@example.com"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                                </div>
+
+                                <div className="form-section-label full-width parent-section-heading">
+                                    <span className="form-section-kicker">FAMILY CONTACT</span>
+                                    <h5>Parent / Guardian Information</h5>
+                                    <p>Provide the primary contact details for communication and emergency records.</p>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Parent / Guardian Name *</label>
+                                    <input type="text" required placeholder="Full name"
+                                        value={formData.parentName}
+                                        onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Relationship *</label>
+                                    <select required value={formData.parentRelationship}
+                                        onChange={(e) => setFormData({ ...formData, parentRelationship: e.target.value })}>
+                                        <option value="">Select Relationship</option>
+                                        <option value="Father">Father</option>
+                                        <option value="Mother">Mother</option>
+                                        <option value="Guardian">Guardian</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" placeholder="+91 98765 43210"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Parent Phone *</label>
+                                    <input type="tel" required placeholder="+91 98765 43210"
+                                        value={formData.parentPhone}
+                                        onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} />
                                 </div>
 
                                 <div className="form-group full-width">
-                                    <label>
-                                        Residential Address *
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="House no, Street name, City, Pincode"
-                                        value={
-                                            formData.address
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                address:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>
-                                        Religion *
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Christian / Hindu / Muslim"
-                                        value={
-                                            formData.religion
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                religion:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>
-                                        Caste *
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. BC / MBC / SC / General"
-                                        value={
-                                            formData.caste
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                caste:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>
-                                        Sub-Caste
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        placeholder="Enter sub-caste if applicable"
-                                        value={
-                                            formData.subCaste
-                                        }
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                subCaste:
-                                                    e.target.value
-                                            })
-                                        }
-                                    />
+                                    <label>Address *</label>
+                                    <textarea required rows="3" placeholder="House no, Street name, City, State, Pincode"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
                                 </div>
                             </div>
                         )}
@@ -1303,32 +1228,32 @@ export default function AdmissionForm({
 
                                 {(
                                     formData.physicalAbility ===
-                                        'Physically Challenged' ||
+                                    'Physically Challenged' ||
                                     formData.physicalAbility ===
-                                        'Other'
+                                    'Other'
                                 ) && (
-                                    <div className="form-group full-width conditional-box">
-                                        <label>
-                                            Please Specify Disability / Medical Considerations *
-                                        </label>
+                                        <div className="form-group full-width conditional-box">
+                                            <label>
+                                                Please Specify Disability / Medical Considerations *
+                                            </label>
 
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Provide detailed description"
-                                            value={
-                                                formData.disabilityDetails
-                                            }
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    disabilityDetails:
-                                                        e.target.value
-                                                })
-                                            }
-                                        />
-                                    </div>
-                                )}
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Provide detailed description"
+                                                value={
+                                                    formData.disabilityDetails
+                                                }
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        disabilityDetails:
+                                                            e.target.value
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    )}
                             </div>
                         )}
 
@@ -1351,6 +1276,39 @@ export default function AdmissionForm({
                                         </span>
                                     </div>
                                 )}
+
+                                <div className="form-group full-width upload-card-container student-photo-upload">
+                                    <label>
+                                        <Upload size={16} />
+                                        Student Photo *
+                                    </label>
+
+                                    <div className="photo-upload-layout">
+                                        <div className="student-photo-preview">
+                                            {formData.studentPhoto ? (
+                                                <img src={formData.studentPhoto} alt="Student preview" />
+                                            ) : (
+                                                <div className="photo-placeholder">
+                                                    <FileText size={26} />
+                                                    <span>Photo</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="file-drop-zone">
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png"
+                                                required={!formData.studentPhoto}
+                                                onChange={(e) => handleFileUpload(e, 'studentPhoto')}
+                                            />
+                                            <div className="drop-zone-text">
+                                                <span>{formData.studentPhoto ? 'Student photo attached' : 'Click to upload student photo'}</span>
+                                                <small>JPG/PNG only. Use a clear recent passport-size photo.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div className="form-group full-width upload-card-container">
                                     <label>
@@ -1439,43 +1397,43 @@ export default function AdmissionForm({
                                     '11th Std',
                                     '12th Std'
                                 ].includes(formData.grade) && (
-                                    <div className="form-group full-width upload-card-container">
-                                        <label>
-                                            <Upload size={16} />
-                                            Transfer Certificate (TC) —
-                                            Required for {formData.grade} *
-                                        </label>
+                                        <div className="form-group full-width upload-card-container">
+                                            <label>
+                                                <Upload size={16} />
+                                                Transfer Certificate (TC) —
+                                                Required for {formData.grade} *
+                                            </label>
 
-                                        <div className="file-drop-zone">
-                                            <input
-                                                type="file"
-                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                required={
-                                                    !formData.tcFile
-                                                }
-                                                onChange={(e) =>
-                                                    handleFileUpload(
-                                                        e,
-                                                        'tcFile'
-                                                    )
-                                                }
-                                            />
+                                            <div className="file-drop-zone">
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                    required={
+                                                        !formData.tcFile
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleFileUpload(
+                                                            e,
+                                                            'tcFile'
+                                                        )
+                                                    }
+                                                />
 
-                                            <div className="drop-zone-text">
-                                                <span>
-                                                    {formData.tcFile
-                                                        ? 'File attached successfully'
-                                                        : 'Click to browse or drop file here'}
-                                                </span>
+                                                <div className="drop-zone-text">
+                                                    <span>
+                                                        {formData.tcFile
+                                                            ? 'File attached successfully'
+                                                            : 'Click to browse or drop file here'}
+                                                    </span>
 
-                                                <small>
-                                                    JPG/PNG are compressed to Base64.
-                                                    PDF must be under 180 KB.
-                                                </small>
+                                                    <small>
+                                                        JPG/PNG are compressed to Base64.
+                                                        PDF must be under 180 KB.
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
                             </div>
                         )}
 
@@ -1502,6 +1460,36 @@ export default function AdmissionForm({
                                     </div>
 
                                     <div className="summary-item">
+                                        <span className="sum-label">DOB (Password)</span>
+                                        <span className="sum-val">{formData.dob || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Blood Group</span>
+                                        <span className="sum-val">{formData.bloodGroup || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Gender</span>
+                                        <span className="sum-val">{formData.gender || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Roll Number</span>
+                                        <span className="sum-val">{formData.rollNumber || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Email Address</span>
+                                        <span className="sum-val">{formData.email || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Status</span>
+                                        <span className="sum-val">{formData.status}</span>
+                                    </div>
+
+                                    <div className="summary-item">
                                         <span className="sum-label">
                                             Grade Applied
                                         </span>
@@ -1520,12 +1508,18 @@ export default function AdmissionForm({
                                     </div>
 
                                     <div className="summary-item">
-                                        <span className="sum-label">
-                                            Phone Number
-                                        </span>
-                                        <span className="sum-val">
-                                            {formData.phone}
-                                        </span>
+                                        <span className="sum-label">Relationship</span>
+                                        <span className="sum-val">{formData.parentRelationship || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Phone Number</span>
+                                        <span className="sum-val">{formData.phone || '—'}</span>
+                                    </div>
+
+                                    <div className="summary-item">
+                                        <span className="sum-label">Parent Phone</span>
+                                        <span className="sum-val">{formData.parentPhone || '—'}</span>
                                     </div>
 
                                     <div className="summary-item full-span">
@@ -1582,10 +1576,9 @@ export default function AdmissionForm({
                                     <div
                                         className="adm-reg-progress-fill"
                                         style={{
-                                            width: `${
-                                                (step / 4) *
+                                            width: `${(step / 4) *
                                                 100
-                                            }%`
+                                                }%`
                                         }}
                                     />
                                 </div>

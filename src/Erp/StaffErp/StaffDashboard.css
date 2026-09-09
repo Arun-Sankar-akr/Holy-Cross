@@ -1047,7 +1047,7 @@ textarea:focus {
         bottom: 0;
         width: 270px !important;
         min-width: 270px !important;
-        height: 100vh;
+        height: fit-content;
         transform: translateX(-105%);
         transition: .28s;
         z-index: 300;
@@ -6547,4 +6547,305 @@ body::after {
 .stat-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 18px 35px rgba(84, 105, 150, .12) !important;
+}
+
+/* =========================================================
+   STAFF DASHBOARD — PREMIUM THEME SYSTEM + FULL REDESIGN
+   ========================================================= */
+:root {
+    --sd-bg: #f5f7fb;
+    --sd-surface: #ffffff;
+    --sd-surface-2: #f8faff;
+    --sd-text: #182033;
+    --sd-muted: #718096;
+    --sd-line: #e4e8f1;
+    --sd-primary: #5b5cf0;
+    --sd-primary-2: #7c5cff;
+    --sd-accent: #17b897;
+    --sd-danger: #ef5b78;
+    --sd-shadow: 0 18px 50px rgba(39, 48, 92, .10);
+    --sd-sidebar-1: #20264a;
+    --sd-sidebar-2: #10152e;
+}
+
+html[data-theme="dark"] {
+    --sd-bg: #0b1020;
+    --sd-surface: #12192b;
+    --sd-surface-2: #182138;
+    --sd-text: #f2f5ff;
+    --sd-muted: #9aa6c0;
+    --sd-line: #27324b;
+    --sd-primary: #7c83ff;
+    --sd-primary-2: #9a78ff;
+    --sd-accent: #35d7ad;
+    --sd-danger: #ff718d;
+    --sd-shadow: 0 22px 60px rgba(0, 0, 0, .34);
+    --sd-sidebar-1: #151b38;
+    --sd-sidebar-2: #080c1d;
+}
+
+body {
+    background: var(--sd-bg) !important;
+    color: var(--sd-text);
+    transition: background .35s ease, color .35s ease;
+}
+
+.dashboard-containers {
+    background: var(--sd-surface) !important;
+    border-color: var(--sd-line) !important;
+    box-shadow: var(--sd-shadow) !important;
+    transition: background .35s ease, border-color .35s ease, box-shadow .35s ease;
+}
+
+.dashboard-main {
+    background: var(--sd-bg) !important;
+}
+
+.dashboard-sidebar {
+    background: linear-gradient(160deg, var(--sd-sidebar-1), var(--sd-sidebar-2)) !important;
+}
+
+.dashboard-topbar {
+    background: color-mix(in srgb, var(--sd-surface) 94%, transparent) !important;
+    border-color: var(--sd-line) !important;
+    backdrop-filter: blur(18px);
+}
+
+.search-bar,
+.icon-btn {
+    background: var(--sd-surface-2) !important;
+    color: var(--sd-muted) !important;
+    border: 1px solid var(--sd-line);
+}
+
+.search-bar input {
+    color: var(--sd-text) !important;
+}
+
+.search-bar input::placeholder {
+    color: var(--sd-muted) !important;
+}
+
+.icon-btn:hover {
+    background: color-mix(in srgb, var(--sd-primary) 14%, var(--sd-surface)) !important;
+    color: var(--sd-primary) !important;
+}
+
+.notification-dropdown,
+.profile-dropdown {
+    background: var(--sd-surface) !important;
+    border-color: var(--sd-line) !important;
+    color: var(--sd-text);
+    box-shadow: var(--sd-shadow);
+}
+
+.dropdown-header {
+    background: var(--sd-surface-2) !important;
+    border-color: var(--sd-line) !important;
+}
+
+.notify-item {
+    border-color: var(--sd-line) !important;
+}
+
+.dashboard-content {
+    background: transparent;
+}
+
+.dash-card,
+.dashboard-content,
+.dashboard-sidebar,
+.class-card,
+.section-card,
+.student-card,
+.task-card,
+.leave-item,
+.syllabus-admin-card,
+.timetable-card,
+.analytics-stat {
+    background: var(--sd-surface) !important;
+    color: var(--sd-text);
+    border-color: var(--sd-line) !important;
+    box-shadow: 0 8px 25px rgba(30, 40, 80, .05);
+    transition: background .3s ease, border-color .3s ease, transform .25s ease, box-shadow .25s ease;
+}
+
+.dash-card:hover,
+.class-card:hover,
+.task-card:hover,
+.timetable-card:hover {
+    box-shadow: var(--sd-shadow);
+}
+
+.card-header,
+.card-footer {
+    border-color: var(--sd-line) !important;
+}
+
+.subtitle,
+.student-meta,
+.task-card p,
+.class-details span,
+.announcement-item span {
+    color: var(--sd-muted) !important;
+}
+
+.stat-card {
+    border-color: var(--sd-line) !important;
+    color: var(--sd-text);
+}
+
+.stat-card:nth-child(1),
+.stat-card:nth-child(2),
+.stat-card:nth-child(3),
+.stat-card:nth-child(4) {
+    background: linear-gradient(135deg, var(--sd-surface), var(--sd-surface-2)) !important;
+}
+
+.stat-title,
+.form-group label,
+.data-table th {
+    color: var(--sd-muted) !important;
+}
+
+.data-table th {
+    background: var(--sd-surface-2) !important;
+}
+
+.data-table td {
+    border-color: var(--sd-line) !important;
+    color: var(--sd-text);
+}
+
+.data-table tr:hover td {
+    background: color-mix(in srgb, var(--sd-primary) 6%, var(--sd-surface)) !important;
+}
+
+.time-pill,
+.badge-count {
+    background: color-mix(in srgb, var(--sd-primary) 15%, var(--sd-surface)) !important;
+    color: var(--sd-primary) !important;
+}
+
+.section-card,
+.student-card,
+.task-card {
+    color: var(--sd-text);
+}
+
+.custom-select,
+.filter-select,
+.form-control,
+.grade-input,
+input[type="date"],
+.assignment-form input,
+.assignment-form select,
+.assignment-form textarea,
+.leave-form input,
+.leave-form select,
+.leave-form textarea {
+    background: var(--sd-surface-2) !important;
+    color: var(--sd-text) !important;
+    border-color: var(--sd-line) !important;
+}
+
+.custom-select option,
+.filter-select option {
+    background: var(--sd-surface);
+    color: var(--sd-text);
+}
+
+.btn-secondary,
+.btn-save-draft {
+    background: var(--sd-surface-2) !important;
+    color: var(--sd-text) !important;
+    border: 1px solid var(--sd-line);
+}
+
+.empty-state,
+.empty-sub-card {
+    background: var(--sd-surface-2) !important;
+    color: var(--sd-muted) !important;
+    border-color: var(--sd-line) !important;
+}
+
+.modal-overlay {
+    background: rgba(4, 8, 20, .62) !important;
+    backdrop-filter: blur(10px);
+}
+
+.modal-content {
+    background: var(--sd-surface) !important;
+    color: var(--sd-text);
+    border: 1px solid var(--sd-line);
+}
+
+/* premium overview */
+.welcome-banner {
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 18px 40px rgba(79, 92, 220, .20);
+}
+
+.stats-grid .stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-grid .stat-card::after {
+    content: "";
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    right: -35px;
+    bottom: -45px;
+    background: color-mix(in srgb, var(--sd-primary) 10%, transparent);
+}
+
+.quick-link-item {
+    border: 1px solid var(--sd-line) !important;
+    background: var(--sd-surface) !important;
+    color: var(--sd-text) !important;
+    border-radius: 14px !important;
+    transition: .25s ease;
+}
+
+.quick-link-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sd-shadow);
+    border-color: color-mix(in srgb, var(--sd-primary) 45%, var(--sd-line)) !important;
+}
+
+/* theme-aware mobile */
+@media(max-width:760px) {
+    .dashboard-containers {
+        border-radius: 0 !important;
+    }
+
+    .dashboard-main {
+        background: var(--sd-bg) !important;
+    }
+
+    .dashboard-topbar {
+        background: var(--sd-surface) !important;
+    }
+
+    .dashboard-content {
+        padding: 16px 12px 28px !important;
+    }
+
+    .welcome-banner {
+        border-radius: 18px !important;
+    }
+
+    .dash-card {
+        border-radius: 17px !important;
+    }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    * {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
 }

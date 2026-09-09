@@ -28,7 +28,7 @@ export default function StaffDashboard() {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
     const [examHallMenuOpen, setExamHallMenuOpen] = useState(true);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('holy-cross-theme') === 'dark');
     const [showAiHint, setShowAiHint] = useState(false);
     const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
     const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date().toDateString());
@@ -213,6 +213,14 @@ export default function StaffDashboard() {
     ];
 
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const theme = isDarkMode ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        localStorage.setItem('holy-cross-theme', theme);
+    }, [isDarkMode]);
+
 
     useEffect(() => {
         const storedUser = localStorage.getItem('staffUser');
@@ -563,7 +571,8 @@ export default function StaffDashboard() {
         if (allStudentsScanned) { setScannerStatus('All allocated students have already been verified for this hall.'); return undefined; }
         let cancelled = false; const scanner = new Html5Qrcode('hall-ticket-qr-reader'); hallTicketScannerRef.current = scanner;
         const startScanner = async () => {
-            try { const cameras = await Html5Qrcode.getCameras(); if (!cameras?.length) throw new Error('No camera found'); const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0]; if (cancelled) return;
+            try {
+                const cameras = await Html5Qrcode.getCameras(); if (!cameras?.length) throw new Error('No camera found'); const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0]; if (cancelled) return;
                 await scanner.start(preferred.id, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, async (decodedText) => {
                     if (scanProcessingRef.current) return;
                     scanProcessingRef.current = true;
@@ -576,7 +585,7 @@ export default function StaffDashboard() {
                         scanProcessingRef.current = false;
                         setScannerStatus('Point the camera at the next student\'s hall-ticket QR code');
                     }, 1800);
-                }, () => {});
+                }, () => { });
                 if (!cancelled) setScannerStatus('Point the camera at the student hall-ticket QR code');
             } catch (error) { console.error('Unable to start hall-ticket QR scanner:', error); if (!cancelled) setScannerStatus('Camera unavailable. Please allow camera permission and try again.'); }
         };
@@ -585,7 +594,7 @@ export default function StaffDashboard() {
             cancelled = true; clearTimeout(timer);
             if (scanPopupTimerRef.current) { clearTimeout(scanPopupTimerRef.current); scanPopupTimerRef.current = null; }
             const activeScanner = hallTicketScannerRef.current; hallTicketScannerRef.current = null;
-            if (activeScanner) activeScanner.stop().catch(() => {}).finally(() => activeScanner.clear());
+            if (activeScanner) activeScanner.stop().catch(() => { }).finally(() => activeScanner.clear());
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showHallTicketScanner]);
@@ -597,7 +606,7 @@ export default function StaffDashboard() {
         setScannerResult(null);
         setScannerStatus('All allocated students have been verified for this hall.');
         const activeScanner = hallTicketScannerRef.current;
-        if (activeScanner && activeScanner.isScanning) activeScanner.stop().catch(() => {});
+        if (activeScanner && activeScanner.isScanning) activeScanner.stop().catch(() => { });
     }, [allStudentsScanned, showHallTicketScanner]);
 
     const myLeaveRequests = staffLeaveList.filter(item =>
@@ -2016,7 +2025,7 @@ export default function StaffDashboard() {
                                 onClick={() => setIsDarkMode(!isDarkMode)}
                                 aria-label="Toggle dark mode"
                             >
-                                <Moon size={17} />
+                                {isDarkMode ? <Sparkles size={17} /> : <Moon size={17} />}
                             </button>
 
                             <div className="notification-wrapper" style={{ position: 'relative' }}>
@@ -2863,91 +2872,91 @@ export default function StaffDashboard() {
                                     <p>You have no class/subject assigned in the timetable yet. Please contact the admin to get a timetable assignment before entering marks.</p>
                                 </div>
                             ) : (
-                            <div className="form-grid marks-four-col-grid">
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={selectedClass || ''}
-                                        onChange={(e) => {
-                                            const cls = e.target.value;
-                                            setSelectedClass(cls);
-                                            setSelectedSection(null);
-                                            const nextSubjects = getMyTaughtSubjectsForClass(cls, null);
-                                            if (!nextSubjects.includes(selectedSubject)) {
-                                                setSelectedSubject(nextSubjects[0] || '');
-                                            }
-                                            setMarksActionStatus('');
-                                        }}
-                                    >
-                                        {myTaughtClasses.map(cls => (
-                                            <option key={cls} value={cls}>{cls}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Section</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={selectedSection ? selectedSection.name : ''}
-                                        onChange={(e) => {
-                                            const secName = e.target.value;
-                                            if (!secName) {
+                                <div className="form-grid marks-four-col-grid">
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={selectedClass || ''}
+                                            onChange={(e) => {
+                                                const cls = e.target.value;
+                                                setSelectedClass(cls);
                                                 setSelectedSection(null);
-                                            } else {
-                                                const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
-                                                setSelectedSection(match || { name: secName });
-                                            }
-                                            const nextSubjects = getMyTaughtSubjectsForClass(selectedClass, secName || null);
-                                            if (!nextSubjects.includes(selectedSubject)) {
-                                                setSelectedSubject(nextSubjects[0] || '');
-                                            }
-                                            setMarksActionStatus('');
-                                        }}
-                                        disabled={!selectedClass}
-                                    >
-                                        <option value="">All My Sections</option>
-                                        {sectionsList
-                                            .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
-                                            .map(sec => (
-                                                <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                                const nextSubjects = getMyTaughtSubjectsForClass(cls, null);
+                                                if (!nextSubjects.includes(selectedSubject)) {
+                                                    setSelectedSubject(nextSubjects[0] || '');
+                                                }
+                                                setMarksActionStatus('');
+                                            }}
+                                        >
+                                            {myTaughtClasses.map(cls => (
+                                                <option key={cls} value={cls}>{cls}</option>
                                             ))}
-                                    </select>
-                                </div>
+                                        </select>
+                                    </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Exam Type</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={examType}
-                                        onChange={(e) => {
-                                            setExamType(e.target.value);
-                                            setMarksActionStatus('');
-                                        }}
-                                    >
-                                        {examList.map(exam => (
-                                            <option key={exam} value={exam}>{exam}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Section</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={selectedSection ? selectedSection.name : ''}
+                                            onChange={(e) => {
+                                                const secName = e.target.value;
+                                                if (!secName) {
+                                                    setSelectedSection(null);
+                                                } else {
+                                                    const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
+                                                    setSelectedSection(match || { name: secName });
+                                                }
+                                                const nextSubjects = getMyTaughtSubjectsForClass(selectedClass, secName || null);
+                                                if (!nextSubjects.includes(selectedSubject)) {
+                                                    setSelectedSubject(nextSubjects[0] || '');
+                                                }
+                                                setMarksActionStatus('');
+                                            }}
+                                            disabled={!selectedClass}
+                                        >
+                                            <option value="">All My Sections</option>
+                                            {sectionsList
+                                                .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
+                                                .map(sec => (
+                                                    <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                                ))}
+                                        </select>
+                                    </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Subject</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={selectedSubject}
-                                        onChange={(e) => {
-                                            setSelectedSubject(e.target.value);
-                                            setMarksActionStatus('');
-                                        }}
-                                    >
-                                        {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
-                                            <option key={subj} value={subj}>{subj}</option>
-                                        ))}
-                                    </select>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Exam Type</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={examType}
+                                            onChange={(e) => {
+                                                setExamType(e.target.value);
+                                                setMarksActionStatus('');
+                                            }}
+                                        >
+                                            {examList.map(exam => (
+                                                <option key={exam} value={exam}>{exam}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Subject</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={selectedSubject}
+                                            onChange={(e) => {
+                                                setSelectedSubject(e.target.value);
+                                                setMarksActionStatus('');
+                                            }}
+                                        >
+                                            {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
+                                                <option key={subj} value={subj}>{subj}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
                             <div className="table-responsive">
@@ -4480,9 +4489,9 @@ export default function StaffDashboard() {
                                                 <span><Users size={14} /> {item.studentCount || item.studentIds?.length || 0} Students</span>
                                             </div>
                                             <button type="button" className="btn-primary" style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px' }} onClick={() => openHallTicketScanner(item)}>
-                                                 <Search size={16} /> Scan Hall Ticket QR
-                                             </button>
-                                             {Array.isArray(item.studentList) && item.studentList.length > 0 && (
+                                                <Search size={16} /> Scan Hall Ticket QR
+                                            </button>
+                                            {Array.isArray(item.studentList) && item.studentList.length > 0 && (
                                                 <div className="exam-hall-student-list">
                                                     {item.studentList.map((student, idx) => (
                                                         <div key={student.id || idx} className="exam-hall-student-item">

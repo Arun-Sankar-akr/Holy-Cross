@@ -222,7 +222,7 @@
         box-shadow 0.15s ease;
 }
 
-.announcement-link span{
+.announcement-link span {
     font-weight: 700;
     color: #0f172a;
 }
@@ -477,5 +477,203 @@
     .notice-modal {
         padding: 1.5rem;
         border-radius: 14px;
+    }
+}
+
+/* =========================================================
+   THEME SYSTEM — LIGHT / DARK MODE
+   Controlled by: html[data-theme="light"] / html[data-theme="dark"]
+   ========================================================= */
+
+.announcements-section,
+.announcements-grid,
+.announcement-card,
+.notice-modal,
+.announcements-loading,
+.no-announcements,
+.notice-modal-close {
+    transition:
+        background-color .3s ease,
+        color .3s ease,
+        border-color .3s ease,
+        box-shadow .3s ease;
+}
+
+/* Light mode — explicit values so the board stays correct even when
+   the rest of the site changes its global variables. */
+html[data-theme="light"] .announcements-section {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+html[data-theme="light"] .announcements-grid {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+}
+
+html[data-theme="light"] .announcement-card {
+    border-bottom-color: #f1f5f9;
+}
+
+html[data-theme="light"] .announcement-card:hover {
+    background: #f8fafc;
+}
+
+html[data-theme="light"] .announcement-text,
+html[data-theme="light"] .header-title h2 {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .announcement-link span {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .notice-modal-overlay {
+    background: rgba(15, 23, 42, .55);
+}
+
+html[data-theme="light"] .notice-modal {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, .22);
+}
+
+html[data-theme="light"] .notice-modal-close {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Dark mode */
+html[data-theme="dark"] .announcements-section {
+    background:
+        radial-gradient(circle at 12% 0%, rgba(79, 70, 229, .10), transparent 34%),
+        radial-gradient(circle at 90% 100%, rgba(236, 72, 153, .07), transparent 32%),
+        #070b14;
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .announcements-grid {
+    background: rgba(15, 23, 42, .82);
+    border-color: rgba(148, 163, 184, .18);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    backdrop-filter: blur(18px);
+}
+
+html[data-theme="dark"] .announcement-card {
+    border-bottom-color: rgba(148, 163, 184, .12);
+}
+
+html[data-theme="dark"] .announcement-card:hover {
+    background: rgba(30, 41, 59, .72);
+}
+
+html[data-theme="dark"] .announcement-text,
+html[data-theme="dark"] .header-title h2 {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .announcement-link span {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .announcement-link:hover span {
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .read-more {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .announcement-card:hover .read-more {
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .date-tag {
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, .13);
+    border-color: rgba(129, 140, 248, .22);
+}
+
+html[data-theme="dark"] .live-badge {
+    background: rgba(16, 185, 129, .11);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, .20);
+}
+
+html[data-theme="dark"] .announcements-loading,
+html[data-theme="dark"] .no-announcements {
+    background: rgba(15, 23, 42, .72);
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, .22);
+}
+
+html[data-theme="dark"] .notice-modal-overlay {
+    background: rgba(2, 6, 23, .78);
+    backdrop-filter: blur(8px);
+}
+
+html[data-theme="dark"] .notice-modal {
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, .18);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, .55);
+}
+
+html[data-theme="dark"] .notice-modal-content {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .notice-modal-close {
+    background: #1e293b;
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .notice-modal-close:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+html[data-theme="dark"] .notice-modal-tag {
+    color: #a5b4fc;
+}
+
+/* Give the board a slightly richer glass effect on larger screens. */
+@media (min-width: 769px) {
+    html[data-theme="dark"] .announcements-grid {
+        border-radius: 16px;
+    }
+
+    html[data-theme="dark"] .announcement-card:hover {
+        box-shadow: inset 3px 0 0 rgba(129, 140, 248, .75);
+    }
+}
+
+/* Mobile dark mode */
+@media (max-width: 520px) {
+    html[data-theme="dark"] .announcements-section {
+        background: #070b14;
+    }
+
+    html[data-theme="dark"] .announcements-grid {
+        border-radius: 12px;
+    }
+
+    html[data-theme="dark"] .notice-modal {
+        background: #0b1220;
+        border-color: rgba(148, 163, 184, .16);
+    }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+
+    .announcements-section,
+    .announcements-grid,
+    .announcement-card,
+    .notice-modal,
+    .announcements-loading,
+    .no-announcements,
+    .notice-modal-close {
+        transition: none !important;
     }
 }

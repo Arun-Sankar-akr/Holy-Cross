@@ -195,7 +195,7 @@ export default function Navbar() {
 }
 
 function ThemeSwitch({ theme, onToggle }) {
-    const isLight = theme === 'light';
+    const isLight = theme === 'dark';
 
     return (
         <button
