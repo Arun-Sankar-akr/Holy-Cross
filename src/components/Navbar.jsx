@@ -1,16 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, Sun, Moon } from 'lucide-react';
 import logo from '../assets/logo.png';
 import './Navbar.css';
+
+const THEME_KEY = 'holy-cross-theme';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [theme, setTheme] = useState(() => {
+        try {
+            return localStorage.getItem(THEME_KEY) || 'dark';
+        } catch {
+            return 'dark';
+        }
+    });
 
     const navRef = useRef(null);
     const location = useLocation();
+
+    useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        try {
+            localStorage.setItem(THEME_KEY, theme);
+        } catch { }
+    }, [theme]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -18,19 +35,14 @@ export default function Navbar() {
                 setOpenDropdown(null);
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 30);
-        };
-
-        window.addEventListener('scroll', handleScroll);
+        const handleScroll = () => setScrolled(window.scrollY > 30);
+        handleScroll();
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -40,11 +52,8 @@ export default function Navbar() {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (mobileMenuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
+        document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
     }, [mobileMenuOpen]);
 
     const navItems = [
@@ -104,12 +113,17 @@ export default function Navbar() {
         setOpenDropdown(openDropdown === id ? null : id);
     };
 
+    const toggleTheme = () => {
+        setTheme((current) => current === 'dark' ? 'light' : 'dark');
+    };
+
     return (
         <header ref={navRef} className={`header-root ${scrolled ? 'is-scrolled' : ''}`}>
             <div className="header-container">
-
                 <Link to="/" className="header-brand" onClick={() => setMobileMenuOpen(false)}>
-                    <img src={logo} alt="Holy Cross Logo" className="brand-crest" />
+                    <span className="brand-logo-wrap">
+                        <img src={logo} alt="Holy Cross Logo" className="brand-crest" />
+                    </span>
                     <div className="brand-details">
                         <h1 className="brand-title">HOLY CROSS MATRIC. HR. SEC. SCHOOL</h1>
                         <div className="brand-subline">
@@ -127,40 +141,78 @@ export default function Navbar() {
                                 key={nav.path}
                                 to={nav.path}
                                 className={`nav-link ${location.pathname === nav.path ? 'is-active' : ''}`}
+                                onClick={() => setMobileMenuOpen(false)}
                             >
-                                {nav.title}
+                                <span>{nav.title}</span>
                             </Link>
                         ) : (
                             <div key={nav.id || index} className="nav-dropdown-group">
                                 <button
+                                    type="button"
                                     className={`nav-link ${openDropdown === nav.id ? 'is-active' : ''}`}
                                     onClick={() => toggleDropdown(nav.id)}
+                                    aria-expanded={openDropdown === nav.id}
                                 >
                                     <span>{nav.title}</span>
                                     <ChevronDown size={14} className={`arrow-indicator ${openDropdown === nav.id ? 'is-rotated' : ''}`} />
                                 </button>
-
                                 <div className={`dropdown-panel ${openDropdown === nav.id ? 'is-open' : ''}`}>
                                     {nav.items.map((item) => (
                                         <Link
                                             key={item.path}
                                             to={item.path}
                                             className={`dropdown-link ${location.pathname === item.path ? 'is-active' : ''}`}
+                                            onClick={() => setMobileMenuOpen(false)}
                                         >
-                                            {item.name}
+                                            <span>{item.name}</span>
+                                            <span className="dropdown-arrow">↗</span>
                                         </Link>
                                     ))}
                                 </div>
                             </div>
                         )
                     ))}
+
+                    <div className="nav-theme-item">
+                        <ThemeSwitch theme={theme} onToggle={toggleTheme} />
+                    </div>
                 </nav>
 
-                <button className="mobile-toggle-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                    {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
-                </button>
-
+                <div className="navbar-actions">
+                    <button
+                        type="button"
+                        className="mobile-toggle-btn"
+                        onClick={() => setMobileMenuOpen((open) => !open)}
+                        aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={mobileMenuOpen}
+                    >
+                        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                </div>
             </div>
         </header>
+    );
+}
+
+function ThemeSwitch({ theme, onToggle }) {
+    const isLight = theme === 'light';
+
+    return (
+        <button
+            type="button"
+            className={`theme-switch ${isLight ? 'is-light' : 'is-dark'}`}
+            onClick={onToggle}
+            aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+            aria-pressed={isLight}
+            title={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+        >
+            <span className="theme-switch-track">
+                <span className="theme-switch-glow" />
+                <span className="theme-switch-thumb">
+                    {isLight ? <Sun size={13} /> : <Moon size={13} />}
+                </span>
+            </span>
+            <span className="theme-switch-label">{isLight ? 'Light' : 'Dark'}</span>
+        </button>
     );
 }

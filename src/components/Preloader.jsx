@@ -71,4 +71,4 @@ export default function Preloader({ fadeOut }) {
 
         </div>
     );
-}
+}   

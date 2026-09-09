@@ -1,69 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Poppins:wght@400;500;600&display=swap');
+
 .preloader-overlay {
     position: fixed;
     inset: 0;
-
     width: 100%;
     height: 100vh;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     overflow: hidden;
-
     z-index: 99999;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.13),
-            transparent 38%
-        ),
-        linear-gradient(
-            135deg,
-            #0756a3 0%,
-            #064b91 55%,
-            #063f7c 100%
-        );
-
+    background: #020307;
     opacity: 1;
     visibility: visible;
-
-    transition:
-        opacity 0.65s ease,
-        visibility 0.65s ease;
+    transition: opacity 0.65s ease, visibility 0.65s ease;
 }
 
-
 /* =========================================================
-   SOFT BACKGROUND
+   INTENSE RADIAL METALLIC BACKGROUND GLOW
    ========================================================= */
 
 .preloader-overlay::before {
     content: "";
-
     position: absolute;
     inset: 0;
-
     background:
-        radial-gradient(
-            circle at 20% 20%,
-            rgba(255, 255, 255, 0.08),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 80% 80%,
-            rgba(255, 210, 90, 0.07),
-            transparent 28%
-        );
-
+        radial-gradient(circle at 50% 45%, rgba(180, 210, 255, 0.22) 0%, rgba(120, 160, 220, 0.08) 35%, transparent 70%),
+        radial-gradient(ellipse 600px 300px at 50% 50%, rgba(255, 255, 255, 0.15), transparent 70%);
     pointer-events: none;
 }
 
+.preloader-overlay::after {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background: conic-gradient(from 0deg at 50% 50%,
+            transparent 0deg,
+            rgba(200, 230, 255, 0.08) 45deg,
+            transparent 120deg,
+            rgba(255, 255, 255, 0.05) 200deg,
+            transparent 300deg);
+    animation: sheenDrift 12s linear infinite;
+    pointer-events: none;
+}
 
-/* =========================================================
-   FADE OUT
-   ========================================================= */
+@keyframes sheenDrift {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 .preloader-overlay.fade-out {
     opacity: 0;
@@ -71,46 +60,28 @@
     pointer-events: none;
 }
 
-
 /* =========================================================
-   MAIN CARD
+   MAIN CARD CONTAINER
    ========================================================= */
 
 .preloader-card {
     position: relative;
     z-index: 2;
-
-    width: 300px;
-
+    width: 340px;
     display: flex;
     flex-direction: column;
     align-items: center;
-
     text-align: center;
-
-    padding: 28px 25px 25px;
-
-    border-radius: 18px;
-
-    background:
-        rgba(255, 255, 255, 0.075);
-
-    border: 1px solid rgba(255, 255, 255, 0.15);
-
-    box-shadow:
-        0 25px 70px rgba(0, 25, 65, 0.24),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-
-    backdrop-filter: blur(14px);
-
-    animation: cardAppear 0.7s ease both;
+    padding: 0;
+    background: none;
+    border: none;
+    animation: cardAppear 0.8s ease both;
 }
-
 
 @keyframes cardAppear {
     from {
         opacity: 0;
-        transform: translateY(12px) scale(0.97);
+        transform: translateY(12px) scale(0.96);
     }
 
     to {
@@ -119,343 +90,255 @@
     }
 }
 
-
 /* =========================================================
-   LOGO
+   LOGO & HALO GLOW
    ========================================================= */
 
 .logo-wrapper {
     position: relative;
-
-    width: 92px;
-    height: 92px;
-
+    width: 90px;
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
-
-    margin-bottom: 17px;
+    margin-bottom: 24px;
 }
-
-
-/* Soft glow */
 
 .logo-halo {
     position: absolute;
-
-    width: 90px;
-    height: 90px;
-
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(255, 255, 255, 0.30),
-            transparent 68%
-        );
-
-    filter: blur(8px);
-
-    animation: haloPulse 2.8s ease-in-out infinite;
+    background: radial-gradient(circle, rgba(220, 240, 255, 0.6) 0%, rgba(140, 180, 255, 0.2) 45%, transparent 70%);
+    filter: blur(12px);
+    animation: haloPulse 2.5s ease-in-out infinite;
 }
 
-
 @keyframes haloPulse {
+
     0%,
     100% {
-        opacity: 0.55;
+        opacity: 0.6;
         transform: scale(0.92);
     }
 
     50% {
-        opacity: 0.9;
-        transform: scale(1.06);
+        opacity: 1;
+        transform: scale(1.12);
     }
 }
-
-
-/* White logo background */
 
 .preloader-logo {
     position: relative;
     z-index: 2;
-
-    width: 78px;
-    height: 78px;
-
-    padding: 6px;
-
+    width: 86px;
+    height: 86px;
     object-fit: contain;
-
     border-radius: 50%;
-
-    background: rgba(255, 255, 255, 0.97);
-
-    box-shadow:
-        0 8px 22px rgba(0, 25, 60, 0.24),
-        0 0 0 2px rgba(255, 255, 255, 0.22);
-
-    animation: logoFloat 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.5)) drop-shadow(0 8px 20px rgba(0, 0, 0, 0.7));
+    animation: logoFloat 3s ease-in-out infinite;
 }
 
-
 @keyframes logoFloat {
+
     0%,
     100% {
         transform: translateY(0);
     }
 
     50% {
-        transform: translateY(-3px);
+        transform: translateY(-4px);
     }
 }
 
-
 /* =========================================================
-   SCHOOL INFORMATION
+   SILVER METALLIC & GLOWING TEXT
    ========================================================= */
 
 .school-info {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-
-/* Welcome */
-
 .welcome {
-    margin-bottom: 6px;
-
-    color: #f3cd69;
-
-    font-family:
-        "Poppins",
-        "Outfit",
-        Arial,
-        sans-serif;
-
-    font-size: 0.48rem;
-
+    margin-bottom: 8px;
+    color: rgba(220, 235, 255, 0.6);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.65rem;
     font-weight: 600;
-
-    letter-spacing: 3px;
+    letter-spacing: 6px;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
-
-/* School name */
-
+/* Metallic Chrome Wordmark */
 .school-info h1 {
+    position: relative;
     margin: 0;
-
-    color: #ffffff;
-
-    font-family:
-        "Georgia",
-        "Times New Roman",
-        serif;
-
-    font-size: 1.65rem;
-
-    font-weight: 600;
-
-    letter-spacing: 0.5px;
-
-    line-height: 1.15;
+    font-family: "Baloo 2", sans-serif;
+    font-size: 3.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    text-transform: uppercase;
+    background: linear-gradient(110deg,
+            #9bb0a5 0%,
+            #ffffff 20%,
+            #d1d8e0 35%,
+            #505866 50%,
+            #ffffff 68%,
+            #a4b0be 85%,
+            #ffffff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.4)) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.8));
+    animation: chromeShimmer 3.5s ease-in-out infinite;
 }
 
+@keyframes chromeShimmer {
+    0% {
+        background-position: 0% center;
+    }
 
-/* School type */
+    50% {
+        background-position: 100% center;
+    }
+
+    100% {
+        background-position: 0% center;
+    }
+}
+
+/* Metallic Glow Reflection behind text */
+.school-info h1::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(160, 200, 255, 0.6) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: blur(18px) brightness(1.8);
+    opacity: 0.75;
+}
 
 .school-info p {
-    margin: 5px 0 0;
-
-    color: rgba(255, 255, 255, 0.88);
-
-    font-family:
-        "Poppins",
-        "Outfit",
-        Arial,
-        sans-serif;
-
-    font-size: 0.65rem;
-
-    font-weight: 400;
-
-    letter-spacing: 1px;
+    margin: 10px 0 0;
+    color: rgba(220, 230, 245, 0.7);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
-
-
-/* Location */
 
 .location {
     display: flex;
     align-items: center;
-
-    gap: 7px;
-
-    margin-top: 10px;
-
-    color: rgba(255, 255, 255, 0.52);
-
-    font-family:
-        "Poppins",
-        "Outfit",
-        Arial,
-        sans-serif;
-
-    font-size: 0.48rem;
-
+    gap: 8px;
+    margin-top: 14px;
+    color: rgba(255, 255, 255, 0.45);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.5rem;
     font-weight: 500;
-
-    letter-spacing: 1.5px;
-
+    letter-spacing: 2px;
     text-transform: uppercase;
 }
 
-
 .location span {
-    color: #f3cd69;
-
-    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.4rem;
 }
 
-
 /* =========================================================
-   LOADER
+   PROGRESS BAR & METALLIC LOADER
    ========================================================= */
 
 .loader {
     width: 100%;
-
-    margin-top: 25px;
+    margin-top: 36px;
 }
-
-
-/* Track */
 
 .loader-track {
     position: relative;
-
     width: 100%;
-    height: 2px;
-
+    height: 3px;
     overflow: hidden;
-
     border-radius: 10px;
-
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8);
 }
-
-
-/* Moving progress */
 
 .loader-progress {
     position: absolute;
-
-    left: -35%;
+    left: -40%;
     top: 0;
-
-    width: 35%;
+    width: 40%;
     height: 100%;
-
     border-radius: inherit;
-
-    background:
-        linear-gradient(
-            90deg,
+    background: linear-gradient(90deg,
             transparent,
-            #e8bd52,
-            #fff0a8,
-            #e8bd52
-        );
-
-    box-shadow:
-        0 0 9px rgba(235, 193, 82, 0.7);
-
-    animation:
-        loaderMove 1.45s
-        ease-in-out
-        infinite;
+            rgba(180, 210, 255, 0.6),
+            #ffffff,
+            rgba(180, 210, 255, 0.6),
+            transparent);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.9), 0 0 6px rgba(160, 200, 255, 0.8);
+    animation: loaderMove 1.4s ease-in-out infinite;
 }
-
 
 @keyframes loaderMove {
     from {
-        left: -35%;
+        left: -40%;
     }
 
     to {
-        left: 105%;
+        left: 110%;
     }
 }
 
-
-/* Loader text */
-
 .loader-text {
     display: flex;
-
     align-items: center;
     justify-content: center;
-
-    gap: 5px;
-
-    margin-top: 8px;
-
-    color: rgba(255, 255, 255, 0.40);
-
-    font-family:
-        "Poppins",
-        "Outfit",
-        Arial,
-        sans-serif;
-
-    font-size: 0.45rem;
-
-    letter-spacing: 2px;
-
+    gap: 6px;
+    margin-top: 12px;
+    color: rgba(255, 255, 255, 0.45);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.48rem;
+    letter-spacing: 2.5px;
     text-transform: uppercase;
 }
 
-
-/* =========================================================
-   LOADING DOTS
-   ========================================================= */
-
 .dots {
     display: flex;
-
-    gap: 3px;
-
+    gap: 4px;
     align-items: center;
 }
 
-
 .dots i {
-    width: 3px;
-    height: 3px;
-
+    width: 3.5px;
+    height: 3.5px;
     border-radius: 50%;
-
-    background: #f1cb67;
-
+    background: #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
     animation: dotPulse 1.2s infinite;
 }
 
-
 .dots i:nth-child(2) {
-    animation-delay: 0.15s;
+    animation-delay: 0.18s;
 }
-
 
 .dots i:nth-child(3) {
-    animation-delay: 0.3s;
+    animation-delay: 0.36s;
 }
 
-
 @keyframes dotPulse {
+
     0%,
     70%,
     100% {
@@ -465,158 +348,57 @@
 
     35% {
         opacity: 1;
-        transform: translateY(-2px);
+        transform: translateY(-3px);
     }
 }
 
-
 /* =========================================================
-   BOTTOM MARK
+   BOTTOM ACCENT MARK
    ========================================================= */
 
 .bottom-mark {
     position: absolute;
-
-    bottom: 20px;
+    bottom: 28px;
     left: 50%;
-
     z-index: 3;
-
     display: flex;
     align-items: center;
-
-    gap: 6px;
-
+    gap: 8px;
     transform: translateX(-50%);
 }
 
-
 .bottom-mark span {
-    width: 28px;
+    width: 32px;
     height: 1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 215, 105, 0.5)
-        );
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4));
 }
-
 
 .bottom-mark span:last-child {
-    background:
-        linear-gradient(
-            90deg,
-            rgba(255, 215, 105, 0.5),
-            transparent
-        );
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.4), transparent);
 }
-
 
 .bottom-mark b {
     width: 4px;
     height: 4px;
-
     border-radius: 50%;
-
-    background: #f0c75c;
-
-    box-shadow:
-        0 0 7px rgba(240, 199, 92, 0.65);
+    background: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
 }
 
-
 /* =========================================================
-   MOBILE
+   RESPONSIVE ADJUSTMENTS
    ========================================================= */
 
 @media (max-width: 480px) {
-
     .preloader-card {
-        width: 270px;
-
-        padding:
-            24px
-            20px
-            22px;
-
-        border-radius: 16px;
-    }
-
-    .logo-wrapper {
-        width: 82px;
-        height: 82px;
-
-        margin-bottom: 14px;
-    }
-
-    .logo-halo {
-        width: 80px;
-        height: 80px;
-    }
-
-    .preloader-logo {
-        width: 70px;
-        height: 70px;
+        width: 290px;
     }
 
     .school-info h1 {
-        font-size: 1.48rem;
+        font-size: 2.5rem;
     }
 
     .school-info p {
-        font-size: 0.58rem;
-    }
-
-    .location {
-        font-size: 0.43rem;
-        letter-spacing: 1.2px;
-    }
-
-    .loader {
-        margin-top: 21px;
-    }
-}
-
-
-/* =========================================================
-   VERY SMALL SCREENS
-   ========================================================= */
-
-@media (max-width: 340px) {
-
-    .preloader-card {
-        width: 250px;
-
-        padding: 21px 17px;
-    }
-
-    .school-info h1 {
-        font-size: 1.35rem;
-    }
-
-    .school-info p {
-        font-size: 0.55rem;
-    }
-
-    .location {
-        font-size: 0.39rem;
-    }
-}
-
-
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .preloader-card,
-    .logo-halo,
-    .preloader-logo,
-    .loader-progress,
-    .dots i {
-        animation: none !important;
+        font-size: 0.65rem;
     }
 }
