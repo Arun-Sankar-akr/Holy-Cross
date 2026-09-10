@@ -33,7 +33,7 @@ import {
     Trophy,
     Users,
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -60,6 +60,17 @@ import HomeNoticeBoard from './HomeNoticeBoard';
 import './Home.css';
 
 const schoolCoordinates = [10.8124016, 78.6360993];
+
+// Stylised approach path used purely for the animated "motion tracer" on the map —
+// a decorative arrival route converging on the campus marker, not turn-by-turn directions.
+const routeToSchool = [
+    [10.8181, 78.6291],
+    [10.8163, 78.6312],
+    [10.8149, 78.6328],
+    [10.8136, 78.6344],
+    [10.8129, 78.6353],
+    schoolCoordinates,
+];
 
 const heroImages = [
     { src: campusBg1, caption: 'Main Academic Quadrangle', subtitle: 'Where character meets knowledge every morning' },
@@ -94,6 +105,11 @@ function SectionHeading({ eyebrow, title, description, action, badge }) {
                     </div>
                 )}
                 <h2>{title}</h2>
+                <span className="heading-trace" aria-hidden="true">
+                    <svg viewBox="0 0 100 4" preserveAspectRatio="none">
+                        <path className="heading-trace-path" d="M0,2 L100,2" />
+                    </svg>
+                </span>
                 {description && <p>{description}</p>}
             </div>
             {action && <div className="section-heading-action">{action}</div>}
@@ -103,6 +119,151 @@ function SectionHeading({ eyebrow, title, description, action, badge }) {
 
 function IconBadge({ children, tone = 'blue' }) {
     return <span className={`icon-badge icon-badge-${tone}`}>{children}</span>;
+}
+
+// MOTION TRACER — animated dot that travels along a path on the Leaflet map,
+// looping smoothly using real-world distances so its speed stays constant.
+function RouteMotionTracer({ path, durationMs = 5200 }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || !path || path.length < 2) return;
+
+        const icon = L.divIcon({
+            className: 'route-mover-icon',
+            html: '<span class="route-mover-ring"></span><span class="route-mover-dot"></span>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+        });
+
+        const marker = L.marker(path[0], {
+            icon,
+            interactive: false,
+            keyboard: false,
+            zIndexOffset: 800,
+        }).addTo(map);
+
+        const latlngs = path.map((point) => L.latLng(point));
+        const segmentLengths = [];
+        let totalLength = 0;
+        for (let i = 0; i < latlngs.length - 1; i++) {
+            const dist = latlngs[i].distanceTo(latlngs[i + 1]);
+            segmentLengths.push(dist);
+            totalLength += dist;
+        }
+
+        let rafId;
+        let startTime = null;
+
+        const step = (timestamp) => {
+            if (startTime === null) startTime = timestamp;
+            const elapsed = (timestamp - startTime) % durationMs;
+            const progress = elapsed / durationMs;
+            const targetDistance = progress * totalLength;
+
+            let covered = 0;
+            let point = latlngs[latlngs.length - 1];
+            for (let i = 0; i < segmentLengths.length; i++) {
+                const segLength = segmentLengths[i];
+                if (targetDistance <= covered + segLength || i === segmentLengths.length - 1) {
+                    const segProgress = segLength === 0 ? 0 : (targetDistance - covered) / segLength;
+                    const a = latlngs[i];
+                    const b = latlngs[i + 1];
+                    point = L.latLng(
+                        a.lat + (b.lat - a.lat) * segProgress,
+                        a.lng + (b.lng - a.lng) * segProgress
+                    );
+                    break;
+                }
+                covered += segLength;
+            }
+
+            marker.setLatLng(point);
+            rafId = requestAnimationFrame(step);
+        };
+
+        rafId = requestAnimationFrame(step);
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            map.removeLayer(marker);
+        };
+    }, [map, path, durationMs]);
+
+    return null;
+}
+
+// MOTION TRACER — a lightweight canvas cursor trail that follows the pointer
+// across the whole page with a fading, glowing tail.
+function CursorTracer() {
+    const canvasRef = useRef(null);
+
+    useEffect(() => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        if (prefersReducedMotion || isTouchDevice) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        let width = (canvas.width = window.innerWidth);
+        let height = (canvas.height = window.innerHeight);
+        let points = [];
+        let rafId;
+
+        const handleResize = () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        };
+
+        const handleMove = (event) => {
+            points.push({ x: event.clientX, y: event.clientY, life: 1 });
+            if (points.length > 26) points.shift();
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, width, height);
+
+            points = points
+                .map((point) => ({ ...point, life: point.life - 0.045 }))
+                .filter((point) => point.life > 0);
+
+            for (let i = 1; i < points.length; i++) {
+                const prev = points[i - 1];
+                const curr = points[i];
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.strokeStyle = `rgba(237, 75, 53, ${Math.max(curr.life, 0) * 0.32})`;
+                ctx.lineWidth = Math.max(curr.life * 2.6, 0.5);
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            if (points.length) {
+                const head = points[points.length - 1];
+                ctx.beginPath();
+                ctx.arc(head.x, head.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(237, 75, 53, ${Math.max(head.life, 0) * 0.55})`;
+                ctx.fill();
+            }
+
+            rafId = requestAnimationFrame(draw);
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('mousemove', handleMove, { passive: true });
+        rafId = requestAnimationFrame(draw);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('mousemove', handleMove);
+            cancelAnimationFrame(rafId);
+        };
+    }, []);
+
+    return <canvas ref={canvasRef} className="cursor-tracer-canvas" aria-hidden="true" />;
 }
 
 export default function Home({ setActivePage }) {
@@ -356,11 +517,14 @@ export default function Home({ setActivePage }) {
 
     return (
         <main className="home-page">
+            {/* MOTION TRACER: cursor trail overlay */}
+            <CursorTracer />
+
             {/* AMBIENT BACKGROUND GLOWS */}
             <div className="ambient-glow ambient-glow-1" />
             <div className="ambient-glow ambient-glow-2" />
 
-           
+
 
             {/* HERO SECTION: Prestige Collegiate Showcase */}
             <section className="home-hero video-hero" onMouseMove={handleHeroPointerMove} onMouseLeave={() => setHeroPointer({ x: 0, y: 0 })}>
@@ -385,7 +549,7 @@ export default function Home({ setActivePage }) {
                 <div className="hero-wash" />
                 <div className="hero-mesh-overlay" />
 
-                <div className="hero-layout">
+                <div className="hero-layout hero-layout-centered">
                     <div className="hero-copy">
                         <div className="hero-badge-row">
                             <span className="hero-institution-tag">
@@ -1237,6 +1401,11 @@ export default function Home({ setActivePage }) {
                                 <br />
                                 <em>the journey unfolds.</em>
                             </h2>
+                            <span className="heading-trace" aria-hidden="true">
+                                <svg viewBox="0 0 100 4" preserveAspectRatio="none">
+                                    <path className="heading-trace-path" d="M0,2 L100,2" />
+                                </svg>
+                            </span>
                             <p className="visit-description">
                                 Experience firsthand our campus spirit, interact with our faculty, and discover why
                                 Holy Cross is the ideal haven for your child's education.
@@ -1291,6 +1460,33 @@ export default function Home({ setActivePage }) {
                                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                     maxZoom={19}
                                 />
+                                {/* MOTION TRACER: animated dashed approach route */}
+                                <Polyline
+                                    positions={routeToSchool}
+                                    pathOptions={{
+                                        className: 'route-tracer-path',
+                                        color: '#ed4b35',
+                                        weight: 3,
+                                        opacity: 0.75,
+                                        lineCap: 'round',
+                                    }}
+                                />
+                                <RouteMotionTracer path={routeToSchool} />
+
+                                {/* Radar pulse sitting beneath the campus marker */}
+                                <Marker
+                                    position={schoolCoordinates}
+                                    icon={L.divIcon({
+                                        className: 'radar-pulse-icon',
+                                        html: '<span class="radar-ring radar-ring-1"></span><span class="radar-ring radar-ring-2"></span>',
+                                        iconSize: [1, 1],
+                                        iconAnchor: [0, 0],
+                                    })}
+                                    interactive={false}
+                                    keyboard={false}
+                                    zIndexOffset={-100}
+                                />
+
                                 <Marker position={schoolCoordinates}>
                                     <Popup>
                                         <div className="map-popup-card">

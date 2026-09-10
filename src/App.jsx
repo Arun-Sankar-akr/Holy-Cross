@@ -6,7 +6,8 @@ import Lenis from 'lenis';
 import ProtectedRoute from './Erp/StaffErp/ProtectedRoute';
 import StdProtectedRoute from './Erp/StudentErp/StdProtectedRoute'
 
-import Preloader from './components/Preloader';
+// import Preloader from './components/Preloader';
+import Preloader from './components/Preload';
 
 // Header & Footer
 import Navbar from './components/Navbar';
