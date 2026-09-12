@@ -1,4 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Poppins:wght@400;500;600&display=swap');
+@font-face {
+    font-family: 'Nasalization';
+    /* Since it's in the public folder, the root path '/' points directly to public */
+    src: url('/fonts/Nasalization Rg') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 
 .preloader-overlay {
     position: fixed;

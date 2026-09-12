@@ -8,6 +8,58 @@
   font-family: var(--font-family);
 }
 
+@font-face {
+  font-family: 'Nasalization';
+  /* Since it's in the public folder, the root path '/' points directly to public */
+  src: url('../public/fonts/Nasalization\ Rg.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body,
+#root,
+.app-container {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%233b82f6'/%3E%3Cstop offset='100%25' stop-color='%230f172a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 5 27 16 16.5 18.5 12.5 29Z' fill='%230f172a' opacity='.25'/%3E%3Cpath d='M7 4 26 15 15.5 17.5 11.5 28Z' fill='url(%23g1)' stroke='%23fff' stroke-width='1.4' stroke-linejoin='round'/%3E%3Ccircle cx='24.5' cy='9' r='2.3' fill='%23f59e0b' stroke='%23fff' stroke-width='.8'/%3E%3C/svg%3E") 6 4, auto;
+}
+
+a,
+button,
+select,
+summary,
+link,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g2' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='100%25' stop-color='%23d97706'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M9 6 28 17 17.5 19.5 13.5 30Z' fill='%230f172a' opacity='.25'/%3E%3Cpath d='M8 5 27 16 16.5 18.5 12.5 29Z' fill='url(%23g2)' stroke='%230f172a' stroke-width='1.3' stroke-linejoin='round'/%3E%3Ccircle cx='8' cy='5' r='2.1' fill='%23fff'/%3E%3C/svg%3E") 6 4, pointer;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+input[type="url"],
+input[type="date"],
+input[type="time"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+/* html,
+body,
+#root,
+.app-container {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M6 24.5 7.8 19 21.7 5.1a3 3 0 0 1 4.2 0l1 1a3 3 0 0 1 0 4.2L13 24.2 7.3 26z' fill='%23f59e0b' stroke='%230f172a' stroke-width='1.5'/%3E%3Cpath d='m20.2 6.6 5.2 5.2' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='m6 24.5 1.3-3.9 3 3z' fill='%23f8fafc' stroke='%230f172a' stroke-width='1.2'/%3E%3Cpath d='m7.1 20.8 2.1 2.1' stroke='%230f172a' stroke-width='1.2'/%3E%3C/svg%3E") 2 28, auto;
+} */
+
+
 body,
 button,
 input,

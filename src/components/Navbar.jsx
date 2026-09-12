@@ -10,12 +10,14 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
     const [theme, setTheme] = useState(() => {
         try {
-            return localStorage.getItem(THEME_KEY) || 'dark';
-        } catch {
-            return 'dark';
-        }
+            const saved = localStorage.getItem(THEME_KEY);
+            if (saved === 'light' || saved === 'dark') return saved;
+        } catch { }
+
+        return document.documentElement.dataset.theme || 'dark';
     });
 
     const navRef = useRef(null);
@@ -24,6 +26,7 @@ export default function Navbar() {
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
+
         try {
             localStorage.setItem(THEME_KEY, theme);
         } catch { }
@@ -35,15 +38,25 @@ export default function Navbar() {
                 setOpenDropdown(null);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 30);
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 30);
+        };
+
         handleScroll();
         window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
     }, []);
 
     useEffect(() => {
@@ -53,64 +66,79 @@ export default function Navbar() {
 
     useEffect(() => {
         document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
-        return () => { document.body.style.overflow = ''; };
+
+        return () => {
+            document.body.style.overflow = '';
+        };
     }, [mobileMenuOpen]);
 
     const navItems = [
         { title: 'Home', path: '/', type: 'link' },
         {
-            title: 'About Us', id: 'school', type: 'dropdown',
+            title: 'About Us',
+            id: 'school',
+            type: 'dropdown',
             items: [
                 { name: 'Administrators', path: '/school/administrators' },
                 { name: 'Rules & Regulations', path: '/school/rules' },
                 { name: 'School Strength', path: '/school/pupil-strength' },
-            ]
+            ],
         },
         {
-            title: 'Academics', id: 'academics', type: 'dropdown',
+            title: 'Academics',
+            id: 'academics',
+            type: 'dropdown',
             items: [
                 { name: 'Academic Calendar', path: '/school/calendar' },
                 { name: 'Holidays List', path: '/school/holiday' },
                 { name: 'Exam Toppers', path: '/school/toppers' },
-            ]
+            ],
         },
         {
-            title: 'Staffs', id: 'staffs', type: 'dropdown',
+            title: 'Staffs',
+            id: 'staffs',
+            type: 'dropdown',
             items: [
                 { name: 'Teaching Staff', path: '/staffs/teaching' },
                 { name: 'Non-Teaching Staff', path: '/staffs/non-teaching' },
                 { name: 'Staff Committees', path: '/staffs/committees' },
-            ]
+            ],
         },
         { title: 'Gallery', path: '/gallery', type: 'link' },
         {
-            title: 'Services & Amenities', id: 'service', type: 'dropdown',
+            title: 'Services & Amenities',
+            id: 'service',
+            type: 'dropdown',
             items: [
                 { name: 'Library', path: '/school/service-library' },
                 { name: 'Transport', path: '/school/service-transport' },
                 { name: 'Hostel', path: '/school/service-hostel' },
-            ]
+            ],
         },
         {
-            title: 'Alumni Network', id: 'alumni', type: 'dropdown',
+            title: 'Alumni Network',
+            id: 'alumni',
+            type: 'dropdown',
             items: [
                 { name: 'About Alumni', path: '/alumni/notable' },
                 { name: 'Registration', path: '/alumni/registration' },
                 { name: 'Alumni Meets', path: '/alumni/meets' },
-            ]
+            ],
         },
         {
-            title: 'ERP', id: 'erp', type: 'dropdown',
+            title: 'ERP',
+            id: 'erp',
+            type: 'dropdown',
             items: [
                 { name: 'Staff', path: '/erp/staff' },
                 { name: 'Student', path: '/erp/student' },
-            ]
+            ],
         },
         { title: 'Admissions 2026', path: '/admissions', type: 'link' },
     ];
 
     const toggleDropdown = (id) => {
-        setOpenDropdown(openDropdown === id ? null : id);
+        setOpenDropdown((current) => current === id ? null : id);
     };
 
     const toggleTheme = () => {
@@ -118,50 +146,86 @@ export default function Navbar() {
     };
 
     return (
-        <header ref={navRef} className={`header-root ${scrolled ? 'is-scrolled' : ''}`}>
+        <header
+            ref={navRef}
+            className={`header-root ${scrolled ? 'is-scrolled' : ''}`}
+        >
             <div className="header-container">
-                <Link to="/" className="header-brand" onClick={() => setMobileMenuOpen(false)}>
+                <Link
+                    to="/"
+                    className="header-brand"
+                    onClick={() => setMobileMenuOpen(false)}
+                >
                     <span className="brand-logo-wrap">
-                        <img src={logo} alt="Holy Cross Logo" className="brand-crest" />
+                        <img
+                            src={logo}
+                            alt="Holy Cross Logo"
+                            className="brand-crest"
+                        />
                     </span>
+
                     <div className="brand-details">
-                        <h1 className="brand-title">HOLY CROSS MATRIC. HR. SEC. SCHOOL</h1>
+                        <h1 className="brand-title">
+                            HOLY CROSS MATRIC. HR. SEC. SCHOOL
+                        </h1>
+
                         <div className="brand-subline">
-                            <span className="subline-divider"></span>
-                            <span className="subline-text">SOMARASAMPETTAI • TIRUCHIRAPPALLI</span>
-                            <span className="subline-divider"></span>
+                            <span className="subline-divider" />
+                            <span className="subline-text">
+                                SOMARASAMPETTAI • TIRUCHIRAPPALLI
+                            </span>
+                            <span className="subline-divider" />
                         </div>
                     </div>
                 </Link>
 
-                <nav className={`header-nav ${mobileMenuOpen ? 'is-mobile-open' : ''}`}>
+                <nav
+                    className={`header-nav ${mobileMenuOpen ? 'is-mobile-open' : ''}`}
+                >
                     {navItems.map((nav, index) => (
                         nav.type === 'link' ? (
                             <Link
                                 key={nav.path}
                                 to={nav.path}
-                                className={`nav-link ${location.pathname === nav.path ? 'is-active' : ''}`}
+                                className={`nav-link ${location.pathname === nav.path ? 'is-active' : ''
+                                    }`}
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 <span>{nav.title}</span>
                             </Link>
                         ) : (
-                            <div key={nav.id || index} className="nav-dropdown-group">
+                            <div
+                                key={nav.id || index}
+                                className="nav-dropdown-group"
+                            >
                                 <button
                                     type="button"
-                                    className={`nav-link ${openDropdown === nav.id ? 'is-active' : ''}`}
+                                    className={`nav-link ${openDropdown === nav.id ? 'is-active' : ''
+                                        }`}
                                     onClick={() => toggleDropdown(nav.id)}
                                     aria-expanded={openDropdown === nav.id}
                                 >
                                     <span>{nav.title}</span>
-                                    <ChevronDown size={14} className={`arrow-indicator ${openDropdown === nav.id ? 'is-rotated' : ''}`} />
+
+                                    <ChevronDown
+                                        size={14}
+                                        className={`arrow-indicator ${openDropdown === nav.id ? 'is-rotated' : ''
+                                            }`}
+                                    />
                                 </button>
-                                <div className={`dropdown-panel ${openDropdown === nav.id ? 'is-open' : ''}`}>
+
+                                <div
+                                    className={`dropdown-panel ${openDropdown === nav.id ? 'is-open' : ''
+                                        }`}
+                                >
                                     {nav.items.map((item) => (
                                         <Link
                                             key={item.path}
                                             to={item.path}
-                                            className={`dropdown-link ${location.pathname === item.path ? 'is-active' : ''}`}
+                                            className={`dropdown-link ${location.pathname === item.path
+                                                    ? 'is-active'
+                                                    : ''
+                                                }`}
                                             onClick={() => setMobileMenuOpen(false)}
                                         >
                                             <span>{item.name}</span>
@@ -174,7 +238,10 @@ export default function Navbar() {
                     ))}
 
                     <div className="nav-theme-item">
-                        <ThemeSwitch theme={theme} onToggle={toggleTheme} />
+                        <ThemeSwitch
+                            theme={theme}
+                            onToggle={toggleTheme}
+                        />
                     </div>
                 </nav>
 
@@ -195,7 +262,7 @@ export default function Navbar() {
 }
 
 function ThemeSwitch({ theme, onToggle }) {
-    const isLight = theme === 'dark';
+    const isLight = theme === 'light';
 
     return (
         <button
@@ -208,11 +275,15 @@ function ThemeSwitch({ theme, onToggle }) {
         >
             <span className="theme-switch-track">
                 <span className="theme-switch-glow" />
+
                 <span className="theme-switch-thumb">
                     {isLight ? <Sun size={13} /> : <Moon size={13} />}
                 </span>
             </span>
-            <span className="theme-switch-label">{isLight ? 'Light' : 'Dark'}</span>
+
+            <span className="theme-switch-label">
+                {isLight ? 'Light' : 'Dark'}
+            </span>
         </button>
     );
 }

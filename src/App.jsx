@@ -65,6 +65,7 @@ import ProgressReport from "./Erp/ProgressReport";
 import './App.css';
 import HallTicket from './components/HallTicket';
 import ExamTimetableViewer from './components/Examtimetableviewer';
+import CustomCursor from './components/Customcursor';
 
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
@@ -117,6 +118,8 @@ function AppContent({ loading, fadeOut }) {
       {loading && <Preloader fadeOut={fadeOut} />}
 
       <div className="app-container">
+        <CustomCursor />
+
         {/* Navbar stays across all routes */}
         <Navbar />
 
