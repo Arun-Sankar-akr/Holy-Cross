@@ -759,6 +759,18 @@ td {
   border: 1px solid rgba(244, 63, 94, 0.25);
 }
 
+.status-half {
+  background: var(--accent-amber-bg);
+  color: var(--accent-amber);
+  border: 1px solid rgba(217, 147, 50, 0.3);
+}
+
+.status-pending {
+  background: var(--dash-bg);
+  color: var(--dash-text-muted);
+  border: 1px solid var(--dash-border);
+}
+
 /* Compact Timetable */
 .student-timetable-wrapper {
   overflow-x: auto;
@@ -3851,6 +3863,7 @@ td {
   align-self: center;
   white-space: nowrap;
 }
+
 /* =========================================================
    Attendance Summary & Session Logs — dedicated restyle
    Everything below is scoped under .attendance-section so it
@@ -3951,8 +3964,13 @@ td {
   transition: all 0.2s ease;
 }
 
-.attendance-ring-card.is-good { border-color: rgba(25, 169, 116, 0.3); }
-.attendance-ring-card.is-low { border-color: rgba(232, 76, 118, 0.3); }
+.attendance-ring-card.is-good {
+  border-color: rgba(25, 169, 116, 0.3);
+}
+
+.attendance-ring-card.is-low {
+  border-color: rgba(232, 76, 118, 0.3);
+}
 
 .attendance-ring {
   --pct: 0;
@@ -3983,9 +4001,17 @@ td {
   color: var(--dash-text-main);
 }
 
-.attendance-ring-card.is-good .attendance-ring { --ring-color: var(--accent-emerald); }
-.attendance-ring-card.is-low .attendance-ring { --ring-color: var(--accent-rose); }
-.attendance-ring-card.is-neutral .attendance-ring { --ring-color: var(--dash-text-muted); }
+.attendance-ring-card.is-good .attendance-ring {
+  --ring-color: var(--accent-emerald);
+}
+
+.attendance-ring-card.is-low .attendance-ring {
+  --ring-color: var(--accent-rose);
+}
+
+.attendance-ring-card.is-neutral .attendance-ring {
+  --ring-color: var(--dash-text-muted);
+}
 
 .attendance-ring-meta {
   display: flex;
@@ -4009,7 +4035,7 @@ td {
 
 .attendance-mini-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.75rem;
 }
 
@@ -4030,12 +4056,27 @@ td {
   box-shadow: var(--dash-shadow);
 }
 
-.attendance-mini-stat svg { flex-shrink: 0; }
-.attendance-mini-stat.stat-good svg { color: var(--accent-emerald); }
-.attendance-mini-stat.stat-bad svg { color: var(--accent-rose); }
-.attendance-mini-stat.stat-neutral svg { color: var(--dash-primary); }
+.attendance-mini-stat svg {
+  flex-shrink: 0;
+}
 
-.attendance-mini-stat > div {
+.attendance-mini-stat.stat-good svg {
+  color: var(--accent-emerald);
+}
+
+.attendance-mini-stat.stat-bad svg {
+  color: var(--accent-rose);
+}
+
+.attendance-mini-stat.stat-neutral svg {
+  color: var(--dash-primary);
+}
+
+.attendance-mini-stat.stat-half svg {
+  color: var(--accent-amber);
+}
+
+.attendance-mini-stat>div {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
@@ -4271,6 +4312,7 @@ td {
 }
 
 @media (max-width: 768px) {
+
   /* Darkened backdrop behind the sliding sidebar drawer */
   .staff-sidebar-overlay {
     display: block;
@@ -4537,7 +4579,7 @@ body {
   border: 1px solid var(--glass-line) !important;
   border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.88), rgba(247,250,255,.70)) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(247, 250, 255, .70)) !important;
   box-shadow: 0 22px 55px rgba(82, 103, 150, 0.13) !important;
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
@@ -4550,7 +4592,7 @@ body {
   position: absolute;
   inset: 0 0 auto 0;
   height: 92px;
-  background: linear-gradient(135deg, rgba(124,115,255,.18), rgba(40,169,214,.12), rgba(239,101,173,.10));
+  background: linear-gradient(135deg, rgba(124, 115, 255, .18), rgba(40, 169, 214, .12), rgba(239, 101, 173, .10));
   pointer-events: none;
 }
 
@@ -4559,10 +4601,10 @@ body {
   z-index: 1;
   margin-bottom: 18px;
   padding: 12px;
-  border: 1px solid rgba(255,255,255,.9) !important;
+  border: 1px solid rgba(255, 255, 255, .9) !important;
   border-radius: 20px;
-  background: rgba(255,255,255,.70) !important;
-  box-shadow: 0 8px 24px rgba(93,110,150,.08);
+  background: rgba(255, 255, 255, .70) !important;
+  box-shadow: 0 8px 24px rgba(93, 110, 150, .08);
   backdrop-filter: blur(16px);
 }
 
@@ -4571,7 +4613,7 @@ body {
   height: 44px;
   border-radius: 15px;
   background: linear-gradient(135deg, #7c73ff, #28a9d6, #ef65ad) !important;
-  box-shadow: 0 8px 18px rgba(108,99,255,.22);
+  box-shadow: 0 8px 18px rgba(108, 99, 255, .22);
 }
 
 .staff-user-info h4 {
@@ -4613,15 +4655,15 @@ body {
 .staff-nav-item:hover {
   transform: translateX(4px);
   color: var(--dash-primary) !important;
-  background: rgba(240,239,255,.78) !important;
-  border-color: rgba(108,99,255,.10);
+  background: rgba(240, 239, 255, .78) !important;
+  border-color: rgba(108, 99, 255, .10);
 }
 
 .staff-nav-item.active {
   color: #5c53e8 !important;
   background: linear-gradient(100deg, #f0efff, #f8f7ff) !important;
   border-color: #dedbff !important;
-  box-shadow: 0 9px 22px rgba(108,99,255,.10);
+  box-shadow: 0 9px 22px rgba(108, 99, 255, .10);
 }
 
 .staff-nav-item.active::before {
@@ -4638,7 +4680,7 @@ body {
 .staff-sidebar-footer {
   position: relative;
   z-index: 1;
-  border-top: 1px solid rgba(118,136,177,.15);
+  border-top: 1px solid rgba(118, 136, 177, .15);
 }
 
 .staff-signout-btn {
@@ -4650,7 +4692,7 @@ body {
 
 .staff-signout-btn:hover {
   color: #fff !important;
-  background: linear-gradient(135deg,#f36b88,#ef65ad) !important;
+  background: linear-gradient(135deg, #f36b88, #ef65ad) !important;
 }
 
 /* ---------- Workspace ---------- */
@@ -4659,10 +4701,10 @@ body {
   min-width: 0;
   margin-top: 20px;
   padding: 18px;
-  border: 1px solid rgba(255,255,255,.82) !important;
+  border: 1px solid rgba(255, 255, 255, .82) !important;
   border-radius: 30px;
-  background: rgba(255,255,255,.48) !important;
-  box-shadow: 0 18px 55px rgba(83,103,148,.08) !important;
+  background: rgba(255, 255, 255, .48) !important;
+  box-shadow: 0 18px 55px rgba(83, 103, 148, .08) !important;
   backdrop-filter: blur(18px) saturate(145%);
   -webkit-backdrop-filter: blur(18px) saturate(145%);
 }
@@ -4677,16 +4719,16 @@ body {
 .staff-search-input-group {
   width: min(360px, 42vw);
   padding: 10px 14px;
-  border: 1px solid rgba(125,143,181,.16) !important;
+  border: 1px solid rgba(125, 143, 181, .16) !important;
   border-radius: 16px;
-  background: rgba(255,255,255,.78) !important;
-  box-shadow: 0 8px 22px rgba(85,106,151,.07) !important;
+  background: rgba(255, 255, 255, .78) !important;
+  box-shadow: 0 8px 22px rgba(85, 106, 151, .07) !important;
   backdrop-filter: blur(15px);
 }
 
 .staff-search-input-group:focus-within {
   border-color: #bdb8ff !important;
-  box-shadow: 0 0 0 4px rgba(108,99,255,.08), 0 10px 25px rgba(85,106,151,.08) !important;
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, .08), 0 10px 25px rgba(85, 106, 151, .08) !important;
 }
 
 .staff-search-input-group input {
@@ -4708,11 +4750,11 @@ body {
 .menu-toggle-btn {
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(125,143,181,.15) !important;
+  border: 1px solid rgba(125, 143, 181, .15) !important;
   border-radius: 13px;
-  background: rgba(255,255,255,.80) !important;
+  background: rgba(255, 255, 255, .80) !important;
   color: #687894 !important;
-  box-shadow: 0 7px 18px rgba(85,106,151,.07);
+  box-shadow: 0 7px 18px rgba(85, 106, 151, .07);
 }
 
 .topbar-icon-btn:hover,
@@ -4731,13 +4773,13 @@ body {
 .staff-welcome-card {
   min-height: 150px;
   padding: 24px 26px;
-  border: 1px solid rgba(255,255,255,.72);
+  border: 1px solid rgba(255, 255, 255, .72);
   border-radius: 26px;
   background:
-    radial-gradient(circle at 92% 15%, rgba(255,255,255,.35), transparent 22%),
-    radial-gradient(circle at 72% 100%, rgba(239,101,173,.20), transparent 30%),
+    radial-gradient(circle at 92% 15%, rgba(255, 255, 255, .35), transparent 22%),
+    radial-gradient(circle at 72% 100%, rgba(239, 101, 173, .20), transparent 30%),
     linear-gradient(120deg, #746bff 0%, #7188ff 48%, #54b9d7 100%) !important;
-  box-shadow: 0 20px 45px rgba(100,104,220,.20) !important;
+  box-shadow: 0 20px 45px rgba(100, 104, 220, .20) !important;
 }
 
 .staff-welcome-card::after {
@@ -4748,8 +4790,8 @@ body {
   right: 13%;
   top: -100px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,.30);
-  box-shadow: 0 0 0 22px rgba(255,255,255,.05), 0 0 0 45px rgba(255,255,255,.04);
+  border: 1px solid rgba(255, 255, 255, .30);
+  box-shadow: 0 0 0 22px rgba(255, 255, 255, .05), 0 0 0 45px rgba(255, 255, 255, .04);
 }
 
 .staff-welcome-card h2 {
@@ -4766,9 +4808,9 @@ body {
   z-index: 2;
   padding: 10px 14px;
   border-radius: 15px;
-  background: rgba(255,255,255,.20);
-  border: 1px solid rgba(255,255,255,.38);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+  background: rgba(255, 255, 255, .20);
+  border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28);
 }
 
 /* ---------- Colorful stat cards ---------- */
@@ -4785,10 +4827,10 @@ body {
   padding: 17px;
   align-items: flex-start;
   text-align: left;
-  border: 1px solid rgba(255,255,255,.85) !important;
+  border: 1px solid rgba(255, 255, 255, .85) !important;
   border-radius: 21px;
-  background: rgba(255,255,255,.76) !important;
-  box-shadow: 0 12px 28px rgba(84,105,150,.08) !important;
+  background: rgba(255, 255, 255, .76) !important;
+  box-shadow: 0 12px 28px rgba(84, 105, 150, .08) !important;
   overflow: hidden;
   backdrop-filter: blur(15px);
 }
@@ -4804,19 +4846,41 @@ body {
   opacity: .65;
 }
 
-.staff-stat-box:nth-child(1)::after { background: #dff9ef; }
-.staff-stat-box:nth-child(2)::after { background: #e9e7ff; }
-.staff-stat-box:nth-child(3)::after { background: #fff0df; }
-.staff-stat-box:nth-child(4)::after { background: #e5f7fd; }
+.staff-stat-box:nth-child(1)::after {
+  background: #dff9ef;
+}
 
-.staff-stat-box:nth-child(1) { border-top: 3px solid #20ba8a !important; }
-.staff-stat-box:nth-child(2) { border-top: 3px solid #7168ff !important; }
-.staff-stat-box:nth-child(3) { border-top: 3px solid #f0a33a !important; }
-.staff-stat-box:nth-child(4) { border-top: 3px solid #28a9d6 !important; }
+.staff-stat-box:nth-child(2)::after {
+  background: #e9e7ff;
+}
+
+.staff-stat-box:nth-child(3)::after {
+  background: #fff0df;
+}
+
+.staff-stat-box:nth-child(4)::after {
+  background: #e5f7fd;
+}
+
+.staff-stat-box:nth-child(1) {
+  border-top: 3px solid #20ba8a !important;
+}
+
+.staff-stat-box:nth-child(2) {
+  border-top: 3px solid #7168ff !important;
+}
+
+.staff-stat-box:nth-child(3) {
+  border-top: 3px solid #f0a33a !important;
+}
+
+.staff-stat-box:nth-child(4) {
+  border-top: 3px solid #28a9d6 !important;
+}
 
 .staff-stat-box:hover {
   transform: translateY(-5px);
-  box-shadow: 0 18px 35px rgba(84,105,150,.12) !important;
+  box-shadow: 0 18px 35px rgba(84, 105, 150, .12) !important;
 }
 
 .stat-head {
@@ -4850,21 +4914,21 @@ body {
 
 .staff-card {
   padding: 17px;
-  border: 1px solid rgba(255,255,255,.84) !important;
+  border: 1px solid rgba(255, 255, 255, .84) !important;
   border-radius: 23px;
-  background: rgba(255,255,255,.76) !important;
-  box-shadow: 0 12px 32px rgba(84,105,150,.075) !important;
+  background: rgba(255, 255, 255, .76) !important;
+  box-shadow: 0 12px 32px rgba(84, 105, 150, .075) !important;
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
 }
 
 .staff-card:hover {
-  box-shadow: 0 17px 38px rgba(84,105,150,.10) !important;
+  box-shadow: 0 17px 38px rgba(84, 105, 150, .10) !important;
 }
 
 .card-header {
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(119,139,180,.12);
+  border-bottom: 1px solid rgba(119, 139, 180, .12);
 }
 
 .card-header h3 {
@@ -4894,25 +4958,25 @@ body {
   position: relative;
   min-height: 145px;
   padding: 15px;
-  border: 1px solid rgba(108,99,255,.13) !important;
+  border: 1px solid rgba(108, 99, 255, .13) !important;
   border-radius: 19px;
-  background: linear-gradient(145deg, rgba(244,242,255,.92), rgba(255,255,255,.78)) !important;
-  box-shadow: 0 8px 22px rgba(84,105,150,.06);
+  background: linear-gradient(145deg, rgba(244, 242, 255, .92), rgba(255, 255, 255, .78)) !important;
+  box-shadow: 0 8px 22px rgba(84, 105, 150, .06);
 }
 
 .assignment-display-card:nth-child(3n+2) {
-  background: linear-gradient(145deg, rgba(233,249,253,.94), rgba(255,255,255,.78)) !important;
-  border-color: rgba(40,169,214,.15) !important;
+  background: linear-gradient(145deg, rgba(233, 249, 253, .94), rgba(255, 255, 255, .78)) !important;
+  border-color: rgba(40, 169, 214, .15) !important;
 }
 
 .assignment-display-card:nth-child(3n+3) {
-  background: linear-gradient(145deg, rgba(255,243,247,.94), rgba(255,255,255,.78)) !important;
-  border-color: rgba(239,101,173,.15) !important;
+  background: linear-gradient(145deg, rgba(255, 243, 247, .94), rgba(255, 255, 255, .78)) !important;
+  border-color: rgba(239, 101, 173, .15) !important;
 }
 
 .assignment-display-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 16px 30px rgba(84,105,150,.11);
+  box-shadow: 0 16px 30px rgba(84, 105, 150, .11);
 }
 
 .assignment-display-card h4 {
@@ -4923,8 +4987,8 @@ body {
 .view-pdf-link {
   padding: 8px 12px;
   border-radius: 11px;
-  background: linear-gradient(135deg,#6c63ff,#8c79ff) !important;
-  box-shadow: 0 7px 15px rgba(108,99,255,.18) !important;
+  background: linear-gradient(135deg, #6c63ff, #8c79ff) !important;
+  box-shadow: 0 7px 15px rgba(108, 99, 255, .18) !important;
 }
 
 /* ---------- Notice / task cards ---------- */
@@ -4936,11 +5000,11 @@ body {
 
 .student-notice-item,
 .student-task-item {
-  border: 1px solid rgba(119,139,180,.13) !important;
+  border: 1px solid rgba(119, 139, 180, .13) !important;
   border-left: 4px solid #6c63ff !important;
   border-radius: 14px;
-  background: rgba(248,250,255,.72) !important;
-  box-shadow: 0 6px 16px rgba(84,105,150,.045);
+  background: rgba(248, 250, 255, .72) !important;
+  box-shadow: 0 6px 16px rgba(84, 105, 150, .045);
 }
 
 .student-notice-item:nth-child(2n) {
@@ -4964,10 +5028,10 @@ body {
 .marks-table-wrapper,
 .attendance-table-wrap,
 .ht-table-wrap {
-  border: 1px solid rgba(119,139,180,.14) !important;
+  border: 1px solid rgba(119, 139, 180, .14) !important;
   border-radius: 18px;
-  background: rgba(255,255,255,.72) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+  background: rgba(255, 255, 255, .72) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75);
 }
 
 .student-timetable-table th,
@@ -4975,7 +5039,7 @@ body {
 .attendance-log-table th {
   background: #f4f5fb !important;
   color: #687894 !important;
-  border-color: rgba(119,139,180,.12) !important;
+  border-color: rgba(119, 139, 180, .12) !important;
 }
 
 .student-timetable-table td,
@@ -4984,17 +5048,17 @@ body {
 .custom-marks-table th,
 .attendance-log-table td,
 .attendance-log-table th {
-  border-color: rgba(119,139,180,.11) !important;
+  border-color: rgba(119, 139, 180, .11) !important;
 }
 
 .slot-td {
-  background: rgba(255,255,255,.62) !important;
+  background: rgba(255, 255, 255, .62) !important;
 }
 
 .student-slot-card {
   border-top: 3px solid #6c63ff;
   border-radius: 10px;
-  background: linear-gradient(145deg,#f0efff,#fafaff) !important;
+  background: linear-gradient(145deg, #f0efff, #fafaff) !important;
 }
 
 /* ---------- Buttons / pills / controls ---------- */
@@ -5005,15 +5069,15 @@ body {
 .ps-header-btn,
 .hall-ticket-action-btn {
   border-radius: 12px !important;
-  border-color: rgba(119,139,180,.18) !important;
-  background: rgba(255,255,255,.82) !important;
+  border-color: rgba(119, 139, 180, .18) !important;
+  background: rgba(255, 255, 255, .82) !important;
   color: #52627d !important;
 }
 
 .custom-select:focus,
 .attendance-select:focus {
   border-color: #bcb7ff !important;
-  box-shadow: 0 0 0 4px rgba(108,99,255,.08) !important;
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, .08) !important;
 }
 
 .status-present {
@@ -5028,6 +5092,18 @@ body {
   border-color: #ffd5df !important;
 }
 
+.status-half {
+  color: #b9791f !important;
+  background: #fdf3e0 !important;
+  border-color: #f6dfb2 !important;
+}
+
+.status-pending {
+  color: #6b7a99 !important;
+  background: #f2f4fa !important;
+  border-color: rgba(119, 139, 180, .18) !important;
+}
+
 /* ---------- Floating action ---------- */
 
 .floating-action-fab {
@@ -5035,29 +5111,29 @@ body {
   bottom: 26px;
   padding: 11px 17px;
   border-radius: 16px;
-  background: linear-gradient(135deg,#6c63ff,#28a9d6) !important;
-  box-shadow: 0 14px 30px rgba(91,99,210,.22) !important;
+  background: linear-gradient(135deg, #6c63ff, #28a9d6) !important;
+  box-shadow: 0 14px 30px rgba(91, 99, 210, .22) !important;
 }
 
 /* ---------- Notification glass ---------- */
 
 .notif-drawer-dropdown {
-  border: 1px solid rgba(255,255,255,.86) !important;
+  border: 1px solid rgba(255, 255, 255, .86) !important;
   border-radius: 20px;
-  background: rgba(255,255,255,.90) !important;
-  box-shadow: 0 22px 55px rgba(69,88,132,.15) !important;
+  background: rgba(255, 255, 255, .90) !important;
+  box-shadow: 0 22px 55px rgba(69, 88, 132, .15) !important;
   backdrop-filter: blur(24px);
 }
 
 .notif-drawer-item {
   background: #f6f8fd !important;
-  border: 1px solid rgba(119,139,180,.08);
+  border: 1px solid rgba(119, 139, 180, .08);
 }
 
 /* ---------- Modal / overlay surfaces ---------- */
 
 .staff-sidebar-overlay {
-  background: rgba(120,135,170,.20) !important;
+  background: rgba(120, 135, 170, .20) !important;
   backdrop-filter: blur(5px);
 }
 
@@ -5065,8 +5141,8 @@ body {
 .empty-sub-card,
 .bulletin-card,
 .hall-ticket-card {
-  background: rgba(255,255,255,.80) !important;
-  border-color: rgba(119,139,180,.14) !important;
+  background: rgba(255, 255, 255, .80) !important;
+  border-color: rgba(119, 139, 180, .14) !important;
   color: var(--dash-text-main) !important;
 }
 
@@ -5101,11 +5177,22 @@ body {
   }
 
   .staff-sidebar {
+
     position: fixed;
-    width: 250px;
-    min-width: 210px;
-    min-height: 100vh;
-    margin-top: 60px;
+    top: 78px;
+    width: 248px;
+    min-width: 248px;
+    height: fit-content;
+    padding: 18px 14px;
+    border: 1px solid var(--glass-line) !important;
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(247, 250, 255, .70)) !important;
+    box-shadow: 0 22px 55px rgba(82, 103, 150, 0.13) !important;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    color: var(--dash-text-main) !important;
+    overflow: hidden;
   }
 
   .staff-welcome-card {
@@ -5132,7 +5219,7 @@ body {
     min-height: 100vh;
     padding: 12px;
     border-radius: 0;
-    background: rgba(255,255,255,.42) !important;
+    background: rgba(255, 255, 255, .42) !important;
     box-shadow: none !important;
   }
 
@@ -5153,7 +5240,7 @@ body {
   }
 
   .staff-stats-grid {
-    grid-template-columns: repeat(2, minmax(0,1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -5164,7 +5251,7 @@ body {
   }
 
   .student-assignments-grid {
-    grid-template-columns: repeat(2, minmax(0,1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .staff-card {
@@ -5176,8 +5263,8 @@ body {
 @media (max-width: 540px) {
   .staff-style-dashboard {
     background:
-      radial-gradient(circle at 100% 0, rgba(124,115,255,.13), transparent 28%),
-      linear-gradient(160deg,#f9fbff,#f5f8ff 60%,#fff8fc) !important;
+      radial-gradient(circle at 100% 0, rgba(124, 115, 255, .13), transparent 28%),
+      linear-gradient(160deg, #f9fbff, #f5f8ff 60%, #fff8fc) !important;
   }
 
   .staff-main-workspace {
@@ -5270,6 +5357,7 @@ body {
 
 /* Respect reduced-motion accessibility preference. */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -5277,5 +5365,166 @@ body {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+/* ==============================================================
+   PREMIUM MOBILE SIDEBAR — full-height drawer, all items reachable
+   ----------------------------------------------------------------
+   Root cause of "only 5 options visible": later rules in this file
+   (the glass-sidebar redesign + the max-width:992px block) redefine
+   .staff-sidebar with `overflow: hidden` and `height: fit-content`,
+   silently overriding the earlier `overflow-y:auto` mobile rule.
+   With position:fixed + height:fit-content, the drawer grew taller
+   than the screen and simply clipped the extra nav items with no
+   way to reach them.
+
+   Fix: give the drawer a real viewport-locked height again, keep
+   the profile header and sign-out footer pinned, and let ONLY the
+   nav list scroll — with the scrollbar hidden and a soft top/bottom
+   fade so it still reads as scrollable. Placed at the very end of
+   the file on purpose so it wins the cascade over every earlier
+   .staff-sidebar rule above.
+   ============================================================== */
+:root {
+  --mobile-topbar-h: 60px;
+}
+
+@media (max-width: 768px) {
+
+  .staff-mobile-toggle-bar {
+    min-height: var(--mobile-topbar-h);
+    background-color: rgba(255, 255, 255, 0.86) !important;
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+
+  [data-theme='dark'] .staff-mobile-toggle-bar {
+    background-color: rgba(28, 27, 44, 0.86) !important;
+  }
+
+  .menu-toggle-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid var(--dash-primary-border);
+    background: var(--dash-primary-light);
+    color: var(--dash-primary);
+    transition: transform .18s ease;
+  }
+
+  .menu-toggle-btn:active {
+    transform: scale(.92);
+  }
+
+  /* Lock the drawer to the actual viewport height again */
+  .staff-sidebar {
+    top: var(--mobile-topbar-h) !important;
+    bottom: 0 !important;
+    height: calc(100vh - var(--mobile-topbar-h)) !important;
+    height: calc(100dvh - var(--mobile-topbar-h)) !important;
+    max-height: unset !important;
+    width: 82vw !important;
+    max-width: 302px !important;
+    border-radius: 0 26px 26px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 18px 12px 14px !important;
+  }
+
+  /* Header + footer stay put; only the nav list scrolls */
+  .staff-sidebar .staff-user-profile {
+    flex: 0 0 auto;
+  }
+
+  .staff-sidebar .staff-nav-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 4px 2px 10px;
+    margin: 0 -2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+
+  .staff-sidebar .staff-nav-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .staff-sidebar .staff-nav-item {
+    padding: 12px 14px;
+    font-size: .82rem;
+  }
+
+  .staff-sidebar .staff-nav-item:active {
+    transform: scale(.97);
+  }
+
+  .staff-sidebar-footer {
+    flex: 0 0 auto;
+    padding-top: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ==============================================================
+   Class Timetable — working Print / Export controls
+   --------------------------------------------------------------
+   Two clear actions instead of one button that only printed a
+   blank page: a ghost "Export CSV" button and a solid "Print"
+   button. The on-screen letterhead/meta lines (.timetable-print-*)
+   stay hidden here and are only revealed by the print stylesheet
+   inside the component (see the injected <style> + @page rule).
+   ============================================================== */
+.schedule-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--dash-surface);
+  color: var(--dash-text-main);
+  border: 1px solid var(--dash-border);
+  padding: 6px 12px;
+  border-radius: 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-schedule-btn:hover {
+  background: var(--dash-bg);
+  border-color: var(--dash-primary-border);
+  color: var(--dash-primary);
+}
+
+.timetable-print-header,
+.timetable-print-meta,
+.timetable-print-footer {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .schedule-header-actions {
+    width: 100%;
+  }
+
+  .export-schedule-btn,
+  .print-schedule-btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }

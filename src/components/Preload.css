@@ -266,6 +266,10 @@
     .preloader-card {
         width: 92vw;
     }
+
+    #name{
+        font-size: 50px;
+    }
 }
 
 @media (max-width: 920px) {
@@ -273,5 +277,9 @@
         font-family: "Outfit", sans-serif;
         font-size: clamp(1.5rem, 6.4vw, 8.5rem);
         font-weight: 700;
+    }
+
+       #name{
+        font-size: 40px;
     }
 }

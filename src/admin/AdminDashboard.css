@@ -6797,3 +6797,419 @@ body {
     justify-content: center;
   }
 }
+
+/* ============================================================
+   USER DIRECTORY CARDS (Students / Staff) — compact premium, light theme
+   ============================================================ */
+
+.directory-form-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.directory-form-close-btn:hover {
+  background: var(--rose-light);
+  color: var(--rose);
+  border-color: var(--rose);
+}
+
+/* ---------- Toolbar ---------- */
+
+.directory-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.directory-search-input,
+.directory-select {
+  flex: 1 1 180px;
+  min-width: 150px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.directory-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.directory-search-input:focus,
+.directory-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  background: #fff;
+}
+
+.directory-select {
+  flex: 0 1 200px;
+  cursor: pointer;
+}
+
+.directory-btn-search,
+.directory-btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.directory-btn-search {
+  background: linear-gradient(135deg, #22c1dc, #2563eb);
+  color: #fff;
+}
+
+.directory-btn-reset {
+  background: linear-gradient(135deg, #fb5b5b, #e02424);
+  color: #fff;
+}
+
+.directory-btn-search:hover,
+.directory-btn-reset:hover {
+  filter: brightness(1.06);
+}
+
+.directory-btn-search:active,
+.directory-btn-reset:active {
+  transform: translateY(1px);
+}
+
+.directory-showing-text {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin: 0 0 10px 2px;
+}
+
+/* ---------- Grid ---------- */
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 520px) {
+  .directory-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ---------- Add New tile ---------- */
+
+.directory-add-card {
+  border-radius: var(--radius-md);
+  background: #fbfbfe;
+  border: 1.5px dashed var(--border-strong);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px 14px 0;
+  min-height: 168px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.directory-add-card:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.directory-add-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.directory-add-card:hover .directory-add-icon {
+  background: var(--primary);
+  color: #fff;
+}
+
+.directory-add-card h5 {
+  margin: 0 0 3px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.directory-add-card p {
+  margin: 0 0 14px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.directory-add-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--primary-light);
+  padding: 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Directory card ---------- */
+
+.directory-card {
+  position: relative;
+  border-radius: var(--radius-md);
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.directory-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop);
+  border-color: var(--border-strong);
+}
+
+.directory-delete-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(30, 41, 59, 0.12);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.directory-card:hover .directory-delete-corner {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.directory-delete-corner:hover {
+  background: var(--rose);
+  color: #fff;
+}
+
+.directory-card-top {
+  background: linear-gradient(180deg, #fafbff 0%, #f4f5fb 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+}
+
+/* Subtle accent tint rotation so the grid isn't visually flat */
+.directory-card:nth-child(4n+2) .directory-card-top {
+  background: linear-gradient(180deg, #f8fbff 0%, #eff5fd 100%);
+}
+
+.directory-card:nth-child(4n+3) .directory-card-top {
+  background: linear-gradient(180deg, #fbfaff 0%, #f4f1fd 100%);
+}
+
+.directory-card:nth-child(4n) .directory-card-top {
+  background: linear-gradient(180deg, #fbfdfa 0%, #f0f8f1 100%);
+}
+
+.directory-avatar-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+}
+
+.directory-avatar-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--border-strong);
+  display: block;
+}
+
+.directory-avatar-fallback {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--border-strong);
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.directory-status-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 2px solid #fff;
+}
+
+.directory-status-dot.inactive {
+  background: var(--text-muted);
+}
+
+.directory-card-name {
+  margin: 2px 0 3px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1.25;
+}
+
+.directory-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.directory-pill-alt {
+  background: var(--purple-light);
+  color: #6d3fc9;
+}
+
+.directory-card-details {
+  padding: 8px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.directory-card-details .staff-detail-item {
+  font-size: 0.72rem;
+  color: var(--text-soft);
+}
+
+.directory-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+}
+
+.directory-action-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  border-right: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.directory-action-btn:last-child {
+  border-right: none;
+}
+
+.directory-action-btn.view {
+  color: var(--blue);
+}
+
+.directory-action-btn.message {
+  color: var(--green);
+}
+
+.directory-action-btn.edit {
+  color: var(--amber);
+}
+
+.directory-action-btn:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.directory-action-btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}

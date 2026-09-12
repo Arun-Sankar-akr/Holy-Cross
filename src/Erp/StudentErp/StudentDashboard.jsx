@@ -1003,19 +1003,67 @@ export default function StudentDashboard() {
     const hasStaffSubmittedAttendance = attendanceLogs.length > 0;
     const latestAttendance = attendanceLogs.length > 0 ? attendanceLogs[0] : null;
     const currentAttendanceStatus = latestAttendance?.status || "pending";
-    const totalWorkingDays = attendanceLogs.length;
 
-    const presentDaysCount = attendanceLogs.filter(
-        (record) => String(record.status || "").toLowerCase() === "present"
-    ).length;
+    // Collapse Forenoon + Afternoon session records into one attendance value
+    // per calendar day:
+    //   - both sessions present            -> counts as 1 full present day
+    //   - present in only one session      -> counts as a HALF day (0.5)
+    //   - absent in both sessions          -> counts as 1 full absent day
+    //   - only one session was ever marked -> that session's status decides
+    //     the whole day (nothing to average against)
+    // `totalDays` is therefore the number of distinct calendar days on
+    // record, not the number of raw session rows.
+    const buildDayLevelAttendance = (logs) => {
+        const byDate = logs.reduce((map, log) => {
+            const key = log.date || 'unknown';
+            if (!map[key]) map[key] = { forenoon: null, afternoon: null };
+            const sessionKey = String(log.session || '').toLowerCase() === 'afternoon' ? 'afternoon' : 'forenoon';
+            map[key][sessionKey] = String(log.status || '').toLowerCase();
+            return map;
+        }, {});
 
-    const absentDaysCount = attendanceLogs.filter(
-        (record) => String(record.status || "").toLowerCase() === "absent"
-    ).length;
+        let totalDays = 0;
+        let fullPresentDays = 0;
+        let fullAbsentDays = 0;
+        let halfDays = 0;
+        let presentCredit = 0;
 
-    const rawAttendanceRate = totalWorkingDays > 0
-        ? Math.round((presentDaysCount / totalWorkingDays) * 100)
-        : 0;
+        Object.values(byDate).forEach(({ forenoon, afternoon }) => {
+            totalDays += 1;
+
+            if (forenoon && afternoon) {
+                if (forenoon === 'present' && afternoon === 'present') {
+                    fullPresentDays += 1;
+                    presentCredit += 1;
+                } else if (forenoon === 'absent' && afternoon === 'absent') {
+                    fullAbsentDays += 1;
+                } else {
+                    // one session present, the other absent -> half day
+                    halfDays += 1;
+                    presentCredit += 0.5;
+                }
+            } else {
+                const onlySession = forenoon || afternoon;
+                if (onlySession === 'present') {
+                    fullPresentDays += 1;
+                    presentCredit += 1;
+                } else {
+                    fullAbsentDays += 1;
+                }
+            }
+        });
+
+        const rate = totalDays > 0 ? Math.round((presentCredit / totalDays) * 100) : 0;
+
+        return { totalDays, fullPresentDays, fullAbsentDays, halfDays, presentCredit, rate };
+    };
+
+    const overallDayAttendance = buildDayLevelAttendance(attendanceLogs);
+    const totalWorkingDays = overallDayAttendance.totalDays;
+    const presentDaysCount = overallDayAttendance.fullPresentDays;
+    const absentDaysCount = overallDayAttendance.fullAbsentDays;
+    const halfDaysCount = overallDayAttendance.halfDays;
+    const rawAttendanceRate = overallDayAttendance.rate;
 
     const isDefaulter = hasStaffSubmittedAttendance && rawAttendanceRate < 75;
 
@@ -1063,19 +1111,12 @@ export default function StudentDashboard() {
         (log) => getAttendanceMonthKey(log.date) === selectedAttendanceMonth
     );
 
-    const monthPresentCount = monthAttendanceLogs.filter(
-        (log) => String(log.status || "").toLowerCase() === "present"
-    ).length;
-
-    const monthAbsentCount = monthAttendanceLogs.filter(
-        (log) => String(log.status || "").toLowerCase() === "absent"
-    ).length;
-
-    const monthTotalSessions = monthAttendanceLogs.length;
-
-    const monthAttendanceRate = monthTotalSessions > 0
-        ? Math.round((monthPresentCount / monthTotalSessions) * 100)
-        : 0;
+    const monthDayAttendance = buildDayLevelAttendance(monthAttendanceLogs);
+    const monthPresentCount = monthDayAttendance.fullPresentDays;
+    const monthAbsentCount = monthDayAttendance.fullAbsentDays;
+    const monthHalfDayCount = monthDayAttendance.halfDays;
+    const monthTotalSessions = monthDayAttendance.totalDays;
+    const monthAttendanceRate = monthDayAttendance.rate;
 
     const monthIsDefaulter = monthTotalSessions > 0 && monthAttendanceRate < 75;
 
@@ -1127,7 +1168,7 @@ export default function StudentDashboard() {
             badge: `${marksEntries.length} Subjects`
         },
         {
-            title: 'Class Routine',
+            title: 'Time',
             value: `${studentSchedule.length} Sessions`,
             icon: BookOpen,
             color: 'cyan',
@@ -1136,7 +1177,27 @@ export default function StudentDashboard() {
     ];
 
     const printTimetable = () => {
-        window.print();
+        // The global @media print rule hides everything except a couple of
+        // explicitly-allowed containers, and the page size is fixed to A4
+        // portrait — which is why this button used to print a blank sheet
+        // (the timetable wasn't in the allow-list) or would have cramped
+        // 10 time-slot columns into a portrait page. `.timetable-print-area`
+        // is now in the allow-list (see the print stylesheet below); here we
+        // just inject a temporary landscape @page rule for this one print job.
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'timetable-print-page-style';
+        pageStyle.textContent = '@page { size: A4 landscape !important; margin: 8mm !important; }';
+        document.head.appendChild(pageStyle);
+
+        const cleanup = () => {
+            document.getElementById('timetable-print-page-style')?.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
+
+        // Give the browser a tick to apply the new stylesheet before the
+        // print dialog captures the layout.
+        setTimeout(() => window.print(), 80);
     };
 
     const hasFeeClearance =
@@ -1213,6 +1274,22 @@ export default function StudentDashboard() {
             feeRecords.forEach(f => {
                 csvContent += `"${f.term}",${f.totalFee},${f.paidAmount || 0},${f.balance},"${f.status}"\n`;
             });
+        } else if (activeTab === 'schedule') {
+            csvContent += "Day,Time Slot,Subject,Teacher,Room\n";
+            weekDays.forEach((day) => {
+                timeSlots.forEach((slot) => {
+                    const match = studentSchedule.find((item) => {
+                        const isDayMatch = cleanString(item.day) === cleanString(day);
+                        const isTimeMatch = cleanTime(item.timeSlot) === cleanTime(slot) ||
+                            cleanTime(item.timeSlot).includes(cleanTime(slot)) ||
+                            cleanTime(slot).includes(cleanTime(item.timeSlot));
+                        return isDayMatch && isTimeMatch;
+                    });
+                    if (match) {
+                        csvContent += `"${day}","${slot}","${match.subject || ''}","${match.teacherName || 'Faculty'}","${match.roomNo || 'N/A'}"\n`;
+                    }
+                });
+            });
         } else {
             csvContent += "Title,Type,DueDate\n";
             studentAssignments.forEach(a => {
@@ -1236,8 +1313,113 @@ export default function StudentDashboard() {
                         visibility: hidden !important;
                     }
                     .receipt-modal-overlay, .receipt-modal-overlay *,
-                    .hall-ticket-preview, .hall-ticket-preview * {
+                    .hall-ticket-preview, .hall-ticket-preview *,
+                    .timetable-print-area, .timetable-print-area * {
                         visibility: visible !important;
+                    }
+                    .timetable-print-area {
+                        position: fixed !important;
+                        inset: 0 !important;
+                        width: 100vw !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        margin: 0 !important;
+                        padding: 6mm 8mm !important;
+                        background: #ffffff !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        z-index: 99999 !important;
+                    }
+                    .timetable-print-area .schedule-header-actions,
+                    .timetable-print-area .card-header p {
+                        display: none !important;
+                    }
+                    .timetable-print-area .card-header {
+                        border-bottom: none !important;
+                        padding-bottom: 0 !important;
+                    }
+                    .timetable-print-header {
+                        display: none;
+                    }
+                    .timetable-print-area .timetable-print-header {
+                        display: flex !important;
+                        align-items: center;
+                        gap: 12px;
+                        border-bottom: 2px solid #0f172a !important;
+                        padding-bottom: 8px;
+                        margin-bottom: 6px;
+                    }
+                    .timetable-print-header img {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                    }
+                    .timetable-print-header h2 {
+                        margin: 0;
+                        font-size: 13px;
+                        letter-spacing: 0.4px;
+                        color: #0f172a;
+                    }
+                    .timetable-print-header p {
+                        margin: 2px 0 0;
+                        font-size: 9px;
+                        color: #475569;
+                    }
+                    .timetable-print-meta {
+                        display: none;
+                    }
+                    .timetable-print-area .timetable-print-meta {
+                        display: flex !important;
+                        flex-wrap: wrap;
+                        justify-content: space-between;
+                        gap: 4px 18px;
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        color: #1e293b !important;
+                        margin-bottom: 10px;
+                    }
+                    .timetable-print-area .student-timetable-wrapper {
+                        border: none !important;
+                        overflow: visible !important;
+                        margin-top: 0 !important;
+                    }
+                    .timetable-print-area .student-timetable-table {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        font-size: 9px !important;
+                        table-layout: fixed;
+                    }
+                    .timetable-print-area .student-timetable-table th,
+                    .timetable-print-area .student-timetable-table td {
+                        border: 1px solid #94a3b8 !important;
+                        padding: 3px 2px !important;
+                        color: #0f172a !important;
+                    }
+                    .timetable-print-area .student-slot-card {
+                        background: #eef1fb !important;
+                        border-top: 2px solid #4338ca !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        padding: 2px !important;
+                    }
+                    .timetable-print-area .slot-subject {
+                        font-size: 8px !important;
+                    }
+                    .timetable-print-area .slot-teacher,
+                    .timetable-print-area .slot-room {
+                        font-size: 7px !important;
+                    }
+                    .timetable-print-footer {
+                        display: none;
+                    }
+                    .timetable-print-area .timetable-print-footer {
+                        display: block !important;
+                        margin-top: 8px;
+                        font-size: 8px;
+                        color: #64748b !important;
+                        text-align: right;
                     }
                     .receipt-modal-overlay {
                         position: fixed !important;
@@ -1457,10 +1639,6 @@ export default function StudentDashboard() {
                 <div className="staff-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />
             )}
 
-            <button className="floating-action-fab" onClick={handleExportCSV} title="Export Current View Data">
-                <Download size={16} /> <span>Quick Export</span>
-            </button>
-
             <div className="staff-layout-grid">
                 <aside className={`staff-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                     <div className="staff-user-profile font-bold">
@@ -1507,7 +1685,7 @@ export default function StudentDashboard() {
                             className={`staff-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
                         >
-                            <Calendar size={16} /><span>Class Routine Table</span>
+                            <Calendar size={16} /><span>Time Table</span>
                         </button>
                         <button
                             className={`staff-nav-item ${activeTab === 'marks' ? 'active' : ''}`}
@@ -1798,7 +1976,7 @@ export default function StudentDashboard() {
                                                 <div className="ps-att-mini">
                                                     <span className="dot halfday" />
                                                     <div>
-                                                        <strong>0</strong>
+                                                        <strong>{halfDaysCount}</strong>
                                                         <p>Half Day</p>
                                                     </div>
                                                 </div>
@@ -2137,6 +2315,13 @@ export default function StudentDashboard() {
                                                         <span className="mini-stat-label">Present</span>
                                                     </div>
                                                 </div>
+                                                <div className="attendance-mini-stat stat-half">
+                                                    <Clock size={16} />
+                                                    <div>
+                                                        <span className="mini-stat-value">{monthHalfDayCount}</span>
+                                                        <span className="mini-stat-label">Half Day</span>
+                                                    </div>
+                                                </div>
                                                 <div className="attendance-mini-stat stat-bad">
                                                     <XCircle size={16} />
                                                     <div>
@@ -2148,7 +2333,7 @@ export default function StudentDashboard() {
                                                     <BarChart2 size={16} />
                                                     <div>
                                                         <span className="mini-stat-value">{monthTotalSessions}</span>
-                                                        <span className="mini-stat-label">Total Sessions</span>
+                                                        <span className="mini-stat-label">Total Days</span>
                                                     </div>
                                                 </div>
                                                 <div className="attendance-mini-stat stat-neutral">
@@ -2170,45 +2355,74 @@ export default function StudentDashboard() {
                                                         <th>Date</th>
                                                         <th>Forenoon</th>
                                                         <th>Afternoon</th>
+                                                        <th>Day Status</th>
                                                         <th>Class Incharge</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {monthAttendanceRows.length === 0 ? (
                                                         <tr>
-                                                            <td colSpan="4" className="attendance-empty-row">
+                                                            <td colSpan="5" className="attendance-empty-row">
                                                                 No attendance logs found matching the selected filters.
                                                             </td>
                                                         </tr>
                                                     ) : (
-                                                        monthAttendanceRows.map((row) => (
-                                                            <tr key={row.date}>
-                                                                <td className="attendance-date-cell">{row.date}</td>
-                                                                <td>
-                                                                    {row.forenoon ? (
-                                                                        <span className={`status-badge status-${row.forenoon.status}`}>
-                                                                            {row.forenoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
-                                                                            {row.forenoon.status.toUpperCase()}
+                                                        monthAttendanceRows.map((row) => {
+                                                            const fnStatus = row.forenoon?.status;
+                                                            const anStatus = row.afternoon?.status;
+                                                            let dayStatusLabel = 'Not Marked';
+                                                            let dayStatusClass = 'pending';
+                                                            if (fnStatus && anStatus) {
+                                                                if (fnStatus === 'present' && anStatus === 'present') {
+                                                                    dayStatusLabel = '1 Day (Present)';
+                                                                    dayStatusClass = 'present';
+                                                                } else if (fnStatus === 'absent' && anStatus === 'absent') {
+                                                                    dayStatusLabel = '1 Day (Absent)';
+                                                                    dayStatusClass = 'absent';
+                                                                } else {
+                                                                    dayStatusLabel = '0.5 Day (Half Day)';
+                                                                    dayStatusClass = 'half';
+                                                                }
+                                                            } else if (fnStatus || anStatus) {
+                                                                const only = fnStatus || anStatus;
+                                                                dayStatusLabel = only === 'present' ? '1 Day (Present)' : '1 Day (Absent)';
+                                                                dayStatusClass = only === 'present' ? 'present' : 'absent';
+                                                            }
+
+                                                            return (
+                                                                <tr key={row.date}>
+                                                                    <td className="attendance-date-cell">{row.date}</td>
+                                                                    <td>
+                                                                        {row.forenoon ? (
+                                                                            <span className={`status-badge status-${row.forenoon.status}`}>
+                                                                                {row.forenoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                                {row.forenoon.status.toUpperCase()}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="attendance-not-marked">Not marked</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        {row.afternoon ? (
+                                                                            <span className={`status-badge status-${row.afternoon.status}`}>
+                                                                                {row.afternoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                                {row.afternoon.status.toUpperCase()}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="attendance-not-marked">Not marked</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        <span className={`status-badge status-${dayStatusClass}`}>
+                                                                            {dayStatusLabel}
                                                                         </span>
-                                                                    ) : (
-                                                                        <span className="attendance-not-marked">Not marked</span>
-                                                                    )}
-                                                                </td>
-                                                                <td>
-                                                                    {row.afternoon ? (
-                                                                        <span className={`status-badge status-${row.afternoon.status}`}>
-                                                                            {row.afternoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
-                                                                            {row.afternoon.status.toUpperCase()}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="attendance-not-marked">Not marked</span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="attendance-teacher-cell">
-                                                                    {row.forenoon?.teacherName || row.afternoon?.teacherName || '—'}
-                                                                </td>
-                                                            </tr>
-                                                        ))
+                                                                    </td>
+                                                                    <td className="attendance-teacher-cell">
+                                                                        {row.forenoon?.teacherName || row.afternoon?.teacherName || '—'}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })
                                                     )}
                                                 </tbody>
                                             </table>
@@ -2400,7 +2614,7 @@ export default function StudentDashboard() {
                         )}
 
                         {activeTab === 'schedule' && (
-                            <div className="staff-card full">
+                            <div className="staff-card full timetable-print-area">
                                 <div className="card-header">
                                     <div>
                                         <h3>Class Timetable — {studentData.grade} {studentData.section ? `Section ${studentData.section}` : ''}</h3>
@@ -2408,9 +2622,29 @@ export default function StudentDashboard() {
                                             Synchronized live with administrator and faculty allocations
                                         </p>
                                     </div>
-                                    <button className="print-schedule-btn" onClick={printTimetable}>
-                                        <Printer size={14} /> Print / Export Timetable
-                                    </button>
+                                    <div className="schedule-header-actions">
+                                        <button className="export-schedule-btn" onClick={handleExportCSV} title="Export Timetable as CSV">
+                                            <Download size={14} /> Export CSV
+                                        </button>
+                                        <button className="print-schedule-btn" onClick={printTimetable} title="Print Timetable">
+                                            <Printer size={14} /> Print Timetable
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Shown only inside the print stylesheet — gives the printed
+                                    sheet a proper letterhead instead of a bare table. */}
+                                <div className="timetable-print-header">
+                                    <img src={logo} alt="School Emblem" />
+                                    <div>
+                                        <h2>{HALL_TICKET_SCHOOL_NAME}</h2>
+                                        <p>{HALL_TICKET_SCHOOL_TAGLINE}</p>
+                                    </div>
+                                </div>
+                                <div className="timetable-print-meta">
+                                    <span>Student: {studentData.name} (#{studentData.rollNo || 'N/A'})</span>
+                                    <span>Class: {studentData.grade} {studentData.section ? `- Section ${studentData.section}` : ''}</span>
+                                    <span>Generated: {new Date().toLocaleDateString()}</span>
                                 </div>
 
                                 <div className="student-timetable-wrapper">
@@ -2455,6 +2689,10 @@ export default function StudentDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <p className="timetable-print-footer">
+                                    Computer-generated timetable — {HALL_TICKET_SCHOOL_NAME}
+                                </p>
                             </div>
                         )}
 

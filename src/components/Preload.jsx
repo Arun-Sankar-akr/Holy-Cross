@@ -28,7 +28,7 @@ export default function Preload({ fadeOut, duration = 4000, onComplete }) {
 
                 {/* School Wordmark */}
                 <div className="school-info">
-                    <h1>
+                    <h1 id="name">
                         <span className="base-text">Holy Cross</span>
                         <span className="glow-text">Holy Cross</span>
                         <span className="sweep-text">Holy Cross</span>

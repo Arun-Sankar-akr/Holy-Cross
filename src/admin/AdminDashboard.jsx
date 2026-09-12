@@ -24,6 +24,8 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('analytics');
 
     const [staffSearchQuery, setStaffSearchQuery] = React.useState('');
+    const [staffIdSearchQuery, setStaffIdSearchQuery] = React.useState('');
+    const [staffDeptFilter, setStaffDeptFilter] = React.useState('');
 
 
     // Collapsible states for sidebar dropdowns
@@ -143,6 +145,13 @@ export default function AdminDashboard() {
     const [staffForm, setStaffForm] = useState(initialStaffForm);
     const [editingStaffId, setEditingStaffId] = useState(null);
     const [editStaffForm, setEditStaffForm] = useState(initialStaffForm);
+
+    // Directory-card UI state (Users-directory style grid for Staff & Students)
+    const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+    const [showAddStudentForm, setShowAddStudentForm] = useState(false);
+    const [viewStaffId, setViewStaffId] = useState(null);
+    const [studentDirSearch, setStudentDirSearch] = useState('');
+    const staffFormRef = useRef(null);
 
     // Section CRUD States
     const [sectionForm, setSectionForm] = useState({ name: '', roomNo: '' });
@@ -933,6 +942,7 @@ export default function AdminDashboard() {
 
     const startEditingStudent = (student) => {
         setEditingStudentId(student.id);
+        setShowAddStudentForm(true);
         setStudentForm({
             admissionNo: student.admissionNo || '',
             admissionDate: student.admissionDate || '',
@@ -2415,16 +2425,16 @@ export default function AdminDashboard() {
                         // Local search state for Staff Directory filtering
 
                         // Filter staff members based on search input
+                        const nameQuery = staffSearchQuery.toLowerCase().trim();
+                        const idQuery = staffIdSearchQuery.toLowerCase().trim();
                         const filteredStaffList = staffList.filter(member => {
-                            const query = staffSearchQuery.toLowerCase().trim();
-                            if (!query) return true;
-                            return (
-                                member.name?.toLowerCase().includes(query) ||
-                                member.staffId?.toLowerCase().includes(query) ||
-                                member.department?.toLowerCase().includes(query) ||
-                                member.email?.toLowerCase().includes(query)
-                            );
+                            const matchesName = !nameQuery || member.name?.toLowerCase().includes(nameQuery);
+                            const matchesId = !idQuery || member.staffId?.toLowerCase().includes(idQuery);
+                            const matchesDept = !staffDeptFilter || member.department === staffDeptFilter;
+                            return matchesName && matchesId && matchesDept;
                         });
+                        const staffDeptOptions = [...new Set(staffList.map(m => m.department).filter(Boolean))];
+                        const staffFiltersActive = !!(staffSearchQuery || staffIdSearchQuery || staffDeptFilter);
 
                         return (
                             <div className="applications-management-card premium-section staff-directory-premium">
@@ -2440,7 +2450,14 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* CREATE FORM */}
-                                <form onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
+                                {showAddStaffForm && (
+                                <form ref={staffFormRef} onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
+                                    <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="form-section-title" style={{ margin: 0 }}>New Staff Member</div>
+                                        <button type="button" className="directory-form-close-btn" onClick={() => setShowAddStaffForm(false)} title="Close">
+                                            <X size={16} />
+                                        </button>
+                                    </div>
                                     <div>
                                         <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Full Name</label>
                                         <input
@@ -2510,22 +2527,44 @@ export default function AdminDashboard() {
                                         <PlusCircle size={15} /> Add Staff Member
                                     </button>
                                 </form>
+                                )}
 
-                                {/* SEARCH BAR */}
-                                <div className="admin-search-wrapper" style={{ marginBottom: '16px' }}>
-                                    <Search size={16} color="var(--text-muted)" />
+                                {/* DIRECTORY TOOLBAR */}
+                                <div className="directory-toolbar">
                                     <input
                                         type="text"
-                                        placeholder="Search staff by name, ID, department, or email..."
+                                        placeholder="Search by full name"
                                         value={staffSearchQuery}
                                         onChange={(e) => setStaffSearchQuery(e.target.value)}
-                                        className="admin-search-input"
+                                        className="directory-search-input"
                                     />
-                                    {staffSearchQuery && (
-                                        <button className="clear-search-btn" onClick={() => setStaffSearchQuery('')}>
-                                            <X size={14} />
-                                        </button>
-                                    )}
+                                    <input
+                                        type="text"
+                                        placeholder="Search by staff ID"
+                                        value={staffIdSearchQuery}
+                                        onChange={(e) => setStaffIdSearchQuery(e.target.value)}
+                                        className="directory-search-input"
+                                    />
+                                    <select
+                                        value={staffDeptFilter}
+                                        onChange={(e) => setStaffDeptFilter(e.target.value)}
+                                        className="directory-select"
+                                    >
+                                        <option value="">Select Department</option>
+                                        {staffDeptOptions.map(dep => (
+                                            <option key={dep} value={dep}>{dep}</option>
+                                        ))}
+                                    </select>
+                                    <button type="button" className="directory-btn-search" onClick={(e) => e.currentTarget.blur()}>
+                                        <Search size={14} /> Search
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="directory-btn-reset"
+                                        onClick={() => { setStaffSearchQuery(''); setStaffIdSearchQuery(''); setStaffDeptFilter(''); }}
+                                    >
+                                        <RefreshCw size={14} /> Reset
+                                    </button>
                                 </div>
 
                                 {/* STAFF LIST */}
@@ -2535,16 +2574,32 @@ export default function AdminDashboard() {
                                         {filteredStaffList.length} / {staffList.length}
                                     </span>
                                 </h4>
+                                <p className="directory-showing-text">Showing {filteredStaffList.length} of {staffList.length}</p>
 
-                                {filteredStaffList.length === 0 ? (
-                                    <div className="empty-state">
-                                        {staffSearchQuery ? `No staff members found matching "${staffSearchQuery}".` : 'No staff members registered yet.'}
-                                    </div>
-                                ) : (
-                                    <div className="staff-cards-container">
-                                        <div className="staff-cards-grid">
-                                            {filteredStaffList.map(member => (
-                                                <div className="staff-card" key={member.id}>
+                                <div className="staff-cards-container">
+                                    <div className="directory-grid">
+                                        <div
+                                            className="directory-add-card"
+                                            onClick={() => {
+                                                setEditingStaffId(null);
+                                                setShowAddStaffForm(true);
+                                                setTimeout(() => staffFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                            }}
+                                        >
+                                            <div className="directory-add-icon"><PlusCircle size={26} /></div>
+                                            <h5>Add New Staff</h5>
+                                            <p>Click to register a new staff account</p>
+                                            <span className="directory-add-link">Create Account <ArrowLeft size={13} style={{ transform: 'rotate(180deg)' }} /></span>
+                                        </div>
+
+                                        {staffFiltersActive && filteredStaffList.length === 0 && (
+                                            <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+                                                No staff members found matching your filters.
+                                            </div>
+                                        )}
+
+                                        {filteredStaffList.map(member => (
+                                            <div className="directory-card" key={member.id}>
                                                     {editingStaffId === member.id ? (
                                                         <div className="staff-edit-form">
                                                             <input
@@ -2599,39 +2654,55 @@ export default function AdminDashboard() {
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div className="staff-card-actions">
-                                                                <button className="icon-btn view-btn" onClick={() => handleStartEditStaff(member)} title="Edit Staff">
-                                                                    <Edit2 size={12} />
-                                                                </button>
-                                                                <button className="icon-btn delete-btn" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
-                                                                    <Trash2 size={12} />
-                                                                </button>
-                                                            </div>
-                                                            <div className="staff-card-header">
-                                                                {member.photo ? (
-                                                                    <img src={member.photo} alt={member.name} className="staff-avatar-photo" />
-                                                                ) : (
-                                                                    <div className="staff-avatar-placeholder">
-                                                                        {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
-                                                                    </div>
-                                                                )}
-                                                                <div className="staff-header-info">
-                                                                    <h5>{member.name}</h5>
-                                                                    <span className="staff-dept-badge">{member.department || 'General'}</span>
+                                                            <button className="directory-delete-corner" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                            <div className="directory-card-top">
+                                                                <div className="directory-avatar-wrap">
+                                                                    {member.photo ? (
+                                                                        <img src={member.photo} alt={member.name} className="directory-avatar-img" />
+                                                                    ) : (
+                                                                        <div className="directory-avatar-fallback">
+                                                                            {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
+                                                                        </div>
+                                                                    )}
+                                                                    <span className="directory-status-dot" title="Active" />
                                                                 </div>
+                                                                <h5 className="directory-card-name">{member.name}</h5>
+                                                                <span className="directory-pill">{member.staffId}</span>
+                                                                <span className="directory-pill directory-pill-alt"><Users size={11} /> {member.department || 'General'}</span>
                                                             </div>
-                                                            <div className="staff-card-body">
-                                                                <div className="staff-detail-item"><strong>ID:</strong> {member.staffId}</div>
-                                                                <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
-                                                                <div className="staff-detail-item"><strong>Email:</strong> {member.email}</div>
+
+                                                            {viewStaffId === member.id && (
+                                                                <div className="directory-card-details">
+                                                                    <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
+                                                                    <div className="staff-detail-item"><strong>Email:</strong> {member.email || 'N/A'}</div>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="directory-card-footer">
+                                                                <button className="directory-action-btn view" onClick={() => setViewStaffId(viewStaffId === member.id ? null : member.id)}>
+                                                                    <Eye size={14} /> View
+                                                                </button>
+                                                                {member.email ? (
+                                                                    <a className="directory-action-btn message" href={`mailto:${member.email}`}>
+                                                                        <Mail size={14} /> Message
+                                                                    </a>
+                                                                ) : (
+                                                                    <button className="directory-action-btn message" disabled title="No email on file">
+                                                                        <Mail size={14} /> Message
+                                                                    </button>
+                                                                )}
+                                                                <button className="directory-action-btn edit" onClick={() => handleStartEditStaff(member)}>
+                                                                    <Edit2 size={14} /> Edit
+                                                                </button>
                                                             </div>
                                                         </>
                                                     )}
                                                 </div>
                                             ))}
-                                        </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         );
                     })()}
@@ -2740,6 +2811,7 @@ export default function AdminDashboard() {
                                             setSelectedSection(null);
                                             setEditingStudentId(null);
                                             setStudentForm(initialStudentForm);
+                                            setShowAddStudentForm(false);
                                         }}>
                                             <ArrowLeft size={15} /> Back to Sections
                                         </button>
@@ -2748,9 +2820,18 @@ export default function AdminDashboard() {
                                         </h3>
                                     </div>
 
+                                    {showAddStudentForm && (
                                     <form ref={studentFormRef} onSubmit={editingStudentId ? handleUpdateStudent : handleAddStudent} className="student-admission-form">
-                                        <div className="form-section-title">
-                                            {editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}
+                                        <div className="form-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>{editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}</span>
+                                            <button
+                                                type="button"
+                                                className="directory-form-close-btn"
+                                                onClick={() => { setShowAddStudentForm(false); setEditingStudentId(null); setStudentForm(initialStudentForm); }}
+                                                title="Close"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                         </div>
                                         <div className="student-form-grid">
                                             <div>
@@ -2852,52 +2933,127 @@ export default function AdminDashboard() {
                                             <button type="submit" className="add-notice-btn">
                                                 {editingStudentId ? <><RefreshCw size={15} /> Update Student Record</> : <><UserCheck size={15} /> Enroll & Generate Credentials</>}
                                             </button>
-                                            {editingStudentId && (
-                                                <button type="button" className="cancel-btn" onClick={() => { setEditingStudentId(null); setStudentForm(initialStudentForm); }}>
-                                                    <X size={14} /> Cancel Edit
-                                                </button>
-                                            )}
+                                            <button
+                                                type="button"
+                                                className="cancel-btn"
+                                                onClick={() => { setEditingStudentId(null); setStudentForm(initialStudentForm); setShowAddStudentForm(false); }}
+                                            >
+                                                <X size={14} /> {editingStudentId ? 'Cancel Edit' : 'Close'}
+                                            </button>
                                         </div>
                                     </form>
+                                    )}
 
-                                    <h4>Enrolled Students Directory <span className="count-badge">{studentsList.filter(st => st.sectionId === selectedSection.id).length}</span></h4>
+                                    {(() => {
+                                        const sectionStudents = studentsList.filter(st => st.sectionId === selectedSection.id);
+                                        const dirQuery = studentDirSearch.toLowerCase().trim();
+                                        const visibleStudents = sectionStudents.filter(st =>
+                                            !dirQuery ||
+                                            st.name?.toLowerCase().includes(dirQuery) ||
+                                            st.admissionNo?.toLowerCase().includes(dirQuery) ||
+                                            String(st.rollNumber || '').toLowerCase().includes(dirQuery)
+                                        );
+                                        return (
+                                    <>
+                                    <h4>Enrolled Students Directory <span className="count-badge">{sectionStudents.length}</span></h4>
 
-                                    {studentsList.filter(st => st.sectionId === selectedSection.id).length === 0 ? (
-                                        <div className="empty-state">No student records enrolled in this section yet.</div>
-                                    ) : (
-                                        <div className="student-cards-list">
-                                            {studentsList.filter(st => st.sectionId === selectedSection.id).map(st => (
-                                                <div key={st.id} className="student-detail-card">
-                                                    <div className="student-card-content">
-                                                        <img src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'} alt={st.name} className="student-avatar" />
-                                                        <div className="student-info">
-                                                            <div className="student-header-row">
-                                                                <h5>{st.name}</h5>
-                                                                {st.bloodGroup && <span className="blood-badge">{st.bloodGroup}</span>}
-                                                                <span className={`status-pill ${(st.status || 'Active').toLowerCase() === 'active' ? 'status-present' : 'status-absent'}`}>{st.status || 'Active'}</span>
-                                                            </div>
-                                                            <p className="student-meta"><strong>Adm No:</strong> <code>{st.admissionNo}</code> | <strong>Roll No:</strong> {st.rollNumber || 'N/A'} | <strong>Gender:</strong> {st.gender || 'N/A'}</p>
-                                                            <p className="student-meta"><strong>Adm Date:</strong> {st.admissionDate || 'N/A'} | <strong>DOB:</strong> {st.dob || 'N/A'}</p>
-                                                            <p className="student-meta"><strong>Parent:</strong> {st.guardianName} ({st.relationship || 'Guardian'}) | <strong>Phone:</strong> {st.phone}{st.parentPhone ? ` / ${st.parentPhone}` : ''}</p>
-                                                            {st.email && <p className="student-meta"><strong>Email:</strong> {st.email}</p>}
-                                                            {st.address && <p className="student-address"><strong>Address:</strong> {st.address}</p>}
+                                    <div className="directory-toolbar">
+                                        <input
+                                            type="text"
+                                            placeholder="Search by full name"
+                                            value={studentDirSearch}
+                                            onChange={(e) => setStudentDirSearch(e.target.value)}
+                                            className="directory-search-input"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Search by admission / roll no"
+                                            value={studentDirSearch}
+                                            onChange={(e) => setStudentDirSearch(e.target.value)}
+                                            className="directory-search-input"
+                                        />
+                                        <select className="directory-select" disabled value="">
+                                            <option value="">{selectedClass} - {selectedSection.name}</option>
+                                        </select>
+                                        <button type="button" className="directory-btn-search" onClick={(e) => e.currentTarget.blur()}>
+                                            <Search size={14} /> Search
+                                        </button>
+                                        <button type="button" className="directory-btn-reset" onClick={() => setStudentDirSearch('')}>
+                                            <RefreshCw size={14} /> Reset
+                                        </button>
+                                    </div>
+                                    <p className="directory-showing-text">Showing {visibleStudents.length} of {sectionStudents.length}</p>
 
-                                                            <div className="student-credentials-box">
-                                                                <KeyRound size={12} />
-                                                                <span>ERP Login: User: <strong>{st.admissionNo}</strong> | Pass: <strong>{st.dob}</strong></span>
-                                                            </div>
+                                    <div className="directory-grid">
+                                        <div
+                                            className="directory-add-card"
+                                            onClick={() => {
+                                                setEditingStudentId(null);
+                                                setStudentForm(initialStudentForm);
+                                                setShowAddStudentForm(true);
+                                                setTimeout(() => studentFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                            }}
+                                        >
+                                            <div className="directory-add-icon"><PlusCircle size={26} /></div>
+                                            <h5>Add New Student</h5>
+                                            <p>Click to enroll a new student</p>
+                                            <span className="directory-add-link">Create Account <ArrowLeft size={13} style={{ transform: 'rotate(180deg)' }} /></span>
+                                        </div>
+
+                                        {visibleStudents.length === 0 ? (
+                                            <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+                                                {dirQuery ? `No students found matching "${studentDirSearch}".` : 'No student records enrolled in this section yet.'}
+                                            </div>
+                                        ) : (
+                                            visibleStudents.map(st => (
+                                                <div key={st.id} className="directory-card">
+                                                    <button className="directory-delete-corner" onClick={() => handleDelete('students_records', st.id)} title="Delete Record">
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                    <div className="directory-card-top">
+                                                        <div className="directory-avatar-wrap">
+                                                            <img
+                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                                alt={st.name}
+                                                                className="directory-avatar-img"
+                                                            />
+                                                            <span
+                                                                className={`directory-status-dot ${(st.status || 'Active').toLowerCase() === 'active' ? '' : 'inactive'}`}
+                                                                title={st.status || 'Active'}
+                                                            />
                                                         </div>
+                                                        <h5 className="directory-card-name">
+                                                            {st.name}
+                                                            {st.bloodGroup && <span className="blood-badge" style={{ marginLeft: '6px' }}>{st.bloodGroup}</span>}
+                                                        </h5>
+                                                        <span className="directory-pill">R.No: {st.rollNumber || 'N/A'}</span>
+                                                        <span className="directory-pill directory-pill-alt"><GraduationCap size={11} /> {selectedClass} - {selectedSection.name}</span>
+                                                    </div>
 
-                                                        <div className="student-card-actions">
-                                                            <button onClick={() => setPreviewStudent(st)} title="Preview Student"><Eye size={14} /></button>
-                                                            <button onClick={() => startEditingStudent(st)} title="Edit Student Record"><Edit2 size={14} /></button>
-                                                            <button onClick={() => handleDelete('students_records', st.id)} title="Delete Record"><Trash2 size={14} /></button>
-                                                        </div>
+                                                    <div className="directory-card-footer">
+                                                        <button className="directory-action-btn view" onClick={() => setPreviewStudent(st)}>
+                                                            <Eye size={14} /> View
+                                                        </button>
+                                                        {st.email ? (
+                                                            <a className="directory-action-btn message" href={`mailto:${st.email}`}>
+                                                                <Mail size={14} /> Message
+                                                            </a>
+                                                        ) : (
+                                                            <button className="directory-action-btn message" disabled title="No email on file">
+                                                                <Mail size={14} /> Message
+                                                            </button>
+                                                        )}
+                                                        <button className="directory-action-btn edit" onClick={() => startEditingStudent(st)}>
+                                                            <Edit2 size={14} /> Edit
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            ))
+                                        )}
+                                    </div>
+                                    </>
+                                        );
+                                    })()}
                                 </>
                             )}
 
