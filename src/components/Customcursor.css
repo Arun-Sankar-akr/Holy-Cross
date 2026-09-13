@@ -1,0 +1,39 @@
+.custom-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: 32px;
+    height: 32px;
+
+    pointer-events: none;
+    z-index: 999999;
+
+    opacity: 0;
+
+    transition: opacity 0.15s ease, filter 0.15s ease;
+
+    will-change: transform;
+}
+
+.custom-cursor.is-visible {
+    opacity: 1;
+}
+
+.custom-cursor.is-pointer svg {
+    transform: scale(1.1);
+}
+
+.custom-cursor svg {
+    display: block;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.25));
+}
+
+/* Native cursor is hidden everywhere once the custom one takes over.
+   Falls back to the CSS url() cursors in App.css on touch/coarse-pointer
+   devices, since the component doesn't mount there. */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+    cursor: none !important;
+}
