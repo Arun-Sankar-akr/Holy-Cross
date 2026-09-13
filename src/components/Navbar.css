@@ -1,14 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
-/* =========================================================
-   HOLY CROSS NAVBAR
-   Premium • Responsive • Light / Dark Theme
-   ========================================================= */
 
 :root {
-    --nav-bg: rgba(255, 255, 255, 0.92);
+    --nav-bg: rgba(255, 255, 255);
     --nav-bg-solid: #ffffff;
-    --nav-surface: rgba(248, 250, 252, 0.92);
+    --nav-surface: rgba(248, 250, 252);
     --nav-surface-hover: #f1f5f9;
 
     --nav-text: #172033;
@@ -16,7 +12,7 @@
     --nav-muted: #7a8799;
 
     --nav-border: rgba(15, 23, 42, 0.10);
-    --nav-border-strong: rgba(37, 99, 235, 0.22);
+    --nav-border-strong: rgba(37, 99, 235);
 
     --nav-accent: #2563eb;
     --nav-accent-2: #06b6d4;

@@ -277,6 +277,17 @@ export default function Home({ setActivePage }) {
     const [heroDirection, setHeroDirection] = useState('next');
     const [heroMotionKey, setHeroMotionKey] = useState(0);
     const [heroPointer, setHeroPointer] = useState({ x: 0, y: 0 });
+    // Theme is owned by the Navbar (it's the single site-wide toggle).
+    // Home just mirrors whatever theme is currently active so its own
+    // colours, map tint, etc. stay in sync instead of running their own
+    // separate light/dark state.
+    const [theme, setTheme] = useState(() => {
+        try {
+            const saved = localStorage.getItem('holy-cross-theme');
+            if (saved === 'light' || saved === 'dark') return saved;
+        } catch { }
+        return document.documentElement.dataset.theme || 'dark';
+    });
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [toppersList, setToppersList] = useState([]);
     const [achieverFilter, setAchieverFilter] = useState('ALL');
@@ -291,6 +302,22 @@ export default function Home({ setActivePage }) {
     const achieversSectionRef = useRef(null);
     const achieversScrollRef = useRef(null);
     const achieversPausedRef = useRef(false);
+
+    // Stay in sync with the Navbar's theme toggle. The Navbar writes
+    // document.documentElement.dataset.theme and broadcasts 'hc-theme-change'
+    // whenever the user flips the switch, from anywhere on the site.
+    useEffect(() => {
+        const syncTheme = () => {
+            const next = document.documentElement.dataset.theme;
+            if (next === 'light' || next === 'dark') {
+                setTheme(next);
+            }
+        };
+
+        syncTheme();
+        window.addEventListener('hc-theme-change', syncTheme);
+        return () => window.removeEventListener('hc-theme-change', syncTheme);
+    }, []);
 
     // Scroll progress & back to top
     useEffect(() => {
@@ -395,25 +422,32 @@ export default function Home({ setActivePage }) {
         return () => cancelAnimationFrame(rafId);
     }, [upcomingEvents]);
 
-    // Achievers horizontal ticker
+    // Achievers auto-sliding marquee. The grid below renders the topper
+    // list twice back-to-back; we translate it left and wrap the offset
+    // exactly at the halfway point (one full set's width) so the loop
+    // repeats seamlessly with no jump-cut, and no buttons are needed.
     useEffect(() => {
         const el = achieversScrollRef.current;
         if (!el) return;
 
         let rafId;
         let lastTime = null;
-        const pixelsPerSecond = 36;
+        let offset = 0;
+        const pixelsPerSecond = 34;
 
         const step = (time) => {
             if (lastTime === null) lastTime = time;
             const delta = time - lastTime;
             lastTime = time;
 
-            if (!achieversPausedRef.current && el.scrollWidth > el.clientWidth) {
-                el.scrollLeft += (pixelsPerSecond * delta) / 1000;
-                if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 1) {
-                    el.scrollLeft = 0;
+            const loopWidth = el.scrollWidth / 2;
+
+            if (!achieversPausedRef.current && loopWidth > 0) {
+                offset += (pixelsPerSecond * delta) / 1000;
+                if (offset >= loopWidth) {
+                    offset -= loopWidth;
                 }
+                el.style.transform = `translateX(-${offset}px)`;
             }
             rafId = requestAnimationFrame(step);
         };
@@ -434,15 +468,6 @@ export default function Home({ setActivePage }) {
         const next = !isEventsPaused;
         setIsEventsPaused(next);
         eventsPausedRef.current = next;
-    };
-
-    const scrollAchievers = (direction) => {
-        const el = achieversScrollRef.current;
-        if (!el) return;
-        achieversPausedRef.current = true;
-        setIsAchieversPaused(true);
-        const cardWidth = el.querySelector('.achiever-card')?.offsetWidth || 280;
-        el.scrollBy({ left: direction * (cardWidth + 24), behavior: 'smooth' });
     };
 
     const nextSlide = () => {
@@ -515,8 +540,56 @@ export default function Home({ setActivePage }) {
         });
     }, [toppersList, achieverFilter]);
 
+    // Renders one achiever card. `dup` marks the second, duplicated copy of
+    // the list used to make the auto-sliding loop wrap seamlessly.
+    const renderAchieverCard = (topper, idx, dup = false) => {
+        const rankNum = parseInt(topper.rank, 10);
+        const isFirst = rankNum === 1;
+        const isSecond = rankNum === 2;
+        const isThird = rankNum === 3;
+
+        return (
+            <article
+                className={`achiever-card ${isFirst ? 'rank-gold' : ''} ${isSecond ? 'rank-silver' : ''
+                    } ${isThird ? 'rank-bronze' : ''}`}
+                key={`${dup ? 'dup' : 'orig'}-${topper.id || idx}`}
+                aria-hidden={dup || undefined}
+            >
+                <div className="achiever-rank-pill">
+                    {isFirst && <Star size={12} fill="#f4b400" color="#f4b400" />}
+                    <span>Rank #{topper.rank || idx + 1}</span>
+                </div>
+
+                {topper.photo ? (
+                    <div className="achiever-photo-wrap">
+                        <img
+                            src={topper.photo}
+                            alt={topper.name}
+                            className="achiever-photo"
+                        />
+                        <span className="achiever-photo-badge">
+                            <Trophy size={14} />
+                        </span>
+                    </div>
+                ) : (
+                    <div className="achiever-avatar-placeholder">
+                        <IconBadge tone={isFirst ? 'gold' : isSecond ? 'purple' : 'blue'}>
+                            <Trophy size={24} />
+                        </IconBadge>
+                    </div>
+                )}
+
+                <span className="achiever-grade">{topper.streamOrGrade || 'Grade XII'}</span>
+                <h3 className="achiever-name">{topper.name}</h3>
+                <div className="achiever-score-chip">
+                    <span>{topper.scoreOrPercentage || 'Distinction'}</span>
+                </div>
+            </article>
+        );
+    };
+
     return (
-        <main className="home-page">
+        <main className={`home-page theme-${theme}`} data-theme={theme}>
             {/* MOTION TRACER: cursor trail overlay */}
             <CursorTracer />
 
@@ -613,8 +686,8 @@ export default function Home({ setActivePage }) {
                             </div>
                         </div>
                     </div>
-
                 </div>
+
 
                 {/* HERO SLIDE CONTROLS WITH LIVE PROGRESS BAR */}
                 <div className="hero-slide-controls">
@@ -1116,15 +1189,6 @@ export default function Home({ setActivePage }) {
                         </div>
                     ) : (
                         <div className="achievers-carousel-wrapper">
-                            <button
-                                type="button"
-                                className="achievers-carousel-btn achievers-carousel-btn-prev"
-                                onClick={() => scrollAchievers(-1)}
-                                aria-label="Scroll to previous achievers"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
-
                             <div
                                 className="achievers-grid"
                                 ref={achieversScrollRef}
@@ -1140,61 +1204,15 @@ export default function Home({ setActivePage }) {
                                     achieversPausedRef.current = true;
                                     setIsAchieversPaused(true);
                                 }}
+                                onTouchEnd={() => {
+                                    achieversPausedRef.current = false;
+                                    setIsAchieversPaused(false);
+                                }}
                             >
-                                {filteredToppers.map((topper, idx) => {
-                                    const rankNum = parseInt(topper.rank, 10);
-                                    const isFirst = rankNum === 1;
-                                    const isSecond = rankNum === 2;
-                                    const isThird = rankNum === 3;
-
-                                    return (
-                                        <article
-                                            className={`achiever-card ${isFirst ? 'rank-gold' : ''} ${isSecond ? 'rank-silver' : ''
-                                                } ${isThird ? 'rank-bronze' : ''}`}
-                                            key={topper.id || idx}
-                                        >
-                                            <div className="achiever-rank-pill">
-                                                {isFirst && <Star size={12} fill="#f4b400" color="#f4b400" />}
-                                                <span>Rank #{topper.rank || idx + 1}</span>
-                                            </div>
-
-                                            {topper.photo ? (
-                                                <div className="achiever-photo-wrap">
-                                                    <img
-                                                        src={topper.photo}
-                                                        alt={topper.name}
-                                                        className="achiever-photo"
-                                                    />
-                                                    <span className="achiever-photo-badge">
-                                                        <Trophy size={14} />
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <div className="achiever-avatar-placeholder">
-                                                    <IconBadge tone={isFirst ? 'gold' : isSecond ? 'purple' : 'blue'}>
-                                                        <Trophy size={24} />
-                                                    </IconBadge>
-                                                </div>
-                                            )}
-
-                                            <span className="achiever-grade">{topper.streamOrGrade || 'Grade XII'}</span>
-                                            <h3 className="achiever-name">{topper.name}</h3>
-                                            <div className="achiever-score-chip">
-                                                <span>{topper.scoreOrPercentage || 'Distinction'}</span>
-                                            </div>
-                                        </article>
-                                    );
-                                })}
+                                {filteredToppers.map((topper, idx) => renderAchieverCard(topper, idx, false))}
+                                {/* Duplicate set — lets the drift loop wrap seamlessly at the halfway point */}
+                                {filteredToppers.map((topper, idx) => renderAchieverCard(topper, idx, true))}
                             </div>
-
-                            <button
-                                type="button"
-                                className="achievers-carousel-btn achievers-carousel-btn-next"
-                                onClick={() => scrollAchievers(1)}
-                                aria-label="Scroll to next achievers"
-                            >
-                                <ChevronRight size={20} />
-                            </button>
                         </div>
                     )}
                 </section>
@@ -1465,7 +1483,7 @@ export default function Home({ setActivePage }) {
                                     positions={routeToSchool}
                                     pathOptions={{
                                         className: 'route-tracer-path',
-                                        color: '#ed4b35',
+                                        color: theme === 'dark' ? '#9f8cff' : '#6d4aff',
                                         weight: 3,
                                         opacity: 0.75,
                                         lineCap: 'round',
@@ -1515,7 +1533,7 @@ export default function Home({ setActivePage }) {
                     <svg className="scroll-progress-ring" width="48" height="48">
                         <circle
                             className="progress-ring-circle-bg"
-                            stroke="rgba(255, 255, 255, 0.15)"
+                            stroke="var(--hc-ring-bg)"
                             strokeWidth="3"
                             fill="transparent"
                             r="20"
@@ -1524,7 +1542,7 @@ export default function Home({ setActivePage }) {
                         />
                         <circle
                             className="progress-ring-circle"
-                            stroke="#f4b400"
+                            stroke="var(--hc-gold)"
                             strokeWidth="3"
                             fill="transparent"
                             r="20"
