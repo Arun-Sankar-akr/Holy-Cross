@@ -636,9 +636,9 @@ export default function Home({ setActivePage }) {
 
                         <p className="hero-eyebrow">A Sanctuary of Wisdom, Character &amp; Excellence</p>
 
-                        <h1 className="hero-headline">
+                        <h1 className="hero-headlines">
                             Holy Cross Matriculation
-                            <span className="hero-headline-accent">Higher Secondary School</span>
+                            <span className="hero-headlines-accent">Higher Secondary School</span>
                         </h1>
 
                         <div className="hero-location-wrap">

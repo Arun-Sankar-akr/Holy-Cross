@@ -98,12 +98,13 @@ body {
 
 .home-page p {
     color: var(--hc-muted);
-    line-height: 1.75
+    line-height: 1.75;
 }
 
 .home-page button,
 .home-page a {
-    font: inherit
+    font-family: "Outfit", sans-serif;
+    text-decoration: none;
 }
 
 .home-page button {
@@ -253,13 +254,16 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px
+    margin-bottom: 14px;
 }
 
 .section-kicker {
     display: inline-flex;
     align-items: center;
+    position: absolute;
+    width: fit-content;
     gap: 9px;
+    padding-bottom: 100px;
     color: var(--hc-accent);
     font: 800 10px var(--ui);
     letter-spacing: .18em;
@@ -519,7 +523,7 @@ body {
     max-width: 700px;
 }
 
-.hero-layout-centered .hero-headline {
+.hero-layout-centered {
     max-width: 100%;
 }
 
@@ -588,17 +592,24 @@ body {
     letter-spacing: .02em
 }
 
-.hero-headline {
+.hero-headlines {
     opacity: 0;
     animation: heroHeadline 1s var(--ease) forwards .2s;
-    margin-top: 15px;
+    padding: 20px 20px 20px 0;
+    position: relative;
     color: var(--hc-ink);
-    font: 700 clamp(50px, 6vw, 88px)/.88 var(--display);
-    letter-spacing: -.07em;
-    max-width: 760px
+    font: 700 clamp(38px, 6vw, 88px)/1.15 var(--display);
+    letter-spacing: -.05em;
+    width: 100%;
+    max-width: 900px
 }
 
-.hero-headline-accent {
+.hero-layout-centered .hero-headlines {
+    padding-left: 20px;
+    margin-inline: auto
+}
+
+.hero-headlines-accent {
     display: block;
     background: linear-gradient(100deg, var(--hc-accent), var(--hc-accent-2) 55%, var(--hc-cyan));
     -webkit-background-clip: text;
@@ -863,7 +874,7 @@ body {
     position: relative;
     font: 700 clamp(45px, 7vw, 92px)/.92 var(--display);
     letter-spacing: -.065em;
-    max-width: 980px;
+    max-width: 100%;
     margin: auto;
     transform: translateY(30px);
     opacity: 0;
@@ -883,7 +894,7 @@ body {
 
 .kinetic-statement-lead {
     position: relative;
-    max-width: 690px;
+    max-width: 100%;
     margin: 25px auto 0;
     font-size: 14px
 }
@@ -1338,12 +1349,13 @@ body {
 }
 
 .principal-index-badge {
+    display: none;
     left: 20px;
     bottom: 20px;
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    display: grid;
+    /* display: grid; */
     place-items: center;
     background: var(--hc-surface);
     color: var(--hc-accent);
@@ -1916,16 +1928,19 @@ body {
 
 .achiever-photo-wrap {
     position: relative;
-    height: 250px;
-    background: var(--hc-surface-3);
+    height: 300px;
+    background: #fff;
     overflow: hidden
 }
 
 .achiever-photo {
-    width: 100%;
-    height: 100%;
+    width: 150px;
+    height: 150px;
+    align-items: center;
+    margin: 80px;
+    border-radius: 200px;
     object-fit: cover;
-    display: block
+    display: block;
 }
 
 .achiever-avatar-placeholder {
@@ -2188,6 +2203,10 @@ body {
 
 .theme-dark .map-frame .leaflet-container {
     filter: saturate(.62) contrast(.9) brightness(.72)
+}
+
+.theme-dark .achiever-photo-wrap {
+    background-color: #000;
 }
 
 .map-badge-overlay {
@@ -2564,7 +2583,7 @@ body {
         min-height: 900px
     }
 
-    .hero-headline {
+    .hero-headlines {
         font-size: clamp(43px, 12vw, 64px)
     }
 
@@ -2726,7 +2745,7 @@ body {
 
 @media(max-width:430px) {
 
-    .hero-headline {
+    .hero-headlines {
         font-size: 43px
     }
 
