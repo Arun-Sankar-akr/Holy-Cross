@@ -1,0 +1,362 @@
+/* ============================================================
+   Reuses the same theme tokens as Footer.css:
+   --footer-heading, --footer-text, --footer-muted, --footer-link,
+   --footer-border, --footer-accent, --footer-accent-soft,
+   --footer-surface, --footer-bg-warm, --footer-bg-cool
+   Both light and dark values are already defined in Footer.css's
+   :root / html[data-theme="dark"] blocks, so no redefinition here.
+============================================================ */
+
+.legal-page {
+    position: relative;
+
+    max-width: 1180px;
+    margin: 0 auto;
+
+    padding: 72px 40px 120px;
+
+    font-family: "DM Sans", sans-serif;
+
+    color: var(--footer-text);
+}
+
+
+/* ============================================================
+   HERO
+============================================================ */
+
+.legal-hero {
+    max-width: 700px;
+
+    margin: 0 0 64px;
+}
+
+
+.legal-eyebrow {
+    display: inline-block;
+
+    margin-bottom: 18px;
+
+    padding: 6px 14px;
+
+    border-radius: 999px;
+
+    background: var(--footer-accent-soft);
+
+    color: var(--footer-accent);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 0.72rem;
+
+    letter-spacing: 0.06em;
+}
+
+
+.legal-hero h1 {
+    margin: 0 0 10px;
+
+    color: var(--footer-heading);
+
+    font-family: "Playfair Display", serif;
+
+    font-weight: 700;
+
+    font-size: clamp(2.1rem, 4vw, 3rem);
+
+    line-height: 1.1;
+}
+
+
+.legal-date {
+    margin: 0 0 22px;
+
+    color: var(--footer-muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 0.78rem;
+}
+
+
+.legal-intro {
+    margin: 0;
+
+    font-size: 1.05rem;
+
+    line-height: 1.7;
+}
+
+
+/* ============================================================
+   BODY LAYOUT — sticky index + reading column
+============================================================ */
+
+.legal-body {
+    display: grid;
+
+    grid-template-columns: 220px minmax(0, 1fr);
+
+    column-gap: 64px;
+
+    align-items: start;
+}
+
+
+/* ---- table of contents ---- */
+
+.legal-toc {
+    position: sticky;
+    top: 32px;
+}
+
+
+.legal-toc-label {
+    display: block;
+
+    margin-bottom: 16px;
+
+    color: var(--footer-muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 0.7rem;
+
+    letter-spacing: 0.06em;
+}
+
+
+.legal-toc ol {
+    list-style: none;
+
+    margin: 0;
+    padding: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 4px;
+
+    border-left: 1px solid var(--footer-border);
+}
+
+
+.legal-toc a {
+    display: flex;
+    align-items: baseline;
+
+    gap: 10px;
+
+    margin-left: -1px;
+
+    padding: 8px 0 8px 16px;
+
+    border-left: 1px solid transparent;
+
+    color: var(--footer-text);
+
+    font-size: 0.86rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+
+.legal-toc a:hover {
+    color: var(--footer-heading);
+}
+
+
+.legal-toc a.is-active {
+    border-left-color: var(--footer-accent);
+
+    color: var(--footer-accent);
+    font-weight: 700;
+}
+
+
+.legal-toc-index {
+    color: var(--footer-muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 0.72rem;
+}
+
+
+.legal-toc a.is-active .legal-toc-index {
+    color: var(--footer-accent);
+}
+
+
+/* ---- reading column ---- */
+
+.legal-content {
+    min-width: 0;
+}
+
+
+.legal-section {
+    padding: 34px 0;
+
+    border-bottom: 1px solid var(--footer-border);
+}
+
+
+.legal-section:first-child {
+    padding-top: 0;
+}
+
+
+.legal-section:last-child {
+    border-bottom: none;
+}
+
+
+.legal-section h2 {
+    display: flex;
+    align-items: baseline;
+
+    gap: 14px;
+
+    margin: 0 0 16px;
+
+    color: var(--footer-heading);
+
+    font-family: "Playfair Display", serif;
+
+    font-weight: 700;
+
+    font-size: 1.4rem;
+}
+
+
+.legal-section-index {
+    color: var(--footer-accent);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 0.85rem;
+
+    font-weight: 500;
+}
+
+
+.legal-section p {
+    margin: 0 0 14px;
+
+    font-size: 0.96rem;
+
+    line-height: 1.75;
+}
+
+
+.legal-section p:last-child {
+    margin-bottom: 0;
+}
+
+
+.legal-section ul {
+    margin: 0;
+    padding-left: 20px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+.legal-section li {
+    font-size: 0.96rem;
+
+    line-height: 1.65;
+}
+
+
+.legal-contact-note {
+    border-bottom: none;
+}
+
+
+.legal-contact-note p {
+    color: var(--footer-muted);
+
+    font-size: 0.9rem;
+
+    font-style: italic;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media (max-width: 900px) {
+
+    .legal-body {
+        grid-template-columns: 1fr;
+        row-gap: 36px;
+    }
+
+
+    .legal-toc {
+        position: static;
+
+        padding-bottom: 24px;
+
+        border-bottom: 1px solid var(--footer-border);
+    }
+
+
+    .legal-toc ol {
+        flex-direction: row;
+        flex-wrap: wrap;
+
+        border-left: none;
+
+        gap: 8px 18px;
+    }
+
+
+    .legal-toc a {
+        margin-left: 0;
+
+        padding: 4px 0;
+
+        border-left: none;
+        border-bottom: 2px solid transparent;
+    }
+
+
+    .legal-toc a.is-active {
+        border-bottom-color: var(--footer-accent);
+    }
+}
+
+
+@media (max-width: 560px) {
+
+    .legal-page {
+        padding: 48px 20px 80px;
+    }
+
+
+    .legal-hero {
+        margin-bottom: 44px;
+    }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .legal-toc a {
+        transition: none;
+    }
+}

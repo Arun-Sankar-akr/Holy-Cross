@@ -67,6 +67,10 @@ import HallTicket from './components/HallTicket';
 import ExamTimetableViewer from './components/Examtimetableviewer';
 import CustomCursor from './components/Customcursor';
 
+import Cookies from "./components/Foot/CookiesSettings"
+import Terms from "./components/Foot/TermsOfService"
+import Privacy from "./components/Foot/PrivacyPolicy"
+
 function AppContent({ loading, fadeOut }) {
   const location = useLocation();
   const lenisRef = useRef(null);
@@ -136,6 +140,12 @@ function AppContent({ loading, fadeOut }) {
             <Route path="/school/calendar" element={<Calendar />} />
             <Route path="/school/holiday" element={<Holiday />} />
             <Route path="/school/toppers" element={<ExamToppers />} />
+
+            {/* Footers */}
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
+
 
             {/* School Services */}
             <Route path="/school/service-library" element={<ServiceLibrary />} />
