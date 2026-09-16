@@ -1,3 +1,13 @@
+@font-face {
+    font-family: "Nasalization";
+    src: url("../../public/fonts/nasalization-webfont.woff2") format("woff2"),
+        url("../../public/fonts/nasalization-webfont.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+
 .preloader-overlay {
     position: fixed;
     inset: 0;
@@ -36,17 +46,7 @@
     }
 }
 
-/* =========================================================
-   MAIN CARD CONTAINER
-   ========================================================= */
-@font-face {
-    font-family: 'Nasalization';
-    /* Since it's in the public folder, the root path '/' points directly to public */
-    src: url('../../public//fonts//Nasalization Rg.otf') format('opentype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
+
 
 .preloader-card {
     position: relative;
@@ -75,18 +75,14 @@
 .school-info h1 {
     position: relative;
     margin: 0;
-    font-family: "Nasalization", sans-serif;
     font-size: clamp(1.5rem, 6.4vw, 10.5rem);
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 4px;
     line-height: 1.4;
     text-transform: uppercase;
     white-space: nowrap;
 }
 
-#name {
-    font-family: "Nasalization", sans-serif;
-}
 
 /* Layer 1 — dim, resting chrome base. Barely visible against black,
    like unlit brushed metal, until the sweep passes over it. */
@@ -121,9 +117,6 @@
     opacity: 0.5;
 }
 
-/* Layer 3 — the bright liquid-chrome + holographic sweep. This is the
-   layer that actually "lights up" the letters as it travels across,
-   mirroring the reference video. */
 .school-info h1 .sweep-text {
     position: absolute;
     inset: 0;
@@ -283,7 +276,7 @@
 
     #name {
         font-family: "Nasalization", sans-serif;
-        font-size: 50px;
+        font-size: 62px;
     }
 }
 
@@ -296,6 +289,6 @@
 
     #name {
         font-family: "Nasalization", sans-serif;
-        font-size: 40px;
+        font-size: 48px;
     }
 }
