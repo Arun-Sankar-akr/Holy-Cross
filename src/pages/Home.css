@@ -426,8 +426,12 @@ body {
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    background: var(--hc-bg-2);
-    border-bottom: 1px solid var(--hc-line);
+    /* Fixed dark backdrop on purpose — this is a full-bleed photo hero with
+       light overlay text, so it should stay dark in both themes rather than
+       following --hc-bg-2 (which flips near-white in light mode and was
+       bleeding through the semi-transparent photo layer below). */
+    background: #0d1018;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 
 .home-hero::before {
@@ -435,7 +439,7 @@ body {
     position: absolute;
     left: -.04em;
     top: 25%;
-    color: color-mix(in srgb, var(--hc-ink) 4%, transparent);
+    color: rgba(255, 255, 255, .05);
     font: 800 clamp(130px, 22vw, 350px)/.72 var(--display);
     letter-spacing: -.09em;
     white-space: nowrap;
@@ -462,8 +466,8 @@ body {
     pointer-events: none;
     transform: translate3d(var(--hero-mouse-x, 0px), calc(var(--hero-scroll-y, 0px) * -1), 0) scale(1.08);
     transition: transform .9s var(--ease);
-    opacity: .50;
-    filter: saturate(0.75) contrast(1.05) brightness(-5);
+    opacity: 1;
+    filter: saturate(0.95) contrast(1.05) brightness(0.85);
 }
 
 .hero-image {
@@ -485,7 +489,7 @@ body {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(105deg, #0d10186a 0%, #0d10186a 35%, #0d10186a 55%, #0d10186a 66%,  #0d10186a 90%, #0d1018e8 100%);
+    background: linear-gradient(105deg, #0d10186a 0%, #0d10186a 35%, #0d10186a 55%, #0d10186a 66%, #0d10186a 90%, #0d1018e8 100%);
 }
 
 .hero-mesh-overlay {
@@ -579,7 +583,7 @@ body {
 }
 
 .hero-counter-tag {
-    color: var(--hc-ink);
+    color: #f5f7fb;
     font: 800 10px var(--ui);
     letter-spacing: .16em
 }
@@ -587,7 +591,7 @@ body {
 .hero-eyebrow {
     opacity: 0;
     animation: heroUp .8s var(--ease) forwards .12s;
-    color: var(--hc-ink) !important;
+    color: #f5f7fb !important;
     font: 700 12px var(--ui);
     letter-spacing: .02em
 }
@@ -634,7 +638,7 @@ body {
 
 #locs {
     font: 700 15px var(--body);
-    color: var(--hc-ink)
+    color: #f5f7fb
 }
 
 .loc-badge {
@@ -726,12 +730,12 @@ body {
     width: min(100%, 650px);
     margin-top: 40px;
     padding-top: 20px;
-    border-top: 1px solid var(--hc-line)
+    border-top: 1px solid rgba(255, 255, 255, .16)
 }
 
 .proof-tile {
     padding: 0 15px;
-    border-right: 1px solid var(--hc-line)
+    border-right: 1px solid rgba(255, 255, 255, .16)
 }
 
 .proof-tile:first-child {
@@ -744,14 +748,14 @@ body {
 
 .proof-tile strong {
     display: block;
-    color: var(--hc-ink);
+    color: #f5f7fb;
     font: 700 21px/1 var(--display)
 }
 
 .proof-tile span {
     display: block;
     margin-top: 6px;
-    color: var(--hc-muted);
+    color: rgba(245, 247, 251, .68);
     font: 800 7px/1.4 var(--ui);
     letter-spacing: .09em;
     text-transform: uppercase
@@ -2557,7 +2561,7 @@ body {
         overflow-x: hidden
     }
 
-    .hero-layout-centered{
+    .hero-layout-centered {
         /* width: 100px; */
     }
 
@@ -2567,7 +2571,7 @@ body {
         min-width: 500px;
     }
 
-    .hero-headlines{
+    .hero-headlines {
         width: 100%;
         min-width: 400px;
     }
@@ -2598,7 +2602,7 @@ body {
         min-height: 900px
     }
 
-    .hero-copy{
+    .hero-copy {
         padding: 50px 50px;
     }
 

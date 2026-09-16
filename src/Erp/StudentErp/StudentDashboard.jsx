@@ -247,6 +247,20 @@ export default function StudentDashboard() {
             .trim();
     };
 
+    // PROFILE HELPER — Firestore student docs are written by several admin
+    // screens over time, so the same piece of info can live under different
+    // key names. This picks the first key that actually has a value.
+    const pickField = (source, keys, fallback = '—') => {
+        if (!source) return fallback;
+        for (const key of keys) {
+            const value = source[key];
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                return String(value).trim();
+            }
+        }
+        return fallback;
+    };
+
     const parseHallTicketDate = (value) => {
         if (!value) return null;
 
@@ -1641,7 +1655,20 @@ export default function StudentDashboard() {
 
             <div className="staff-layout-grid">
                 <aside className={`staff-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                    <div className="staff-user-profile font-bold">
+                    <div
+                        className="staff-user-profile font-bold clickable-profile"
+                        role="button"
+                        tabIndex={0}
+                        title="View my profile"
+                        onClick={() => { setActiveTab('profile'); setIsMobileMenuOpen(false); }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setActiveTab('profile');
+                                setIsMobileMenuOpen(false);
+                            }
+                        }}
+                    >
                         <div className="staff-avatar-ring">
                             {liveStudentRecord?.photo ? (
                                 <img src={liveStudentRecord.photo} alt="Avatar" className="student-profile-img" />
@@ -1662,6 +1689,12 @@ export default function StudentDashboard() {
                             onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                         >
                             <BookOpen size={16} /><span>Dashboard Overview</span>
+                        </button>
+                        <button
+                            className={`staff-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('profile'); setIsMobileMenuOpen(false); }}
+                        >
+                            <User size={16} /><span>My Profile</span>
                         </button>
                         <button
                             className={`staff-nav-item ${activeTab === 'attendance' ? 'active' : ''}`}
@@ -1866,7 +1899,7 @@ export default function StudentDashboard() {
                                                 <span className="ps-quarterly-pill">
                                                     <Award size={12} /> {averageScore !== 'N/A' ? `Avg ${averageScore}%` : '1st Quarterly'}
                                                 </span>
-                                                <button className="ps-edit-btn" onClick={() => setActiveTab('marks')}>
+                                                <button className="ps-edit-btn" onClick={() => setActiveTab('profile')}>
                                                     <ChevronRight size={13} /> View Profile
                                                 </button>
                                             </div>
@@ -3042,7 +3075,7 @@ export default function StudentDashboard() {
                                                                     </tr>
                                                                 )) : (
                                                                     <tr>
-                                                                        <td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>
+                                                                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--dash-text-muted)' }}>
                                                                             Subject-wise schedule will be updated by the office shortly.
                                                                         </td>
                                                                     </tr>
@@ -3087,6 +3120,222 @@ export default function StudentDashboard() {
                                 })()}
                             </div>
                         )}
+
+                        {activeTab === 'profile' && (() => {
+                            const rec = liveStudentRecord || {};
+
+                            const profilePhoto = rec.photo || rec.photoURL || rec.imageUrl || '';
+                            const admissionNo = pickField(rec, ['admissionNo', 'rollNo', 'registerNo'], studentData.rollNo || '—');
+                            const classLabel = pickField(rec, ['className', 'class', 'grade'], studentData.grade || '—');
+                            const sectionLabel = pickField(rec, ['sectionName', 'section'], studentData.section || '—');
+
+                            const personalFields = [
+                                ['Full Name', pickField(rec, ['name', 'studentName'], studentData.name || '—')],
+                                ['Date of Birth', pickField(rec, ['dob', 'dateOfBirth', 'birthDate'])],
+                                ['Gender', pickField(rec, ['gender', 'sex'])],
+                                ['Blood Group', pickField(rec, ['bloodGroup', 'blood'])],
+                                ['Mother Tongue', pickField(rec, ['motherTongue', 'language'])],
+                                ['Nationality', pickField(rec, ['nationality'])],
+                            ];
+
+                            const academicFields = [
+                                ['Admission No', admissionNo],
+                                ['Class', classLabel],
+                                ['Section', sectionLabel],
+                                ['Roll No', pickField(rec, ['rollNo', 'classRollNo'], studentData.rollNo || '—')],
+                                ['Admission Date', pickField(rec, ['admissionDate', 'joiningDate', 'dateOfAdmission'])],
+                                ['Academic Year', pickField(rec, ['academicYear', 'session'])],
+                                ['Group / Stream', pickField(rec, ['group', 'stream', 'subjectGroup'])],
+                                ['Class Teacher', pickField(rec, ['classTeacher', 'teacherName', 'advisor'])],
+                            ];
+
+                            const contactFields = [
+                                ['Mobile Number', pickField(rec, ['phone', 'mobile', 'contactNumber', 'phoneNumber'])],
+                                ['Email Address', pickField(rec, ['email', 'emailId', 'mailId'])],
+                                ['Address', pickField(rec, ['address', 'residentialAddress', 'permanentAddress'])],
+                                ['City / Town', pickField(rec, ['city', 'town', 'district'])],
+                                ['State', pickField(rec, ['state'])],
+                                ['PIN Code', pickField(rec, ['pincode', 'pinCode', 'zip'])],
+                            ];
+
+                            const guardianFields = [
+                                ["Father's Name", pickField(rec, ['fatherName', 'father'])],
+                                ["Father's Occupation", pickField(rec, ['fatherOccupation'])],
+                                ["Mother's Name", pickField(rec, ['motherName', 'mother'])],
+                                ["Mother's Occupation", pickField(rec, ['motherOccupation'])],
+                                ['Guardian Name', pickField(rec, ['guardianName', 'guardian'])],
+                                ['Guardian Contact', pickField(rec, ['guardianPhone', 'parentPhone', 'emergencyContact', 'guardianContact'])],
+                            ];
+
+                            const fieldGroups = [
+                                { title: 'Personal Information', icon: User, tone: 'primary', fields: personalFields },
+                                { title: 'Academic Information', icon: BookOpen, tone: 'cyan', fields: academicFields },
+                                { title: 'Contact Information', icon: FileText, tone: 'emerald', fields: contactFields },
+                                { title: 'Parent / Guardian Details', icon: Award, tone: 'amber', fields: guardianFields },
+                            ];
+
+                            const feeStatusLabel = feeRecords.length === 0
+                                ? 'No Records'
+                                : (hasFeeClearance ? 'All Clear' : `${pendingFeesList.length} Pending`);
+
+                            const quickStats = [
+                                {
+                                    label: 'Attendance',
+                                    value: hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : '—',
+                                    hint: hasStaffSubmittedAttendance ? `${totalWorkingDays} working days` : 'Awaiting faculty entry',
+                                    tone: isDefaulter ? 'rose' : 'emerald',
+                                    icon: CheckCircle
+                                },
+                                {
+                                    label: 'Average Score',
+                                    value: averageScore !== 'N/A' ? `${averageScore}%` : '—',
+                                    hint: `${marksEntries.length} result${marksEntries.length === 1 ? '' : 's'} published`,
+                                    tone: 'primary',
+                                    icon: Award
+                                },
+                                {
+                                    label: 'Class Rank',
+                                    value: studentRank ? `#${studentRank}` : '—',
+                                    hint: studentRank ? 'As published by school' : 'Not published yet',
+                                    tone: 'purple',
+                                    icon: BarChart2
+                                },
+                                {
+                                    label: 'Fee Status',
+                                    value: feeStatusLabel,
+                                    hint: `${paidFeesList.length} settled transaction${paidFeesList.length === 1 ? '' : 's'}`,
+                                    tone: hasFeeClearance ? 'emerald' : 'amber',
+                                    icon: Receipt
+                                },
+                            ];
+
+                            return (
+                                <div className="profile-tab-wrap">
+                                    <div className="profile-banner-card">
+                                        <div className="profile-banner-bg" />
+                                        <div className="profile-banner-main">
+                                            <div className="profile-avatar-xl">
+                                                {profilePhoto ? (
+                                                    <img src={profilePhoto} alt={studentData.name} />
+                                                ) : (
+                                                    <User size={44} />
+                                                )}
+                                            </div>
+
+                                            <div className="profile-banner-text">
+                                                <span className="profile-id-chip">
+                                                    <Sparkles size={11} /> #HCMS{(studentData.rollNo || '00000').toString().padStart(4, '0')}
+                                                </span>
+                                                <h2>{studentData.name || 'Student'}</h2>
+                                                <p className="profile-banner-sub">
+                                                    Class {classLabel}
+                                                    {sectionLabel !== '—' ? ` • Section ${sectionLabel}` : ''}
+                                                    {admissionNo !== '—' ? ` • Adm. No ${admissionNo}` : ''}
+                                                </p>
+
+                                                <div className="profile-chip-row">
+                                                    <span className={`profile-status-chip ${isDefaulter ? 'is-alert' : 'is-ok'}`}>
+                                                        <CheckCircle size={11} />
+                                                        {hasStaffSubmittedAttendance ? `Attendance ${rawAttendanceRate}%` : 'Attendance Pending'}
+                                                    </span>
+                                                    <span className={`profile-status-chip ${hasFeeClearance ? 'is-ok' : 'is-warn'}`}>
+                                                        <Receipt size={11} /> Fees: {feeStatusLabel}
+                                                    </span>
+                                                    <span className="profile-status-chip is-info">
+                                                        <Award size={11} />
+                                                        {averageScore !== 'N/A' ? `Avg ${averageScore}%` : 'No results yet'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="profile-banner-actions">
+                                                <button
+                                                    type="button"
+                                                    className="profile-action-btn ghost"
+                                                    onClick={() => setActiveTab('marks')}
+                                                >
+                                                    <Award size={14} /> Exam Results
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="profile-action-btn ghost"
+                                                    onClick={() => setActiveTab('attendance')}
+                                                >
+                                                    <BarChart2 size={14} /> Attendance
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="profile-action-btn solid"
+                                                    onClick={() => window.print()}
+                                                >
+                                                    <Printer size={14} /> Print Profile
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="profile-stat-strip">
+                                        {quickStats.map(stat => {
+                                            const StatIcon = stat.icon;
+                                            return (
+                                                <div className={`profile-stat-card tone-${stat.tone}`} key={stat.label}>
+                                                    <div className="profile-stat-icon">
+                                                        <StatIcon size={16} />
+                                                    </div>
+                                                    <div className="profile-stat-body">
+                                                        <span className="profile-stat-label">{stat.label}</span>
+                                                        <strong className="profile-stat-value">{stat.value}</strong>
+                                                        <span className="profile-stat-hint">{stat.hint}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {!liveStudentRecord && (
+                                        <div className="profile-sync-note">
+                                            <AlertTriangle size={15} />
+                                            <span>
+                                                Your detailed school record is still syncing. Fields shown as “—” will fill
+                                                in automatically once the office record loads.
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="profile-detail-grid">
+                                        {fieldGroups.map(group => {
+                                            const GroupIcon = group.icon;
+                                            return (
+                                                <div className={`profile-detail-card tone-${group.tone}`} key={group.title}>
+                                                    <div className="profile-detail-head">
+                                                        <span className="profile-detail-icon">
+                                                            <GroupIcon size={15} />
+                                                        </span>
+                                                        <h3>{group.title}</h3>
+                                                    </div>
+                                                    <dl className="profile-field-list">
+                                                        {group.fields.map(([label, value]) => (
+                                                            <div className="profile-field-row" key={label}>
+                                                                <dt>{label}</dt>
+                                                                <dd className={value === '—' ? 'is-empty' : ''}>{value}</dd>
+                                                            </div>
+                                                        ))}
+                                                    </dl>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="profile-note-footer">
+                                        <FileText size={14} />
+                                        <span>
+                                            These details are maintained by the school office. If anything here is
+                                            incorrect, please contact your class advisor to have the record updated.
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {activeTab === 'notices' && (
                             <div className="staff-card full">
@@ -3147,14 +3396,14 @@ export default function StudentDashboard() {
                                         </thead>
                                         <tbody>
                                             {pendingFeesList.length === 0 ? (
-                                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1rem', color: 'green' }}>No pending fee dues. All accounts clear!</td></tr>
+                                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '1rem', color: 'var(--accent-emerald)' }}>No pending fee dues. All accounts clear!</td></tr>
                                             ) : (
                                                 pendingFeesList.map(fee => (
                                                     <tr key={fee.id}>
                                                         <td><strong>{fee.term}</strong></td>
                                                         <td>₹{fee.totalFee}</td>
                                                         <td>₹{fee.paidAmount || 0}</td>
-                                                        <td style={{ color: 'red', fontWeight: 700 }}>₹{fee.balance}</td>
+                                                        <td style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>₹{fee.balance}</td>
                                                         <td><span className="status-badge status-absent">Pending Counter Payment</span></td>
                                                     </tr>
                                                 ))
@@ -3176,7 +3425,7 @@ export default function StudentDashboard() {
                                         </thead>
                                         <tbody>
                                             {paidFeesList.length === 0 ? (
-                                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: '#64748b' }}>No completed payments found.</td></tr>
+                                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: 'var(--dash-text-muted)' }}>No completed payments found.</td></tr>
                                             ) : (
                                                 paidFeesList.map(fee => (
                                                     <tr key={fee.id}>
