@@ -38,6 +38,11 @@ export default function StaffDashboard() {
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
 
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [isProfileSaving, setIsProfileSaving] = useState(false);
+    const [profileSaveStatus, setProfileSaveStatus] = useState('');
+    const [profileForm, setProfileForm] = useState({ email: '', phone: '', qualification: '', bio: '' });
+
     const [staffLeaveList, setStaffLeaveList] = useState([]);
     const [leaveForm, setLeaveForm] = useState({
         leaveType: 'Casual Leave',
@@ -434,6 +439,16 @@ export default function StaffDashboard() {
     const myStaffRecord = allStaffMembers.find(s => s.staffId === staffData.staffId);
     const myStaffDocId = myStaffRecord?.id || '';
 
+    useEffect(() => {
+        if (!myStaffRecord || isEditingProfile) return;
+        setProfileForm({
+            email: myStaffRecord.email || '',
+            phone: myStaffRecord.phone || '',
+            qualification: myStaffRecord.qualification || '',
+            bio: myStaffRecord.bio || ''
+        });
+    }, [myStaffRecord?.email, myStaffRecord?.phone, myStaffRecord?.qualification, myStaffRecord?.bio, isEditingProfile]);
+
     const myInchargeSections = sectionsList.filter((sec) => {
         const idMatch =
             Boolean(sec.classInchargeId) &&
@@ -724,6 +739,33 @@ export default function StaffDashboard() {
     const handleLogout = () => {
         localStorage.removeItem('staffUser');
         navigate('/');
+    };
+
+    const handleSaveProfile = async (e) => {
+        e.preventDefault();
+        if (!myStaffDocId) {
+            setProfileSaveStatus('Unable to save — your staff record was not found.');
+            return;
+        }
+        setIsProfileSaving(true);
+        setProfileSaveStatus('');
+        try {
+            await updateDoc(doc(db, 'staff_members', myStaffDocId), {
+                email: profileForm.email.trim(),
+                phone: profileForm.phone.trim(),
+                qualification: profileForm.qualification.trim(),
+                bio: profileForm.bio.trim(),
+                updatedAt: serverTimestamp()
+            });
+            setProfileSaveStatus('Profile updated successfully.');
+            setIsEditingProfile(false);
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setProfileSaveStatus('Something went wrong while saving. Please try again.');
+        } finally {
+            setIsProfileSaving(false);
+            setTimeout(() => setProfileSaveStatus(''), 4000);
+        }
     };
 
     const getMatchedInchargeSection = () => {
@@ -1749,6 +1791,17 @@ export default function StaffDashboard() {
                         </button>
 
                         <button
+                            className={`nav-links ${activeTab === 'profile' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
+                        >
+                            <div className="nav-links-content">
+                                <User size={18} />
+                                <span>My Profile</span>
+                            </div>
+                            <ChevronRight size={15} className="nav-arrow" />
+                        </button>
+
+                        <button
                             className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
                         >
@@ -2082,6 +2135,9 @@ export default function StaffDashboard() {
                             </div>
                             {showProfileMenu && (
                                 <div className="notification-dropdown profile-dropdown">
+                                    <button className="profile-dropdown-item" onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setShowProfileMenu(false); }}>
+                                        <User size={15} /> My Profile
+                                    </button>
                                     <button className="profile-dropdown-item" onClick={() => { setActiveTab('leaves'); setShowProfileMenu(false); }}>
                                         <SendHorizonal size={15} /> My Leave Requests
                                     </button>
@@ -2412,6 +2468,211 @@ export default function StaffDashboard() {
                                     </div>
                                 </div>
                             </aside>
+                        </div>
+                    )}
+
+                    {activeTab === 'profile' && (
+                        <div className="profile-page">
+                            <div className="dash-card full-width profile-header-card">
+                                <div className="profile-header-identity">
+                                    <div className="profile-avatar-lg">{(staffData.name || '?').charAt(0)}</div>
+                                    <div>
+                                        <h3 className="profile-header-name">{staffData.name}</h3>
+                                        <div className="profile-header-tags">
+                                            <span className="topic-badge">{staffData.department || 'Faculty'}</span>
+                                            {staffData.staffId && <span className="profile-id-badge">ID: {staffData.staffId}</span>}
+                                            {isClassIncharge && <span className="profile-id-badge profile-badge-accent">Class Incharge</span>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {!isEditingProfile && (
+                                    <button type="button" className="btn-secondary" onClick={() => setIsEditingProfile(true)}>
+                                        <Edit3 size={14} /> Edit Profile
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="profile-stats-grid">
+                                <div className="stat-card stat-card-1">
+                                    <div className="stat-icon"><BookOpen size={18} /></div>
+                                    <div>
+                                        <span className="stat-title">Classes Taught</span>
+                                        <span className="stat-value">{myTaughtClasses.length}</span>
+                                    </div>
+                                </div>
+                                <div className="stat-card stat-card-2">
+                                    <div className="stat-icon"><Layers size={18} /></div>
+                                    <div>
+                                        <span className="stat-title">Subjects</span>
+                                        <span className="stat-value">{[...new Set(myTaughtAssignments.map(a => a.subject))].length}</span>
+                                    </div>
+                                </div>
+                                <div className="stat-card stat-card-3">
+                                    <div className="stat-icon"><GraduationCap size={18} /></div>
+                                    <div>
+                                        <span className="stat-title">Sections In-Charge</span>
+                                        <span className="stat-value">{myInchargeSections.length}</span>
+                                    </div>
+                                </div>
+                                <div className="stat-card stat-card-4">
+                                    <div className="stat-icon"><SendHorizonal size={18} /></div>
+                                    <div>
+                                        <span className="stat-title">Leave Requests</span>
+                                        <span className="stat-value">{myLeaveRequests.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="dash-card full-width">
+                                <div className="card-header">
+                                    <div>
+                                        <h3>Contact & Personal Details</h3>
+                                        <p className="subtitle">
+                                            {isEditingProfile
+                                                ? 'Update how colleagues and administration can reach you.'
+                                                : 'Your Staff ID and Department are assigned by Admin and cannot be edited here.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {profileSaveStatus && (
+                                    <div style={{
+                                        color: profileSaveStatus.includes('success') ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                                        padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px'
+                                    }}>
+                                        {profileSaveStatus.includes('success') ? <Check size={18} /> : <AlertCircle size={18} />} {profileSaveStatus}
+                                    </div>
+                                )}
+
+                                {isEditingProfile ? (
+                                    <form onSubmit={handleSaveProfile} className="assignment-form-grid" style={{ marginTop: '10px' }}>
+                                        <div>
+                                            <label>Email Address</label>
+                                            <input
+                                                type="email"
+                                                className="table-input full-width-input"
+                                                placeholder="you@holycross.edu"
+                                                value={profileForm.email}
+                                                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                className="table-input full-width-input"
+                                                placeholder="+91 90000 00000"
+                                                value={profileForm.phone}
+                                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Qualification</label>
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. M.Sc, B.Ed"
+                                                value={profileForm.qualification}
+                                                onChange={(e) => setProfileForm({ ...profileForm, qualification: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label>Department</label>
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                value={staffData.department || ''}
+                                                disabled
+                                            />
+                                        </div>
+                                        <div style={{ gridColumn: '1 / -1' }}>
+                                            <label>Short Bio</label>
+                                            <textarea
+                                                rows="3"
+                                                className="custom-textarea"
+                                                placeholder="A short note about your role, experience or interests..."
+                                                value={profileForm.bio}
+                                                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                                            />
+                                        </div>
+                                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+                                            <button type="submit" className="btn-primary" disabled={isProfileSaving}>
+                                                <Save size={15} /> {isProfileSaving ? 'Saving...' : 'Save Changes'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-secondary"
+                                                onClick={() => {
+                                                    setIsEditingProfile(false);
+                                                    setProfileForm({
+                                                        email: myStaffRecord?.email || '',
+                                                        phone: myStaffRecord?.phone || '',
+                                                        qualification: myStaffRecord?.qualification || '',
+                                                        bio: myStaffRecord?.bio || ''
+                                                    });
+                                                }}
+                                                disabled={isProfileSaving}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="profile-details-grid">
+                                        <div className="profile-field">
+                                            <span className="profile-field-label">Staff ID</span>
+                                            <span className="profile-field-value">{staffData.staffId || '—'}</span>
+                                        </div>
+                                        <div className="profile-field">
+                                            <span className="profile-field-label">Department</span>
+                                            <span className="profile-field-value">{staffData.department || '—'}</span>
+                                        </div>
+                                        <div className="profile-field">
+                                            <span className="profile-field-label">Email Address</span>
+                                            <span className="profile-field-value">{profileForm.email || 'Not provided'}</span>
+                                        </div>
+                                        <div className="profile-field">
+                                            <span className="profile-field-label">Phone Number</span>
+                                            <span className="profile-field-value">{profileForm.phone || 'Not provided'}</span>
+                                        </div>
+                                        <div className="profile-field">
+                                            <span className="profile-field-label">Qualification</span>
+                                            <span className="profile-field-value">{profileForm.qualification || 'Not provided'}</span>
+                                        </div>
+                                        <div className="profile-field profile-field-wide">
+                                            <span className="profile-field-label">Short Bio</span>
+                                            <span className="profile-field-value">{profileForm.bio || 'Not provided'}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {myTaughtClasses.length > 0 && (
+                                <div className="dash-card full-width">
+                                    <div className="card-header">
+                                        <div>
+                                            <h3>Classes You Teach</h3>
+                                            <p className="subtitle">Synced live from the Admin timetable.</p>
+                                        </div>
+                                    </div>
+                                    <div className="class-cards-grid">
+                                        {myTaughtClasses.map((cls) => (
+                                            <div key={cls} className="class-card">
+                                                <div className="class-card-icon">
+                                                    <BookOpen size={24} />
+                                                </div>
+                                                <div>
+                                                    <h4 style={{ margin: 0 }}>{cls}</h4>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                        {getMyTaughtSubjectsForClass(cls).join(', ') || 'No subjects listed'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
