@@ -260,10 +260,10 @@ body {
 .section-kicker {
     display: inline-flex;
     align-items: center;
-    position: absolute;
-    width: fit-content;
+    position: relative;
+    width: 400px;
     gap: 9px;
-    padding-bottom: 100px;
+    padding-bottom: 30px;
     color: var(--hc-accent);
     font: 800 10px var(--ui);
     letter-spacing: .18em;
@@ -284,6 +284,7 @@ body {
 }
 
 .section-kicker-pill {
+    display: none;
     padding: 6px 9px;
     border: 1px solid var(--hc-accent-soft-2);
     border-radius: 999px;
