@@ -123,7 +123,6 @@ export default function AdmissionDashboard() {
                 </div>
 
                 <nav className="adm-navlinks" aria-label="Admission page sections">
-                    <button type="button" onClick={scrollToTop}><HomeIcon size={15} /> Home</button>
                     <button type="button" onClick={() => goToTab('procedure')}><ClipboardList size={15} /> Procedure</button>
                     <button type="button" onClick={scrollToWhy}><Award size={15} /> Why Us</button>
                     <button type="button" onClick={() => goToTab('fee')}><CreditCard size={15} /> Fees</button>

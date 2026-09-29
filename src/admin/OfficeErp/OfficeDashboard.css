@@ -4249,3 +4249,195 @@ body,
         gap: 10px
     }
 }
+
+/* =========================================================
+   Exam Timetable – latest exam + collapsible older exams
+   Append to OfficeDashboard.css
+   ========================================================= */
+
+.tt-exam-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 4px;
+}
+
+.tt-exam-head strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.tt-exam-count {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.tt-exam-dropdown {
+    margin-top: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.tt-exam-dropdown:hover,
+.tt-exam-dropdown.open {
+    border-color: #c7c2fd;
+    box-shadow: 0 4px 14px rgba(109, 93, 252, 0.10);
+}
+
+.tt-exam-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    background: #f8fafc;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-align: left;
+    transition: background 0.2s ease;
+}
+
+.tt-exam-toggle:hover {
+    background: #f1efff;
+}
+
+.tt-exam-toggle small {
+    color: #64748b;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.tt-exam-dropdown.open .tt-exam-toggle {
+    background: #f1efff;
+    color: #6d5dfc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tt-exam-toggle svg {
+    flex-shrink: 0;
+    color: #6d5dfc;
+}
+
+/* =========================================================
+   Seating Arrangement – class by class
+   ========================================================= */
+
+.seat-filter-select {
+    margin-bottom: 12px;
+}
+
+.seat-class-group {
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.seat-class-group:hover,
+.seat-class-group.open {
+    border-color: #c7c2fd;
+    box-shadow: 0 4px 14px rgba(109, 93, 252, 0.10);
+}
+
+.seat-class-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-align: left;
+    transition: background 0.2s ease;
+}
+
+.seat-class-toggle:hover,
+.seat-class-group.open .seat-class-toggle {
+    background: #f1efff;
+}
+
+.seat-class-toggle>svg {
+    flex-shrink: 0;
+    color: #6d5dfc;
+}
+
+.seat-class-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.seat-class-title svg {
+    color: #6d5dfc;
+}
+
+.seat-class-title small {
+    color: #64748b;
+    font-weight: 500;
+    font-size: 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.seat-hall {
+    padding: 12px 14px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.seat-hall-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.seat-hall-head strong {
+    color: #0f172a;
+    font-size: 0.92rem;
+}
+
+.seat-hall-exam {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.seat-hall .custom-table td .exam-seat-range {
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+
+    .tt-exam-toggle,
+    .seat-class-toggle {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+    }
+
+    .seat-hall {
+        padding: 10px 10px;
+    }
+}

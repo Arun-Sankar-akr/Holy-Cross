@@ -704,6 +704,12 @@ export default function AdminDashboard() {
         }
     };
 
+    const getAdmissionInitials = (app) => {
+        const first = (app.firstName || '')[0] || '';
+        const last = (app.lastName || '')[0] || '';
+        return (first + last).toUpperCase() || '?';
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
@@ -1478,102 +1484,131 @@ export default function AdminDashboard() {
 
                     {/* ADMISSIONS ADMINISTRATION PANEL */}
                     {activeTab === 'admission_panel' && (
-                        <div className="admin-panel-container applications-management-card">
-                            <div className="admin-header" style={{ marginBottom: '20px' }}>
-                                <h3>Admissions Administration Panel</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Manage incoming online student registration files, evaluate qualifications, and push approved profiles directly to ERP records.</p>
+                        <div className="admin-panel-container applications-management-card admission-panel-premium">
+                            <div className="admin-header admission-panel-header">
+                                <div>
+                                    <h3>Admissions Administration Panel</h3>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Manage incoming online student registration files, evaluate qualifications, and push approved profiles directly to ERP records.</p>
+                                </div>
+                                <div className="admission-stat-row">
+                                    <div className="admission-stat-chip">
+                                        <span className="admission-stat-value">{admissionApplications.length}</span>
+                                        <span className="admission-stat-label">Total</span>
+                                    </div>
+                                    <div className="admission-stat-chip pending">
+                                        <span className="admission-stat-value">{admissionApplications.filter(a => (a.status || 'Pending') === 'Pending').length}</span>
+                                        <span className="admission-stat-label">Pending</span>
+                                    </div>
+                                    <div className="admission-stat-chip approved">
+                                        <span className="admission-stat-value">{admissionApplications.filter(a => a.status === 'Approved').length}</span>
+                                        <span className="admission-stat-label">Approved</span>
+                                    </div>
+                                    <div className="admission-stat-chip rejected">
+                                        <span className="admission-stat-value">{admissionApplications.filter(a => a.status === 'Rejected').length}</span>
+                                        <span className="admission-stat-label">Rejected</span>
+                                    </div>
+                                </div>
                             </div>
 
                             {admissionLoading ? (
                                 <div className="admin-loading">Loading applications...</div>
+                            ) : admissionApplications.length === 0 ? (
+                                <div className="admission-empty-state">
+                                    <FileText size={28} strokeWidth={1.5} />
+                                    <p>No admission applications found.</p>
+                                </div>
                             ) : (
-                                <div className="table-responsive-wrapper">
-                                    <table className="admin-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Ack No.</th>
-                                                <th>Student Name</th>
-                                                <th>Grade</th>
-                                                <th>Parent Name</th>
-                                                <th>Phone</th>
-                                                <th>Section</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {admissionApplications.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan="8" className="no-data-cell">No admission applications found.</td>
-                                                </tr>
-                                            ) : (
-                                                admissionApplications.map((app) => (
-                                                    <tr key={app.id}>
-                                                        <td className="ack-cell"><strong>{app.acknowledgementNumber || 'N/A'}</strong></td>
-                                                        <td>{app.firstName} {app.lastName}</td>
-                                                        <td><span className="grade-badge">{app.grade}</span></td>
-                                                        <td>{app.parentName}</td>
-                                                        <td>{app.phone}</td>
-                                                        <td>
-                                                            <select
-                                                                className="custom-select"
-                                                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', marginRight: '6px', border: '1px solid #cbd5e1' }}
-                                                                value={approvalSections[app.id] || 'Section A'}
-                                                                onChange={(e) => setApprovalSections({ ...approvalSections, [app.id]: e.target.value })}
-                                                            >
-                                                                {sectionsList
-                                                                    .filter(sec => sec.className === app.grade)
-                                                                    .length > 0 ? (
-                                                                    sectionsList
-                                                                        .filter(sec => sec.className === app.grade)
-                                                                        .map(sec => (
-                                                                            <option key={sec.id} value={sec.name}>{sec.name}</option>
-                                                                        ))
-                                                                ) : (
-                                                                    <option value="Section A">Section A (Default)</option>
-                                                                )
-                                                                }
-                                                            </select>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`status-pill ${app.status ? app.status.toLowerCase() : 'pending'}`}>
-                                                                {app.status || 'Pending'}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <div className="actions-cell">
-                                                                <button className="icon-btn view-btn" onClick={() => setSelectedApp(app)} title="View Details">
-                                                                    <Eye size={16} />
-                                                                </button>
-                                                                {app.status !== 'Approved' && (
-                                                                    <button className="icon-btn approve-btn" onClick={() => handleApproveAdmission(app)} title="Approve & Send to ERP">
-                                                                        <CheckCircle size={16} />
-                                                                    </button>
-                                                                )}
-                                                                {app.status !== 'Rejected' && (
-                                                                    <button className="icon-btn reject-btn" onClick={() => handleRejectAdmission(app.id)} title="Reject Application">
-                                                                        <XCircle size={16} />
-                                                                    </button>
-                                                                )}
-                                                                <button className="icon-btn delete-btn" onClick={() => handleDeleteAdmission(app.id)} title="Delete Record">
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
+                                <div className="admission-cards-grid">
+                                    {admissionApplications.map((app) => {
+                                        const statusClass = (app.status || 'Pending').toLowerCase();
+                                        const isApproved = app.status === 'Approved';
+                                        const isRejected = app.status === 'Rejected';
+                                        return (
+                                            <div className={`admission-app-card ${statusClass}`} key={app.id}>
+                                                <div className="admission-app-accent" />
+
+                                                <div className="admission-app-top">
+                                                    <div className="admission-app-avatar">{getAdmissionInitials(app)}</div>
+                                                    <div className="admission-app-titles">
+                                                        <h4 title={`${app.firstName || ''} ${app.lastName || ''}`}>{app.firstName} {app.lastName}</h4>
+                                                        <div className="admission-app-meta">
+                                                            <span className="grade-badge">{app.grade}</span>
+                                                            <span className="admission-ack-tag">#{app.acknowledgementNumber || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`status-pill ${statusClass}`}>{app.status || 'Pending'}</span>
+                                                </div>
+
+                                                <div className="admission-app-details">
+                                                    <div className="admission-app-detail-row">
+                                                        <User size={13} />
+                                                        <span>{app.parentName || 'No parent name provided'}</span>
+                                                    </div>
+                                                    <div className="admission-app-detail-row">
+                                                        <Mail size={13} />
+                                                        <span>{app.phone || 'No phone provided'}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="admission-app-section-row">
+                                                    <label>Assign Section</label>
+                                                    <select
+                                                        className="custom-select"
+                                                        value={approvalSections[app.id] || 'Section A'}
+                                                        onChange={(e) => setApprovalSections({ ...approvalSections, [app.id]: e.target.value })}
+                                                    >
+                                                        {sectionsList
+                                                            .filter(sec => sec.className === app.grade)
+                                                            .length > 0 ? (
+                                                            sectionsList
+                                                                .filter(sec => sec.className === app.grade)
+                                                                .map(sec => (
+                                                                    <option key={sec.id} value={sec.name}>{sec.name}</option>
+                                                                ))
+                                                        ) : (
+                                                            <option value="Section A">Section A (Default)</option>
+                                                        )
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                <div className="admission-app-footer">
+                                                    <button className="icon-btn view-btn" onClick={() => setSelectedApp(app)} title="View Details">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <div className="admission-app-footer-right">
+                                                        {!isApproved && (
+                                                            <button className="approve-btn" onClick={() => handleApproveAdmission(app)} title="Approve & Send to ERP">
+                                                                <CheckCircle size={14} /> Approve
+                                                            </button>
+                                                        )}
+                                                        {!isRejected && (
+                                                            <button className="reject-btn" onClick={() => handleRejectAdmission(app.id)} title="Reject Application">
+                                                                <XCircle size={14} /> Reject
+                                                            </button>
+                                                        )}
+                                                        <button className="icon-btn delete-btn" onClick={() => handleDeleteAdmission(app.id)} title="Delete Record">
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
                             {selectedApp && (
-                                <div className="admin-modal-backdrop">
-                                    <div className="admin-modal-card">
-                                        <h3>Application Full View</h3>
+                                <div className="admin-modal-backdrop" onClick={() => setSelectedApp(null)}>
+                                    <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+                                        <div className="admission-modal-header-block">
+                                            <div className="admission-app-avatar large">{getAdmissionInitials(selectedApp)}</div>
+                                            <div>
+                                                <h3 style={{ margin: 0, border: 'none', padding: 0 }}>{selectedApp.firstName} {selectedApp.middleName} {selectedApp.lastName}</h3>
+                                                <span className={`status-pill ${(selectedApp.status || 'Pending').toLowerCase()}`}>{selectedApp.status || 'Pending'}</span>
+                                            </div>
+                                        </div>
                                         <div className="modal-grid">
-                                            <p><strong>Full Name:</strong> {selectedApp.firstName} {selectedApp.middleName} {selectedApp.lastName}</p>
                                             <p><strong>Grade:</strong> {selectedApp.grade}</p>
                                             <p><strong>Parent Name:</strong> {selectedApp.parentName}</p>
                                             <p><strong>Phone:</strong> {selectedApp.phone}</p>

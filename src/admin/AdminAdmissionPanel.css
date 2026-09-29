@@ -1,6 +1,7 @@
 /* ============================================================================
-   ADMISSIONS PANEL — matches the EduPulse Admin premium design system.
-   Tokens are repeated here so this file also works if ever loaded on its own.
+   ADMISSIONS PANEL — card layout, matches the EduPulse Admin premium design
+   system. Tokens are repeated here so this file also works if ever loaded
+   on its own.
    ============================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
@@ -37,6 +38,7 @@
     --r-md: 13px;
     --r-sm: 9px;
     --shadow-card: 0 1px 2px rgba(26, 23, 48, 0.04), 0 8px 24px -12px rgba(26, 23, 48, 0.10);
+    --shadow-card-hover: 0 4px 10px rgba(26, 23, 48, 0.06), 0 20px 40px -14px rgba(26, 23, 48, 0.18);
     --shadow-pop: 0 20px 45px -12px rgba(23, 20, 44, 0.32);
 
     --font-display: 'Outfit', 'Segoe UI', sans-serif;
@@ -46,8 +48,8 @@
 /* Container — scoped so this panel's own header never collides with the
    dashboard's global topbar, which also happens to use ".admin-header" */
 .admin-panel-container {
-    padding: 26px;
-    background: var(--surface);
+    padding: 28px;
+    background: var(--paper);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-card);
@@ -55,109 +57,241 @@
     color: var(--ink);
 }
 
+/* ---- Header ---- */
 .admin-panel-container .admin-header {
-    display: block;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 18px;
     background: none;
     border: none;
     box-shadow: none;
-    padding: 0 0 18px;
-    margin: 0 0 20px;
-    border-bottom: 1px solid var(--border);
+    padding: 0 0 20px;
+    margin: 0 0 24px;
+    border-bottom: 1px solid var(--border-strong);
 }
 
-.admin-panel-container .admin-header h3 {
+.admin-header-text h3 {
     margin: 0 0 4px;
     font-family: var(--font-display);
     color: var(--ink);
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
 }
 
-.admin-panel-container .admin-header p {
+.admin-header-text p {
     color: var(--ink-faint);
-    font-size: .84rem;
+    font-size: .86rem;
     margin: 0;
 }
 
+.admin-stats-row {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 76px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-card);
+}
+
+.admin-stat-value {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.2;
+}
+
+.admin-stat-chip.pending .admin-stat-value {
+    color: var(--warning);
+}
+
+.admin-stat-chip.approved .admin-stat-value {
+    color: var(--success);
+}
+
+.admin-stat-label {
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+}
+
+/* ---- Loading & empty states ---- */
 .admin-loading {
-    padding: 40px;
+    padding: 60px 20px;
     text-align: center;
     color: var(--ink-faint);
     font-weight: 500;
     font-size: .88rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
 }
 
-/* ---- Table wrapper (shared shape with the main dashboard tables) ---- */
-.table-responsive-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    margin-top: 20px;
-    border: 1px solid var(--border);
+.admin-loading-spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 3px solid var(--brand-light);
+    border-top-color: var(--brand);
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.no-data-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 60px 20px;
+    color: var(--ink-faint);
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
     border-radius: var(--r-md);
 }
 
-.admin-data-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
+.no-data-state p {
+    margin: 0;
+    font-size: .88rem;
+    font-weight: 500;
+}
+
+/* ---- Cards grid ---- */
+.admissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+}
+
+.admission-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px 20px 18px;
+    overflow: hidden;
+    transition: box-shadow .18s ease, transform .18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admission-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+}
+
+.admission-card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+}
+
+.admission-card.approved .admission-card-accent {
+    background: linear-gradient(90deg, var(--success), #0c6d53);
+}
+
+.admission-card.rejected .admission-card-accent {
+    background: linear-gradient(90deg, var(--danger), #a81f41);
+}
+
+.admission-card.pending .admission-card-accent {
+    background: linear-gradient(90deg, var(--brass), var(--brass-dark));
+}
+
+/* ---- Top: avatar + name + status ---- */
+.admission-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.admission-avatar {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: .86rem;
-    white-space: nowrap;
-}
-
-.admin-data-table th {
-    background: var(--brand-light);
     color: var(--brand-dark);
+    background: var(--brand-light);
+    border: 1px solid var(--brand-ring);
+}
+
+.admission-avatar.large {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    font-size: 1.05rem;
+}
+
+.admission-card-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.admission-card-titles h4 {
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+    font-size: 1rem;
     font-weight: 700;
-    font-size: .76rem;
-    padding: 13px 16px;
-    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.admin-data-table td {
-    padding: 13px 16px;
-    border-bottom: 1px solid var(--border);
-    color: var(--ink-soft);
-    vertical-align: middle;
-}
-
-.admin-data-table tr:last-child td {
-    border-bottom: none;
-}
-
-.admin-data-table tr:hover td {
-    background: var(--surface-tint);
-}
-
-.no-data-cell {
-    text-align: center;
-    color: var(--ink-faint);
-    padding: 34px !important;
-}
-
-/* ---- Badges & pills ---- */
-.ack-cell strong {
-    color: var(--brand);
-    font-family: var(--font-body);
-    font-weight: 700;
-}
-
+/* ---- Badges & pills (shared across card + modal) ---- */
 .grade-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     background: var(--success-light);
     color: var(--success);
-    padding: 4px 11px;
+    padding: 4px 10px;
     border-radius: 7px;
     font-weight: 700;
-    font-size: .76rem;
+    font-size: .74rem;
     border: 1px solid #cdeee0;
 }
 
 .status-pill {
     display: inline-flex;
     align-items: center;
-    padding: 5px 12px;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 5px 11px;
     border-radius: 999px;
-    font-size: .7rem;
+    font-size: .68rem;
     font-weight: 700;
+    text-transform: capitalize;
 }
 
 .status-pill.pending {
@@ -175,18 +309,62 @@
     color: var(--danger);
 }
 
+/* ---- Contact details ---- */
+.admission-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px 14px;
+    background: var(--surface-tint);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+.admission-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .8rem;
+    color: var(--ink-soft);
+}
+
+.admission-detail-row svg {
+    flex-shrink: 0;
+    color: var(--ink-faint);
+}
+
+.admission-detail-row span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ---- Assign-section select ---- */
+.admission-card-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admission-card-section label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+}
+
 .section-select {
-    padding: 8px 12px;
+    width: 100%;
+    padding: 9px 12px;
     border-radius: var(--r-sm);
     border: 1px solid var(--border-strong);
     background: var(--surface);
-    font-size: .82rem;
+    font-size: .84rem;
     font-family: var(--font-body);
     color: var(--ink);
     outline: none;
     transition: border-color .15s ease, box-shadow .15s ease;
-    min-width: 150px;
 }
 
 .section-select:focus {
@@ -200,32 +378,37 @@
     cursor: not-allowed;
 }
 
-/* ---- Action buttons ---- */
-.actions-cell {
+/* ---- Footer actions ---- */
+.admission-card-footer {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
 }
 
 .icon-btn {
     background: var(--surface-tint);
     border: 1px solid var(--border-strong);
-    height: 34px;
+    height: 36px;
+    padding: 0 13px;
     border-radius: var(--r-sm);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    transition: all .15s ease;
+    font-size: .78rem;
+    font-weight: 600;
+    font-family: var(--font-body);
     color: var(--ink-soft);
+    transition: all .15s ease;
 }
 
 .icon-btn:hover {
     transform: translateY(-1px);
-}
-
-.view-btn {
-    width: 34px;
 }
 
 .view-btn:hover {
@@ -235,13 +418,9 @@
 }
 
 .approve-sync-btn {
-    width: auto;
-    padding: 0 14px;
-    font-size: .78rem;
-    font-weight: 700;
-    gap: 6px;
     color: var(--success);
     border-color: #cdeee0;
+    font-weight: 700;
 }
 
 .approve-sync-btn:hover {
@@ -250,21 +429,10 @@
     border-color: #b9e8d4;
 }
 
-.reject-btn:hover {
-    background: var(--danger-light);
-    color: var(--danger);
-    border-color: #f6c3d1;
-}
-
-.delete-btn:hover {
-    background: var(--danger-light);
-    color: var(--danger);
-    border-color: #f6c3d1;
-}
-
 .synced-label {
     color: var(--ink-faint);
-    font-size: .74rem;
+    font-size: .76rem;
+    font-weight: 600;
     font-style: italic;
     display: inline-flex;
     align-items: center;
@@ -285,6 +453,7 @@
 }
 
 .admin-modal-card {
+    position: relative;
     background: var(--surface);
     width: 100%;
     max-width: 600px;
@@ -296,31 +465,68 @@
     animation: scaleInModal 0.22s ease-out;
 }
 
-.admin-modal-card h3 {
-    margin-top: 0;
+.modal-close-x {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-tint);
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.modal-close-x:hover {
+    background: var(--border);
+}
+
+.modal-header-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header-block h3 {
+    margin: 0 0 6px;
     font-family: var(--font-display);
     color: var(--ink);
     font-size: 1.15rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 12px;
+    border: none;
+    padding: 0;
 }
 
 .modal-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px 20px;
-    margin: 18px 0;
+    gap: 14px 20px;
+    margin: 0 0 18px;
     font-size: .88rem;
 }
 
 .modal-grid p {
     margin: 0;
-    color: var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--ink);
+    font-weight: 600;
 }
 
 .modal-grid p strong {
     color: var(--ink-faint);
     font-weight: 600;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
 }
 
 .modal-docs {
@@ -337,6 +543,12 @@
     color: var(--brand);
 }
 
+.modal-docs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .modal-docs a {
     display: inline-flex;
     align-items: center;
@@ -349,7 +561,6 @@
     font-size: .78rem;
     font-weight: 600;
     text-decoration: none;
-    margin: 0 8px 6px 0;
     transition: background .15s ease;
 }
 
@@ -387,11 +598,20 @@
 }
 
 @media (max-width: 640px) {
-    .modal-grid {
+    .admissions-grid {
         grid-template-columns: 1fr;
     }
 
     .admin-panel-container {
         padding: 18px;
+    }
+
+    .admin-panel-container .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
     }
 }

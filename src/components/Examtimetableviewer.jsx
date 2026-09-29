@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../service/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -19,7 +18,7 @@ export default function ExamTimetableViewer() {
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState('select'); // 'select' | 'view'
     const [selectedClass, setSelectedClass] = useState('');
-    const [selectedExam, setSelectedExam] = useState('all');
+    const [selectedExam, setSelectedExam] = useState('');
 
     useEffect(() => {
         const unsub = onSnapshot(
@@ -97,14 +96,19 @@ export default function ExamTimetableViewer() {
         [timetables, selectedClass]
     );
 
+    useEffect(() => {
+        if (
+            examNamesForClass.length > 0 &&
+            !examNamesForClass.includes(selectedExam)
+        ) {
+            setSelectedExam(examNamesForClass[0]);
+        }
+    }, [examNamesForClass]);
+
     const classSchedule = useMemo(() => {
         return timetables
             .filter(t => t.className === selectedClass)
-            .filter(
-                t =>
-                    selectedExam === 'all' ||
-                    t.examName === selectedExam
-            )
+            .filter(t => t.examName === selectedExam)
             .sort((a, b) =>
                 (a.examDate || '').localeCompare(
                     b.examDate || ''
@@ -120,18 +124,18 @@ export default function ExamTimetableViewer() {
         return isNaN(d)
             ? dateStr
             : d.toLocaleDateString(
-                  'en-GB',
-                  opts || {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                  }
-              );
+                'en-GB',
+                opts || {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                }
+            );
     };
 
     const openClass = cls => {
         setSelectedClass(cls);
-        setSelectedExam('all');
+        setSelectedExam('');
         setStep('view');
     };
 
@@ -141,14 +145,14 @@ export default function ExamTimetableViewer() {
         setSelectedClass(cls);
 
         if (cls) {
-            setSelectedExam('all');
+            setSelectedExam('');
             setStep('view');
         }
     };
 
     const goBack = () => {
         setStep('select');
-        setSelectedExam('all');
+        setSelectedExam('');
     };
 
     const handleDownload = () => {
@@ -174,10 +178,7 @@ export default function ExamTimetableViewer() {
             )
             .join('');
 
-        const examLabel =
-            selectedExam === 'all'
-                ? 'All Examinations'
-                : selectedExam;
+        const examLabel = selectedExam || 'Examination';
 
         const generatedOn = new Date().toLocaleDateString(
             'en-GB',
@@ -568,10 +569,6 @@ export default function ExamTimetableViewer() {
                                 }
                             >
 
-                                <option value="all">
-                                    All Exams
-                                </option>
-
                                 {examNamesForClass.map(
                                     exam => (
                                         <option
@@ -618,7 +615,7 @@ export default function ExamTimetableViewer() {
                             <p>
                                 There's no published timetable
                                 for {selectedClass}
-                                {selectedExam !== 'all'
+                                {selectedExam
                                     ? ` — ${selectedExam}`
                                     : ''}
                                 yet.

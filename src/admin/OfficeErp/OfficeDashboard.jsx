@@ -35,6 +35,13 @@ export default function OfficeDashboard() {
 
     const [selectedTimetableClass, setSelectedTimetableClass] = useState('all');
 
+    // Timetable: which older (non-latest) exams are expanded, keyed by `${class}__${examName}`
+    const [openTimetableExams, setOpenTimetableExams] = useState({});
+
+    // Seating arrangement (class-by-class) view state
+    const [seatingFilterClass, setSeatingFilterClass] = useState('all');
+    const [openSeatingClasses, setOpenSeatingClasses] = useState({});
+
 
     // Sidebar Submenu Open/Close Toggle State for Exam Halls
     const [isExamMenuOpen, setIsExamMenuOpen] = useState(true);
@@ -261,7 +268,7 @@ export default function OfficeDashboard() {
         }
 
         try {
-            await addDoc(collection(db, 'hall_ticket_publications'), {
+            const newPublicationRef = await addDoc(collection(db, 'hall_ticket_publications'), {
                 studentId: student.id,
                 studentName: student.name || 'Student',
                 admissionNo: student.admissionNo || student.rollNo || '',
@@ -273,6 +280,18 @@ export default function OfficeDashboard() {
                 published: true,
                 publishedAt: serverTimestamp()
             });
+
+            // Delete this student's older published hall tickets - only the latest is kept
+            const oldPublications = hallTicketPublications.filter(p =>
+                p.id !== newPublicationRef.id &&
+                (
+                    p.studentId === student.id ||
+                    (p.admissionNo && String(p.admissionNo) === String(student.admissionNo || student.rollNo))
+                )
+            );
+            await Promise.all(
+                oldPublications.map(p => deleteDoc(doc(db, 'hall_ticket_publications', p.id)))
+            );
 
             alert(`Hall Ticket published for ${student.name || 'student'}.`);
         } catch (error) {
@@ -482,6 +501,84 @@ export default function OfficeDashboard() {
     const dashboardPublishedTickets = hallTicketPublications.filter(item => item.published === true).length;
     const dashboardPaidStudents = studentsList.filter(student => getStudentFeeStatus(student).paid).length;
 
+    // Group a class's timetable rows by exam; newest published exam comes first
+    const getExamGroups = (classTimetables) => {
+        const map = {};
+        classTimetables.forEach(t => {
+            const key = t.examName || 'Examination';
+            (map[key] = map[key] || []).push(t);
+        });
+        return Object.entries(map)
+            .map(([examName, items]) => ({
+                examName,
+                items,
+                latest: Math.max(...items.map(i => i.createdAt?.seconds ?? Date.now() / 1000))
+            }))
+            .sort((a, b) => (b.latest - a.latest) || (examTypes.indexOf(b.examName) - examTypes.indexOf(a.examName)));
+    };
+
+    const renderTimetableTable = (items) => (
+        <div className="table-responsive">
+            <table className="custom-table classwise-exam-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Exam</th>
+                        <th>Subject Code</th>
+                        <th>Subject</th>
+                        <th>Timing</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items.map((item, index) => (
+                        <tr key={item.id}>
+                            <td><span className="exam-number">{index + 1}</span></td>
+                            <td>
+                                <strong className="exam-date">
+                                    {item.examDate ? new Date(item.examDate).toLocaleDateString('en-GB') : '—'}
+                                </strong>
+                            </td>
+                            <td><span className="exam-name-badge">{item.examName || 'Examination'}</span></td>
+                            <td><code>{item.subjectCode || '—'}</code></td>
+                            <td><strong>{item.subject}</strong></td>
+                            <td><span className="exam-time">{item.examTime || '09:30 AM - 12:30 PM'}</span></td>
+                            <td>
+                                <button
+                                    type="button"
+                                    className="delete-task-btn"
+                                    onClick={() => handleDelete('exam_timetables', item.id)}
+                                    title="Delete Timetable"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+
+    // Seating arrangement grouped class by class
+    const seatingClasses = Array.from(new Set(examHalls.map(h => h.targetClass).filter(Boolean)));
+    const getHallSeatList = (hall) => {
+        const list = Array.isArray(hall.studentList) && hall.studentList.length
+            ? hall.studentList
+            : (hall.studentIds || []).map((id, i) => {
+                const st = studentsList.find(x => x.id === id) || {};
+                return {
+                    id,
+                    name: st.name || 'Student',
+                    admissionNo: st.admissionNo || '',
+                    sectionName: st.sectionName || st.section || hall.targetSection || '',
+                    seatNo: i + 1
+                };
+            });
+        return [...list].sort((a, b) => Number(a.seatNo || 0) - Number(b.seatNo || 0));
+    };
+
     return (
         <div className="dashboard-containers">
             {/* Mobile Navigation Bar */}
@@ -656,21 +753,21 @@ export default function OfficeDashboard() {
                             <div className="overview-insight-row">
                                 <div className="insight-card insight-primary">
                                     <div className="insight-head"><div><span>OPERATIONS FLOW</span><b>Today’s activity</b></div><Activity size={16} /></div>
-                                    <div className="mini-bars">{[42,58,48,72,64,82,68,91,76,88,70,96].map((v,i)=><span key={i} style={{height:`${v}%`}} />)}</div>
+                                    <div className="mini-bars">{[42, 58, 48, 72, 64, 82, 68, 91, 76, 88, 70, 96].map((v, i) => <span key={i} style={{ height: `${v}%` }} />)}</div>
                                     <div className="insight-foot"><strong>+18.4%</strong><small>vs. previous activity window</small></div>
                                 </div>
                                 <div className="insight-card">
                                     <div className="insight-head"><div><span>COLLECTION SNAPSHOT</span><b>Fee performance</b></div><TrendingUp size={16} /></div>
                                     <div className="insight-metric"><strong>₹{dashboardFeePaid.toLocaleString('en-IN')}</strong><span>collected</span></div>
-                                    <div className="progress-track"><span style={{width:`${dashboardFeeTotal ? Math.min(100,(dashboardFeePaid/dashboardFeeTotal)*100) : 0}%`}} /></div>
-                                    <div className="insight-foot"><strong>{dashboardFeeTotal ? Math.round((dashboardFeePaid/dashboardFeeTotal)*100) : 0}%</strong><small>of total fee ledger</small></div>
+                                    <div className="progress-track"><span style={{ width: `${dashboardFeeTotal ? Math.min(100, (dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%` }} /></div>
+                                    <div className="insight-foot"><strong>{dashboardFeeTotal ? Math.round((dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%</strong><small>of total fee ledger</small></div>
                                 </div>
                                 <div className="notification-panel">
-                                    <div className="notification-head"><div><span>NOTIFICATIONS</span><b>Needs attention</b></div><button type="button"><MoreHorizontal size={16}/></button></div>
+                                    <div className="notification-head"><div><span>NOTIFICATIONS</span><b>Needs attention</b></div><button type="button"><MoreHorizontal size={16} /></button></div>
                                     <div className="notification-list">
-                                        <button type="button" onClick={() => setActiveTab('leaves')}><span className="notice-dot notice-amber"/><div><b>{dashboardPendingLeaves} leave request{dashboardPendingLeaves === 1 ? '' : 's'}</b><small>Awaiting approval</small></div><ArrowLeft size={13}/></button>
-                                        <button type="button" onClick={() => setActiveTab('tasks')}><span className="notice-dot notice-violet"/><div><b>{dashboardPendingTasks} open task{dashboardPendingTasks === 1 ? '' : 's'}</b><small>Internal work queue</small></div><ArrowLeft size={13}/></button>
-                                        <button type="button" onClick={() => setActiveTab('hall-ticket-allocation')}><span className="notice-dot notice-blue"/><div><b>{dashboardPublishedTickets} tickets published</b><small>Hall ticket desk status</small></div><ArrowLeft size={13}/></button>
+                                        <button type="button" onClick={() => setActiveTab('leaves')}><span className="notice-dot notice-amber" /><div><b>{dashboardPendingLeaves} leave request{dashboardPendingLeaves === 1 ? '' : 's'}</b><small>Awaiting approval</small></div><ArrowLeft size={13} /></button>
+                                        <button type="button" onClick={() => setActiveTab('tasks')}><span className="notice-dot notice-violet" /><div><b>{dashboardPendingTasks} open task{dashboardPendingTasks === 1 ? '' : 's'}</b><small>Internal work queue</small></div><ArrowLeft size={13} /></button>
+                                        <button type="button" onClick={() => setActiveTab('hall-ticket-allocation')}><span className="notice-dot notice-blue" /><div><b>{dashboardPublishedTickets} tickets published</b><small>Hall ticket desk status</small></div><ArrowLeft size={13} /></button>
                                     </div>
                                 </div>
                             </div>
@@ -1227,111 +1324,39 @@ export default function OfficeDashboard() {
                                                         </div>
 
 
-                                                        {/* EXAM TABLE */}
+                                                        {/* EXAMS: latest open, older exams hidden in dropdowns */}
 
-                                                        <div className="table-responsive">
+                                                        {getExamGroups(classTimetables).map((group, gi) => {
+                                                            const key = `${cls}__${group.examName}`;
+                                                            const isOpen = !!openTimetableExams[key];
 
-                                                            <table className="custom-table classwise-exam-table">
+                                                            if (gi === 0) {
+                                                                return (
+                                                                    <div key={key}>
+                                                                        <div className="tt-exam-head">
+                                                                            <strong>{group.examName}</strong>
+                                                                            <span className="status-badge status-present">Latest Published</span>
+                                                                            <small className="tt-exam-count">{group.items.length} {group.items.length === 1 ? 'subject' : 'subjects'}</small>
+                                                                        </div>
+                                                                        {renderTimetableTable(group.items)}
+                                                                    </div>
+                                                                );
+                                                            }
 
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>#</th>
-                                                                        <th>Date</th>
-                                                                        <th>Exam</th>
-                                                                        <th>Subject Code</th>
-                                                                        <th>Subject</th>
-                                                                        <th>Timing</th>
-                                                                        <th>Action</th>
-                                                                    </tr>
-                                                                </thead>
-
-
-                                                                <tbody>
-
-                                                                    {classTimetables.map(
-                                                                        (item, index) => (
-
-                                                                            <tr key={item.id}>
-
-                                                                                <td>
-                                                                                    <span className="exam-number">
-                                                                                        {index + 1}
-                                                                                    </span>
-                                                                                </td>
-
-
-                                                                                <td>
-                                                                                    <strong className="exam-date">
-                                                                                        {item.examDate
-                                                                                            ? new Date(
-                                                                                                item.examDate
-                                                                                            ).toLocaleDateString(
-                                                                                                'en-GB'
-                                                                                            )
-                                                                                            : '—'}
-                                                                                    </strong>
-                                                                                </td>
-
-
-                                                                                <td>
-                                                                                    <span className="exam-name-badge">
-                                                                                        {item.examName ||
-                                                                                            'Examination'}
-                                                                                    </span>
-                                                                                </td>
-
-
-                                                                                <td>
-                                                                                    <code>
-                                                                                        {item.subjectCode ||
-                                                                                            '—'}
-                                                                                    </code>
-                                                                                </td>
-
-
-                                                                                <td>
-                                                                                    <strong>
-                                                                                        {item.subject}
-                                                                                    </strong>
-                                                                                </td>
-
-
-                                                                                <td>
-                                                                                    <span className="exam-time">
-                                                                                        {item.examTime ||
-                                                                                            '09:30 AM - 12:30 PM'}
-                                                                                    </span>
-                                                                                </td>
-
-
-                                                                                <td>
-
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        className="delete-task-btn"
-                                                                                        onClick={() =>
-                                                                                            handleDelete(
-                                                                                                'exam_timetables',
-                                                                                                item.id
-                                                                                            )
-                                                                                        }
-                                                                                        title="Delete Timetable"
-                                                                                    >
-                                                                                        <Trash2 size={14} />
-                                                                                    </button>
-
-                                                                                </td>
-
-                                                                            </tr>
-
-                                                                        )
-                                                                    )}
-
-                                                                </tbody>
-
-                                                            </table>
-
-                                                        </div>
+                                                            return (
+                                                                <div key={key} className={`tt-exam-dropdown ${isOpen ? 'open' : ''}`}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setOpenTimetableExams(prev => ({ ...prev, [key]: !prev[key] }))}
+                                                                        className="tt-exam-toggle"
+                                                                    >
+                                                                        <span>{group.examName} <small>({group.items.length} {group.items.length === 1 ? 'subject' : 'subjects'})</small></span>
+                                                                        {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                                    </button>
+                                                                    {isOpen && renderTimetableTable(group.items)}
+                                                                </div>
+                                                            );
+                                                        })}
 
                                                     </div>
 
@@ -1697,6 +1722,85 @@ export default function OfficeDashboard() {
                                                 </tbody>
                                             </table>
                                         </div>
+                                    </div>
+
+                                    {/* CLASS-WISE SEATING ARRANGEMENT */}
+                                    <div className="exam-existing-section">
+                                        <div className="exam-section-heading">
+                                            <strong>Seating Arrangement (Class-wise)</strong>
+                                            <span>{seatingClasses.length}</span>
+                                        </div>
+
+                                        <select
+                                            className="custom-select full-width seat-filter-select"
+                                            value={seatingFilterClass}
+                                            onChange={e => setSeatingFilterClass(e.target.value)}
+                                        >
+                                            <option value="all">All Classes</option>
+                                            {seatingClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                                        </select>
+
+                                        {seatingClasses.length === 0 ? (
+                                            <div className="exam-empty-state"><Users size={22} /><span>No seating arrangements yet. Assign students to a hall first.</span></div>
+                                        ) : seatingClasses
+                                            .filter(cls => seatingFilterClass === 'all' || seatingFilterClass === cls)
+                                            .map(cls => {
+                                                const classHalls = examHalls
+                                                    .filter(h => h.targetClass === cls)
+                                                    .sort((a, b) => String(a.hallNo).localeCompare(String(b.hallNo), undefined, { numeric: true }));
+                                                const totalStudents = classHalls.reduce((n, h) => n + getHallSeatList(h).length, 0);
+                                                const isOpen = seatingFilterClass === cls || !!openSeatingClasses[cls];
+
+                                                return (
+                                                    <div key={cls} className={`seat-class-group ${isOpen ? 'open' : ''}`}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setOpenSeatingClasses(prev => ({ ...prev, [cls]: !prev[cls] }))}
+                                                            className="seat-class-toggle"
+                                                        >
+                                                            <span className="seat-class-title">
+                                                                <GraduationCap size={16} /> {cls}
+                                                                <small>
+                                                                    {classHalls.length} {classHalls.length === 1 ? 'hall' : 'halls'} · {totalStudents} students
+                                                                </small>
+                                                            </span>
+                                                            {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                        </button>
+
+                                                        {isOpen && classHalls.map(hall => (
+                                                            <div key={hall.id} className="seat-hall">
+                                                                <div className="seat-hall-head">
+                                                                    <strong>{hall.hallNo}</strong>
+                                                                    <span className="task-target-tag">{hall.targetClass || '—'} / {hall.targetSection || '—'}</span>
+                                                                    <small className="seat-hall-exam">{hall.examName || 'Examination'}</small>
+                                                                </div>
+                                                                <div className="table-responsive">
+                                                                    <table className="custom-table">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Seat No</th>
+                                                                                <th>Student Name</th>
+                                                                                <th>Admission No</th>
+                                                                                <th>Section</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {getHallSeatList(hall).map(st => (
+                                                                                <tr key={st.id}>
+                                                                                    <td><span className="exam-seat-range">{st.seatNo || '—'}</span></td>
+                                                                                    <td><strong>{st.name || 'Student'}</strong></td>
+                                                                                    <td>{st.admissionNo || '—'}</td>
+                                                                                    <td>{st.sectionName || hall.targetSection || '—'}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })}
                                     </div>
                                 </div>
 

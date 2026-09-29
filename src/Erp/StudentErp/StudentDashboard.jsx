@@ -16,6 +16,83 @@ import principalSignature from "../../assets/signature.png"
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
 const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
 
+// Prints the hall ticket exactly as it looks on screen, on ONE A4 page.
+// It clones the on-screen ticket into a hidden iframe, freezes every element's computed
+// style (so print-width media queries can't restack the layout), then scales it to fit.
+const printHallTicketCard = async () => {
+    const card = document.querySelector('.hall-ticket-preview .ht-card');
+    if (!card) { window.print(); return; }
+
+    const rect = card.getBoundingClientRect();
+    const PAGE_W = 755;   // A4 width (210mm) minus 5mm margins, in CSS px
+    const PAGE_H = 1070;  // A4 height (297mm) minus 5mm margins, with a small safety gap
+    const scale = Math.min(PAGE_W / rect.width, PAGE_H / rect.height, 1.6);
+
+    const clone = card.cloneNode(true);
+    const freezeStyles = (src, dst) => {
+        const cs = window.getComputedStyle(src);
+        for (let i = 0; i < cs.length; i++) {
+            const prop = cs[i];
+            dst.style.setProperty(prop, cs.getPropertyValue(prop), cs.getPropertyPriority(prop));
+        }
+        for (let i = 0; i < src.children.length; i++) freezeStyles(src.children[i], dst.children[i]);
+    };
+    freezeStyles(card, clone);
+
+    // Make image URLs absolute so they load inside the iframe
+    const srcImgs = card.querySelectorAll('img');
+    clone.querySelectorAll('img').forEach((img, i) => {
+        if (srcImgs[i]) img.setAttribute('src', srcImgs[i].src);
+    });
+    clone.style.setProperty('margin', '0', 'important');
+    clone.style.setProperty('transform', 'none', 'important');
+
+    // Keep the web fonts the dashboard uses
+    let fontCss = '';
+    let fontLinks = '';
+    Array.from(document.styleSheets).forEach((sheet) => {
+        try {
+            Array.from(sheet.cssRules).forEach((rule) => {
+                if (rule.constructor.name === 'CSSFontFaceRule') fontCss += rule.cssText + '\n';
+            });
+        } catch (e) {
+            if (sheet.href) fontLinks += `<link rel="stylesheet" href="${sheet.href}">`;
+        }
+    });
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Hall Ticket</title>${fontLinks}<style>
+${fontCss}
+@page { size: A4 portrait; margin: 5mm; }
+html, body { margin: 0; padding: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.ht-print-wrap { width: ${rect.width}px; margin: 0 auto; zoom: ${scale}; break-inside: avoid; page-break-inside: avoid; }
+</style></head><body><div class="ht-print-wrap"></div></body></html>`);
+    doc.close();
+    doc.querySelector('.ht-print-wrap').appendChild(clone);
+
+    // Wait for images and fonts so nothing prints blank
+    const images = Array.from(doc.images);
+    await Promise.all(images.map((img) => (img.complete ? null : new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+    }))));
+    if (doc.fonts?.ready) {
+        await Promise.race([doc.fonts.ready, new Promise((resolve) => setTimeout(resolve, 2500))]);
+    }
+
+    const cleanup = () => iframe.remove();
+    iframe.contentWindow.onafterprint = cleanup;
+    setTimeout(cleanup, 120000);
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+};
+
 // Keep in sync with HolidayList.jsx — same manual Government Public Holidays list,
 // used here so "holiday" days can be colored pink in the attendance widgets
 // even before the live Firestore 'holidays' collection has loaded.
@@ -609,6 +686,19 @@ export default function StudentDashboard() {
             unsubExamTimetables();
         };
     }, [studentData, liveStudentRecord]);
+
+    // While the hall ticket preview is open, Ctrl/Cmd+P prints the ticket itself (one page)
+    useEffect(() => {
+        if (!selectedHallTicket) return undefined;
+        const onKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'p') {
+                e.preventDefault();
+                printHallTicketCard();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [selectedHallTicket]);
 
     const studentSchedule = timetableList.filter(item => {
         const itemClass = cleanString(item.className);
@@ -1221,19 +1311,35 @@ export default function StudentDashboard() {
             return status === 'paid' || Number(f.balance ?? 0) <= 0;
         });
 
-    const myHallTicketAllocation = myExamHallAllocations?.[0] || null;
+    // Only this student's published hall tickets, newest first (latest one is shown)
+    const getPublicationTime = (publication) => {
+        const ts = publication?.publishedAt;
+        if (ts?.seconds) return ts.seconds;
+        if (typeof ts?.toMillis === 'function') return ts.toMillis() / 1000;
+        // publishedAt is briefly null while a fresh write is still pending -> treat as newest
+        return Date.now() / 1000;
+    };
 
-    const myPublishedHallTickets = hallTicketPublications.filter(publication => {
-        if (publication.published !== true) return false;
-        const studentMatch =
-            publication.studentId === studentData.id ||
-            (publication.admissionNo &&
-                cleanString(publication.admissionNo) === cleanString(studentData.rollNo));
-        return studentMatch;
-    });
+    const myPublishedHallTickets = hallTicketPublications
+        .filter(publication => {
+            if (publication.published !== true) return false;
+            return (
+                publication.studentId === studentData.id ||
+                (publication.admissionNo &&
+                    cleanString(publication.admissionNo) === cleanString(studentData.rollNo))
+            );
+        })
+        .sort((a, b) => getPublicationTime(b) - getPublicationTime(a));
 
     const myHallTicketPublication = myPublishedHallTickets[0] || null;
     const isHallTicketPublished = Boolean(myHallTicketPublication);
+
+    // Use the hall allocation that belongs to the latest published hall ticket
+    const myHallTicketAllocation =
+        (myHallTicketPublication?.allocationId &&
+            myExamHallAllocations.find(a => a.id === myHallTicketPublication.allocationId)) ||
+        myExamHallAllocations?.[0] ||
+        null;
 
     const guardHallTicketAccess = () => {
         if (!myHallTicketAllocation) {
@@ -1273,7 +1379,7 @@ export default function StudentDashboard() {
         if (!guardHallTicketAccess()) return;
         stampHallTicketMeta();
         setSelectedHallTicket(myHallTicketAllocation);
-        setTimeout(() => window.print(), 150);
+        setTimeout(printHallTicketCard, 150);
     };
 
     const handleExportCSV = () => {
@@ -2986,7 +3092,7 @@ export default function StudentDashboard() {
                                                     <span>Official examination details</span>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: 8 }}>
-                                                    <button type="button" onClick={() => window.print()} title="Print / Download" style={{ width: 34, height: 34, border: '1px solid #e2e8f0', borderRadius: 9, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                                                    <button type="button" onClick={printHallTicketCard} title="Print / Download" style={{ width: 34, height: 34, border: '1px solid #e2e8f0', borderRadius: 9, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
                                                         <Printer size={16} />
                                                     </button>
                                                     <button type="button" onClick={() => setSelectedHallTicket(null)} aria-label="Close hall ticket preview">
