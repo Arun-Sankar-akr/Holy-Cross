@@ -23,10 +23,20 @@ const printHallTicketCard = async () => {
     const card = document.querySelector('.hall-ticket-preview .ht-card');
     if (!card) { window.print(); return; }
 
-    const rect = card.getBoundingClientRect();
-    const PAGE_W = 755;   // A4 width (210mm) minus 5mm margins, in CSS px
-    const PAGE_H = 1070;  // A4 height (297mm) minus 5mm margins, with a small safety gap
-    const scale = Math.min(PAGE_W / rect.width, PAGE_H / rect.height, 1.6);
+    // Fixed A4 sheet: 210 x 297mm with 5mm margins -> 755 x 1080 CSS px of usable area
+    const PAGE_W = 755;
+    const PAGE_H = 1080;
+
+    // Lay the ticket out at exactly the A4 width (synchronously, so nothing flickers)
+    const saved = {
+        width: card.style.getPropertyValue('width'),
+        maxWidth: card.style.getPropertyValue('max-width'),
+        minWidth: card.style.getPropertyValue('min-width'),
+    };
+    card.style.setProperty('width', PAGE_W + 'px', 'important');
+    card.style.setProperty('max-width', PAGE_W + 'px', 'important');
+    card.style.setProperty('min-width', '0', 'important');
+    const naturalHeight = card.getBoundingClientRect().height;
 
     const clone = card.cloneNode(true);
     const freezeStyles = (src, dst) => {
@@ -39,13 +49,54 @@ const printHallTicketCard = async () => {
     };
     freezeStyles(card, clone);
 
+    // Put the on-screen ticket back exactly as it was
+    ['width', 'max-width', 'min-width'].forEach((prop, i) => {
+        const key = ['width', 'maxWidth', 'minWidth'][i];
+        if (saved[key]) card.style.setProperty(prop, saved[key]);
+        else card.style.removeProperty(prop);
+    });
+
+    // Too tall for one sheet -> shrink; otherwise stretch to fill the full sheet
+    const scale = naturalHeight > PAGE_H ? PAGE_H / naturalHeight : 1;
+    const fillHeight = PAGE_H / scale;
+
     // Make image URLs absolute so they load inside the iframe
     const srcImgs = card.querySelectorAll('img');
     clone.querySelectorAll('img').forEach((img, i) => {
         if (srcImgs[i]) img.setAttribute('src', srcImgs[i].src);
     });
-    clone.style.setProperty('margin', '0', 'important');
-    clone.style.setProperty('transform', 'none', 'important');
+
+    const force = (el, css) => {
+        if (!el) return;
+        Object.entries(css).forEach(([prop, value]) => el.style.setProperty(prop, value, 'important'));
+    };
+    force(clone, {
+        margin: '0',
+        transform: 'none',
+        'box-sizing': 'border-box',
+        width: PAGE_W + 'px',
+        height: fillHeight + 'px',
+        'min-height': fillHeight + 'px',
+        display: 'flex',
+        'flex-direction': 'column',
+    });
+    const content = clone.querySelector('.ht-content');
+    force(content, {
+        display: 'flex',
+        'flex-direction': 'column',
+        flex: '1 1 auto',
+        height: 'auto',
+        'min-height': '0',
+    });
+    // Signature, instructions and principal sit at the bottom of the sheet
+    force(clone.querySelector('.ht-sign-row'), { 'margin-top': 'auto' });
+    // Keep the watermark centred on the whole sheet
+    const watermark = clone.querySelector('.ht-watermark');
+    force(watermark, {
+        top: '0', left: '0', right: '0', bottom: '0',
+        width: 'auto', height: 'auto',
+        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+    });
 
     // Keep the web fonts the dashboard uses
     let fontCss = '';
@@ -70,8 +121,8 @@ const printHallTicketCard = async () => {
     doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Hall Ticket</title>${fontLinks}<style>
 ${fontCss}
 @page { size: A4 portrait; margin: 5mm; }
-html, body { margin: 0; padding: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.ht-print-wrap { width: ${rect.width}px; margin: 0 auto; zoom: ${scale}; break-inside: avoid; page-break-inside: avoid; }
+html, body { margin: 0; padding: 0; background: #ffffff; width: ${PAGE_W}px; height: ${PAGE_H}px; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.ht-print-wrap { width: ${PAGE_W}px; height: ${fillHeight}px; margin: 0; zoom: ${scale}; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
 </style></head><body><div class="ht-print-wrap"></div></body></html>`);
     doc.close();
     doc.querySelector('.ht-print-wrap').appendChild(clone);
@@ -1149,9 +1200,13 @@ export default function StudentDashboard() {
             } else {
                 const onlySession = forenoon || afternoon;
                 if (onlySession === 'present') {
+                    // A recorded present session is treated as a full present day
+                    // when the other session has not been marked yet.
                     fullPresentDays += 1;
                     presentCredit += 1;
-                } else {
+                } else if (onlySession === 'absent') {
+                    // A recorded absence is an actual absence. Do not give
+                    // present credit just because the other session is missing.
                     fullAbsentDays += 1;
                 }
             }
@@ -1164,7 +1219,7 @@ export default function StudentDashboard() {
 
     const overallDayAttendance = buildDayLevelAttendance(attendanceLogs);
     const totalWorkingDays = overallDayAttendance.totalDays;
-    const presentDaysCount = overallDayAttendance.fullPresentDays;
+    const presentDaysCount = overallDayAttendance.presentCredit;
     const absentDaysCount = overallDayAttendance.fullAbsentDays;
     const halfDaysCount = overallDayAttendance.halfDays;
     const rawAttendanceRate = overallDayAttendance.rate;
@@ -1216,7 +1271,7 @@ export default function StudentDashboard() {
     );
 
     const monthDayAttendance = buildDayLevelAttendance(monthAttendanceLogs);
-    const monthPresentCount = monthDayAttendance.fullPresentDays;
+    const monthPresentCount = monthDayAttendance.presentCredit;
     const monthAbsentCount = monthDayAttendance.fullAbsentDays;
     const monthHalfDayCount = monthDayAttendance.halfDays;
     const monthTotalSessions = monthDayAttendance.totalDays;
@@ -2354,24 +2409,25 @@ export default function StudentDashboard() {
                         )}
 
                         {activeTab === 'attendance' && (
-                            <div className="staff-card full attendance-section">
-                                <div className="attendance-head">
-                                    <div>
-                                        <h3>Attendance Summary & Session Logs</h3>
-                                        <p className="attendance-subtitle">
-                                            Month-wise attendance record for {studentData.name} (#{studentData.rollNo})
-                                        </p>
+                            <div className="staff-card full attendance-section att2">
+                                <div className="att2-header">
+                                    <div className="att2-title">
+                                        <div className="att2-title-icon">
+                                            <BarChart2 size={20} />
+                                        </div>
+                                        <div>
+                                            <h3>Attendance Summary & Session Logs</h3>
+                                            <p>
+                                                {studentData.name} • #{studentData.rollNo || '—'}
+                                            </p>
+                                        </div>
                                     </div>
 
                                     {hasStaffSubmittedAttendance && (
-                                        <div className="attendance-filters">
-                                            <div className="attendance-filters-label">
-                                                <Filter size={13} />
-                                                <span>Filters</span>
-                                            </div>
-
+                                        <div className="att2-month-nav">
+                                            <Filter size={14} className="att2-filter-icon" />
                                             <select
-                                                className="custom-select attendance-select"
+                                                className="att2-month-select"
                                                 value={selectedAttendanceMonth}
                                                 onChange={(e) => setSelectedAttendanceMonth(e.target.value)}
                                                 title="Select Month"
@@ -2382,195 +2438,230 @@ export default function StudentDashboard() {
                                                     </option>
                                                 ))}
                                             </select>
-
-                                            <input
-                                                type="date"
-                                                className="custom-select attendance-select"
-                                                value={attendanceDateFilter}
-                                                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-                                                title="Filter by Date"
-                                            />
-
-                                            <select
-                                                className="custom-select attendance-select"
-                                                value={attendanceStatusFilter}
-                                                onChange={(e) => setAttendanceStatusFilter(e.target.value)}
-                                            >
-                                                <option value="all">All Statuses</option>
-                                                <option value="present">Present Only</option>
-                                                <option value="absent">Absent Only</option>
-                                            </select>
-
-                                            {(attendanceDateFilter || attendanceStatusFilter !== 'all') && (
-                                                <button
-                                                    type="button"
-                                                    className="attendance-reset-btn"
-                                                    onClick={() => { setAttendanceDateFilter(''); setAttendanceStatusFilter('all'); }}
-                                                >
-                                                    Reset
-                                                </button>
-                                            )}
                                         </div>
                                     )}
                                 </div>
 
                                 {!hasStaffSubmittedAttendance ? (
-                                    <div className="empty-sub-card" style={{ padding: '3rem 1rem' }}>
-                                        <Clock size={36} color="var(--staff-text-muted)" />
+                                    <div className="empty-sub-card attendance-pending-card">
+                                        <div className="attendance-pending-icon">
+                                            <Clock size={26} />
+                                        </div>
                                         <h4>Attendance Pending Faculty Submission</h4>
-                                        <p>Your class advisor or faculty has not submitted or published attendance records for today yet. Please check back later.</p>
+                                        <p>
+                                            Your class advisor or faculty has not submitted or published attendance records for today yet. Please check back later.
+                                        </p>
                                     </div>
                                 ) : (
                                     <>
-                                        <h4 className="attendance-month-label">
-                                            {getAttendanceMonthLabel(selectedAttendanceMonth) || 'Selected Month'}
-                                        </h4>
-
-                                        <div className="attendance-overview">
-                                            <div className={`attendance-ring-card ${monthTotalSessions === 0 ? 'is-neutral' : (monthIsDefaulter ? 'is-low' : 'is-good')}`}>
+                                        <div className="att2-hero">
+                                            <div className={`att2-ring-card ${monthTotalSessions === 0 ? 'tone-neutral' : (monthIsDefaulter ? 'tone-low' : 'tone-good')}`}>
                                                 <div
-                                                    className="attendance-ring"
+                                                    className="att2-ring"
                                                     style={{ '--pct': monthTotalSessions > 0 ? monthAttendanceRate : 0 }}
                                                 >
-                                                    <span className="attendance-ring-value">
-                                                        {monthTotalSessions > 0 ? `${monthAttendanceRate}%` : '--'}
-                                                    </span>
+                                                    <span>{monthTotalSessions > 0 ? `${monthAttendanceRate}%` : '--'}</span>
                                                 </div>
-                                                <div className="attendance-ring-meta">
-                                                    <span className="attendance-ring-title">Month Percentage</span>
-                                                    <span className="attendance-ring-note">
+                                                <div className="att2-ring-text">
+                                                    <small>{getAttendanceMonthLabel(selectedAttendanceMonth) || 'Selected Month'}</small>
+                                                    <strong>
                                                         {monthTotalSessions === 0
-                                                            ? 'No sessions this month'
-                                                            : (monthIsDefaulter ? 'Below 75% minimum requirement' : 'Meets standards')}
-                                                    </span>
+                                                            ? 'No attendance yet'
+                                                            : (monthIsDefaulter ? 'Needs attention' : 'Attendance on track')}
+                                                    </strong>
+                                                    <em>
+                                                        {monthTotalSessions === 0
+                                                            ? 'No sessions recorded for this month.'
+                                                            : (monthIsDefaulter ? 'Below the 75% minimum requirement.' : 'Meeting the 75% attendance requirement.')}
+                                                    </em>
                                                 </div>
                                             </div>
 
-                                            <div className="attendance-mini-stats">
-                                                <div className="attendance-mini-stat stat-good">
-                                                    <CheckCircle size={16} />
-                                                    <div>
-                                                        <span className="mini-stat-value">{monthPresentCount}</span>
-                                                        <span className="mini-stat-label">Present</span>
-                                                    </div>
+                                            <div className="att2-stats">
+                                                <div className="att2-stat stat-present">
+                                                    <div className="att2-stat-icon"><CheckCircle size={16} /></div>
+                                                    <strong>{monthPresentCount}</strong>
+                                                    <small>Present</small>
                                                 </div>
-                                                <div className="attendance-mini-stat stat-half">
-                                                    <Clock size={16} />
-                                                    <div>
-                                                        <span className="mini-stat-value">{monthHalfDayCount}</span>
-                                                        <span className="mini-stat-label">Half Day</span>
-                                                    </div>
+                                                <div className="att2-stat stat-half">
+                                                    <div className="att2-stat-icon"><Clock size={16} /></div>
+                                                    <strong>{monthHalfDayCount}</strong>
+                                                    <small>Half Day</small>
                                                 </div>
-                                                <div className="attendance-mini-stat stat-bad">
-                                                    <XCircle size={16} />
-                                                    <div>
-                                                        <span className="mini-stat-value">{monthAbsentCount}</span>
-                                                        <span className="mini-stat-label">Absent</span>
-                                                    </div>
+                                                <div className="att2-stat stat-absent">
+                                                    <div className="att2-stat-icon"><XCircle size={16} /></div>
+                                                    <strong>{monthAbsentCount}</strong>
+                                                    <small>Absent</small>
                                                 </div>
-                                                <div className="attendance-mini-stat stat-neutral">
-                                                    <BarChart2 size={16} />
-                                                    <div>
-                                                        <span className="mini-stat-value">{monthTotalSessions}</span>
-                                                        <span className="mini-stat-label">Total Days</span>
-                                                    </div>
-                                                </div>
-                                                <div className="attendance-mini-stat stat-neutral">
-                                                    <Filter size={16} />
-                                                    <div>
-                                                        <span className="mini-stat-value">{monthAttendanceRows.length}</span>
-                                                        <span className="mini-stat-label">Filtered Dates</span>
-                                                    </div>
+                                                <div className="att2-stat">
+                                                    <div className="att2-stat-icon"><Calendar size={16} /></div>
+                                                    <strong>{monthTotalSessions}</strong>
+                                                    <small>Total Days</small>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <h4 className="attendance-log-heading">Forenoon / Afternoon Roll Call Logs</h4>
+                                        <div className={`att2-overall ${monthTotalSessions === 0 ? '' : (monthIsDefaulter ? 'tone-low' : 'tone-good')}`}>
+                                            <div className="att2-overall-head">
+                                                <div>
+                                                    <span className="att2-section-kicker">Monthly performance</span>
+                                                    <h4>Attendance progress</h4>
+                                                </div>
+                                                <span className={`att2-tag ${monthIsDefaulter ? 'is-low' : 'is-good'}`}>
+                                                    {monthTotalSessions === 0 ? 'No Data' : (monthIsDefaulter ? 'Below 75%' : 'On Track')}
+                                                </span>
+                                            </div>
+                                            <div className="att2-overall-value">
+                                                {monthTotalSessions > 0 ? monthAttendanceRate : '--'}<span>%</span>
+                                            </div>
+                                            <div className="att2-bar">
+                                                <div
+                                                    className="att2-bar-fill"
+                                                    style={{ width: `${Math.min(monthTotalSessions > 0 ? monthAttendanceRate : 0, 100)}%` }}
+                                                />
+                                                <span className="att2-bar-mark" title="75% minimum" />
+                                            </div>
+                                            <div className="att2-bar-scale">
+                                                <span>0%</span>
+                                                <span>75% minimum</span>
+                                                <span>100%</span>
+                                            </div>
+                                            <div className="att2-overall-grid">
+                                                <div>
+                                                    <strong>{monthAttendanceRows.length}</strong>
+                                                    <span>Filtered dates</span>
+                                                </div>
+                                                <div>
+                                                    <strong>{monthTotalSessions}</strong>
+                                                    <span>Recorded days</span>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                        <div className="attendance-table-wrap">
-                                            <table className="attendance-log-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Date</th>
-                                                        <th>Forenoon</th>
-                                                        <th>Afternoon</th>
-                                                        <th>Day Status</th>
-                                                        <th>Class Incharge</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {monthAttendanceRows.length === 0 ? (
-                                                        <tr>
-                                                            <td colSpan="5" className="attendance-empty-row">
-                                                                No attendance logs found matching the selected filters.
-                                                            </td>
-                                                        </tr>
-                                                    ) : (
-                                                        monthAttendanceRows.map((row) => {
-                                                            const fnStatus = row.forenoon?.status;
-                                                            const anStatus = row.afternoon?.status;
-                                                            let dayStatusLabel = 'Not Marked';
-                                                            let dayStatusClass = 'pending';
-                                                            if (fnStatus && anStatus) {
-                                                                if (fnStatus === 'present' && anStatus === 'present') {
-                                                                    dayStatusLabel = '1 Day (Present)';
-                                                                    dayStatusClass = 'present';
-                                                                } else if (fnStatus === 'absent' && anStatus === 'absent') {
-                                                                    dayStatusLabel = '1 Day (Absent)';
-                                                                    dayStatusClass = 'absent';
-                                                                } else {
-                                                                    dayStatusLabel = '0.5 Day (Half Day)';
-                                                                    dayStatusClass = 'half';
-                                                                }
-                                                            } else if (fnStatus || anStatus) {
-                                                                const only = fnStatus || anStatus;
-                                                                dayStatusLabel = only === 'present' ? '1 Day (Present)' : '1 Day (Absent)';
-                                                                dayStatusClass = only === 'present' ? 'present' : 'absent';
-                                                            }
-
-                                                            return (
-                                                                <tr key={row.date}>
-                                                                    <td className="attendance-date-cell">{row.date}</td>
-                                                                    <td>
-                                                                        {row.forenoon ? (
-                                                                            <span className={`status-badge status-${row.forenoon.status}`}>
-                                                                                {row.forenoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
-                                                                                {row.forenoon.status.toUpperCase()}
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="attendance-not-marked">Not marked</span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td>
-                                                                        {row.afternoon ? (
-                                                                            <span className={`status-badge status-${row.afternoon.status}`}>
-                                                                                {row.afternoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
-                                                                                {row.afternoon.status.toUpperCase()}
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="attendance-not-marked">Not marked</span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td>
-                                                                        <span className={`status-badge status-${dayStatusClass}`}>
-                                                                            {dayStatusLabel}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="attendance-teacher-cell">
-                                                                        {row.forenoon?.teacherName || row.afternoon?.teacherName || '—'}
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })
+                                        <div className="att2-log">
+                                            <div className="att2-log-head">
+                                                <div>
+                                                    <h4>Forenoon / Afternoon Roll Call Logs</h4>
+                                                    <span>Daily session-wise attendance history</span>
+                                                </div>
+                                                <div className="att2-filters">
+                                                    <div className="att2-seg" aria-label="Attendance status filter">
+                                                        <button
+                                                            type="button"
+                                                            className={attendanceStatusFilter === 'all' ? 'active' : ''}
+                                                            onClick={() => setAttendanceStatusFilter('all')}
+                                                        >All</button>
+                                                        <button
+                                                            type="button"
+                                                            className={attendanceStatusFilter === 'present' ? 'active' : ''}
+                                                            onClick={() => setAttendanceStatusFilter('present')}
+                                                        >Present</button>
+                                                        <button
+                                                            type="button"
+                                                            className={attendanceStatusFilter === 'absent' ? 'active' : ''}
+                                                            onClick={() => setAttendanceStatusFilter('absent')}
+                                                        >Absent</button>
+                                                    </div>
+                                                    <input
+                                                        type="date"
+                                                        className="att2-date-input"
+                                                        value={attendanceDateFilter}
+                                                        onChange={(e) => setAttendanceDateFilter(e.target.value)}
+                                                        title="Filter by Date"
+                                                    />
+                                                    {(attendanceDateFilter || attendanceStatusFilter !== 'all') && (
+                                                        <button
+                                                            type="button"
+                                                            className="att2-reset"
+                                                            onClick={() => { setAttendanceDateFilter(''); setAttendanceStatusFilter('all'); }}
+                                                        >Reset</button>
                                                     )}
-                                                </tbody>
-                                            </table>
+                                                </div>
+                                            </div>
+
+                                            <div className="att2-rows">
+                                                <div className="att2-row att2-row-head">
+                                                    <span>Date</span>
+                                                    <span>Forenoon</span>
+                                                    <span>Afternoon</span>
+                                                    <span>Day Status</span>
+                                                    <span>Class Incharge</span>
+                                                </div>
+
+                                                {monthAttendanceRows.length === 0 ? (
+                                                    <div className="att2-empty">
+                                                        No attendance logs found matching the selected filters.
+                                                    </div>
+                                                ) : (
+                                                    monthAttendanceRows.map((row) => {
+                                                        const fnStatus = row.forenoon?.status;
+                                                        const anStatus = row.afternoon?.status;
+                                                        let dayStatusLabel = 'Not Marked';
+                                                        let dayStatusClass = 'empty';
+                                                        if (fnStatus && anStatus) {
+                                                            if (fnStatus === 'present' && anStatus === 'present') {
+                                                                dayStatusLabel = '1 Day (Present)';
+                                                                dayStatusClass = 'present';
+                                                            } else if (fnStatus === 'absent' && anStatus === 'absent') {
+                                                                dayStatusLabel = '1 Day (Absent)';
+                                                                dayStatusClass = 'absent';
+                                                            } else {
+                                                                dayStatusLabel = '0.5 Day (Half Day)';
+                                                                dayStatusClass = 'half';
+                                                            }
+                                                        } else if (fnStatus || anStatus) {
+                                                            const only = fnStatus || anStatus;
+                                                            if (only === 'absent') {
+                                                                dayStatusLabel = 'Absent';
+                                                                dayStatusClass = 'absent';
+                                                            } else if (only === 'present') {
+                                                                dayStatusLabel = '1 Day (Present)';
+                                                                dayStatusClass = 'present';
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <div key={row.date} className={`att2-row state-${dayStatusClass}`}>
+                                                                <div className="att2-row-date">
+                                                                    <b>{String(row.date).split('-').pop()}</b>
+                                                                    <span>{row.date}</span>
+                                                                </div>
+
+                                                                <div className="att2-cell" data-label="Forenoon">
+                                                                    {row.forenoon ? (
+                                                                        <span className={`att2-chip is-${row.forenoon.status}`}>
+                                                                            {row.forenoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                            {row.forenoon.status.toUpperCase()}
+                                                                        </span>
+                                                                    ) : <span className="att2-chip is-empty">Not marked</span>}
+                                                                </div>
+
+                                                                <div className="att2-cell" data-label="Afternoon">
+                                                                    {row.afternoon ? (
+                                                                        <span className={`att2-chip is-${row.afternoon.status}`}>
+                                                                            {row.afternoon.status === 'present' ? <Check size={11} /> : <XCircle size={11} />}
+                                                                            {row.afternoon.status.toUpperCase()}
+                                                                        </span>
+                                                                    ) : <span className="att2-chip is-empty">Not marked</span>}
+                                                                </div>
+
+                                                                <div className="att2-cell" data-label="Day Status">
+                                                                    <span className={`att2-day-badge is-${dayStatusClass}`}>{dayStatusLabel}</span>
+                                                                </div>
+
+                                                                <div className="att2-cell att2-incharge" data-label="Class Incharge">
+                                                                    {row.forenoon?.teacherName || row.afternoon?.teacherName || '—'}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
                                         </div>
                                     </>
                                 )}
                             </div>
                         )}
-
                         {activeTab === 'assignments' && (
                             <div className="staff-card full">
                                 <div className="card-header">

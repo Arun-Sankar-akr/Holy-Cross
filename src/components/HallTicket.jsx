@@ -183,6 +183,140 @@ const getFeeStatus = (student, feeRecords) => {
     };
 };
 
+// Newest published hall ticket first (a just-written publication has no timestamp yet -> newest)
+const getPublicationTime = (publication) => {
+    const ts = publication?.publishedAt;
+    if (ts?.seconds) return ts.seconds;
+    if (typeof ts?.toMillis === 'function') return ts.toMillis() / 1000;
+    return Date.now() / 1000;
+};
+
+// Prints the hall ticket exactly as it looks on screen, on ONE fixed A4 sheet.
+// The ticket is cloned into a hidden iframe with every element's computed style frozen
+// (so print-width media queries can't restack the layout), then fitted to the page.
+const printHallTicketCard = async () => {
+    const card = document.querySelector('.ticket-stage .ht-card');
+    if (!card) { window.print(); return; }
+
+    // A4 (210 x 297mm) minus 5mm margins -> 755 x 1080 CSS px of usable area
+    const PAGE_W = 755;
+    const PAGE_H = 1080;
+
+    // Lay the ticket out at exactly the A4 width (synchronously, so nothing flickers)
+    const saved = {
+        width: card.style.getPropertyValue('width'),
+        maxWidth: card.style.getPropertyValue('max-width'),
+        minWidth: card.style.getPropertyValue('min-width'),
+    };
+    card.style.setProperty('width', PAGE_W + 'px', 'important');
+    card.style.setProperty('max-width', PAGE_W + 'px', 'important');
+    card.style.setProperty('min-width', '0', 'important');
+    const naturalHeight = card.getBoundingClientRect().height;
+
+    const clone = card.cloneNode(true);
+    const freezeStyles = (src, dst) => {
+        const cs = window.getComputedStyle(src);
+        for (let i = 0; i < cs.length; i++) {
+            const prop = cs[i];
+            dst.style.setProperty(prop, cs.getPropertyValue(prop), cs.getPropertyPriority(prop));
+        }
+        for (let i = 0; i < src.children.length; i++) freezeStyles(src.children[i], dst.children[i]);
+    };
+    freezeStyles(card, clone);
+
+    // Put the on-screen ticket back exactly as it was
+    [['width', 'width'], ['max-width', 'maxWidth'], ['min-width', 'minWidth']].forEach(([prop, key]) => {
+        if (saved[key]) card.style.setProperty(prop, saved[key]);
+        else card.style.removeProperty(prop);
+    });
+
+    // Too tall for one sheet -> shrink; otherwise stretch to fill the full sheet
+    const scale = naturalHeight > PAGE_H ? PAGE_H / naturalHeight : 1;
+    const fillHeight = PAGE_H / scale;
+
+    // Make image URLs absolute so they load inside the iframe
+    const srcImgs = card.querySelectorAll('img');
+    clone.querySelectorAll('img').forEach((img, i) => {
+        if (srcImgs[i]) img.setAttribute('src', srcImgs[i].src);
+    });
+
+    const force = (el, css) => {
+        if (!el) return;
+        Object.entries(css).forEach(([prop, value]) => el.style.setProperty(prop, value, 'important'));
+    };
+    force(clone, {
+        margin: '0',
+        transform: 'none',
+        'box-shadow': 'none',
+        'border-radius': '0',
+        'box-sizing': 'border-box',
+        width: PAGE_W + 'px',
+        height: fillHeight + 'px',
+        'min-height': fillHeight + 'px',
+        display: 'flex',
+        'flex-direction': 'column',
+    });
+    force(clone.querySelector('.ht-content'), {
+        display: 'flex',
+        'flex-direction': 'column',
+        flex: '1 1 auto',
+        height: 'auto',
+        'min-height': '0',
+    });
+    // Signature, instructions and principal sit at the bottom of the sheet
+    force(clone.querySelector('.ht-sign-row'), { 'margin-top': 'auto' });
+    // Keep the watermark centred on the whole sheet
+    force(clone.querySelector('.ht-watermark'), {
+        top: '0', left: '0', right: '0', bottom: '0',
+        width: 'auto', height: 'auto',
+        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+    });
+
+    // Keep any web fonts the page uses
+    let fontCss = '';
+    let fontLinks = '';
+    Array.from(document.styleSheets).forEach((sheet) => {
+        try {
+            Array.from(sheet.cssRules).forEach((rule) => {
+                if (rule.constructor.name === 'CSSFontFaceRule') fontCss += rule.cssText + '\n';
+            });
+        } catch (e) {
+            if (sheet.href) fontLinks += `<link rel="stylesheet" href="${sheet.href}">`;
+        }
+    });
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Hall Ticket</title>${fontLinks}<style>
+${fontCss}
+@page { size: A4 portrait; margin: 5mm; }
+html, body { margin: 0; padding: 0; background: #ffffff; width: ${PAGE_W}px; height: ${PAGE_H}px; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.ht-print-wrap { width: ${PAGE_W}px; height: ${fillHeight}px; margin: 0; zoom: ${scale}; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
+</style></head><body><div class="ht-print-wrap"></div></body></html>`);
+    doc.close();
+    doc.querySelector('.ht-print-wrap').appendChild(clone);
+
+    // Wait for images and fonts so nothing prints blank
+    await Promise.all(Array.from(doc.images).map((img) => (img.complete ? null : new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+    }))));
+    if (doc.fonts?.ready) {
+        await Promise.race([doc.fonts.ready, new Promise((resolve) => setTimeout(resolve, 2500))]);
+    }
+
+    const cleanup = () => iframe.remove();
+    iframe.contentWindow.onafterprint = cleanup;
+    setTimeout(cleanup, 120000);
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+};
+
 export default function Hallticket({
     schoolName = 'EduPulse Matric Higher Secondary School',
     academicYear = '2026 - 2027',
@@ -307,6 +441,19 @@ export default function Hallticket({
             unsubTimetables();
         };
     }, []);
+
+    // While the hall ticket is open, Ctrl/Cmd+P prints the ticket itself (one A4 page)
+    useEffect(() => {
+        if (currentStep !== 3) return undefined;
+        const onKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'p') {
+                e.preventDefault();
+                printHallTicketCard();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [currentStep]);
 
     /*
      * Combines students_records with students_erp.
@@ -553,7 +700,11 @@ export default function Hallticket({
                         timetable,
                         seatNo: getSeatNumber(student, publication, allocation)
                     };
-                });
+                })
+                // newest published hall ticket first
+                .sort((a, b) =>
+                    getPublicationTime(b.publication) - getPublicationTime(a.publication)
+                );
 
             setVerifiedStudent({
                 ...student,
@@ -567,7 +718,8 @@ export default function Hallticket({
                 return;
             }
 
-            setAvailableTickets(validTickets);
+            // Only the latest published hall ticket is shown
+            setAvailableTickets([validTickets[0]]);
             setSelectedTicket(validTickets[0]);
             setCurrentStep(2);
         } catch (err) {
@@ -660,7 +812,7 @@ export default function Hallticket({
         setCurrentStep(3);
     };
 
-    const printHallTicket = () => window.print();
+    const printHallTicket = () => printHallTicketCard();
 
     const renderExactHallTicket = () => {
         if (!verifiedStudent || !selectedTicket) return null;
@@ -849,4 +1001,4 @@ export default function Hallticket({
             )}
         </div>
     );
-} 
+}
