@@ -8,8 +8,9 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
-    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2
 } from 'lucide-react';
+import HallManagement from './Hallmanagement';
 import './OfficeDashboard.css';
 
 export default function OfficeDashboard() {
@@ -81,10 +82,27 @@ export default function OfficeDashboard() {
     const [examStudentClass, setExamStudentClass] = useState('');
     const [examStudentSection, setExamStudentSection] = useState('');
     const [selectedExamStudents, setSelectedExamStudents] = useState([]);
-    const [examHallNo, setExamHallNo] = useState('');
-    const [examName, setExamName] = useState('');
-    const [examCapacity, setExamCapacity] = useState('');
-    const [selectedExamStaff, setSelectedExamStaff] = useState('');
+    const [examHallId, setExamHallId] = useState('');
+    const [hallMaster, setHallMaster] = useState([]);   // Hall Management master list
+    const [examName, setExamName] = useState('1st Mid-Term Exam');
+    const [selectedExamStaff, setSelectedExamStaff] = useState([]);
+    const [allocMode, setAllocMode] = useState('');            // '' | 'students' | 'staff'
+    const [allocStudentSearch, setAllocStudentSearch] = useState('');
+    const [examStaffSearch, setExamStaffSearch] = useState('');
+    const [allocRecordsTab, setAllocRecordsTab] = useState('halls');
+    const [seatEdit, setSeatEdit] = useState(null);   // { allocId, studentId, value }
+    const [seatBusy, setSeatBusy] = useState(false);
+    const [allocSeatOverrides, setAllocSeatOverrides] = useState({});   // { studentId: typed seat } while allocating
+    const [editHallSeats, setEditHallSeats] = useState({});             // { studentId: typed seat } in the edit window
+    const [allocRecordSearch, setAllocRecordSearch] = useState('');
+    const [selectedHallIds, setSelectedHallIds] = useState([]);
+    const [selectedDutyIds, setSelectedDutyIds] = useState([]);
+    const [editHall, setEditHall] = useState(null);
+    const [editHallForm, setEditHallForm] = useState({ hallId: '', examName: '' });
+    const [editHallKeep, setEditHallKeep] = useState([]);
+    const [editHallAllStudents, setEditHallAllStudents] = useState([]);
+    const [editDuty, setEditDuty] = useState(null);
+    const [editDutyForm, setEditDutyForm] = useState({ hallId: '', dutyTime: '' });
     const [selectedStaffHall, setSelectedStaffHall] = useState('');
     const [staffDutyTime, setStaffDutyTime] = useState('');
 
@@ -121,6 +139,9 @@ export default function OfficeDashboard() {
         const unsubHalls = onSnapshot(collection(db, 'exam_hall_allocations'), snap =>
             setExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubHallMaster = onSnapshot(collection(db, 'exam_hall_master'), snap =>
+            setHallMaster(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
         const unsubHallTicketPublications = onSnapshot(collection(db, 'hall_ticket_publications'), snap =>
             setHallTicketPublications(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
@@ -139,6 +160,7 @@ export default function OfficeDashboard() {
             unsubStaff();
             unsubStudents();
             unsubHalls();
+            unsubHallMaster();
             unsubStaffHalls();
             unsubHallTicketPublications();
             unsubTimetables();
@@ -158,6 +180,34 @@ export default function OfficeDashboard() {
         const cls = s.className || s.grade;
         const sec = s.sectionName || s.section;
         return cls === examStudentClass && (!examStudentSection || sec === examStudentSection);
+    });
+
+    const allocVisibleStudents = examClassStudents.filter(s => {
+        const q = allocStudentSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [s.name, s.admissionNo, s.rollNo].filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+    });
+    const allocExam = examName || examTypes[0];
+    const seatedAllocFor = (student, exam) => examHalls.find(a =>
+        (a.examName || 'Examination') === exam &&
+        ((a.studentIds || []).includes(student.id) || (a.studentList || []).some(x => x.id === student.id))
+    );
+    const allocSelectableStudents = allocVisibleStudents.filter(s => !seatedAllocFor(s, allocExam));
+
+    const allocQ = allocRecordSearch.trim().toLowerCase();
+    const allocFilteredHalls = examHalls.filter(h => !allocQ ||
+        [h.hallNo, h.targetClass, h.targetSection, h.examName].filter(Boolean).some(v => String(v).toLowerCase().includes(allocQ)));
+    const allocFilteredDuties = staffExamHalls.filter(d => !allocQ ||
+        [d.staffName, d.hallNo, d.dutyTime, d.examName].filter(Boolean).some(v => String(v).toLowerCase().includes(allocQ)));
+    // keep selections in sync with live Firestore data
+    const hallSel = selectedHallIds.filter(id => examHalls.some(h => h.id === id));
+    const dutySel = selectedDutyIds.filter(id => staffExamHalls.some(d => d.id === id));
+
+    const allocVisibleStaff = staffList.filter(s => {
+        const q = examStaffSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [s.name, s.staffName, s.department, s.subject, s.designation, s.email]
+            .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
     });
 
     const selectedExamStudentRecords = examClassStudents.filter(s => selectedExamStudents.includes(s.id));
@@ -395,36 +445,54 @@ export default function OfficeDashboard() {
 
     const handleStudentHallAllocation = async (e) => {
         e.preventDefault();
-        if (!examStudentClass || !examStudentSection || selectedExamStudentRecords.length === 0 || !examHallNo.trim()) {
-            alert('Please select class, section, at least one student and enter a hall number.');
+        const hall = hallMaster.find(h => h.id === examHallId);
+        const exam = examName || examTypes[0];
+        if (!examStudentClass || !examStudentSection || selectedExamStudentRecords.length === 0 || !hall) {
+            alert('Please select class, section, at least one student and a hall.');
+            return;
+        }
+        if (hall.status === 'Maintenance') {
+            alert(`${hall.hallNo} is under maintenance. Choose another hall.`);
+            return;
+        }
+        const dup = selectedExamStudentRecords.find(s => seatedAllocFor(s, exam));
+        if (dup) {
+            alert(`${dup.name || 'A student'} already has a seat for ${exam}. Untick them or edit their allocation.`);
+            return;
+        }
+        const plan = buildSeatPlan(hall, exam, selectedExamStudentRecords, allocSeatOverrides);
+        if (!plan.ok) {
+            alert('Some seat numbers are invalid, already taken, or the hall is full. Fix the highlighted seats.');
             return;
         }
 
         try {
-            const studentList = selectedExamStudentRecords.map((s, index) => ({
+            const studentList = selectedExamStudentRecords.map((s) => ({
                 id: s.id,
                 name: s.name || 'Student',
                 admissionNo: s.admissionNo || '',
                 className: s.className || s.grade || examStudentClass,
                 sectionName: s.sectionName || s.section || examStudentSection,
-                seatNo: index + 1
+                seatNo: plan.map[s.id]
             }));
 
             await addDoc(collection(db, 'exam_hall_allocations'), {
-                hallNo: examHallNo.trim(),
-                examName: examName.trim() || 'Examination',
+                hallId: hall.id,
+                hallNo: hall.hallNo,
+                examName: exam,
                 targetClass: examStudentClass,
                 targetSection: examStudentSection,
                 studentCount: studentList.length,
-                capacity: Number(examCapacity) || studentList.length,
+                capacity: Number(hall.capacity) || studentList.length,
                 studentIds: studentList.map(s => s.id),
                 studentList,
                 createdAt: serverTimestamp()
             });
 
             setSelectedExamStudents([]);
-            setExamHallNo('');
-            setExamCapacity('');
+            setAllocSeatOverrides({});
+            setAllocStudentSearch('');
+            setAllocRecordsTab('halls');
             alert('Students assigned to the exam hall successfully.');
         } catch (error) {
             console.error('Error assigning students to hall:', error);
@@ -434,16 +502,16 @@ export default function OfficeDashboard() {
 
     const handleStaffHallAssignment = async (e) => {
         e.preventDefault();
-        if (!selectedExamStaff || !selectedStaffHall) {
-            alert('Please select a staff member and an allocated hall.');
+        if (selectedExamStaff.length === 0 || !selectedStaffHall || !selectedStaffHallRecord) {
+            alert('Please select at least one staff member and an allocated hall.');
             return;
         }
 
-        const staff = staffList.find(s => s.id === selectedExamStaff);
-        if (!staff) return;
+        const chosen = staffList.filter(s => selectedExamStaff.includes(s.id));
+        if (chosen.length === 0) return;
 
         try {
-            await addDoc(collection(db, 'staff_exam_halls'), {
+            await Promise.all(chosen.map(staff => addDoc(collection(db, 'staff_exam_halls'), {
                 hallNo: selectedStaffHallRecord.hallNo,
                 examName: selectedStaffHallRecord.examName || examName || 'Examination',
                 staffId: staff.id,
@@ -456,15 +524,221 @@ export default function OfficeDashboard() {
                 targetSection: selectedStaffHallRecord.targetSection || '',
                 hallAllocationId: selectedStaffHall,
                 createdAt: serverTimestamp()
-            });
+            })));
 
-            setSelectedExamStaff('');
+            setSelectedExamStaff([]);
             setSelectedStaffHall('');
             setStaffDutyTime('');
+            setAllocRecordsTab('duties');
             alert('Staff invigilation duty assigned successfully.');
         } catch (error) {
             console.error('Error assigning staff duty:', error);
             alert('Failed to assign staff duty.');
+        }
+    };
+
+    // ---------- Allocate: Update / Delete (single + bulk) ----------
+    const deleteHalls = async (ids) => {
+        if (!ids.length) return;
+        const linked = staffExamHalls.filter(d => ids.includes(d.hallAllocationId));
+        const msg = `Delete ${ids.length} hall allocation${ids.length > 1 ? 's' : ''}?` +
+            (linked.length ? `\n${linked.length} linked staff dut${linked.length > 1 ? 'ies' : 'y'} will also be removed.` : '');
+        if (!window.confirm(msg)) return;
+        try {
+            await Promise.all([
+                ...ids.map(id => deleteDoc(doc(db, 'exam_hall_allocations', id))),
+                ...linked.map(d => deleteDoc(doc(db, 'staff_exam_halls', d.id)))
+            ]);
+            setSelectedHallIds(prev => prev.filter(id => !ids.includes(id)));
+        } catch (error) {
+            console.error('Error deleting hall allocations:', error);
+            alert('Failed to delete the selected hall allocations.');
+        }
+    };
+
+    const deleteDuties = async (ids) => {
+        if (!ids.length) return;
+        if (!window.confirm(`Delete ${ids.length} staff dut${ids.length > 1 ? 'ies' : 'y'}?`)) return;
+        try {
+            await Promise.all(ids.map(id => deleteDoc(doc(db, 'staff_exam_halls', id))));
+            setSelectedDutyIds(prev => prev.filter(id => !ids.includes(id)));
+        } catch (error) {
+            console.error('Error deleting staff duties:', error);
+            alert('Failed to delete the selected duties.');
+        }
+    };
+
+    const openEditHall = (hall) => {
+        const list = getHallSeatList(hall);
+        const matched = hall.hallId || hallMaster.find(h => allocInHall(hall, h))?.id || '';
+        setEditHall(hall);
+        setEditHallForm({ hallId: matched, examName: hall.examName || examTypes[0] });
+        setEditHallAllStudents(list);
+        setEditHallKeep(list.map(s => s.id));
+        setEditHallSeats(Object.fromEntries(list.map(s => [s.id, String(s.seatNo || '')])));
+    };
+
+    // changing hall or exam in the edit window re-suggests seats from that hall's free seats
+    const changeEditHallTarget = (hallId, exam) => {
+        const hall = hallMaster.find(h => h.id === hallId);
+        if (hall) {
+            if (hall.status === 'Maintenance') { alert(`${hall.hallNo} is under maintenance.`); return; }
+            const kept = editHallAllStudents.filter(s => editHallKeep.includes(s.id));
+            const seats = pickFreeSeats(hall, exam, kept.length, editHall.id);
+            if (!seats) { alert(`${hall.hallNo} does not have enough free seats for ${exam}.`); return; }
+            setEditHallSeats(prev => {
+                const next = { ...prev };
+                kept.forEach((s, i) => { next[s.id] = String(seats[i]); });
+                return next;
+            });
+        }
+        setEditHallForm({ hallId, examName: exam });
+    };
+
+    const saveHall = async (e) => {
+        e.preventDefault();
+        if (!editHall) return;
+        const keptBase = editHallAllStudents.filter(s => editHallKeep.includes(s.id));
+        if (keptBase.length === 0) {
+            alert('Keep at least one student (or delete the allocation instead).');
+            return;
+        }
+
+        const exam = editHallForm.examName || 'Examination';
+        const hall = hallMaster.find(h => h.id === editHallForm.hallId) || null;
+        const originalHallId = editHall.hallId || hallMaster.find(h => allocInHall(editHall, h))?.id || '';
+        const moved = !!hall && (hall.id !== originalHallId || exam !== (editHall.examName || 'Examination'));
+        if (moved && hall.status === 'Maintenance') { alert(`${hall.hallNo} is under maintenance.`); return; }
+
+        // validate the seat numbers typed in the list
+        let seatOf;
+        if (hall) {
+            const plan = buildSeatPlan(hall, exam, keptBase, editHallSeats, editHall.id);
+            if (!plan.ok) { alert('Some seat numbers are invalid or already taken. Fix the highlighted seats.'); return; }
+            seatOf = (id) => plan.map[id];
+        } else {
+            const seen = new Set();
+            const map = {};
+            for (const s of keptBase) {
+                const n = Math.floor(Number(editHallSeats[s.id])) || Number(s.seatNo) || 0;
+                if (n < 1 || seen.has(n)) { alert('Seat numbers must be unique and at least 1.'); return; }
+                seen.add(n);
+                map[s.id] = n;
+            }
+            seatOf = (id) => map[id];
+        }
+        const kept = keptBase.map(s => ({ ...s, seatNo: seatOf(s.id) }));
+
+        const payload = {
+            examName: exam,
+            studentCount: kept.length,
+            studentIds: kept.map(s => s.id),
+            studentList: kept,
+            ...(hall ? { hallId: hall.id, hallNo: hall.hallNo, capacity: Number(hall.capacity) || kept.length } : {})
+        };
+        try {
+            await updateDoc(doc(db, 'exam_hall_allocations', editHall.id), { ...payload, updatedAt: serverTimestamp() });
+            // keep staff duties for this allocation in sync
+            await Promise.all(staffExamHalls.filter(d => d.hallAllocationId === editHall.id).map(d =>
+                updateDoc(doc(db, 'staff_exam_halls', d.id), {
+                    hallNo: hall ? hall.hallNo : d.hallNo,
+                    examName: payload.examName,
+                    studentCount: payload.studentCount,
+                    studentIds: payload.studentIds,
+                    studentList: payload.studentList
+                })
+            ));
+            setEditHall(null);
+        } catch (error) {
+            console.error('Error updating hall allocation:', error);
+            alert('Failed to update the hall allocation.');
+        }
+    };
+
+    // ---------- Edit a single student's seat (swaps if the seat is taken) ----------
+    const saveSeatChange = async (alloc, studentId, rawValue) => {
+        if (seatBusy) return;
+        const list = getHallSeatList(alloc);
+        const me = list.find(s => s.id === studentId);
+        if (!me) { setSeatEdit(null); return; }
+
+        const oldSeat = Number(me.seatNo || 0);
+        const newSeat = Math.floor(Number(rawValue));
+        if (newSeat === oldSeat) { setSeatEdit(null); return; }
+
+        const hall = hallMaster.find(h => allocInHall(alloc, h)) || null;
+        const cap = hall ? Number(hall.capacity || 0) : 0;
+        if (!newSeat || newSeat < 1 || (cap && newSeat > cap)) {
+            alert(cap ? `Enter a seat number between 1 and ${cap}.` : 'Enter a valid seat number.');
+            return;
+        }
+
+        // who already sits in that seat (same hall, same exam — any class/section)
+        const exam = alloc.examName || 'Examination';
+        const sameHall = (a) => hall ? allocInHall(a, hall) : normHall(a.hallNo) === normHall(alloc.hallNo);
+        let holder = null, holderAlloc = null;
+        examHalls.forEach(a => {
+            if (holder || !sameHall(a) || (a.examName || 'Examination') !== exam) return;
+            const found = getHallSeatList(a).find(s => Number(s.seatNo) === newSeat && !(a.id === alloc.id && s.id === studentId));
+            if (found) { holder = found; holderAlloc = a; }
+        });
+
+        if (holder && !window.confirm(`Seat ${newSeat} is taken by ${holder.name || 'another student'}.\nSwap seats with them (they move to seat ${oldSeat || '—'})?`)) return;
+
+        const changes = new Map();
+        const listFor = (a) => {
+            if (!changes.has(a.id)) changes.set(a.id, { alloc: a, list: getHallSeatList(a).map(s => ({ ...s })) });
+            return changes.get(a.id).list;
+        };
+        listFor(alloc).find(s => s.id === studentId).seatNo = newSeat;
+        if (holder) listFor(holderAlloc).find(s => s.id === holder.id).seatNo = oldSeat;
+
+        setSeatBusy(true);
+        try {
+            await Promise.all([...changes.values()].flatMap(({ alloc: a, list: l }) => [
+                updateDoc(doc(db, 'exam_hall_allocations', a.id), { studentList: l, updatedAt: serverTimestamp() }),
+                // staff duties keep a copy of the student list — keep it in sync
+                ...staffExamHalls.filter(d => d.hallAllocationId === a.id)
+                    .map(d => updateDoc(doc(db, 'staff_exam_halls', d.id), { studentList: l }))
+            ]));
+            setSeatEdit(null);
+        } catch (error) {
+            console.error('Error updating seat:', error);
+            alert('Failed to update the seat.');
+        }
+        setSeatBusy(false);
+    };
+
+    const openEditDuty = (duty) => {
+        setEditDuty(duty);
+        setEditDutyForm({ hallId: duty.hallAllocationId || '', dutyTime: duty.dutyTime || '' });
+    };
+
+    const saveDuty = async (e) => {
+        e.preventDefault();
+        const hall = examHalls.find(h => h.id === editDutyForm.hallId);
+        if (!editDuty || !hall) {
+            alert('Please select a hall.');
+            return;
+        }
+        const list = getHallSeatList(hall);
+        try {
+            await updateDoc(doc(db, 'staff_exam_halls', editDuty.id), {
+                hallNo: hall.hallNo,
+                examName: hall.examName || 'Examination',
+                dutyTime: editDutyForm.dutyTime.trim() || 'Exam Duty',
+                studentCount: list.length,
+                studentIds: list.map(s => s.id),
+                studentList: list,
+                targetClass: hall.targetClass || '',
+                targetSection: hall.targetSection || '',
+                hallAllocationId: hall.id,
+                updatedAt: serverTimestamp()
+            });
+            setEditDuty(null);
+        } catch (error) {
+            console.error('Error updating staff duty:', error);
+            alert('Failed to update the duty.');
         }
     };
 
@@ -821,6 +1095,64 @@ export default function OfficeDashboard() {
         return [...list].sort((a, b) => Number(a.seatNo || 0) - Number(b.seatNo || 0));
     };
 
+    // ---------- Hall Management sync helpers ----------
+    const normHall = (v) => String(v || '').trim().toLowerCase();
+    const allocInHall = (a, hall) => a.hallId ? a.hallId === hall.id : normHall(a.hallNo) === normHall(hall.hallNo);
+    // seats already taken in a hall for one exam (optionally ignoring one allocation)
+    const hallUsage = (hall, exam, excludeId) => {
+        const taken = new Set();
+        examHalls.forEach(a => {
+            if (a.id === excludeId || !allocInHall(a, hall) || (a.examName || 'Examination') !== exam) return;
+            getHallSeatList(a).forEach(st => taken.add(Number(st.seatNo)));
+        });
+        const cap = Number(hall.capacity || 0);
+        return { taken, used: taken.size, cap, free: Math.max(cap - taken.size, 0) };
+    };
+    // the n lowest free seat numbers in a hall, or null if it can't fit n students
+    const pickFreeSeats = (hall, exam, n, excludeId) => {
+        const { taken, cap } = hallUsage(hall, exam, excludeId);
+        const out = [];
+        for (let seat = 1; seat <= cap && out.length < n; seat++) if (!taken.has(seat)) out.push(seat);
+        return out.length === n ? out : null;
+    };
+
+    // Works out a seat for every student: typed-in seats first (validated), the rest fill the lowest free seats
+    const buildSeatPlan = (hall, exam, records, overrides, excludeId) => {
+        const { taken, cap } = hallUsage(hall, exam, excludeId);
+        const used = new Set(taken);
+        const map = {};
+        const errors = {};
+        records.forEach(s => {
+            const raw = overrides[s.id];
+            if (raw === undefined || raw === '') return;
+            const n = Math.floor(Number(raw));
+            if (!n || n < 1 || n > cap) errors[s.id] = `Use a seat between 1 and ${cap}`;
+            else if (used.has(n)) errors[s.id] = `Seat ${n} is already taken`;
+            else { used.add(n); map[s.id] = n; }
+        });
+        let next = 1;
+        records.forEach(s => {
+            if (map[s.id] || errors[s.id]) return;
+            while (next <= cap && used.has(next)) next++;
+            if (next <= cap) { map[s.id] = next; used.add(next); }
+            else errors[s.id] = 'No free seat left';
+        });
+        return { map, errors, ok: Object.keys(errors).length === 0 };
+    };
+
+    const allocSelectedHall = hallMaster.find(h => h.id === examHallId) || null;
+    const allocFree = allocSelectedHall ? hallUsage(allocSelectedHall, allocExam).free : 0;
+    const allocOverflow = !!allocSelectedHall && selectedExamStudents.length > allocFree;
+    const allocSeatPlan = allocSelectedHall && selectedExamStudentRecords.length
+        ? buildSeatPlan(allocSelectedHall, allocExam, selectedExamStudentRecords, allocSeatOverrides)
+        : { map: {}, errors: {}, ok: true };
+    const allocSeatNums = Object.values(allocSeatPlan.map);
+
+    const editHallTarget = editHall ? (hallMaster.find(h => h.id === editHallForm.hallId) || null) : null;
+    const editHallPlan = editHallTarget
+        ? buildSeatPlan(editHallTarget, editHallForm.examName || 'Examination', editHallAllStudents.filter(s => editHallKeep.includes(s.id)), editHallSeats, editHall.id)
+        : null;
+
     return (
         <div className="dashboard-containers">
             {/* Mobile Navigation Bar */}
@@ -902,6 +1234,9 @@ export default function OfficeDashboard() {
                                 </button>
                                 <button className={`nav-links ${activeTab === 'hall-tickets' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-tickets'); setIsMobileMenuOpen(false); }}>
                                     <Download size={18} /><span id='hall'>Hall Tickets</span>
+                                </button>
+                                <button className={`nav-links ${activeTab === 'hall-management' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-management'); setIsMobileMenuOpen(false); }}>
+                                    <div className="nav-links-content"><Building2 size={16} /><span>Hall Management</span></div>
                                 </button>
                                 <button className={`nav-links ${activeTab === 'exam-halls' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}>
                                     <div className="nav-links-content"><Users size={16} /><span>Allocate</span></div>
@@ -2029,159 +2364,389 @@ export default function OfficeDashboard() {
                         </div>
                     )}
 
-                    {/* EXAM HALL ALLOCATION MODULE */}
+                    {/* HALL MANAGEMENT */}
+                    {activeTab === 'hall-management' && (
+                        <HallManagement
+                            halls={hallMaster}
+                            allocations={examHalls}
+                            duties={staffExamHalls}
+                            examTypes={examTypes}
+                            getSeatList={getHallSeatList}
+                            allocInHall={allocInHall}
+                            onOpenAllocate={() => { setActiveTab('exam-halls'); setAllocMode('students'); }}
+                        />
+                    )}
+
+                    {/* EXAM HALL ALLOCATION MODULE — guided Students / Staff flow */}
                     {activeTab === 'exam-halls' && (
-                        <div className="exam-allocation-page">
-                            <div className="dash-card full-width exam-allocation-hero">
-                                <div className="card-header">
-                                    <div>
-                                        <span className="exam-module-kicker">EXAMINATION MANAGEMENT</span>
-                                        <h3>Exam Hall Allocation</h3>
-                                        <p className="subtitle">First allocate students to a hall, then assign the invigilating staff to the same hall. All allocations are synchronized in Firestore.</p>
-                                    </div>
-                                    <div className="exam-live-badge"><CheckCircle size={15} /> Live Sync</div>
+                        <div className="alloc-page">
+                            {/* Header */}
+                            <div className="dash-card full-width alloc-hero">
+                                <div>
+                                    <span className="alloc-kicker">EXAMINATION MANAGEMENT</span>
+                                    <h3>Allocate</h3>
+                                    <p className="subtitle">Seat students in exam halls, then assign staff to invigilate them.</p>
+                                </div>
+                                <div className="alloc-hero-stats">
+                                    <div><strong>{examHalls.length}</strong><span>Halls</span></div>
+                                    <div><strong>{examHalls.reduce((n, h) => n + Number(h.studentCount || h.studentIds?.length || 0), 0)}</strong><span>Seated</span></div>
+                                    <div><strong>{staffExamHalls.length}</strong><span>Duties</span></div>
                                 </div>
                             </div>
 
-                            <div className="exam-allocation-grid">
-                                {/* STUDENT ALLOCATION */}
-                                <div className="dash-card exam-allocation-card">
-                                    <div className="exam-card-title">
-                                        <div className="exam-title-icon students"><GraduationCap size={19} /></div>
-                                        <div>
-                                            <h3>Students</h3>
-                                            <p>Select Class → Section → Students → Hall No</p>
+                            {/* STEP 0 — choose who to allocate */}
+                            <div className="alloc-mode-grid">
+                                <button type="button" className={`alloc-mode-card students ${allocMode === 'students' ? 'active' : ''}`} onClick={() => { setAllocMode('students'); }}>
+                                    <span className="alloc-mode-icon"><GraduationCap size={26} /></span>
+                                    <span className="alloc-mode-copy">
+                                        <strong>Students</strong>
+                                        <small>Choose class → section → students and give them seats in a hall</small>
+                                    </span>
+                                    {allocMode === 'students' && <CheckCircle size={20} className="alloc-mode-check" />}
+                                </button>
+                                <button type="button" className={`alloc-mode-card staff ${allocMode === 'staff' ? 'active' : ''}`} onClick={() => { setAllocMode('staff'); }}>
+                                    <span className="alloc-mode-icon"><UserCheck size={26} /></span>
+                                    <span className="alloc-mode-copy">
+                                        <strong>Staff</strong>
+                                        <small>Search and pick staff, then assign them invigilation duty in a hall</small>
+                                    </span>
+                                    {allocMode === 'staff' && <CheckCircle size={20} className="alloc-mode-check" />}
+                                </button>
+                            </div>
+
+                            {!allocMode && (
+                                <div className="dash-card alloc-placeholder">
+                                    <LayoutGrid size={28} />
+                                    <strong>Select Students or Staff to begin</strong>
+                                    <span>Your allocation steps will appear here.</span>
+                                </div>
+                            )}
+
+                            {/* ============ STUDENTS FLOW ============ */}
+                            {allocMode === 'students' && (
+                                <div className="dash-card alloc-flow">
+                                    {/* Breadcrumb / stepper */}
+                                    <div className="alloc-steps">
+                                        <button type="button" className={`alloc-step ${!examStudentClass ? 'current' : 'done'}`} onClick={() => { setExamStudentClass(''); setExamStudentSection(''); setSelectedExamStudents([]); setAllocStudentSearch(''); }}>
+                                            <span className="alloc-step-no">{examStudentClass ? <Check size={13} /> : 1}</span>
+                                            <span>Class{examStudentClass ? `: ${examStudentClass}` : ''}</span>
+                                        </button>
+                                        <span className="alloc-step-line" />
+                                        <button type="button" className={`alloc-step ${examStudentClass && !examStudentSection ? 'current' : examStudentSection ? 'done' : ''}`} disabled={!examStudentClass} onClick={() => { setExamStudentSection(''); setSelectedExamStudents([]); setAllocStudentSearch(''); }}>
+                                            <span className="alloc-step-no">{examStudentSection ? <Check size={13} /> : 2}</span>
+                                            <span>Section{examStudentSection ? `: ${examStudentSection}` : ''}</span>
+                                        </button>
+                                        <span className="alloc-step-line" />
+                                        <div className={`alloc-step ${examStudentClass && examStudentSection ? 'current' : ''}`}>
+                                            <span className="alloc-step-no">3</span>
+                                            <span>Students</span>
                                         </div>
                                     </div>
 
-                                    <form onSubmit={handleStudentHallAllocation}>
-                                        <div className="exam-form-grid">
-                                            <div className="exam-field">
-                                                <label>Select Class</label>
-                                                <select value={examStudentClass} onChange={e => {
-                                                    setExamStudentClass(e.target.value);
-                                                    setExamStudentSection('');
-                                                    setSelectedExamStudents([]);
-                                                }} required>
-                                                    <option value="">Select Class</option>
-                                                    {uniqueClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
-                                                </select>
-                                            </div>
-
-                                            <div className="exam-field">
-                                                <label>Select Section</label>
-                                                <select value={examStudentSection} onChange={e => {
-                                                    setExamStudentSection(e.target.value);
-                                                    setSelectedExamStudents([]);
-                                                }} disabled={!examStudentClass} required>
-                                                    <option value="">Select Section</option>
-                                                    {examSections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
-                                                </select>
-                                            </div>
-
-                                            <div className="exam-field">
-                                                <label>Exam Name</label>
-                                                <select value={examName} onChange={e => setExamName(e.target.value)}>
-                                                    {examTypes.map(type => <option key={type} value={type}>{type}</option>)}
-                                                </select>
-                                            </div>
-
-                                            <div className="exam-field">
-                                                <label>Hall No</label>
-                                                <input value={examHallNo} onChange={e => setExamHallNo(e.target.value)} placeholder="e.g. Hall 101" required />
-                                            </div>
-
-                                            <div className="exam-field">
-                                                <label>Hall Capacity</label>
-                                                <input type="number" min="1" value={examCapacity} onChange={e => setExamCapacity(e.target.value)} placeholder="Optional" />
-                                            </div>
-                                        </div>
-
-                                        <div className="exam-student-selector">
-                                            <div className="exam-selector-head">
-                                                <div>
-                                                    <strong>Select Students</strong>
-                                                    <span>{examClassStudents.length} available</span>
-                                                </div>
-                                                <div className="exam-selected-count">{selectedExamStudents.length} Selected</div>
-                                            </div>
-
-                                            {!examStudentClass || !examStudentSection ? (
-                                                <div className="exam-empty-state"><Users size={22} /><span>Select a class and section to load students.</span></div>
-                                            ) : examClassStudents.length === 0 ? (
-                                                <div className="exam-empty-state"><Users size={22} /><span>No students found for this class and section.</span></div>
+                                    {/* Step 1 — class */}
+                                    {!examStudentClass && (
+                                        <>
+                                            <div className="alloc-section-title"><h4>Select a class</h4><span>{uniqueClasses.length} classes</span></div>
+                                            {uniqueClasses.length === 0 ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>No students found in the records.</span></div>
                                             ) : (
-                                                <>
-                                                    <label className="exam-select-all">
-                                                        <input type="checkbox" checked={examClassStudents.length > 0 && examClassStudents.every(s => selectedExamStudents.includes(s.id))} onChange={toggleAllExamStudents} />
-                                                        Select All Students
-                                                    </label>
-                                                    <div className="exam-student-list">
-                                                        {examClassStudents.map(student => (
-                                                            <label className={`exam-student-row ${selectedExamStudents.includes(student.id) ? 'selected' : ''}`} key={student.id}>
-                                                                <input type="checkbox" checked={selectedExamStudents.includes(student.id)} onChange={() => toggleExamStudent(student.id)} />
-                                                                <span className="exam-student-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</span>
-                                                                <span className="exam-student-info">
-                                                                    <strong>{student.name || 'Student'}</strong>
-                                                                    <small>#{student.admissionNo || student.id.slice(0, 7)}</small>
-                                                                </span>
-                                                            </label>
-                                                        ))}
+                                                <div className="alloc-tile-grid">
+                                                    {uniqueClasses.map(cls => {
+                                                        const count = studentsList.filter(s => (s.className || s.grade) === cls).length;
+                                                        return (
+                                                            <button type="button" key={cls} className="alloc-tile" onClick={() => { setExamStudentClass(cls); setExamStudentSection(''); setSelectedExamStudents([]); }}>
+                                                                <span className="alloc-tile-icon"><GraduationCap size={18} /></span>
+                                                                <strong>{cls}</strong>
+                                                                <small>{count} {count === 1 ? 'student' : 'students'}</small>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Step 2 — section */}
+                                    {examStudentClass && !examStudentSection && (
+                                        <>
+                                            <div className="alloc-section-title"><h4>Select a section of {examStudentClass}</h4><span>{examSections.length} sections</span></div>
+                                            {examSections.length === 0 ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>No sections found for this class.</span></div>
+                                            ) : (
+                                                <div className="alloc-tile-grid">
+                                                    {examSections.map(sec => {
+                                                        const count = studentsList.filter(s => (s.className || s.grade) === examStudentClass && (s.sectionName || s.section) === sec).length;
+                                                        return (
+                                                            <button type="button" key={sec} className="alloc-tile section" onClick={() => { setExamStudentSection(sec); setSelectedExamStudents([]); }}>
+                                                                <span className="alloc-tile-icon"><LayoutGrid size={18} /></span>
+                                                                <strong>Section {sec}</strong>
+                                                                <small>{count} {count === 1 ? 'student' : 'students'}</small>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Step 3 — student list + hall details */}
+                                    {examStudentClass && examStudentSection && (
+                                        <form onSubmit={handleStudentHallAllocation} className="alloc-student-layout">
+                                            <div className="alloc-panel">
+                                                <div className="alloc-section-title">
+                                                    <h4>Students — {examStudentClass} / {examStudentSection}</h4>
+                                                    <span className="alloc-count-pill">{selectedExamStudents.length} of {examClassStudents.length} selected</span>
+                                                </div>
+                                                <div className="alloc-toolbar">
+                                                    <div className="alloc-search">
+                                                        <Search size={16} />
+                                                        <input value={allocStudentSearch} onChange={e => setAllocStudentSearch(e.target.value)} placeholder="Search by name or admission no." />
                                                     </div>
-                                                </>
+                                                    <label className="alloc-check-all">
+                                                        <input type="checkbox" checked={allocSelectableStudents.length > 0 && allocSelectableStudents.every(s => selectedExamStudents.includes(s.id))} onChange={() => {
+                                                            const ids = allocSelectableStudents.map(s => s.id);
+                                                            const all = ids.length > 0 && ids.every(id => selectedExamStudents.includes(id));
+                                                            setSelectedExamStudents(prev => all ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids])));
+                                                        }} />
+                                                        Select all
+                                                    </label>
+                                                </div>
+                                                {allocVisibleStudents.length === 0 ? (
+                                                    <div className="exam-empty-state"><Users size={22} /><span>No students match.</span></div>
+                                                ) : (
+                                                    <div className="alloc-list">
+                                                        {allocVisibleStudents.map(student => {
+                                                            const already = seatedAllocFor(student, allocExam);
+                                                            const checked = selectedExamStudents.includes(student.id);
+                                                            return (
+                                                                <label className={`alloc-row ${checked ? 'selected' : ''} ${already ? 'disabled' : ''}`} key={student.id}>
+                                                                    <input type="checkbox" checked={checked} disabled={!!already} onChange={() => toggleExamStudent(student.id)} />
+                                                                    <span className="alloc-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</span>
+                                                                    <span className="alloc-row-info">
+                                                                        <strong>{student.name || 'Student'}</strong>
+                                                                        <small>#{student.admissionNo || student.rollNo || student.id.slice(0, 7)}</small>
+                                                                    </span>
+                                                                    {already && <span className="alloc-tag warn">Seated · {already.hallNo}</span>}
+                                                                    {checked && allocSelectedHall && (
+                                                                        <span className={`alloc-seat-input ${allocSeatPlan.errors[student.id] ? 'err' : ''}`} title={allocSeatPlan.errors[student.id] || 'Edit seat number'} onClick={e => e.preventDefault()}>
+                                                                            <small>Seat</small>
+                                                                            <input
+                                                                                type="number" min="1"
+                                                                                value={allocSeatOverrides[student.id] ?? (allocSeatPlan.map[student.id] ?? '')}
+                                                                                onChange={e => setAllocSeatOverrides(prev => ({ ...prev, [student.id]: e.target.value }))}
+                                                                                onBlur={() => setAllocSeatOverrides(prev => {
+                                                                                    if (prev[student.id] !== '') return prev;
+                                                                                    const { [student.id]: _drop, ...rest } = prev;
+                                                                                    return rest;
+                                                                                })}
+                                                                            />
+                                                                        </span>
+                                                                    )}
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <aside className="alloc-panel alloc-side">
+                                                <div className="alloc-section-title"><h4>Hall details</h4></div>
+                                                <div className="alloc-field">
+                                                    <label>Exam</label>
+                                                    <select value={examName} onChange={e => setExamName(e.target.value)}>
+                                                        {examTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="alloc-field">
+                                                    <label>Hall</label>
+                                                    <select value={examHallId} onChange={e => setExamHallId(e.target.value)} required>
+                                                        <option value="">{hallMaster.length ? 'Select a hall' : 'No halls added yet'}</option>
+                                                        {hallMaster.filter(h => h.status !== 'Maintenance').map(h => {
+                                                            const u = hallUsage(h, allocExam);
+                                                            return <option key={h.id} value={h.id} disabled={u.free <= 0}>{h.hallNo} — {u.free} of {h.capacity} seats free{u.free <= 0 ? ' (full)' : ''}</option>;
+                                                        })}
+                                                    </select>
+                                                    {hallMaster.length === 0 && (
+                                                        <small className="alloc-hint">Add halls first in <button type="button" className="hm-link" onClick={() => setActiveTab('hall-management')}>Hall Management</button>.</small>
+                                                    )}
+                                                </div>
+                                                {allocSelectedHall && (
+                                                    <div className="alloc-hall-preview">
+                                                        <strong>{allocSelectedHall.hallNo}{allocSelectedHall.location ? ` · ${allocSelectedHall.location}` : ''}</strong>
+                                                        <span>{allocSelectedHall.capacity} seats · {allocFree} free for {allocExam}</span>
+                                                        <div className="hm-bar" style={{ marginTop: 6 }}>
+                                                            <i className={allocOverflow ? 'full' : 'ok'} style={{ width: `${Math.min(100, Math.round(((allocSelectedHall.capacity - allocFree + selectedExamStudents.length) / allocSelectedHall.capacity) * 100))}%` }} />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="alloc-summary">
+                                                    <div><span>Class / Section</span><strong>{examStudentClass} / {examStudentSection}</strong></div>
+                                                    <div><span>Students</span><strong>{selectedExamStudents.length}</strong></div>
+                                                    <div><span>Seats</span><strong>{allocSeatNums.length ? `${Math.min(...allocSeatNums)} – ${Math.max(...allocSeatNums)}` : '—'}</strong></div>
+                                                </div>
+                                                {Object.keys(allocSeatOverrides).length > 0 && (
+                                                    <button type="button" className="hm-link" style={{ marginBottom: 12 }} onClick={() => setAllocSeatOverrides({})}>Reset to automatic seats</button>
+                                                )}
+                                                {!allocOverflow && !allocSeatPlan.ok && (
+                                                    <div className="alloc-warning">Some seat numbers are invalid or already taken — fix the highlighted seats.</div>
+                                                )}
+                                                {allocOverflow && (
+                                                    <div className="alloc-warning">Only {allocFree} seat{allocFree === 1 ? '' : 's'} free in this hall — deselect {selectedExamStudents.length - allocFree} student{selectedExamStudents.length - allocFree === 1 ? '' : 's'} or pick another hall.</div>
+                                                )}
+                                                <button type="submit" className="alloc-btn" disabled={!selectedExamStudents.length || !allocSelectedHall || allocOverflow || !allocSeatPlan.ok}>
+                                                    <CheckSquare size={16} /> Allocate Seats
+                                                </button>
+                                            </aside>
+                                        </form>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ============ STAFF FLOW ============ */}
+                            {allocMode === 'staff' && (
+                                <div className="dash-card alloc-flow">
+                                    <form onSubmit={handleStaffHallAssignment} className="alloc-student-layout">
+                                        <div className="alloc-panel">
+                                            <div className="alloc-section-title">
+                                                <h4>Select staff</h4>
+                                                <span className="alloc-count-pill">{selectedExamStaff.length} selected</span>
+                                            </div>
+                                            <div className="alloc-toolbar">
+                                                <div className="alloc-search">
+                                                    <Search size={16} />
+                                                    <input value={examStaffSearch} onChange={e => setExamStaffSearch(e.target.value)} placeholder="Search staff by name, department or subject" />
+                                                </div>
+                                                <label className="alloc-check-all">
+                                                    <input type="checkbox" checked={allocVisibleStaff.length > 0 && allocVisibleStaff.every(st => selectedExamStaff.includes(st.id))} onChange={() => {
+                                                        const ids = allocVisibleStaff.map(st => st.id);
+                                                        const all = ids.length > 0 && ids.every(id => selectedExamStaff.includes(id));
+                                                        setSelectedExamStaff(prev => all ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids])));
+                                                    }} />
+                                                    Select all
+                                                </label>
+                                            </div>
+                                            {allocVisibleStaff.length === 0 ? (
+                                                <div className="exam-empty-state"><Users size={22} /><span>{staffList.length === 0 ? 'No staff records found.' : 'No staff match your search.'}</span></div>
+                                            ) : (
+                                                <div className="alloc-list">
+                                                    {allocVisibleStaff.map(staff => {
+                                                        const checked = selectedExamStaff.includes(staff.id);
+                                                        const duties = staffExamHalls.filter(d => d.staffId === staff.id);
+                                                        const nm = staff.name || staff.staffName || 'Staff';
+                                                        return (
+                                                            <label className={`alloc-row ${checked ? 'selected' : ''}`} key={staff.id}>
+                                                                <input type="checkbox" checked={checked} onChange={() => setSelectedExamStaff(prev => prev.includes(staff.id) ? prev.filter(id => id !== staff.id) : [...prev, staff.id])} />
+                                                                <span className="alloc-avatar staff">{nm.charAt(0).toUpperCase()}</span>
+                                                                <span className="alloc-row-info">
+                                                                    <strong>{nm}</strong>
+                                                                    <small>{[staff.department, staff.subject, staff.designation].filter(Boolean).join(' · ') || 'Staff member'}</small>
+                                                                </span>
+                                                                {duties.length > 0 && <span className="alloc-tag info">{duties.length} {duties.length === 1 ? 'duty' : 'duties'}</span>}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
                                             )}
                                         </div>
 
-                                        <div className="exam-allocation-summary">
-                                            <div><span>No. of Students</span><strong>{selectedExamStudents.length}</strong></div>
-                                            <div><span>Class / Section</span><strong>{examStudentClass || '—'} / {examStudentSection || '—'}</strong></div>
-                                            <div><span>Hall No</span><strong>{examHallNo || '—'}</strong></div>
-                                        </div>
-
-                                        <button type="submit" className="exam-primary-btn" disabled={!selectedExamStudents.length}>
-                                            <CheckSquare size={16} /> Assign Students to Hall
-                                        </button>
+                                        <aside className="alloc-panel alloc-side">
+                                            <div className="alloc-section-title"><h4>Invigilation duty</h4></div>
+                                            <div className="alloc-field">
+                                                <label>Hall</label>
+                                                <select value={selectedStaffHall} onChange={e => setSelectedStaffHall(e.target.value)} required>
+                                                    <option value="">Select allocated hall</option>
+                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''} ({hall.studentCount || hall.studentIds?.length || 0})</option>)}
+                                                </select>
+                                                {examHalls.length === 0 && <small className="alloc-hint">Allocate students to a hall first.</small>}
+                                            </div>
+                                            <div className="alloc-field">
+                                                <label>Duty time / slot</label>
+                                                <input value={staffDutyTime} onChange={e => setStaffDutyTime(e.target.value)} placeholder="e.g. 09:30 AM - 12:30 PM" />
+                                            </div>
+                                            {selectedStaffHallRecord && (
+                                                <div className="alloc-hall-preview">
+                                                    <strong>{selectedStaffHallRecord.hallNo}</strong>
+                                                    <span>{selectedStaffHallRecord.examName || 'Examination'} · {staffHallStudents.length || selectedStaffHallRecord.studentCount || 0} students</span>
+                                                </div>
+                                            )}
+                                            <div className="alloc-summary">
+                                                <div><span>Staff</span><strong>{selectedExamStaff.length}</strong></div>
+                                                <div><span>Hall</span><strong>{selectedStaffHallRecord?.hallNo || '—'}</strong></div>
+                                            </div>
+                                            <button type="submit" className="alloc-btn staff" disabled={!selectedExamStaff.length || !selectedStaffHall}>
+                                                <UserCheck size={16} /> Assign Invigilation Duty
+                                            </button>
+                                        </aside>
                                     </form>
+                                </div>
+                            )}
 
-                                    <div className="exam-existing-section">
-                                        <div className="exam-section-heading"><strong>Allocated Halls</strong><span>{examHalls.length}</span></div>
-                                        <div className="exam-allocation-table-wrap">
-                                            <table className="custom-table exam-allocation-table">
-                                                <thead><tr><th>Hall</th><th>Class / Section</th><th>Students</th><th>Seat Nos.</th><th>Exam</th><th></th></tr></thead>
-                                                <tbody>
-                                                    {examHalls.length === 0 ? <tr><td colSpan="6" className="exam-table-empty">No student hall allocations yet.</td></tr> : examHalls.map(item => (
-                                                        <tr key={item.id}>
-                                                            <td><strong>{item.hallNo}</strong></td>
-                                                            <td><span className="task-target-tag">{item.targetClass || '—'} / {item.targetSection || '—'}</span></td>
-                                                            <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
-                                                            <td><span className="exam-seat-range">{Array.isArray(item.studentList) && item.studentList.length ? `1–${item.studentList.length}` : '—'}</span></td>
-                                                            <td>{item.examName || 'Examination'}</td>
-                                                            <td><button className="delete-task-btn" onClick={() => handleDelete('exam_hall_allocations', item.id)} title="Delete"><X size={14} /></button></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                            {/* ============ RECORDS ============ */}
+                            <div className="dash-card alloc-records">
+                                <div className="alloc-record-tabs">
+                                    <button type="button" className={allocRecordsTab === 'halls' ? 'active' : ''} onClick={() => setAllocRecordsTab('halls')}>Allocated halls <span>{examHalls.length}</span></button>
+                                    <button type="button" className={allocRecordsTab === 'seating' ? 'active' : ''} onClick={() => setAllocRecordsTab('seating')}>Seating arrangement <span>{seatingClasses.length}</span></button>
+                                    <button type="button" className={allocRecordsTab === 'duties' ? 'active' : ''} onClick={() => setAllocRecordsTab('duties')}>Staff duties <span>{staffExamHalls.length}</span></button>
+                                </div>
+
+                                {(allocRecordsTab === 'halls' || allocRecordsTab === 'duties') && (
+                                    <div className="alloc-records-bar">
+                                        <div className="alloc-search">
+                                            <Search size={16} />
+                                            <input value={allocRecordSearch} onChange={e => setAllocRecordSearch(e.target.value)} placeholder={allocRecordsTab === 'halls' ? 'Search hall, class, section or exam' : 'Search staff, hall or duty time'} />
                                         </div>
+                                        {(allocRecordsTab === 'halls' ? hallSel.length : dutySel.length) > 0 && (
+                                            <>
+                                                <span className="alloc-count-pill">{allocRecordsTab === 'halls' ? hallSel.length : dutySel.length} selected</span>
+                                                <button type="button" className="alloc-danger-btn" onClick={() => allocRecordsTab === 'halls' ? deleteHalls(hallSel) : deleteDuties(dutySel)}>
+                                                    <Trash2 size={15} /> Delete selected
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
+                                )}
 
-                                    {/* CLASS-WISE SEATING ARRANGEMENT */}
-                                    <div className="exam-existing-section">
-                                        <div className="exam-section-heading">
-                                            <strong>Seating Arrangement (Class-wise)</strong>
-                                            <span>{seatingClasses.length}</span>
-                                        </div>
+                                {allocRecordsTab === 'halls' && (
+                                    <div className="exam-allocation-table-wrap">
+                                        <table className="custom-table exam-allocation-table">
+                                            <thead><tr>
+                                                <th style={{ width: 36 }}><input type="checkbox" className="alloc-cb" title="Select all" checked={allocFilteredHalls.length > 0 && allocFilteredHalls.every(h => hallSel.includes(h.id))} onChange={() => {
+                                                    const ids = allocFilteredHalls.map(h => h.id);
+                                                    const all = ids.length > 0 && ids.every(id => hallSel.includes(id));
+                                                    setSelectedHallIds(prev => all ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids])));
+                                                }} /></th>
+                                                <th>Hall</th><th>Class / Section</th><th>Students</th><th>Seat Nos.</th><th>Exam</th><th style={{ textAlign: 'right' }}>Actions</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                {allocFilteredHalls.length === 0 ? <tr><td colSpan="7" className="exam-table-empty">{examHalls.length === 0 ? 'No student hall allocations yet.' : 'No halls match your search.'}</td></tr> : allocFilteredHalls.map(item => (
+                                                    <tr key={item.id} className={hallSel.includes(item.id) ? 'alloc-tr-selected' : ''}>
+                                                        <td><input type="checkbox" className="alloc-cb" checked={hallSel.includes(item.id)} onChange={() => setSelectedHallIds(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} /></td>
+                                                        <td><strong>{item.hallNo}</strong></td>
+                                                        <td><span className="task-target-tag">{item.targetClass || '—'} / {item.targetSection || '—'}</span></td>
+                                                        <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
+                                                        <td><span className="exam-seat-range">{Array.isArray(item.studentList) && item.studentList.length ? `1–${item.studentList.length}` : '—'}</span></td>
+                                                        <td>{item.examName || 'Examination'}</td>
+                                                        <td>
+                                                            <div className="alloc-actions">
+                                                                <button type="button" className="alloc-icon-btn" title="Edit" onClick={() => openEditHall(item)}><Pencil size={14} /></button>
+                                                                <button type="button" className="alloc-icon-btn danger" title="Delete" onClick={() => deleteHalls([item.id])}><Trash2 size={14} /></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
 
-                                        <select
-                                            className="custom-select full-width seat-filter-select"
-                                            value={seatingFilterClass}
-                                            onChange={e => setSeatingFilterClass(e.target.value)}
-                                        >
+                                {allocRecordsTab === 'seating' && (
+                                    <div>
+                                        <select className="custom-select full-width seat-filter-select" value={seatingFilterClass} onChange={e => setSeatingFilterClass(e.target.value)}>
                                             <option value="all">All Classes</option>
                                             {seatingClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
                                         </select>
-
                                         {seatingClasses.length === 0 ? (
-                                            <div className="exam-empty-state"><Users size={22} /><span>No seating arrangements yet. Assign students to a hall first.</span></div>
+                                            <div className="exam-empty-state"><Users size={22} /><span>No seating arrangements yet. Allocate students to a hall first.</span></div>
                                         ) : seatingClasses
                                             .filter(cls => seatingFilterClass === 'all' || seatingFilterClass === cls)
                                             .map(cls => {
@@ -2190,23 +2755,15 @@ export default function OfficeDashboard() {
                                                     .sort((a, b) => String(a.hallNo).localeCompare(String(b.hallNo), undefined, { numeric: true }));
                                                 const totalStudents = classHalls.reduce((n, h) => n + getHallSeatList(h).length, 0);
                                                 const isOpen = seatingFilterClass === cls || !!openSeatingClasses[cls];
-
                                                 return (
                                                     <div key={cls} className={`seat-class-group ${isOpen ? 'open' : ''}`}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setOpenSeatingClasses(prev => ({ ...prev, [cls]: !prev[cls] }))}
-                                                            className="seat-class-toggle"
-                                                        >
+                                                        <button type="button" onClick={() => setOpenSeatingClasses(prev => ({ ...prev, [cls]: !prev[cls] }))} className="seat-class-toggle">
                                                             <span className="seat-class-title">
                                                                 <GraduationCap size={16} /> {cls}
-                                                                <small>
-                                                                    {classHalls.length} {classHalls.length === 1 ? 'hall' : 'halls'} · {totalStudents} students
-                                                                </small>
+                                                                <small>{classHalls.length} {classHalls.length === 1 ? 'hall' : 'halls'} · {totalStudents} students</small>
                                                             </span>
                                                             {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                         </button>
-
                                                         {isOpen && classHalls.map(hall => (
                                                             <div key={hall.id} className="seat-hall">
                                                                 <div className="seat-hall-head">
@@ -2216,18 +2773,32 @@ export default function OfficeDashboard() {
                                                                 </div>
                                                                 <div className="table-responsive">
                                                                     <table className="custom-table">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Seat No</th>
-                                                                                <th>Student Name</th>
-                                                                                <th>Admission No</th>
-                                                                                <th>Section</th>
-                                                                            </tr>
-                                                                        </thead>
+                                                                        <thead><tr><th>Seat No <small style={{ fontWeight: 600, color: '#94a3b8' }}>(editable)</small></th><th>Student Name</th><th>Admission No</th><th>Section</th></tr></thead>
                                                                         <tbody>
                                                                             {getHallSeatList(hall).map(st => (
                                                                                 <tr key={st.id}>
-                                                                                    <td><span className="exam-seat-range">{st.seatNo || '—'}</span></td>
+                                                                                    <td>
+                                                                                        {seatEdit && seatEdit.allocId === hall.id && seatEdit.studentId === st.id ? (
+                                                                                            <span className="alloc-seat-edit">
+                                                                                                <input
+                                                                                                    type="number" min="1" autoFocus
+                                                                                                    value={seatEdit.value}
+                                                                                                    onChange={e => setSeatEdit(prev => ({ ...prev, value: e.target.value }))}
+                                                                                                    onKeyDown={e => {
+                                                                                                        if (e.key === 'Enter') { e.preventDefault(); saveSeatChange(hall, st.id, seatEdit.value); }
+                                                                                                        if (e.key === 'Escape') setSeatEdit(null);
+                                                                                                    }}
+                                                                                                />
+                                                                                                <button type="button" className="alloc-icon-btn ok" title="Save" disabled={seatBusy} onClick={() => saveSeatChange(hall, st.id, seatEdit.value)}><Check size={14} /></button>
+                                                                                                <button type="button" className="alloc-icon-btn" title="Cancel" onClick={() => setSeatEdit(null)}><X size={14} /></button>
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="alloc-seat-view">
+                                                                                                <span className="exam-seat-range">{st.seatNo || '—'}</span>
+                                                                                                <button type="button" className="alloc-icon-btn sm" title="Edit seat" onClick={() => setSeatEdit({ allocId: hall.id, studentId: st.id, value: String(st.seatNo || '') })}><Pencil size={12} /></button>
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </td>
                                                                                     <td><strong>{st.name || 'Student'}</strong></td>
                                                                                     <td>{st.admissionNo || '—'}</td>
                                                                                     <td>{st.sectionName || hall.targetSection || '—'}</td>
@@ -2242,99 +2813,125 @@ export default function OfficeDashboard() {
                                                 );
                                             })}
                                     </div>
-                                </div>
+                                )}
 
-                                {/* STAFF ALLOCATION */}
-                                <div className="dash-card exam-allocation-card">
-                                    <div className="exam-card-title">
-                                        <div className="exam-title-icon staff"><UserCheck size={19} /></div>
-                                        <div>
-                                            <h3>Staff</h3>
-                                            <p>Select Staff → Hall → Student List → Assign</p>
-                                        </div>
+                                {allocRecordsTab === 'duties' && (
+                                    <div className="exam-allocation-table-wrap">
+                                        <table className="custom-table exam-allocation-table">
+                                            <thead><tr>
+                                                <th style={{ width: 36 }}><input type="checkbox" className="alloc-cb" title="Select all" checked={allocFilteredDuties.length > 0 && allocFilteredDuties.every(d => dutySel.includes(d.id))} onChange={() => {
+                                                    const ids = allocFilteredDuties.map(d => d.id);
+                                                    const all = ids.length > 0 && ids.every(id => dutySel.includes(id));
+                                                    setSelectedDutyIds(prev => all ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids])));
+                                                }} /></th>
+                                                <th>Staff</th><th>Hall</th><th>Students</th><th>Duty Time</th><th style={{ textAlign: 'right' }}>Actions</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                {allocFilteredDuties.length === 0 ? <tr><td colSpan="6" className="exam-table-empty">{staffExamHalls.length === 0 ? 'No staff duties assigned yet.' : 'No duties match your search.'}</td></tr> : allocFilteredDuties.map(item => (
+                                                    <tr key={item.id} className={dutySel.includes(item.id) ? 'alloc-tr-selected' : ''}>
+                                                        <td><input type="checkbox" className="alloc-cb" checked={dutySel.includes(item.id)} onChange={() => setSelectedDutyIds(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} /></td>
+                                                        <td><strong>{item.staffName}</strong></td>
+                                                        <td>{item.hallNo}</td>
+                                                        <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
+                                                        <td><span className="task-target-tag">{item.dutyTime || 'Exam Duty'}</span></td>
+                                                        <td>
+                                                            <div className="alloc-actions">
+                                                                <button type="button" className="alloc-icon-btn" title="Edit" onClick={() => openEditDuty(item)}><Pencil size={14} /></button>
+                                                                <button type="button" className="alloc-icon-btn danger" title="Delete" onClick={() => deleteDuties([item.id])}><Trash2 size={14} /></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-
-                                    <form onSubmit={handleStaffHallAssignment}>
-                                        <div className="exam-form-grid">
-                                            <div className="exam-field exam-field-wide">
-                                                <label>Select Staff</label>
-                                                <select value={selectedExamStaff} onChange={e => setSelectedExamStaff(e.target.value)} required>
-                                                    <option value="">Select Staff Member</option>
-                                                    {staffList.map(staff => <option key={staff.id} value={staff.id}>{staff.name || staff.staffName || 'Staff'}{staff.department ? ` — ${staff.department}` : ''}</option>)}
-                                                </select>
-                                            </div>
-
-                                            <div className="exam-field exam-field-wide">
-                                                <label>Hall No</label>
-                                                <select value={selectedStaffHall} onChange={e => setSelectedStaffHall(e.target.value)} required>
-                                                    <option value="">Select Allocated Hall</option>
-                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''} {hall.targetSection ? `/ ${hall.targetSection}` : ''} — {hall.studentCount || hall.studentIds?.length || 0} Students</option>)}
-                                                </select>
-                                            </div>
-
-                                            <div className="exam-field exam-field-wide">
-                                                <label>Duty Time / Slot</label>
-                                                <input value={staffDutyTime} onChange={e => setStaffDutyTime(e.target.value)} placeholder="e.g. 09:30 AM - 12:30 PM" />
-                                            </div>
-                                        </div>
-
-                                        <div className="exam-staff-preview">
-                                            <div className="exam-selector-head">
-                                                <div>
-                                                    <strong>List Students</strong>
-                                                    <span>{selectedStaffHallRecord ? `${selectedStaffHallRecord.targetClass || ''} ${selectedStaffHallRecord.targetSection ? `/ ${selectedStaffHallRecord.targetSection}` : ''}` : 'Select a hall'}</span>
-                                                </div>
-                                                <div className="exam-selected-count">{staffHallStudents.length || selectedStaffHallRecord?.studentCount || 0} Students</div>
-                                            </div>
-
-                                            {!selectedStaffHallRecord ? (
-                                                <div className="exam-empty-state"><LayoutGrid size={22} /><span>Select an allocated hall to see its student list.</span></div>
-                                            ) : staffHallStudents.length === 0 ? (
-                                                <div className="exam-empty-state"><Users size={22} /><span>This hall has no student list stored.</span></div>
-                                            ) : (
-                                                <div className="exam-staff-student-list">
-                                                    {staffHallStudents.map((student, idx) => (
-                                                        <div className="exam-staff-student-row" key={student.id || idx}>
-                                                            <span className="exam-student-number">{idx + 1}</span>
-                                                            <span><strong>{student.name}</strong><small>#{student.admissionNo || 'N/A'}</small></span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="exam-allocation-summary staff-summary">
-                                            <div><span>Staff</span><strong>{staffList.find(s => s.id === selectedExamStaff)?.name || '—'}</strong></div>
-                                            <div><span>No. of Students</span><strong>{staffHallStudents.length || selectedStaffHallRecord?.studentCount || 0}</strong></div>
-                                            <div><span>Hall No</span><strong>{selectedStaffHallRecord?.hallNo || '—'}</strong></div>
-                                        </div>
-
-                                        <button type="submit" className="exam-primary-btn staff-btn" disabled={!selectedExamStaff || !selectedStaffHall}>
-                                            <UserCheck size={16} /> Assign Invigilation Duty
-                                        </button>
-                                    </form>
-
-                                    <div className="exam-existing-section">
-                                        <div className="exam-section-heading"><strong>Assigned Staff Duties</strong><span>{staffExamHalls.length}</span></div>
-                                        <div className="exam-allocation-table-wrap">
-                                            <table className="custom-table exam-allocation-table">
-                                                <thead><tr><th>Staff</th><th>Hall</th><th>Students</th><th>Duty Time</th><th></th></tr></thead>
-                                                <tbody>
-                                                    {staffExamHalls.length === 0 ? <tr><td colSpan="5" className="exam-table-empty">No staff duties assigned yet.</td></tr> : staffExamHalls.map(item => (
-                                                        <tr key={item.id}>
-                                                            <td><strong>{item.staffName}</strong></td>
-                                                            <td>{item.hallNo}</td>
-                                                            <td><span className="exam-count-badge">{item.studentCount || item.studentIds?.length || 0}</span></td>
-                                                            <td><span className="task-target-tag">{item.dutyTime || 'Exam Duty'}</span></td>
-                                                            <td><button className="delete-task-btn" onClick={() => handleDelete('staff_exam_halls', item.id)} title="Delete"><X size={14} /></button></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
+
+                            {/* ============ EDIT MODALS ============ */}
+                            {editHall && (
+                                <div className="alloc-modal-backdrop" onClick={() => setEditHall(null)}>
+                                    <form className="alloc-modal" onClick={e => e.stopPropagation()} onSubmit={saveHall}>
+                                        <div className="alloc-modal-head">
+                                            <div><h4>Edit hall allocation</h4><small>{editHall.targetClass || '—'} / {editHall.targetSection || '—'}</small></div>
+                                            <button type="button" className="alloc-icon-btn" onClick={() => setEditHall(null)}><X size={16} /></button>
+                                        </div>
+                                        <div className="alloc-modal-body">
+                                            <div className="alloc-modal-grid">
+                                                <div className="alloc-field">
+                                                    <label>Hall</label>
+                                                    <select value={editHallForm.hallId} onChange={e => changeEditHallTarget(e.target.value, editHallForm.examName)}>
+                                                        {!editHallForm.hallId && <option value="">{editHall.hallNo} (not in Hall Management)</option>}
+                                                        {hallMaster.map(h => <option key={h.id} value={h.id}>{h.hallNo} — {h.capacity} seats{h.status === 'Maintenance' ? ' (maintenance)' : ''}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="alloc-field">
+                                                    <label>Exam</label>
+                                                    <select value={editHallForm.examName} onChange={e => changeEditHallTarget(editHallForm.hallId, e.target.value)}>
+                                                        {Array.from(new Set([...examTypes, editHallForm.examName].filter(Boolean))).map(t => <option key={t} value={t}>{t}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="alloc-section-title">
+                                                <h4>Students in this hall</h4>
+                                                <span className="alloc-count-pill">{editHallKeep.length} of {editHallAllStudents.length} kept</span>
+                                            </div>
+                                            <label className="alloc-check-all" style={{ marginBottom: 10 }}>
+                                                <input type="checkbox" checked={editHallAllStudents.length > 0 && editHallKeep.length === editHallAllStudents.length} onChange={() => setEditHallKeep(editHallKeep.length === editHallAllStudents.length ? [] : editHallAllStudents.map(s => s.id))} />
+                                                Select all
+                                            </label>
+                                            <div className="alloc-list" style={{ maxHeight: 260 }}>
+                                                {editHallAllStudents.map(st => (
+                                                    <label key={st.id} className={`alloc-row ${editHallKeep.includes(st.id) ? 'selected' : ''}`}>
+                                                        <input type="checkbox" checked={editHallKeep.includes(st.id)} onChange={() => setEditHallKeep(prev => prev.includes(st.id) ? prev.filter(id => id !== st.id) : [...prev, st.id])} />
+                                                        <span className="alloc-avatar">{(st.name || 'S').charAt(0).toUpperCase()}</span>
+                                                        <span className="alloc-row-info"><strong>{st.name || 'Student'}</strong><small>#{st.admissionNo || '—'}</small></span>
+                                                        {editHallKeep.includes(st.id) && (
+                                                            <span className={`alloc-seat-input ${editHallPlan?.errors[st.id] ? 'err' : ''}`} title={editHallPlan?.errors[st.id] || 'Edit seat number'} onClick={e => e.preventDefault()}>
+                                                                <small>Seat</small>
+                                                                <input type="number" min="1" value={editHallSeats[st.id] ?? ''} onChange={e => setEditHallSeats(prev => ({ ...prev, [st.id]: e.target.value }))} />
+                                                            </span>
+                                                        )}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            <p className="alloc-hint" style={{ marginTop: 10 }}>Type a new number to change a student's seat. Unticked students are removed and their seats become free. Changing the hall or exam suggests new seats from that hall's free seats. Linked staff duties are updated too.</p>
+                                        </div>
+                                        <div className="alloc-modal-foot">
+                                            <button type="button" className="alloc-ghost-btn" onClick={() => setEditHall(null)}>Cancel</button>
+                                            <button type="submit" className="alloc-btn" style={{ width: 'auto', padding: '0 22px' }} disabled={!editHallKeep.length || (!!editHallPlan && !editHallPlan.ok)}>Save changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+
+                            {editDuty && (
+                                <div className="alloc-modal-backdrop" onClick={() => setEditDuty(null)}>
+                                    <form className="alloc-modal small" onClick={e => e.stopPropagation()} onSubmit={saveDuty}>
+                                        <div className="alloc-modal-head">
+                                            <div><h4>Edit invigilation duty</h4><small>{editDuty.staffName}</small></div>
+                                            <button type="button" className="alloc-icon-btn" onClick={() => setEditDuty(null)}><X size={16} /></button>
+                                        </div>
+                                        <div className="alloc-modal-body">
+                                            <div className="alloc-field">
+                                                <label>Hall</label>
+                                                <select value={editDutyForm.hallId} onChange={e => setEditDutyForm(f => ({ ...f, hallId: e.target.value }))} required>
+                                                    <option value="">Select allocated hall</option>
+                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="alloc-field">
+                                                <label>Duty time / slot</label>
+                                                <input value={editDutyForm.dutyTime} onChange={e => setEditDutyForm(f => ({ ...f, dutyTime: e.target.value }))} placeholder="e.g. 09:30 AM - 12:30 PM" />
+                                            </div>
+                                        </div>
+                                        <div className="alloc-modal-foot">
+                                            <button type="button" className="alloc-ghost-btn" onClick={() => setEditDuty(null)}>Cancel</button>
+                                            <button type="submit" className="alloc-btn staff" style={{ width: 'auto', padding: '0 22px' }} disabled={!editDutyForm.hallId}>Save changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
                         </div>
                     )}
 
