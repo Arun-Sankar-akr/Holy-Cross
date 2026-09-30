@@ -2175,9 +2175,10 @@ export default function OfficeDashboard() {
                                     @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap');
 
                                     .htx{
-                                        --ink:#161b33;--ink-2:#3b4262;--muted:#6b7394;--line:#e3e6f0;--paper:#fff;--wash:#f1f2f8;
-                                        --signal:#ffb020;--signal-soft:#fff6df;--signal-ink:#5a3a00;
-                                        --ok:#0f7a55;--ok-bg:#e2f5ec;--bad:#b42b2b;--bad-bg:#fdeaea;--pub:#3340c9;--pub-bg:#e8eafd;
+                                        --brand:var(--office-primary,#6d5dfc);--brand-dark:var(--office-primary-dark,#5848e8);--brand-soft:var(--office-primary-soft,#f1efff);--accent:var(--office-accent,#8b7cf6);
+                                        --ink:var(--office-text,#1d2330);--ink-2:var(--office-text-soft,#596174);--muted:var(--office-text-soft,#596174);--line:var(--office-border,#e8eaf2);--paper:var(--office-surface,#fff);--wash:var(--office-bg,#f6f7fb);
+                                        --signal:var(--brand);--signal-soft:var(--brand-soft);
+                                        --ok:#157a4e;--ok-bg:var(--office-success-soft,#eafaf2);--bad:#c43d47;--bad-bg:var(--office-danger-soft,#fff0f2);--pub:var(--brand-dark);--pub-bg:var(--brand-soft);
                                         --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
                                         display:flex;flex-direction:column;gap:22px;color:var(--ink)
                                     }
@@ -2189,7 +2190,7 @@ export default function OfficeDashboard() {
                                     .htx-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
                                     .htx-mast h3{margin:0;font-family:var(--display);font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--ink)}
                                     .htx-mast p{margin:8px 0 0;max-width:480px;font-size:.84rem;line-height:1.5;color:var(--muted)}
-                                    .htx-pass{position:relative;display:flex;align-items:stretch;border-radius:16px;background:var(--ink);color:#fff;box-shadow:0 10px 24px rgba(22,27,51,.22)}
+                                    .htx-pass{position:relative;display:flex;align-items:stretch;border-radius:16px;background:var(--brand-dark);color:#fff;box-shadow:0 10px 24px rgba(76,70,120,.22)}
                                     .htx-pass-cell{display:flex;flex-direction:column;gap:4px;padding:12px 18px}
                                     .htx-pass-cell span{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.62)}
                                     .htx-pass-cell select{min-width:150px;height:30px;padding:0 24px 0 0;border:0;background:transparent;color:#fff;font-family:var(--display);font-size:1rem;font-weight:700;outline:0;cursor:pointer}
@@ -2208,11 +2209,11 @@ export default function OfficeDashboard() {
                                     button.htx-node:disabled{cursor:not-allowed;opacity:.6}
                                     .htx-dot{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:var(--paper);font-family:var(--display);font-size:.8rem;font-weight:800;color:var(--muted)}
                                     .htx-node.current{color:var(--ink)}
-                                    .htx-node.current .htx-dot{border-color:var(--ink);background:var(--signal);color:var(--ink)}
+                                    .htx-node.current .htx-dot{border-color:var(--brand);background:var(--brand);color:#fff}
                                     .htx-node.done{color:var(--ink)}
-                                    .htx-node.done .htx-dot{border-color:var(--ink);background:var(--ink);color:#fff}
+                                    .htx-node.done .htx-dot{border-color:var(--brand-dark);background:var(--brand-dark);color:#fff}
                                     .htx-link{flex:1;min-width:24px;max-width:90px;height:2px;background:var(--line);border-radius:2px}
-                                    .htx-link.on{background:var(--ink)}
+                                    .htx-link.on{background:var(--brand)}
 
                                     /* ---------- surface ---------- */
                                     .htx-stage{padding:26px;border:1px solid var(--line);border-radius:22px;background:var(--paper)}
@@ -2224,9 +2225,9 @@ export default function OfficeDashboard() {
                                     /* ---------- class picker ---------- */
                                     .htx-classes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
                                     .htx-class{position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 18px 16px 22px;border:1px solid var(--line);border-radius:14px;background:var(--paper);text-align:left;cursor:pointer;overflow:hidden;transition:border-color .15s,box-shadow .15s}
-                                    .htx-class::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--ink);transition:width .15s,background .15s}
-                                    .htx-class:hover{border-color:var(--ink);box-shadow:0 8px 20px rgba(22,27,51,.1)}
-                                    .htx-class:hover::before{width:10px;background:var(--signal)}
+                                    .htx-class::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--brand-dark);transition:width .15s,background .15s}
+                                    .htx-class:hover{border-color:var(--brand);box-shadow:0 8px 20px rgba(76,70,120,.1)}
+                                    .htx-class:hover::before{width:10px;background:var(--accent)}
                                     .htx-class strong{font-family:var(--display);font-size:1.7rem;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
                                     .htx-class-meta{display:flex;justify-content:space-between;gap:8px;font-size:.76rem;font-weight:600;color:var(--muted)}
                                     .htx-meter{height:4px;border-radius:4px;background:var(--wash);overflow:hidden}
@@ -2236,40 +2237,40 @@ export default function OfficeDashboard() {
                                     .htx-sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
                                     .htx-section{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--wash);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
                                     .htx-section:hover{background:var(--signal-soft);border-color:var(--signal)}
-                                    .htx-letter{font-family:var(--display);font-size:3.4rem;font-weight:800;line-height:.95;letter-spacing:-.04em;color:var(--ink)}
+                                    .htx-letter{font-family:var(--display);font-size:3.4rem;font-weight:800;line-height:.95;letter-spacing:-.04em;color:var(--brand-dark)}
                                     .htx-section small{font-size:.76rem;font-weight:600;color:var(--muted)}
 
                                     /* ---------- students layout ---------- */
                                     .htx-work{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start}
                                     .htx-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
                                     .htx-search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--muted)}
-                                    .htx-search:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--signal-soft)}
+                                    .htx-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--signal-soft)}
                                     .htx-search input{flex:1;border:0;outline:0;background:transparent;font-size:.86rem;color:var(--ink)}
                                     .htx-all{display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 16px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:.82rem;font-weight:700;color:var(--ink);cursor:pointer;user-select:none}
-                                    .htx-all input,.htx-check{width:18px;height:18px;accent-color:var(--ink);cursor:pointer}
+                                    .htx-all input,.htx-check{width:18px;height:18px;accent-color:var(--brand);cursor:pointer}
                                     .htx-all:has(input:disabled){opacity:.5;cursor:not-allowed}
 
                                     .htx-list{display:flex;flex-direction:column;gap:10px;max-height:600px;overflow:auto;padding:12px;border-radius:16px;background:var(--wash)}
 
                                     /* ticket strip */
                                     .htx-ticket{position:relative;display:grid;grid-template-columns:92px 0 minmax(0,1fr) auto auto;align-items:center;gap:0 18px;min-height:76px;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden;cursor:pointer;transition:border-color .15s,background .15s}
-                                    .htx-ticket:hover{border-color:var(--ink-2)}
-                                    .htx-ticket.selected{border-color:var(--ink);background:var(--signal-soft);box-shadow:0 0 0 1px var(--ink)}
-                                    .htx-ticket.locked{cursor:default;background:#f9fafc}
+                                    .htx-ticket:hover{border-color:var(--accent)}
+                                    .htx-ticket.selected{border-color:var(--brand);background:var(--signal-soft);box-shadow:0 0 0 1px var(--brand)}
+                                    .htx-ticket.locked{cursor:default;background:#fafafe}
                                     .htx-ticket.locked:hover{border-color:var(--line)}
                                     .htx-ticket.locked .htx-check{cursor:not-allowed}
-                                    .htx-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;gap:1px;padding:8px 6px;background:var(--ink);color:#fff;text-align:center}
-                                    .htx-stub small{max-width:100%;font-size:.68rem;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                    .htx-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;gap:1px;padding:8px 6px;background:var(--brand-soft);color:var(--brand-dark);text-align:center}
+                                    .htx-stub small{max-width:100%;font-size:.68rem;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
                                     .htx-stub b{font-family:var(--display);font-size:1.6rem;font-weight:800;line-height:1.05;letter-spacing:-.02em}
-                                    .htx-ticket.selected .htx-stub{background:var(--signal);color:var(--ink)}
-                                    .htx-ticket.selected .htx-stub small{color:var(--signal-ink)}
-                                    .htx-ticket.locked .htx-stub{background:repeating-linear-gradient(135deg,#e9ebf3 0 6px,#f1f2f8 6px 12px);color:var(--muted)}
+                                    .htx-ticket.selected .htx-stub{background:var(--brand);color:#fff}
+                                    .htx-ticket.selected .htx-stub small{color:rgba(255,255,255,.85)}
+                                    .htx-ticket.locked .htx-stub{background:repeating-linear-gradient(135deg,#eceef6 0 6px,#f4f5fa 6px 12px);color:var(--muted)}
                                     .htx-ticket.locked .htx-stub small{color:var(--muted)}
                                     .htx-perf{position:relative;align-self:stretch;width:0;border-left:2px dashed var(--line)}
                                     .htx-perf::before,.htx-perf::after{content:"";position:absolute;left:-10px;width:18px;height:18px;border-radius:50%;background:var(--wash);border:1px solid var(--line)}
                                     .htx-perf::before{top:-10px}
                                     .htx-perf::after{bottom:-10px}
-                                    .htx-ticket.selected .htx-perf{border-left-color:var(--ink)}
+                                    .htx-ticket.selected .htx-perf{border-left-color:var(--brand)}
                                     .htx-who{display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px 0}
                                     .htx-who strong{font-size:.95rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
                                     .htx-who small{font-size:.76rem;font-weight:600;color:var(--muted)}
@@ -2278,7 +2279,7 @@ export default function OfficeDashboard() {
                                     .htx-chip.paid{background:var(--ok-bg);color:var(--ok)}
                                     .htx-chip.unpaid{background:var(--bad-bg);color:var(--bad)}
                                     .htx-chip.published{background:var(--pub-bg);color:var(--pub)}
-                                    .htx-chip.ready{background:var(--ink);color:#fff}
+                                    .htx-chip.ready{background:var(--brand-dark);color:#fff}
                                     .htx-chip.blocked{background:var(--wash);color:var(--muted)}
                                     .htx-tick{padding-right:18px}
 
@@ -2287,7 +2288,7 @@ export default function OfficeDashboard() {
                                     .htx-side-for{font-size:.8rem;color:var(--muted);font-weight:600;line-height:1.4}
                                     .htx-side-for b{display:block;margin-bottom:2px;font-family:var(--display);font-size:1.15rem;font-weight:800;color:var(--ink)}
                                     .htx-big{display:flex;align-items:baseline;gap:8px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-                                    .htx-big strong{font-family:var(--display);font-size:3.2rem;font-weight:800;line-height:.9;letter-spacing:-.04em;color:var(--ink)}
+                                    .htx-big strong{font-family:var(--display);font-size:3.2rem;font-weight:800;line-height:.9;letter-spacing:-.04em;color:var(--brand-dark)}
                                     .htx-big span{font-size:.82rem;font-weight:600;color:var(--muted)}
                                     .htx-facts{display:grid;gap:9px;margin:0}
                                     .htx-facts div{display:flex;justify-content:space-between;gap:10px;font-size:.82rem}
@@ -2296,9 +2297,9 @@ export default function OfficeDashboard() {
                                     .htx-facts .bad dd{color:var(--bad)}
                                     .htx-facts .ok dd{color:var(--ok)}
                                     .htx-facts .pub dd{color:var(--pub)}
-                                    .htx-publish{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:50px;border:2px solid var(--ink);border-radius:13px;background:var(--signal);color:var(--ink);font-family:var(--display);font-size:.98rem;font-weight:800;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
-                                    .htx-publish:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
-                                    .htx-publish:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+                                    .htx-publish{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:50px;border:2px solid var(--brand-dark);border-radius:13px;background:var(--brand);color:#fff;font-family:var(--display);font-size:.98rem;font-weight:800;cursor:pointer;box-shadow:3px 3px 0 var(--brand-dark);transition:transform .12s,box-shadow .12s}
+                                    .htx-publish:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--brand-dark)}
+                                    .htx-publish:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--brand-dark)}
                                     .htx-publish:disabled{background:var(--wash);border-color:var(--line);color:var(--muted);box-shadow:none;cursor:not-allowed}
                                     .htx-clear{border:0;background:transparent;color:var(--ink-2);font-size:.82rem;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
                                     .htx-clear:disabled{opacity:.4;cursor:not-allowed}
@@ -2306,7 +2307,7 @@ export default function OfficeDashboard() {
                                     /* ---------- responsive ---------- */
                                     @media(max-width:980px){
                                         .htx-work{grid-template-columns:1fr}
-                                        .htx-side{position:sticky;top:auto;bottom:10px;z-index:5;order:2;flex-direction:row;align-items:center;flex-wrap:wrap;padding:12px 14px;box-shadow:0 12px 28px rgba(22,27,51,.2)}
+                                        .htx-side{position:sticky;top:auto;bottom:10px;z-index:5;order:2;flex-direction:row;align-items:center;flex-wrap:wrap;padding:12px 14px;box-shadow:0 12px 28px rgba(76,70,120,.2)}
                                         .htx-side-for,.htx-facts{display:none}
                                         .htx-big{flex:1;padding:0;border:0}
                                         .htx-big strong{font-size:2rem}
