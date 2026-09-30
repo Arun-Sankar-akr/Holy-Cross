@@ -288,7 +288,7 @@ export default function OfficeDashboard() {
     };
 
     const toggleAllPaidHallTicketStudents = () => {
-        const paidIds = paidHallTicketStudents.map(s => s.id);
+        const paidIds = hallTicketSelectableStudents.map(s => s.id);
         const allSelected = paidIds.length > 0 && paidIds.every(id => hallTicketSelectedStudents.includes(id));
 
         setHallTicketSelectedStudents(prev =>
@@ -310,7 +310,12 @@ export default function OfficeDashboard() {
         );
     };
 
-    const publishHallTicket = async (student) => {
+    // Only students who are fee-cleared, seated in a hall and not yet published can be bulk-selected
+    const hallTicketSelectableStudents = hallTicketListStudents.filter(s =>
+        getStudentFeeStatus(s).paid && !!hallTicketAllocationForStudent(s) && !isHallTicketPublished(s)
+    );
+
+    const publishHallTicket = async (student, silent = false) => {
         const fee = getStudentFeeStatus(student);
         if (!fee.paid) {
             alert(`${student.name || 'This student'} has pending fees. Hall Ticket cannot be published.`);
@@ -354,27 +359,31 @@ export default function OfficeDashboard() {
                 oldPublications.map(p => deleteDoc(doc(db, 'hall_ticket_publications', p.id)))
             );
 
-            alert(`Hall Ticket published for ${student.name || 'student'}.`);
+            if (!silent) alert(`Hall Ticket published for ${student.name || 'student'}.`);
+            return true;
         } catch (error) {
             console.error('Hall Ticket publication failed:', error);
-            alert('Failed to publish Hall Ticket. Please try again.');
+            if (!silent) alert('Failed to publish Hall Ticket. Please try again.');
+            return false;
         }
     };
 
     const publishSelectedHallTickets = async () => {
-        const selected = paidHallTicketStudents.filter(s => hallTicketSelectedStudents.includes(s.id));
+        const selected = hallTicketSelectableStudents.filter(s => hallTicketSelectedStudents.includes(s.id));
         if (selected.length === 0) {
-            alert('Please select at least one paid student.');
+            alert('Please select at least one student who is ready to publish.');
             return;
         }
 
+        let success = 0;
         for (const student of selected) {
-            if (!isHallTicketPublished(student)) {
-                await publishHallTicket(student);
-            }
+            if (await publishHallTicket(student, true)) success += 1;
         }
 
         setHallTicketSelectedStudents([]);
+        alert(success === selected.length
+            ? `Hall Tickets published for ${success} student${success === 1 ? '' : 's'}.`
+            : `Published ${success} of ${selected.length} Hall Tickets. Please retry the remaining students.`);
     };
 
     const handleAddTimetableSubject = async (e) => {
@@ -2147,201 +2156,364 @@ export default function OfficeDashboard() {
                     )}
 
                     {/* HALL TICKET OFFICE MODULE */}
-                    {activeTab === 'hall-ticket-allocation' && (
-                        <div className="dash-card full-width hall-ticket-allocation-module">
-                            <style>{`
-                                .hall-ticket-allocation-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0;padding:18px;border:1px solid #dbe7e2;border-radius:16px;background:#f8fbfa}
-                                .hall-ticket-allocation-filters label{display:flex;flex-direction:column;gap:7px;font-size:.75rem;font-weight:800;color:#475569}
-                                .hall-ticket-allocation-filters select,.hall-ticket-allocation-filters input{height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:.8rem;outline:none}
-                                .hall-ticket-allocation-filters select:focus,.hall-ticket-allocation-filters input:focus{border-color:#7c6df6;box-shadow:0 0 0 3px rgba(16,185,129,.12)}
-                                .hall-ticket-search-field{grid-column:span 1}
-                                .hall-ticket-summary-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
-                                .hall-ticket-count{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:10px;font-size:.75rem}
-                                .hall-ticket-count strong{font-size:1rem}
-                                .hall-ticket-count.paid{background:#dcfce7;color:#5847e8}
-                                .hall-ticket-count.blocked{background:#fee2e2;color:#b91c1c}
-                                .hall-ticket-publish-selected{background:#6d5dfc!important;color:#fff!important}
-                                .hall-ticket-publish-selected:disabled,.hall-ticket-summary-row .exam-primary-btn:disabled{opacity:.45;cursor:not-allowed}
-                                .hall-ticket-allocation-table td{vertical-align:middle}
-                                .hall-ticket-allocation-table input[type="checkbox"]{width:16px;height:16px;accent-color:#6d5dfc}
-                                .hall-ticket-fee-badge,.hall-ticket-published-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;font-size:.68rem;font-weight:900}
-                                .hall-ticket-fee-badge.paid{background:#dcfce7;color:#5847e8}
-                                .hall-ticket-fee-badge.not-paid{background:#fee2e2;color:#b91c1c}
-                                .hall-ticket-published-badge{background:#e6e0ff;color:#5847e8}
-                                .hall-ticket-publish-btn,.hall-ticket-block-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:9px;padding:9px 12px;font-size:.72rem;font-weight:800;cursor:pointer}
-                                .hall-ticket-publish-btn{background:#6d5dfc;color:#fff}
-                                .hall-ticket-publish-btn:hover{background:#5847e8}
-                                .hall-ticket-block-btn{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
-                                .hall-ticket-row-blocked{background:rgba(248,113,113,.035)}
-                                .hall-ticket-no-allocation{color:#94a3b8;font-size:.72rem}
-                                @media(max-width:900px){.hall-ticket-allocation-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
-                                @media(max-width:560px){.hall-ticket-allocation-filters{grid-template-columns:1fr}.hall-ticket-search-field{grid-column:auto}}
-                            `}</style>
-                            <div className="card-header">
-                                <div>
-                                    <span className="exam-module-kicker">HALL TICKET MANAGEMENT</span>
-                                    <h3>Hall Ticket Allocation</h3>
-                                    <p className="subtitle">Select the examination and academic year, then publish Hall Tickets only for students whose fees are fully paid.</p>
+                    {activeTab === 'hall-ticket-allocation' && (() => {
+                        const clsOf = s => s.className || s.grade;
+                        const secOf = s => s.sectionName || s.section;
+                        const secLetter = sec => String(sec).replace(/^section\s*/i, '').slice(0, 3).toUpperCase();
+                        const step = !hallTicketClass ? 1 : !hallTicketSection ? 2 : 3;
+                        const publishedCount = hallTicketListStudents.filter(isHallTicketPublished).length;
+                        const selectableIds = hallTicketSelectableStudents.map(s => s.id);
+                        const allSelectableChosen = selectableIds.length > 0 && selectableIds.every(id => hallTicketSelectedStudents.includes(id));
+                        const selectedCount = hallTicketSelectedStudents.length;
+                        const goClass = () => { setHallTicketClass(''); setHallTicketSection(''); setHallTicketSelectedStudents([]); setHallTicketSearch(''); };
+                        const goSection = () => { setHallTicketSection(''); setHallTicketSelectedStudents([]); setHallTicketSearch(''); };
+                        const blockReason = (fee, allocation) => !fee.paid ? 'Fees pending' : !allocation ? 'No hall allocated' : '';
+
+                        return (
+                            <div className="htx">
+                                <style>{`
+                                    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap');
+
+                                    .htx{
+                                        --ink:#161b33;--ink-2:#3b4262;--muted:#6b7394;--line:#e3e6f0;--paper:#fff;--wash:#f1f2f8;
+                                        --signal:#ffb020;--signal-soft:#fff6df;--signal-ink:#5a3a00;
+                                        --ok:#0f7a55;--ok-bg:#e2f5ec;--bad:#b42b2b;--bad-bg:#fdeaea;--pub:#3340c9;--pub-bg:#e8eafd;
+                                        --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+                                        display:flex;flex-direction:column;gap:22px;color:var(--ink)
+                                    }
+                                    .htx *{box-sizing:border-box}
+                                    .htx button,.htx input,.htx select{font-family:inherit}
+                                    .htx :focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+
+                                    /* ---------- masthead ---------- */
+                                    .htx-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+                                    .htx-mast h3{margin:0;font-family:var(--display);font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--ink)}
+                                    .htx-mast p{margin:8px 0 0;max-width:480px;font-size:.84rem;line-height:1.5;color:var(--muted)}
+                                    .htx-pass{position:relative;display:flex;align-items:stretch;border-radius:16px;background:var(--ink);color:#fff;box-shadow:0 10px 24px rgba(22,27,51,.22)}
+                                    .htx-pass-cell{display:flex;flex-direction:column;gap:4px;padding:12px 18px}
+                                    .htx-pass-cell span{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.62)}
+                                    .htx-pass-cell select{min-width:150px;height:30px;padding:0 24px 0 0;border:0;background:transparent;color:#fff;font-family:var(--display);font-size:1rem;font-weight:700;outline:0;cursor:pointer}
+                                    .htx-pass-cell select option{color:#0f172a;font-family:inherit}
+                                    .htx-pass-cell.year select{min-width:78px}
+                                    .htx-pass-cut{position:relative;width:0;border-left:2px dashed rgba(255,255,255,.28);margin:10px 0}
+                                    .htx-pass-cut::before,.htx-pass-cut::after{content:"";position:absolute;left:-11px;width:20px;height:20px;border-radius:50%;background:var(--office-bg,#f5f7fb)}
+                                    .htx-pass-cut::before{top:-20px}
+                                    .htx-pass-cut::after{bottom:-20px}
+
+                                    /* ---------- progress rail ---------- */
+                                    .htx-rail{display:flex;align-items:center;gap:0;padding:6px 4px}
+                                    .htx-node{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:.86rem;font-weight:700;cursor:default}
+                                    button.htx-node{cursor:pointer}
+                                    button.htx-node:hover:not(:disabled){background:var(--wash)}
+                                    button.htx-node:disabled{cursor:not-allowed;opacity:.6}
+                                    .htx-dot{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:var(--paper);font-family:var(--display);font-size:.8rem;font-weight:800;color:var(--muted)}
+                                    .htx-node.current{color:var(--ink)}
+                                    .htx-node.current .htx-dot{border-color:var(--ink);background:var(--signal);color:var(--ink)}
+                                    .htx-node.done{color:var(--ink)}
+                                    .htx-node.done .htx-dot{border-color:var(--ink);background:var(--ink);color:#fff}
+                                    .htx-link{flex:1;min-width:24px;max-width:90px;height:2px;background:var(--line);border-radius:2px}
+                                    .htx-link.on{background:var(--ink)}
+
+                                    /* ---------- surface ---------- */
+                                    .htx-stage{padding:26px;border:1px solid var(--line);border-radius:22px;background:var(--paper)}
+                                    .htx-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px}
+                                    .htx-head h4{margin:0;font-family:var(--display);font-size:1.25rem;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+                                    .htx-head span{font-size:.8rem;color:var(--muted);font-weight:600}
+                                    .htx-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:44px 12px;color:var(--muted);font-size:.86rem;text-align:center}
+
+                                    /* ---------- class picker ---------- */
+                                    .htx-classes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+                                    .htx-class{position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 18px 16px 22px;border:1px solid var(--line);border-radius:14px;background:var(--paper);text-align:left;cursor:pointer;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+                                    .htx-class::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--ink);transition:width .15s,background .15s}
+                                    .htx-class:hover{border-color:var(--ink);box-shadow:0 8px 20px rgba(22,27,51,.1)}
+                                    .htx-class:hover::before{width:10px;background:var(--signal)}
+                                    .htx-class strong{font-family:var(--display);font-size:1.7rem;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
+                                    .htx-class-meta{display:flex;justify-content:space-between;gap:8px;font-size:.76rem;font-weight:600;color:var(--muted)}
+                                    .htx-meter{height:4px;border-radius:4px;background:var(--wash);overflow:hidden}
+                                    .htx-meter i{display:block;height:100%;background:var(--pub);border-radius:4px}
+
+                                    /* ---------- section picker ---------- */
+                                    .htx-sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+                                    .htx-section{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--wash);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+                                    .htx-section:hover{background:var(--signal-soft);border-color:var(--signal)}
+                                    .htx-letter{font-family:var(--display);font-size:3.4rem;font-weight:800;line-height:.95;letter-spacing:-.04em;color:var(--ink)}
+                                    .htx-section small{font-size:.76rem;font-weight:600;color:var(--muted)}
+
+                                    /* ---------- students layout ---------- */
+                                    .htx-work{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start}
+                                    .htx-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+                                    .htx-search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--muted)}
+                                    .htx-search:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--signal-soft)}
+                                    .htx-search input{flex:1;border:0;outline:0;background:transparent;font-size:.86rem;color:var(--ink)}
+                                    .htx-all{display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 16px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:.82rem;font-weight:700;color:var(--ink);cursor:pointer;user-select:none}
+                                    .htx-all input,.htx-check{width:18px;height:18px;accent-color:var(--ink);cursor:pointer}
+                                    .htx-all:has(input:disabled){opacity:.5;cursor:not-allowed}
+
+                                    .htx-list{display:flex;flex-direction:column;gap:10px;max-height:600px;overflow:auto;padding:12px;border-radius:16px;background:var(--wash)}
+
+                                    /* ticket strip */
+                                    .htx-ticket{position:relative;display:grid;grid-template-columns:92px 0 minmax(0,1fr) auto auto;align-items:center;gap:0 18px;min-height:76px;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden;cursor:pointer;transition:border-color .15s,background .15s}
+                                    .htx-ticket:hover{border-color:var(--ink-2)}
+                                    .htx-ticket.selected{border-color:var(--ink);background:var(--signal-soft);box-shadow:0 0 0 1px var(--ink)}
+                                    .htx-ticket.locked{cursor:default;background:#f9fafc}
+                                    .htx-ticket.locked:hover{border-color:var(--line)}
+                                    .htx-ticket.locked .htx-check{cursor:not-allowed}
+                                    .htx-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;gap:1px;padding:8px 6px;background:var(--ink);color:#fff;text-align:center}
+                                    .htx-stub small{max-width:100%;font-size:.68rem;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                    .htx-stub b{font-family:var(--display);font-size:1.6rem;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+                                    .htx-ticket.selected .htx-stub{background:var(--signal);color:var(--ink)}
+                                    .htx-ticket.selected .htx-stub small{color:var(--signal-ink)}
+                                    .htx-ticket.locked .htx-stub{background:repeating-linear-gradient(135deg,#e9ebf3 0 6px,#f1f2f8 6px 12px);color:var(--muted)}
+                                    .htx-ticket.locked .htx-stub small{color:var(--muted)}
+                                    .htx-perf{position:relative;align-self:stretch;width:0;border-left:2px dashed var(--line)}
+                                    .htx-perf::before,.htx-perf::after{content:"";position:absolute;left:-10px;width:18px;height:18px;border-radius:50%;background:var(--wash);border:1px solid var(--line)}
+                                    .htx-perf::before{top:-10px}
+                                    .htx-perf::after{bottom:-10px}
+                                    .htx-ticket.selected .htx-perf{border-left-color:var(--ink)}
+                                    .htx-who{display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px 0}
+                                    .htx-who strong{font-size:.95rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                                    .htx-who small{font-size:.76rem;font-weight:600;color:var(--muted)}
+                                    .htx-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+                                    .htx-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:.72rem;font-weight:700;white-space:nowrap}
+                                    .htx-chip.paid{background:var(--ok-bg);color:var(--ok)}
+                                    .htx-chip.unpaid{background:var(--bad-bg);color:var(--bad)}
+                                    .htx-chip.published{background:var(--pub-bg);color:var(--pub)}
+                                    .htx-chip.ready{background:var(--ink);color:#fff}
+                                    .htx-chip.blocked{background:var(--wash);color:var(--muted)}
+                                    .htx-tick{padding-right:18px}
+
+                                    /* ---------- summary panel ---------- */
+                                    .htx-side{position:sticky;top:16px;display:flex;flex-direction:column;gap:16px;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}
+                                    .htx-side-for{font-size:.8rem;color:var(--muted);font-weight:600;line-height:1.4}
+                                    .htx-side-for b{display:block;margin-bottom:2px;font-family:var(--display);font-size:1.15rem;font-weight:800;color:var(--ink)}
+                                    .htx-big{display:flex;align-items:baseline;gap:8px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+                                    .htx-big strong{font-family:var(--display);font-size:3.2rem;font-weight:800;line-height:.9;letter-spacing:-.04em;color:var(--ink)}
+                                    .htx-big span{font-size:.82rem;font-weight:600;color:var(--muted)}
+                                    .htx-facts{display:grid;gap:9px;margin:0}
+                                    .htx-facts div{display:flex;justify-content:space-between;gap:10px;font-size:.82rem}
+                                    .htx-facts dt{color:var(--muted);font-weight:600}
+                                    .htx-facts dd{margin:0;font-weight:800;color:var(--ink)}
+                                    .htx-facts .bad dd{color:var(--bad)}
+                                    .htx-facts .ok dd{color:var(--ok)}
+                                    .htx-facts .pub dd{color:var(--pub)}
+                                    .htx-publish{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:50px;border:2px solid var(--ink);border-radius:13px;background:var(--signal);color:var(--ink);font-family:var(--display);font-size:.98rem;font-weight:800;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+                                    .htx-publish:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+                                    .htx-publish:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+                                    .htx-publish:disabled{background:var(--wash);border-color:var(--line);color:var(--muted);box-shadow:none;cursor:not-allowed}
+                                    .htx-clear{border:0;background:transparent;color:var(--ink-2);font-size:.82rem;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+                                    .htx-clear:disabled{opacity:.4;cursor:not-allowed}
+
+                                    /* ---------- responsive ---------- */
+                                    @media(max-width:980px){
+                                        .htx-work{grid-template-columns:1fr}
+                                        .htx-side{position:sticky;top:auto;bottom:10px;z-index:5;order:2;flex-direction:row;align-items:center;flex-wrap:wrap;padding:12px 14px;box-shadow:0 12px 28px rgba(22,27,51,.2)}
+                                        .htx-side-for,.htx-facts{display:none}
+                                        .htx-big{flex:1;padding:0;border:0}
+                                        .htx-big strong{font-size:2rem}
+                                        .htx-publish{width:auto;flex:1;min-width:190px}
+                                    }
+                                    @media(max-width:640px){
+                                        .htx-mast h3{font-size:1.6rem}
+                                        .htx-pass{width:100%}
+                                        .htx-pass-cell{flex:1}
+                                        .htx-pass-cell select{min-width:0;width:100%}
+                                        .htx-stage{padding:16px}
+                                        .htx-link{display:none}
+                                        .htx-rail{flex-wrap:wrap;gap:4px}
+                                        .htx-ticket{grid-template-columns:72px 0 minmax(0,1fr) auto;gap:0 12px}
+                                        .htx-tags{grid-column:3 / 4;grid-row:2;justify-content:flex-start;padding:0 0 10px}
+                                        .htx-tick{grid-column:4;grid-row:1 / span 2;padding-right:12px}
+                                        .htx-stub{grid-row:1 / span 2}
+                                        .htx-perf{grid-row:1 / span 2}
+                                    }
+                                    @media(prefers-reduced-motion:reduce){.htx *{transition:none!important}}
+                                `}</style>
+
+                                {/* Masthead */}
+                                <div className="htx-mast">
+                                    <div>
+                                        <h3>Hall Ticket Allocation</h3>
+                                        <p>Choose a class and section, then publish hall tickets for every student whose fees are cleared and who has a seat.</p>
+                                    </div>
+                                    <div className="htx-pass">
+                                        <label className="htx-pass-cell">
+                                            <span>Exam</span>
+                                            <select value={hallTicketExam} onChange={e => setHallTicketExam(e.target.value)}>
+                                                {hallTicketExamOptions.map(exam => <option key={exam} value={exam}>{exam}</option>)}
+                                            </select>
+                                        </label>
+                                        <span className="htx-pass-cut" aria-hidden="true" />
+                                        <label className="htx-pass-cell year">
+                                            <span>Year</span>
+                                            <select value={hallTicketYear} onChange={e => setHallTicketYear(e.target.value)}>
+                                                {hallTicketYears.map(year => <option key={year} value={year}>{year}</option>)}
+                                            </select>
+                                        </label>
+                                    </div>
                                 </div>
-                                <Ticket size={28} />
-                            </div>
 
-                            <div className="hall-ticket-allocation-filters">
-                                <label>
-                                    <span>Exam</span>
-                                    <select value={hallTicketExam} onChange={e => setHallTicketExam(e.target.value)}>
-                                        {hallTicketExamOptions.map(exam => <option key={exam} value={exam}>{exam}</option>)}
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Year</span>
-                                    <select value={hallTicketYear} onChange={e => setHallTicketYear(e.target.value)}>
-                                        {hallTicketYears.map(year => <option key={year} value={year}>{year}</option>)}
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Class</span>
-                                    <select value={hallTicketClass} onChange={e => {
-                                        setHallTicketClass(e.target.value);
-                                        setHallTicketSection('');
-                                    }}>
-                                        <option value="">All Classes</option>
-                                        {hallTicketClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Section</span>
-                                    <select value={hallTicketSection} onChange={e => setHallTicketSection(e.target.value)}>
-                                        <option value="">All Sections</option>
-                                        {hallTicketSections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
-                                    </select>
-                                </label>
-
-                                <label className="hall-ticket-search-field">
-                                    <span>Search Student</span>
-                                    <input
-                                        value={hallTicketSearch}
-                                        onChange={e => setHallTicketSearch(e.target.value)}
-                                        placeholder="Name / Admission No..."
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="hall-ticket-summary-row">
-                                <div className="hall-ticket-count paid">
-                                    <strong>{paidHallTicketStudents.length}</strong>
-                                    <span>Paid</span>
+                                {/* Progress rail */}
+                                <div className="htx-rail">
+                                    <button type="button" className={`htx-node ${step === 1 ? 'current' : 'done'}`} onClick={goClass}>
+                                        <span className="htx-dot">{hallTicketClass ? <Check size={14} /> : 1}</span>
+                                        <span>{hallTicketClass ? hallTicketClass : 'Class'}</span>
+                                    </button>
+                                    <span className={`htx-link ${hallTicketClass ? 'on' : ''}`} />
+                                    <button type="button" className={`htx-node ${step === 2 ? 'current' : hallTicketSection ? 'done' : ''}`} disabled={!hallTicketClass} onClick={goSection}>
+                                        <span className="htx-dot">{hallTicketSection ? <Check size={14} /> : 2}</span>
+                                        <span>{hallTicketSection ? `Section ${hallTicketSection}` : 'Section'}</span>
+                                    </button>
+                                    <span className={`htx-link ${hallTicketSection ? 'on' : ''}`} />
+                                    <div className={`htx-node ${step === 3 ? 'current' : ''}`}>
+                                        <span className="htx-dot">3</span>
+                                        <span>Students</span>
+                                    </div>
                                 </div>
-                                <div className="hall-ticket-count blocked">
-                                    <strong>{unpaidHallTicketStudents.length}</strong>
-                                    <span>Not Paid / Blocked</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="exam-primary-btn"
-                                    onClick={toggleAllPaidHallTicketStudents}
-                                    disabled={paidHallTicketStudents.length === 0}
-                                >
-                                    <CheckSquare size={15} /> Select All Paid
-                                </button>
-                                <button
-                                    type="button"
-                                    className="exam-primary-btn hall-ticket-publish-selected"
-                                    onClick={publishSelectedHallTickets}
-                                    disabled={hallTicketSelectedStudents.length === 0}
-                                >
-                                    <Ticket size={15} /> Publish Selected ({hallTicketSelectedStudents.length})
-                                </button>
-                            </div>
 
-                            <div className="table-responsive">
-                                <table className="custom-table hall-ticket-allocation-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Select</th>
-                                            <th>Student</th>
-                                            <th>Admission No</th>
-                                            <th>Class / Section</th>
-                                            <th>Fee Status</th>
-                                            <th>Hall / Seat</th>
-                                            <th>Hall Ticket</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {hallTicketListStudents.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="7" style={{ textAlign: 'center', padding: '28px' }}>
-                                                    No students found for the selected filters.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            hallTicketListStudents.map(student => {
-                                                const fee = getStudentFeeStatus(student);
-                                                const allocation = hallTicketAllocationForStudent(student);
-                                                const published = isHallTicketPublished(student);
-                                                const seat = allocation
-                                                    ? (allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '—'
-                                                    : '—';
-
-                                                return (
-                                                    <tr key={student.id} className={!fee.paid ? 'hall-ticket-row-blocked' : ''}>
-                                                        <td>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={hallTicketSelectedStudents.includes(student.id)}
-                                                                onChange={() => toggleHallTicketStudent(student.id)}
-                                                                disabled={!fee.paid || published}
-                                                            />
-                                                        </td>
-                                                        <td><strong>{student.name || 'Student'}</strong></td>
-                                                        <td>{student.admissionNo || student.rollNo || '—'}</td>
-                                                        <td>{student.className || student.grade || ''} {student.sectionName || student.section ? `/ ${student.sectionName || student.section}` : ''}</td>
-                                                        <td>
-                                                            <span className={`hall-ticket-fee-badge ${fee.paid ? 'paid' : 'not-paid'}`}>
-                                                                {fee.paid ? 'PAID' : 'NOT PAID'}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            {allocation
-                                                                ? `${allocation.hallNo || '—'} / Seat ${seat}`
-                                                                : <span className="hall-ticket-no-allocation">Not Allocated</span>}
-                                                        </td>
-                                                        <td>
-                                                            {published ? (
-                                                                <span className="hall-ticket-published-badge">
-                                                                    <CheckCircle size={14} /> Published
+                                <div className="htx-stage">
+                                    {/* STEP 1 — class */}
+                                    {step === 1 && (
+                                        <>
+                                            <div className="htx-head"><h4>Which class?</h4><span>{hallTicketClasses.length} {hallTicketClasses.length === 1 ? 'class' : 'classes'}</span></div>
+                                            {hallTicketClasses.length === 0 ? (
+                                                <div className="htx-empty"><Users size={26} />No students found in the records.</div>
+                                            ) : (
+                                                <div className="htx-classes">
+                                                    {hallTicketClasses.map(cls => {
+                                                        const inClass = studentsList.filter(s => clsOf(s) === cls);
+                                                        const pub = inClass.filter(isHallTicketPublished).length;
+                                                        return (
+                                                            <button type="button" key={cls} className="htx-class" onClick={() => { setHallTicketClass(cls); setHallTicketSection(''); setHallTicketSelectedStudents([]); }}>
+                                                                <strong>{cls}</strong>
+                                                                <span className="htx-class-meta">
+                                                                    <span>{inClass.length} {inClass.length === 1 ? 'student' : 'students'}</span>
+                                                                    <span>{pub} published</span>
                                                                 </span>
-                                                            ) : fee.paid && allocation ? (
-                                                                <button
-                                                                    type="button"
-                                                                    className="hall-ticket-publish-btn"
-                                                                    onClick={() => publishHallTicket(student)}
-                                                                >
-                                                                    <Ticket size={14} /> Publish Hall Ticket
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    type="button"
-                                                                    className="hall-ticket-block-btn"
-                                                                    disabled
-                                                                    title={!fee.paid ? 'Fees are pending' : 'Exam hall is not allocated'}
-                                                                >
-                                                                    <XCircle size={14} /> Blocked
-                                                                </button>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                                                                <span className="htx-meter"><i style={{ width: `${inClass.length ? Math.round((pub / inClass.length) * 100) : 0}%` }} /></span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* STEP 2 — section */}
+                                    {step === 2 && (
+                                        <>
+                                            <div className="htx-head"><h4>Which section of {hallTicketClass}?</h4><span>{hallTicketSections.length} {hallTicketSections.length === 1 ? 'section' : 'sections'}</span></div>
+                                            {hallTicketSections.length === 0 ? (
+                                                <div className="htx-empty"><Users size={26} />No sections found for this class.</div>
+                                            ) : (
+                                                <div className="htx-sections">
+                                                    {hallTicketSections.map(sec => {
+                                                        const inSec = studentsList.filter(s => clsOf(s) === hallTicketClass && secOf(s) === sec);
+                                                        const pub = inSec.filter(isHallTicketPublished).length;
+                                                        return (
+                                                            <button type="button" key={sec} className="htx-section" onClick={() => { setHallTicketSection(sec); setHallTicketSelectedStudents([]); }}>
+                                                                <span className="htx-letter">{secLetter(sec)}</span>
+                                                                <small>{inSec.length} {inSec.length === 1 ? 'student' : 'students'}, {pub} published</small>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* STEP 3 — bulk select students */}
+                                    {step === 3 && (
+                                        <>
+                                            <div className="htx-head">
+                                                <h4>Students in {hallTicketClass}, Section {hallTicketSection}</h4>
+                                                <span>{hallTicketListStudents.length} shown</span>
+                                            </div>
+
+                                            <div className="htx-work">
+                                                <div>
+                                                    <div className="htx-bar">
+                                                        <div className="htx-search">
+                                                            <Search size={16} />
+                                                            <input value={hallTicketSearch} onChange={e => setHallTicketSearch(e.target.value)} placeholder="Search by name or admission no." />
+                                                        </div>
+                                                        <label className="htx-all">
+                                                            <input type="checkbox" checked={allSelectableChosen} disabled={selectableIds.length === 0} onChange={toggleAllPaidHallTicketStudents} />
+                                                            Select all ready ({selectableIds.length})
+                                                        </label>
+                                                    </div>
+
+                                                    {hallTicketListStudents.length === 0 ? (
+                                                        <div className="htx-list"><div className="htx-empty"><Users size={26} />No students match your search.</div></div>
+                                                    ) : (
+                                                        <div className="htx-list">
+                                                            {hallTicketListStudents.map(student => {
+                                                                const fee = getStudentFeeStatus(student);
+                                                                const allocation = hallTicketAllocationForStudent(student);
+                                                                const published = isHallTicketPublished(student);
+                                                                const seat = allocation ? ((allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '—') : '—';
+                                                                const selectable = fee.paid && !!allocation && !published;
+                                                                const checked = hallTicketSelectedStudents.includes(student.id);
+                                                                return (
+                                                                    <label key={student.id} className={`htx-ticket ${checked ? 'selected' : ''} ${!selectable ? 'locked' : ''}`} title={blockReason(fee, allocation)}>
+                                                                        <span className="htx-stub">
+                                                                            <small>{allocation ? (allocation.hallNo || 'Hall') : 'No hall'}</small>
+                                                                            <b>{seat}</b>
+                                                                            <small>{allocation ? 'Seat' : 'yet'}</small>
+                                                                        </span>
+                                                                        <span className="htx-perf" aria-hidden="true" />
+                                                                        <span className="htx-who">
+                                                                            <strong>{student.name || 'Student'}</strong>
+                                                                            <small>Adm. {student.admissionNo || student.rollNo || '—'}</small>
+                                                                        </span>
+                                                                        <span className="htx-tags">
+                                                                            <span className={`htx-chip ${fee.paid ? 'paid' : 'unpaid'}`}>{fee.paid ? <CheckCircle size={13} /> : <XCircle size={13} />}{fee.paid ? 'Paid' : 'Not paid'}</span>
+                                                                            {published ? (
+                                                                                <span className="htx-chip published"><Ticket size={13} /> Published</span>
+                                                                            ) : selectable ? (
+                                                                                <span className="htx-chip ready"><Check size={13} /> Ready</span>
+                                                                            ) : (
+                                                                                <span className="htx-chip blocked">{blockReason(fee, allocation)}</span>
+                                                                            )}
+                                                                        </span>
+                                                                        <span className="htx-tick">
+                                                                            <input className="htx-check" type="checkbox" checked={checked} disabled={!selectable} onChange={() => toggleHallTicketStudent(student.id)} aria-label={`Select ${student.name || 'student'}`} />
+                                                                        </span>
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Summary + bulk action */}
+                                                <aside className="htx-side">
+                                                    <div className="htx-side-for">
+                                                        <b>{hallTicketClass}, Section {hallTicketSection}</b>
+                                                        {hallTicketExam}, {hallTicketYear}
+                                                    </div>
+                                                    <div className="htx-big">
+                                                        <strong>{selectedCount}</strong>
+                                                        <span>selected of {hallTicketSelectableStudents.length} ready</span>
+                                                    </div>
+                                                    <dl className="htx-facts">
+                                                        <div className="ok"><dt>Ready to publish</dt><dd>{hallTicketSelectableStudents.length}</dd></div>
+                                                        <div className="bad"><dt>Fees pending</dt><dd>{unpaidHallTicketStudents.length}</dd></div>
+                                                        <div className="pub"><dt>Already published</dt><dd>{publishedCount}</dd></div>
+                                                    </dl>
+                                                    <button type="button" className="htx-publish" onClick={publishSelectedHallTickets} disabled={selectedCount === 0}>
+                                                        <Ticket size={18} /> Publish {selectedCount || ''} hall ticket{selectedCount === 1 ? '' : 's'}
+                                                    </button>
+                                                    <button type="button" className="htx-clear" onClick={() => setHallTicketSelectedStudents([])} disabled={selectedCount === 0}>
+                                                        Clear selection
+                                                    </button>
+                                                </aside>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {activeTab === 'hall-tickets' && (
                         <div className="dash-card full-width">
