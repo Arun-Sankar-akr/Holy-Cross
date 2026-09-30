@@ -24,6 +24,16 @@ export default function OfficeDashboard() {
     const [hallTicketSection, setHallTicketSection] = useState('');
     const [hallTicketSelectedStudents, setHallTicketSelectedStudents] = useState([]);
     const [hallTicketPublications, setHallTicketPublications] = useState([]);
+    // Hall Ticket Allocation page: records view (CRUD)
+    const [htxView, setHtxView] = useState('allocate');
+    const [htxRecSearch, setHtxRecSearch] = useState('');
+    const [htxRecExam, setHtxRecExam] = useState('');
+    const [htxRecYear, setHtxRecYear] = useState('');
+    const [htxCollapsed, setHtxCollapsed] = useState({});
+    const [htxRecSel, setHtxRecSel] = useState([]);
+    const [htxEdit, setHtxEdit] = useState(null);
+    const [htxEditForm, setHtxEditForm] = useState({ hallNo: '', seatNo: '', exam: '', year: '', published: true });
+    const [htxSaving, setHtxSaving] = useState(false);
 
     // Exam Timetable States
     const [timetableClass, setTimetableClass] = useState('');
@@ -384,6 +394,66 @@ export default function OfficeDashboard() {
         alert(success === selected.length
             ? `Hall Tickets published for ${success} student${success === 1 ? '' : 's'}.`
             : `Published ${success} of ${selected.length} Hall Tickets. Please retry the remaining students.`);
+    };
+
+    // ---- Hall Ticket records: update / delete ----
+    const openHtxEdit = (rec) => {
+        setHtxEdit(rec);
+        setHtxEditForm({
+            hallNo: rec.hallNo || '',
+            seatNo: rec.seatNo === undefined || rec.seatNo === null ? '' : String(rec.seatNo),
+            exam: rec.exam || hallTicketExamOptions[0] || '',
+            year: String(rec.year || hallTicketYear),
+            published: rec.published === true
+        });
+    };
+
+    const saveHtxEdit = async (e) => {
+        e.preventDefault();
+        if (!htxEdit) return;
+        const duplicate = hallTicketPublications.some(p =>
+            p.id !== htxEdit.id &&
+            p.exam === htxEditForm.exam &&
+            String(p.year) === String(htxEditForm.year) &&
+            ((p.studentId && p.studentId === htxEdit.studentId) ||
+                (p.admissionNo && String(p.admissionNo) === String(htxEdit.admissionNo)))
+        );
+        if (duplicate) {
+            alert('This student already has a hall ticket record for the same exam and year.');
+            return;
+        }
+        setHtxSaving(true);
+        try {
+            await updateDoc(doc(db, 'hall_ticket_publications', htxEdit.id), {
+                hallNo: htxEditForm.hallNo.trim(),
+                seatNo: htxEditForm.seatNo === '' ? '' : Number(htxEditForm.seatNo),
+                exam: htxEditForm.exam,
+                year: Number(htxEditForm.year),
+                published: htxEditForm.published,
+                updatedAt: serverTimestamp()
+            });
+            setHtxEdit(null);
+        } catch (error) {
+            console.error('Hall Ticket record update failed:', error);
+            alert('Failed to update the record. Please try again.');
+        } finally {
+            setHtxSaving(false);
+        }
+    };
+
+    const deleteHtxRecords = async (records) => {
+        if (records.length === 0) return;
+        const label = records.length === 1
+            ? `the hall ticket record of ${records[0].studentName || 'this student'}`
+            : `${records.length} hall ticket records`;
+        if (!window.confirm(`Delete ${label}? The student(s) will no longer see the hall ticket.`)) return;
+        try {
+            await Promise.all(records.map(r => deleteDoc(doc(db, 'hall_ticket_publications', r.id))));
+            setHtxRecSel(prev => prev.filter(id => !records.some(r => r.id === id)));
+        } catch (error) {
+            console.error('Hall Ticket record delete failed:', error);
+            alert('Failed to delete the record(s). Please try again.');
+        }
     };
 
     const handleAddTimetableSubject = async (e) => {
@@ -2169,6 +2239,35 @@ export default function OfficeDashboard() {
                         const goSection = () => { setHallTicketSection(''); setHallTicketSelectedStudents([]); setHallTicketSearch(''); };
                         const blockReason = (fee, allocation) => !fee.paid ? 'Fees pending' : !allocation ? 'No hall allocated' : '';
 
+                        // ---- records view data: publications grouped by class ----
+                        const studentForRec = rec =>
+                            studentsList.find(st => st.id === rec.studentId) ||
+                            studentsList.find(st => rec.admissionNo && String(rec.admissionNo) === String(st.admissionNo || st.rollNo));
+                        const recClass = rec => { const st = studentForRec(rec); return (st && clsOf(st)) || 'Unassigned'; };
+                        const recSection = rec => { const st = studentForRec(rec); return (st && secOf(st)) || '—'; };
+                        const recQ = htxRecSearch.trim().toLowerCase();
+                        const filteredRecs = hallTicketPublications.filter(rec =>
+                            (!htxRecExam || rec.exam === htxRecExam) &&
+                            (!htxRecYear || String(rec.year) === htxRecYear) &&
+                            (!recQ || [rec.studentName, rec.admissionNo, rec.hallNo].filter(Boolean).some(v => String(v).toLowerCase().includes(recQ)))
+                        );
+                        const recGroupMap = {};
+                        filteredRecs.forEach(rec => { const c = recClass(rec); (recGroupMap[c] = recGroupMap[c] || []).push(rec); });
+                        const recGroups = [...hallTicketClasses, 'Unassigned']
+                            .filter(c => recGroupMap[c] && recGroupMap[c].length > 0)
+                            .map(c => ({
+                                name: c,
+                                rows: recGroupMap[c].slice().sort((x, y) =>
+                                    String(recSection(x)).localeCompare(String(recSection(y))) ||
+                                    String(x.studentName || '').localeCompare(String(y.studentName || '')))
+                            }));
+                        const recSel = htxRecSel.filter(id => hallTicketPublications.some(r => r.id === id));
+                        const recSelRecords = hallTicketPublications.filter(r => recSel.includes(r.id));
+                        const fmtDate = ts => (ts && ts.toDate)
+                            ? ts.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : '—';
+                        const hallOptions = Array.from(new Set([...(hallMaster || []).map(h => h.hallNo).filter(Boolean), htxEditForm.hallNo].filter(Boolean)));
+
                         return (
                             <div className="htx">
                                 <style>{`
@@ -2304,6 +2403,61 @@ export default function OfficeDashboard() {
                                     .htx-clear{border:0;background:transparent;color:var(--ink-2);font-size:.82rem;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
                                     .htx-clear:disabled{opacity:.4;cursor:not-allowed}
 
+
+                                    /* ---------- view tabs ---------- */
+                                    .htx-tabs{display:inline-flex;align-self:flex-start;gap:4px;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
+                                    .htx-tab{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--ink-2);font-size:.85rem;font-weight:700;cursor:pointer}
+                                    .htx-tab:hover{background:var(--wash)}
+                                    .htx-tab.on{background:var(--brand);color:#fff}
+                                    .htx-tab-count{padding:1px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand-dark);font-size:.72rem}
+                                    .htx-tab.on .htx-tab-count{background:rgba(255,255,255,.22);color:#fff}
+
+                                    /* ---------- records by class ---------- */
+                                    .htx-filter{height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:.82rem;font-weight:600;outline:0;cursor:pointer}
+                                    .htx-filter:focus{border-color:var(--brand)}
+                                    .htx-add{display:inline-flex;align-items:center;gap:7px;height:44px;padding:0 16px;border:2px solid var(--brand-dark);border-radius:12px;background:var(--brand);color:#fff;font-size:.82rem;font-weight:800;cursor:pointer}
+                                    .htx-add:hover{background:var(--brand-dark)}
+                                    .htx-selbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;border-radius:12px;background:var(--brand-soft);color:var(--brand-dark);font-size:.84rem;font-weight:600}
+                                    .htx-selbar b{font-family:var(--display);font-size:1.1rem}
+                                    .htx-selbar-actions{margin-left:auto;display:flex;align-items:center;gap:14px}
+                                    .htx-danger{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border:0;border-radius:10px;background:var(--bad);color:#fff;font-size:.8rem;font-weight:800;cursor:pointer}
+                                    .htx-danger:hover{filter:brightness(.92)}
+                                    .htx-groups{display:flex;flex-direction:column;gap:14px}
+                                    .htx-group{border:1px solid var(--line);border-radius:16px;background:var(--paper);overflow:hidden}
+                                    .htx-group-head{display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--wash);border-left:6px solid var(--brand-dark)}
+                                    .htx-group-toggle{flex:1;display:flex;align-items:center;gap:14px;padding:14px 0;border:0;background:transparent;text-align:left;cursor:pointer;color:var(--ink)}
+                                    .htx-group-toggle strong{font-family:var(--display);font-size:1.25rem;font-weight:800;letter-spacing:-.01em}
+                                    .htx-group-toggle span{flex:1;font-size:.78rem;font-weight:600;color:var(--ink-2)}
+                                    .htx-rwrap{overflow-x:auto}
+                                    .htx-rtable{width:100%;min-width:760px;border-collapse:collapse;font-size:.84rem}
+                                    .htx-rtable th{padding:10px 14px;text-align:left;font-size:.76rem;font-weight:700;color:var(--ink-2);border-bottom:1px solid var(--line);white-space:nowrap}
+                                    .htx-rtable td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+                                    .htx-rtable tbody tr:last-child td{border-bottom:0}
+                                    .htx-rtable tbody tr:hover{background:var(--wash)}
+                                    .htx-rtable tr.sel{background:var(--brand-soft)}
+                                    .htx-rtable .htx-r{text-align:right}
+                                    .htx-rtable td small,.htx-sub{color:var(--ink-2);font-weight:600}
+                                    .htx-sub{display:block;font-size:.74rem}
+                                    .htx-seat{font-family:var(--display);font-weight:800}
+                                    .htx-rowbtns{display:inline-flex;gap:6px}
+                                    .htx-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink-2);cursor:pointer}
+                                    .htx-icon:hover{border-color:var(--brand);color:var(--brand-dark);background:var(--brand-soft)}
+                                    .htx-icon.del:hover{border-color:var(--bad);color:var(--bad);background:var(--bad-bg)}
+
+                                    /* ---------- edit dialog ---------- */
+                                    .htx-modal-back{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:16px;background:rgba(29,35,48,.5)}
+                                    .htx-modal{width:100%;max-width:480px;max-height:92vh;overflow:auto;padding:22px;border-radius:20px;background:var(--paper);box-shadow:0 24px 60px rgba(29,35,48,.3)}
+                                    .htx-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+                                    .htx-modal-head h4{margin:0;font-family:var(--display);font-size:1.25rem;font-weight:800;color:var(--ink)}
+                                    .htx-modal-head small{font-size:.8rem;font-weight:600;color:var(--ink-2)}
+                                    .htx-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+                                    .htx-fields label{display:flex;flex-direction:column;gap:6px;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+                                    .htx-fields label.full{grid-column:1 / -1}
+                                    .htx-fields select,.htx-fields input{height:44px;padding:0 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper);color:var(--ink);font-size:.86rem;outline:0}
+                                    .htx-fields select:focus,.htx-fields input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+                                    .htx-modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-top:22px}
+                                    .htx-save{width:auto;min-width:150px;padding:0 20px;height:44px}
+
                                     /* ---------- responsive ---------- */
                                     @media(max-width:980px){
                                         .htx-work{grid-template-columns:1fr}
@@ -2314,6 +2468,9 @@ export default function OfficeDashboard() {
                                         .htx-publish{width:auto;flex:1;min-width:190px}
                                     }
                                     @media(max-width:640px){
+                                        .htx-fields{grid-template-columns:1fr}
+                                        .htx-tabs{align-self:stretch}
+                                        .htx-tab{flex:1;justify-content:center;padding:0 8px}
                                         .htx-mast h3{font-size:1.6rem}
                                         .htx-pass{width:100%}
                                         .htx-pass-cell{flex:1}
@@ -2336,7 +2493,7 @@ export default function OfficeDashboard() {
                                         <h3>Hall Ticket Allocation</h3>
                                         <p>Choose a class and section, then publish hall tickets for every student whose fees are cleared and who has a seat.</p>
                                     </div>
-                                    <div className="htx-pass">
+                                    {htxView === 'allocate' && <div className="htx-pass">
                                         <label className="htx-pass-cell">
                                             <span>Exam</span>
                                             <select value={hallTicketExam} onChange={e => setHallTicketExam(e.target.value)}>
@@ -2350,9 +2507,20 @@ export default function OfficeDashboard() {
                                                 {hallTicketYears.map(year => <option key={year} value={year}>{year}</option>)}
                                             </select>
                                         </label>
-                                    </div>
+                                    </div>}
                                 </div>
 
+                                {/* View switch */}
+                                <div className="htx-tabs" role="tablist">
+                                    <button type="button" role="tab" aria-selected={htxView === 'allocate'} className={`htx-tab ${htxView === 'allocate' ? 'on' : ''}`} onClick={() => setHtxView('allocate')}>
+                                        <Ticket size={16} /> Publish tickets
+                                    </button>
+                                    <button type="button" role="tab" aria-selected={htxView === 'records'} className={`htx-tab ${htxView === 'records' ? 'on' : ''}`} onClick={() => setHtxView('records')}>
+                                        <ClipboardList size={16} /> Records by class <span className="htx-tab-count">{hallTicketPublications.length}</span>
+                                    </button>
+                                </div>
+
+                                {htxView === 'allocate' && (<>
                                 {/* Progress rail */}
                                 <div className="htx-rail">
                                     <button type="button" className={`htx-node ${step === 1 ? 'current' : 'done'}`} onClick={goClass}>
@@ -2512,6 +2680,174 @@ export default function OfficeDashboard() {
                                         </>
                                     )}
                                 </div>
+                                </>)}
+
+                                {/* ================= RECORDS BY CLASS (CRUD) ================= */}
+                                {htxView === 'records' && (
+                                    <div className="htx-stage">
+                                        <div className="htx-head">
+                                            <h4>Hall ticket records</h4>
+                                            <span>{filteredRecs.length} of {hallTicketPublications.length} records</span>
+                                        </div>
+
+                                        <div className="htx-bar">
+                                            <div className="htx-search">
+                                                <Search size={16} />
+                                                <input value={htxRecSearch} onChange={e => setHtxRecSearch(e.target.value)} placeholder="Search by student, admission no. or hall" />
+                                            </div>
+                                            <select className="htx-filter" value={htxRecExam} onChange={e => setHtxRecExam(e.target.value)} aria-label="Filter by exam">
+                                                <option value="">All exams</option>
+                                                {hallTicketExamOptions.map(exam => <option key={exam} value={exam}>{exam}</option>)}
+                                            </select>
+                                            <select className="htx-filter" value={htxRecYear} onChange={e => setHtxRecYear(e.target.value)} aria-label="Filter by year">
+                                                <option value="">All years</option>
+                                                {hallTicketYears.map(year => <option key={year} value={year}>{year}</option>)}
+                                            </select>
+                                            <button type="button" className="htx-add" onClick={() => setHtxView('allocate')}>
+                                                <Plus size={16} /> Publish new tickets
+                                            </button>
+                                        </div>
+
+                                        {recSel.length > 0 && (
+                                            <div className="htx-selbar">
+                                                <b>{recSel.length}</b> selected
+                                                <span className="htx-selbar-actions">
+                                                    <button type="button" className="htx-clear" onClick={() => setHtxRecSel([])}>Clear</button>
+                                                    <button type="button" className="htx-danger" onClick={() => deleteHtxRecords(recSelRecords)}>
+                                                        <Trash2 size={15} /> Delete selected
+                                                    </button>
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {recGroups.length === 0 ? (
+                                            <div className="htx-empty">
+                                                <Ticket size={26} />
+                                                {hallTicketPublications.length === 0
+                                                    ? 'No hall tickets have been published yet.'
+                                                    : 'No records match your filters.'}
+                                            </div>
+                                        ) : (
+                                            <div className="htx-groups">
+                                                {recGroups.map(group => {
+                                                    const open = !htxCollapsed[group.name];
+                                                    const ids = group.rows.map(r => r.id);
+                                                    const allOn = ids.every(id => recSel.includes(id));
+                                                    const live = group.rows.filter(r => r.published === true).length;
+                                                    return (
+                                                        <section className="htx-group" key={group.name}>
+                                                            <div className="htx-group-head">
+                                                                <input
+                                                                    className="htx-check"
+                                                                    type="checkbox"
+                                                                    checked={allOn}
+                                                                    onChange={() => setHtxRecSel(prev => allOn ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids])))}
+                                                                    aria-label={`Select all records of ${group.name}`}
+                                                                />
+                                                                <button type="button" className="htx-group-toggle" onClick={() => setHtxCollapsed(prev => ({ ...prev, [group.name]: open }))} aria-expanded={open}>
+                                                                    <strong>{group.name}</strong>
+                                                                    <span>{group.rows.length} {group.rows.length === 1 ? 'record' : 'records'}, {live} live</span>
+                                                                    {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                                                </button>
+                                                            </div>
+                                                            {open && (
+                                                                <div className="htx-rwrap">
+                                                                    <table className="htx-rtable">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th></th>
+                                                                                <th>Student</th>
+                                                                                <th>Section</th>
+                                                                                <th>Exam</th>
+                                                                                <th>Hall / Seat</th>
+                                                                                <th>Status</th>
+                                                                                <th>Published on</th>
+                                                                                <th className="htx-r">Actions</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {group.rows.map(rec => (
+                                                                                <tr key={rec.id} className={recSel.includes(rec.id) ? 'sel' : ''}>
+                                                                                    <td>
+                                                                                        <input className="htx-check" type="checkbox" checked={recSel.includes(rec.id)} onChange={() => setHtxRecSel(prev => prev.includes(rec.id) ? prev.filter(id => id !== rec.id) : [...prev, rec.id])} aria-label={`Select ${rec.studentName || 'record'}`} />
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <div className="htx-who"><strong>{rec.studentName || 'Student'}</strong><small>Adm. {rec.admissionNo || '—'}</small></div>
+                                                                                    </td>
+                                                                                    <td>{recSection(rec)}</td>
+                                                                                    <td>{rec.exam || '—'}<small className="htx-sub">{rec.year || ''}</small></td>
+                                                                                    <td><span className="htx-seat">{rec.hallNo || '—'}</span> <small>Seat {rec.seatNo === '' || rec.seatNo === undefined ? '—' : rec.seatNo}</small></td>
+                                                                                    <td>
+                                                                                        {rec.published === true
+                                                                                            ? <span className="htx-chip published"><CheckCircle size={13} /> Published</span>
+                                                                                            : <span className="htx-chip blocked"><XCircle size={13} /> Unpublished</span>}
+                                                                                    </td>
+                                                                                    <td>{fmtDate(rec.publishedAt)}</td>
+                                                                                    <td className="htx-r">
+                                                                                        <span className="htx-rowbtns">
+                                                                                            <button type="button" className="htx-icon" onClick={() => openHtxEdit(rec)} title="Edit record" aria-label={`Edit ${rec.studentName || 'record'}`}><Pencil size={15} /></button>
+                                                                                            <button type="button" className="htx-icon del" onClick={() => deleteHtxRecords([rec])} title="Delete record" aria-label={`Delete ${rec.studentName || 'record'}`}><Trash2 size={15} /></button>
+                                                                                        </span>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            )}
+                                                        </section>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Edit record dialog */}
+                                {htxEdit && (
+                                    <div className="htx-modal-back" onMouseDown={e => { if (e.target === e.currentTarget) setHtxEdit(null); }}>
+                                        <form className="htx-modal" onSubmit={saveHtxEdit} role="dialog" aria-modal="true" aria-label="Edit hall ticket record">
+                                            <div className="htx-modal-head">
+                                                <div>
+                                                    <h4>Edit hall ticket</h4>
+                                                    <small>{htxEdit.studentName || 'Student'}, Adm. {htxEdit.admissionNo || '—'}</small>
+                                                </div>
+                                                <button type="button" className="htx-icon" onClick={() => setHtxEdit(null)} aria-label="Close"><X size={16} /></button>
+                                            </div>
+                                            <div className="htx-fields">
+                                                <label>Exam
+                                                    <select value={htxEditForm.exam} onChange={e => setHtxEditForm(f => ({ ...f, exam: e.target.value }))}>
+                                                        {Array.from(new Set([...hallTicketExamOptions, htxEditForm.exam].filter(Boolean))).map(exam => <option key={exam} value={exam}>{exam}</option>)}
+                                                    </select>
+                                                </label>
+                                                <label>Year
+                                                    <select value={htxEditForm.year} onChange={e => setHtxEditForm(f => ({ ...f, year: e.target.value }))}>
+                                                        {Array.from(new Set([...hallTicketYears, htxEditForm.year].filter(Boolean))).map(year => <option key={year} value={year}>{year}</option>)}
+                                                    </select>
+                                                </label>
+                                                <label>Hall
+                                                    <select value={htxEditForm.hallNo} onChange={e => setHtxEditForm(f => ({ ...f, hallNo: e.target.value }))}>
+                                                        <option value="">No hall</option>
+                                                        {hallOptions.map(h => <option key={h} value={h}>{h}</option>)}
+                                                    </select>
+                                                </label>
+                                                <label>Seat number
+                                                    <input type="number" min="1" value={htxEditForm.seatNo} onChange={e => setHtxEditForm(f => ({ ...f, seatNo: e.target.value }))} placeholder="e.g. 12" />
+                                                </label>
+                                                <label className="full">Status
+                                                    <select value={htxEditForm.published ? 'yes' : 'no'} onChange={e => setHtxEditForm(f => ({ ...f, published: e.target.value === 'yes' }))}>
+                                                        <option value="yes">Published: student can see it</option>
+                                                        <option value="no">Unpublished: hidden from student</option>
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <div className="htx-modal-foot">
+                                                <button type="button" className="htx-clear" onClick={() => setHtxEdit(null)}>Cancel</button>
+                                                <button type="submit" className="htx-publish htx-save" disabled={htxSaving}>{htxSaving ? 'Saving...' : 'Save changes'}</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
                             </div>
                         );
                     })()}
