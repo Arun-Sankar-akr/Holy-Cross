@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
-    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2, MapPin
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, ChevronRight, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2, MapPin
 } from 'lucide-react';
 import HallManagement from './Hallmanagement';
 import './OfficeDashboard.css';
@@ -1245,235 +1245,281 @@ export default function OfficeDashboard() {
         ? buildSeatPlan(editHallTarget, editHallForm.examName || 'Examination', editHallAllStudents.filter(s => editHallKeep.includes(s.id)), editHallSeats, editHall.id)
         : null;
 
-    return (
-        <div className="dashboard-containers">
-            {/* Mobile Navigation Bar */}
-            <div className="mobile-topbar">
-                <div className="mobile-brand">
-                    <img src={logo} alt="School logo" />
-                    <span>Front-Office Desk</span>
-                </div>
-                <button
-                    className="menu-toggle-btn"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    aria-label="Toggle navigation"
-                >
-                    {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
-            </div>
+    // ---- Shell + overview view-model (display only; no data logic changed) ----
+    const [navQuery, setNavQuery] = useState('');
+    const pageTitles = {
+        'overview': 'Dashboard',
+        'enquiries': 'Enquiries & visitors',
+        'fees': 'Fee dues & receipts',
+        'exam-timetable': 'Exam timetable',
+        'hall-ticket-allocation': 'Hall ticket allocation',
+        'hall-tickets': 'Hall tickets',
+        'hall-management': 'Hall management',
+        'exam-halls': 'Allocate exam halls',
+        'leaves': 'Staff leave approvals',
+        'tasks': 'Internal task board'
+    };
+    const now = new Date();
+    const greetingWord = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+    const longDate = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+    const pendingLeaveList = leaveRequests.filter(item => String(item.status || 'Pending').toLowerCase() === 'pending');
+    const openTaskList = officeTasks.filter(item => !['completed', 'done'].includes(String(item.status || '').toLowerCase()));
+    const attentionCount = dashboardPendingLeaves + dashboardPendingTasks;
+    const feePercent = dashboardFeeTotal ? Math.min(100, Math.round((dashboardFeePaid / dashboardFeeTotal) * 100)) : 0;
+    const ringLen = 2 * Math.PI * 62;
+    const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const fmtDate = (d) => {
+        if (!d) return '';
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d));
+        if (!m) return String(d);
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    };
+
+    const attentionSummary = attentionCount === 0
+        ? 'Nothing is waiting on you right now.'
+        : [
+            dashboardPendingLeaves > 0 ? `${plural(dashboardPendingLeaves, 'leave request')} to approve` : null,
+            dashboardPendingTasks > 0 ? `${plural(dashboardPendingTasks, 'open task')} on the board` : null
+        ].filter(Boolean).join(' and ') + '.';
+    const heroAction = dashboardPendingLeaves > 0
+        ? { label: 'Review leave requests', tab: 'leaves' }
+        : dashboardPendingTasks > 0
+            ? { label: 'Open the task board', tab: 'tasks' }
+            : { label: 'Open the fee desk', tab: 'fees' };
+
+    const goTo = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); setNavQuery(''); };
+    const searchMatches = navQuery.trim()
+        ? Object.entries(pageTitles).filter(([, title]) => title.toLowerCase().includes(navQuery.trim().toLowerCase()))
+        : [];
+    const navItem = (tab, Icon, label, count) => (
+        <button
+            key={tab}
+            className={`od-nav-item ${activeTab === tab ? 'is-active' : ''}`}
+            aria-current={activeTab === tab ? 'page' : undefined}
+            onClick={() => goTo(tab)}
+        >
+            <Icon size={18} />
+            <span>{label}</span>
+            {count > 0 && <b className="od-nav-count">{count}</b>}
+        </button>
+    );
+
+    return (
+        <div className="od-app">
             {isMobileMenuOpen && (
                 <button
-                    className="mobile-overlays"
+                    className="od-scrim is-shown"
                     onClick={() => setIsMobileMenuOpen(false)}
                     aria-label="Close navigation"
                 />
             )}
 
-            {/* Sidebar Navigation */}
-            <aside className={`dashboard-sidebars ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                <div className="sidebar-header">
-                    <div className="brand-icon"> <img src={logo} alt="" id='logogs' /> </div>
-                    <span className="brand-titles">Front-Office Desk</span>
-                </div>
-
-                <div className="sidebar-user">
-                    <div className="user-avatar" style={{ background: '#6d5dfc' }}>O</div>
-                    <div className="user-info">
-                        <span className="user-name">Office Executive</span>
-                        <span className="user-role">Front-Desk Admin</span>
+            {/* Sidebar */}
+            <aside className={`od-side od-glass ${isMobileMenuOpen ? 'is-open' : ''}`}>
+                <div className="od-profile">
+                    <div className="od-logo"><img src={logo} alt="School logo" /></div>
+                    <div className="od-profile-text">
+                        <b>Front Office</b>
+                        <small>Office Executive</small>
+                        <span className="od-chip">2026–27</span>
                     </div>
                 </div>
 
-                <div className="sidebar-command-card">
-                    <div className="command-icon"><Sparkles size={15} /></div>
-                    <div><b>Today at a glance</b><span>Everything looks synced</span></div>
-                    <span className="command-status"><i /></span>
-                </div>
+                <nav className="od-nav" aria-label="Main">
+                    {navItem('overview', LayoutGrid, 'Dashboard')}
 
-                <nav className="sidebar-nav">
-                    <button className={`nav-links ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}>
-                        <div className="nav-links-content"><LayoutGrid size={18} /><span>Dashboard Overview</span></div>
-                    </button>
-                    <button className={`nav-links ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => { setActiveTab('enquiries'); setIsMobileMenuOpen(false); }}>
-                        <div className="nav-links-content"><UserPlus size={18} /><span>Enquiries & Visitors</span></div>
-                    </button>
-                    <button className={`nav-links ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => { setActiveTab('fees'); setIsMobileMenuOpen(false); }}>
-                        <div className="nav-links-content"><DollarSign size={18} /><span>Fee Dues & Receipts</span></div>
-                    </button>
+                    <div className="od-nav-label">Front desk</div>
+                    {navItem('enquiries', UserPlus, 'Enquiries & visitors')}
+                    {navItem('fees', DollarSign, 'Fee dues & receipts')}
 
-                    {/* Exam Hall Allocation with Submenus */}
-                    <div className="sidebar-submenu-group" style={{ marginBottom: '10px' }}>
-                        <button
-                            className="nav-links submenu-parent-btn"
-                            onClick={() => setIsExamMenuOpen(!isExamMenuOpen)}
-                            style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 150, 105, 0.04)', border: 'none', cursor: 'pointer' }}
-                        >
-                            <div className="nav-links-content">
-                                <LayoutGrid size={18} />
-                                <span style={{ fontWeight: 600 }}>Exam Hall Allocation</span>
-                            </div>
-                            {isExamMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-
-                        {isExamMenuOpen && (
-                            <div className="submenu-children" style={{ display: 'flex', flexDirection: 'column', paddingLeft: '1.25rem', gap: '4px', marginTop: '6px' }}>
-                                <button className={`nav-links ${activeTab === 'exam-timetable' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-timetable'); setIsMobileMenuOpen(false); }}>
-                                    <CalendarDays size={18} /><span id='hall'>Exam Timetable</span>
-                                </button>
-                                <button className={`nav-links ${activeTab === 'hall-ticket-allocation' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-ticket-allocation'); setIsMobileMenuOpen(false); }}>
-                                    <Ticket size={18} /><span id='hall'>Hall Ticket Allocation</span>
-                                </button>
-                                <button className={`nav-links ${activeTab === 'hall-tickets' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-tickets'); setIsMobileMenuOpen(false); }}>
-                                    <Download size={18} /><span id='hall'>Hall Tickets</span>
-                                </button>
-                                <button className={`nav-links ${activeTab === 'hall-management' ? 'active' : ''}`} onClick={() => { setActiveTab('hall-management'); setIsMobileMenuOpen(false); }}>
-                                    <div className="nav-links-content"><Building2 size={16} /><span>Hall Management</span></div>
-                                </button>
-                                <button className={`nav-links ${activeTab === 'exam-halls' ? 'active' : ''}`} onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}>
-                                    <div className="nav-links-content"><Users size={16} /><span>Allocate</span></div>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <button className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`} onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}>
-                        <div className="nav-links-content"><Calendar size={18} /><span>Staff Leave Approvals</span></div>
+                    <div className="od-nav-label">Examinations</div>
+                    <button
+                        className="od-nav-item od-nav-group-btn"
+                        aria-expanded={isExamMenuOpen}
+                        onClick={() => setIsExamMenuOpen(!isExamMenuOpen)}
+                    >
+                        <GraduationCap size={18} />
+                        <span>Exam hall allocation</span>
+                        <ChevronDown size={16} className="od-chev" />
                     </button>
-                    <button className={`nav-links ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => { setActiveTab('tasks'); setIsMobileMenuOpen(false); }}>
-                        <div className="nav-links-content"><ClipboardList size={18} /><span>Internal Task Board</span></div>
-                    </button>
+                    {isExamMenuOpen && (
+                        <div className="od-nav-children">
+                            {navItem('exam-timetable', CalendarDays, 'Exam timetable')}
+                            {navItem('hall-ticket-allocation', Ticket, 'Hall ticket allocation')}
+                            {navItem('hall-tickets', Download, 'Hall tickets')}
+                            {navItem('hall-management', Building2, 'Hall management')}
+                            {navItem('exam-halls', Users, 'Seating Arangements')}
+                        </div>
+                    )}
+
+                    <div className="od-nav-label">Staff</div>
+                    {navItem('leaves', Calendar, 'Leave approvals', dashboardPendingLeaves)}
+                    {navItem('tasks', ClipboardList, 'Task board', dashboardPendingTasks)}
                 </nav>
 
-                <div className="sidebar-footer">
-                    <button className="logout-btn" onClick={handleLogout}>
-                        <LogOut size={16} /><span>Sign Out</span>
+                <div className="od-side-foot">
+                    <button className="od-signout" onClick={handleLogout}>
+                        <LogOut size={17} /><span>Sign out</span>
                     </button>
                 </div>
             </aside>
 
-            {/* Main Workspace Area */}
-            <main className="dashboard-main">
-                <header className="dashboard-topbar">
-                    <div className="topbar-title-wrap">
-                        <div className="topbar-breadcrumb"><span>Workspace</span><b>/</b><strong>{activeTab === 'overview' ? 'Overview' : activeTab.replaceAll('-', ' ')}</strong></div>
-                        <div className="academic-badge">Academic Year 2026 - 2027</div>
+            {/* Main panel */}
+            <main className="od-main od-glass">
+                <header className="od-top">
+                    <div className="od-top-left">
+                        <button
+                            className="od-menu-btn"
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+                        >
+                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
+                        <h1>{pageTitles[activeTab] || 'Front Office'}</h1>
                     </div>
-                    <div className="topbar-actions">
-                        <button className="topbar-search" type="button" onClick={() => document.querySelector('.dashboard-content')?.scrollTo({ top: 0, behavior: 'smooth' })}>
-                            <Search size={15} /><span>Search workspace</span><kbd>⌘ K</kbd>
+
+                    <div className="od-search">
+                        <Search size={17} />
+                        <input
+                            type="search"
+                            value={navQuery}
+                            placeholder="Jump to a page…"
+                            aria-label="Jump to a page"
+                            onChange={e => setNavQuery(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && searchMatches[0]) goTo(searchMatches[0][0]);
+                                if (e.key === 'Escape') setNavQuery('');
+                            }}
+                        />
+                        {navQuery.trim() && (
+                            <div className="od-results">
+                                {searchMatches.length === 0
+                                    ? <p>No page matches “{navQuery.trim()}”.</p>
+                                    : searchMatches.map(([tab, title]) => (
+                                        <button key={tab} onClick={() => goTo(tab)}>{title}</button>
+                                    ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="od-top-right">
+                        <span className="od-pill is-live">Live sync</span>
+                        <button
+                            className="od-bell"
+                            type="button"
+                            onClick={() => goTo('overview')}
+                            title={attentionCount ? `${attentionCount} items need attention` : 'Nothing needs attention'}
+                            aria-label={attentionCount ? `${attentionCount} items need attention` : 'Nothing needs attention'}
+                        >
+                            <Bell size={18} />
+                            {attentionCount > 0 && <em>{attentionCount}</em>}
                         </button>
-                        <button className="topbar-icon-btn notification-trigger" type="button" title="Notifications">
-                            <Bell size={17} /><i />
-                        </button>
-                        <div className="topbar-profile"><span className="topbar-avatar">O</span><div><b>Office Executive</b><small>Administrator</small></div><ChevronDown size={14} /></div>
+                        <button className="od-pill" type="button" onClick={() => goTo('fees')}><DollarSign size={16} /> Fee desk</button>
                     </div>
                 </header>
 
-                <div className="dashboard-content">
+                <div className="od-content">
                     {activeTab === 'overview' && (
-                        <section className="office-overview">
-                            <div className="overview-hero">
-                                <div className="overview-hero-copy">
-                                    <span className="overview-kicker">FRONT-OFFICE CONTROL CENTER</span>
-                                    <h1>Good evening, Office Executive.</h1>
-                                    <p>One compact workspace for enquiries, fee operations, examinations, staff approvals and daily tasks.</p>
-                                    <div className="overview-hero-meta">
-                                        <span><CheckCircle size={14} /> Live Firestore sync</span>
-                                        <span>Academic Year 2026–2027</span>
+                        <section className="ov">
+                            <div className="ov-row3">
+                                <div className="ov-hero">
+                                    <span className="ov-hero-date">{longDate}</span>
+                                    <div>
+                                        <h2>{greetingWord}, Office Executive</h2>
+                                        <p>{attentionSummary}</p>
                                     </div>
+                                    <button className="ov-hero-btn" onClick={() => goTo(heroAction.tab)}>
+                                        {heroAction.label} <ChevronRight size={16} />
+                                    </button>
                                 </div>
-                                <div className="overview-hero-orb"><LayoutGrid size={34} /></div>
-                            </div>
 
-                            <div className="overview-stat-grid">
-                                <button className="overview-stat stat-green" onClick={() => setActiveTab('enquiries')}>
-                                    <span className="overview-stat-icon"><UserPlus size={17} /></span>
-                                    <span className="overview-stat-copy"><small>ENQUIRIES</small><strong>{enquiries.length}</strong><em>Active records</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                                <button className="overview-stat stat-blue" onClick={() => setActiveTab('fees')}>
-                                    <span className="overview-stat-icon"><DollarSign size={17} /></span>
-                                    <span className="overview-stat-copy"><small>FEE BALANCE</small><strong>₹{dashboardFeeBalance.toLocaleString('en-IN')}</strong><em>₹{dashboardFeePaid.toLocaleString('en-IN')} collected</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                                <button className="overview-stat stat-purple" onClick={() => setActiveTab('exam-halls')}>
-                                    <span className="overview-stat-icon"><Users size={17} /></span>
-                                    <span className="overview-stat-copy"><small>EXAM HALLS</small><strong>{examHalls.length}</strong><em>{examHalls.reduce((n, h) => n + Number(h.studentCount || h.studentIds?.length || 0), 0)} students allocated</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                                <button className="overview-stat stat-amber" onClick={() => setActiveTab('hall-ticket-allocation')}>
-                                    <span className="overview-stat-icon"><Ticket size={17} /></span>
-                                    <span className="overview-stat-copy"><small>HALL TICKETS</small><strong>{dashboardPublishedTickets}</strong><em>Published tickets</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                                <button className="overview-stat stat-rose" onClick={() => setActiveTab('leaves')}>
-                                    <span className="overview-stat-icon"><Calendar size={17} /></span>
-                                    <span className="overview-stat-copy"><small>LEAVE REQUESTS</small><strong>{dashboardPendingLeaves}</strong><em>Awaiting approval</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                                <button className="overview-stat stat-slate" onClick={() => setActiveTab('tasks')}>
-                                    <span className="overview-stat-icon"><ClipboardList size={17} /></span>
-                                    <span className="overview-stat-copy"><small>TASK BOARD</small><strong>{dashboardPendingTasks}</strong><em>Open tasks</em></span>
-                                    <ArrowLeft className="overview-stat-arrow" size={15} />
-                                </button>
-                            </div>
+                                <div className="ov-card">
+                                    <div className="ov-card-head">
+                                        <h3>Fee collection</h3>
+                                        <button className="ov-link" onClick={() => goTo('fees')}>Fee desk <ChevronRight size={14} /></button>
+                                    </div>
+                                    <div className="ov-ring-wrap">
+                                        <div className="ov-ring" role="img" aria-label={`${feePercent}% of fees collected`}>
+                                            <svg viewBox="0 0 150 150">
+                                                <circle className={dashboardFeeTotal ? 'due' : 'trk'} cx="75" cy="75" r="62" />
+                                                <circle className="got" cx="75" cy="75" r="62" strokeDasharray={`${(ringLen * feePercent) / 100} ${ringLen}`} style={{ display: feePercent ? undefined : 'none' }} />
+                                            </svg>
+                                            <div className="ov-ring-mid"><strong>{feePercent}%</strong><span>collected</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="ov-legend">
+                                        <span><i />Collected <b>{inr(dashboardFeePaid)}</b></span>
+                                        <span className="is-due"><i />Balance <b>{inr(dashboardFeeBalance)}</b></span>
+                                    </div>
+                                    <p className="ov-fee-note"><b>{dashboardPaidStudents}</b> of {studentsList.length} students cleared for hall tickets</p>
+                                </div>
 
-                            <div className="overview-insight-row">
-                                <div className="insight-card insight-primary">
-                                    <div className="insight-head"><div><span>OPERATIONS FLOW</span><b>Today’s activity</b></div><Activity size={16} /></div>
-                                    <div className="mini-bars">{[42, 58, 48, 72, 64, 82, 68, 91, 76, 88, 70, 96].map((v, i) => <span key={i} style={{ height: `${v}%` }} />)}</div>
-                                    <div className="insight-foot"><strong>+18.4%</strong><small>vs. previous activity window</small></div>
-                                </div>
-                                <div className="insight-card">
-                                    <div className="insight-head"><div><span>COLLECTION SNAPSHOT</span><b>Fee performance</b></div><TrendingUp size={16} /></div>
-                                    <div className="insight-metric"><strong>₹{dashboardFeePaid.toLocaleString('en-IN')}</strong><span>collected</span></div>
-                                    <div className="progress-track"><span style={{ width: `${dashboardFeeTotal ? Math.min(100, (dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%` }} /></div>
-                                    <div className="insight-foot"><strong>{dashboardFeeTotal ? Math.round((dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%</strong><small>of total fee ledger</small></div>
-                                </div>
-                                <div className="notification-panel">
-                                    <div className="notification-head"><div><span>NOTIFICATIONS</span><b>Needs attention</b></div><button type="button"><MoreHorizontal size={16} /></button></div>
-                                    <div className="notification-list">
-                                        <button type="button" onClick={() => setActiveTab('leaves')}><span className="notice-dot notice-amber" /><div><b>{dashboardPendingLeaves} leave request{dashboardPendingLeaves === 1 ? '' : 's'}</b><small>Awaiting approval</small></div><ArrowLeft size={13} /></button>
-                                        <button type="button" onClick={() => setActiveTab('tasks')}><span className="notice-dot notice-violet" /><div><b>{dashboardPendingTasks} open task{dashboardPendingTasks === 1 ? '' : 's'}</b><small>Internal work queue</small></div><ArrowLeft size={13} /></button>
-                                        <button type="button" onClick={() => setActiveTab('hall-ticket-allocation')}><span className="notice-dot notice-blue" /><div><b>{dashboardPublishedTickets} tickets published</b><small>Hall ticket desk status</small></div><ArrowLeft size={13} /></button>
+                                <div className="ov-card">
+                                    <div className="ov-card-head"><h3>Desk at a glance</h3></div>
+                                    <div className="ov-nums">
+                                        <button className="ov-num" style={{ '--dot': '#6a5cf0' }} onClick={() => goTo('enquiries')}><i /><span>Enquiries</span><strong>{enquiries.length}</strong></button>
+                                        <button className="ov-num" style={{ '--dot': '#1fb27a' }} onClick={() => goTo('fees')}><i /><span>Students</span><strong>{studentsList.length}</strong></button>
+                                        <button className="ov-num" style={{ '--dot': '#f0587a' }} onClick={() => goTo('exam-halls')}><i /><span>Exam halls<small>{examHalls.reduce((n, h) => n + Number(h.studentCount || h.studentIds?.length || 0), 0)} students seated</small></span><strong>{examHalls.length}</strong></button>
+                                        <button className="ov-num" style={{ '--dot': '#e59a1a' }} onClick={() => goTo('hall-ticket-allocation')}><i /><span>Hall tickets published</span><strong>{dashboardPublishedTickets}</strong></button>
+                                        <button className="ov-num" style={{ '--dot': '#3b9be8' }} onClick={() => goTo('exam-timetable')}><i /><span>Exam papers scheduled</span><strong>{examTimetables.length}</strong></button>
+                                        <button className="ov-num" style={{ '--dot': '#8a7dfa' }} onClick={() => goTo('leaves')}><i /><span>Staff members</span><strong>{staffList.length}</strong></button>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="overview-main-grid">
-                                <div className="overview-panel">
-                                    <div className="overview-panel-head">
-                                        <div><span className="panel-kicker">QUICK ACCESS</span><h2>Office operations</h2></div>
-                                        <span className="panel-live"><span /> Live</span>
+                            <div className="ov-row2">
+                                <div className="ov-card">
+                                    <div className="ov-card-head">
+                                        <h3>Leave requests</h3>
+                                        <button className="ov-link" onClick={() => goTo('leaves')}>View all <ChevronRight size={14} /></button>
                                     </div>
-                                    <div className="quick-action-grid">
-                                        <button onClick={() => setActiveTab('enquiries')}><span className="qa-icon qa-green"><UserPlus size={18} /></span><span><b>New enquiry</b><small>Log visitor / admission</small></span><ArrowLeft size={14} /></button>
-                                        <button onClick={() => setActiveTab('fees')}><span className="qa-icon qa-blue"><DollarSign size={18} /></span><span><b>Fee desk</b><small>Manage dues & receipts</small></span><ArrowLeft size={14} /></button>
-                                        <button onClick={() => setActiveTab('exam-timetable')}><span className="qa-icon qa-violet"><CalendarDays size={18} /></span><span><b>Exam timetable</b><small>Schedule subjects</small></span><ArrowLeft size={14} /></button>
-                                        <button onClick={() => setActiveTab('hall-ticket-allocation')}><span className="qa-icon qa-amber"><Ticket size={18} /></span><span><b>Publish tickets</b><small>Check fee eligibility</small></span><ArrowLeft size={14} /></button>
-                                        <button onClick={() => setActiveTab('leaves')}><span className="qa-icon qa-rose"><Calendar size={18} /></span><span><b>Leave approvals</b><small>{dashboardPendingLeaves} pending request{dashboardPendingLeaves === 1 ? '' : 's'}</small></span><ArrowLeft size={14} /></button>
-                                        <button onClick={() => setActiveTab('tasks')}><span className="qa-icon qa-slate"><ClipboardList size={18} /></span><span><b>Task board</b><small>Track office work</small></span><ArrowLeft size={14} /></button>
-                                    </div>
+                                    {pendingLeaveList.length === 0 ? (
+                                        <div className="ov-empty">No leave requests are waiting for approval.</div>
+                                    ) : (
+                                        pendingLeaveList.slice(0, 4).map(leave => (
+                                            <div className="ov-item" key={leave.id}>
+                                                <div className="ov-item-main">
+                                                    <b>{leave.staffName || 'Faculty member'}</b>
+                                                    <small>{leave.leaveType || 'Casual leave'}, {fmtDate(leave.fromDate)} to {fmtDate(leave.toDate)}</small>
+                                                </div>
+                                                <div className="ov-item-actions">
+                                                    <button className="ov-btn is-primary" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')}><Check size={14} /> Approve</button>
+                                                    <button className="ov-btn is-danger" onClick={() => handleUpdateLeaveStatus(leave.id, 'Rejected')}><X size={14} /> Reject</button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
 
-                                <div className="overview-panel">
-                                    <div className="overview-panel-head">
-                                        <div><span className="panel-kicker">AT A GLANCE</span><h2>Workspace health</h2></div>
+                                <div className="ov-card">
+                                    <div className="ov-card-head">
+                                        <h3>Open tasks</h3>
+                                        <button className="ov-link" onClick={() => goTo('tasks')}>View all <ChevronRight size={14} /></button>
                                     </div>
-                                    <div className="health-list">
-                                        <div className="health-row"><span className="health-icon green"><Users size={15} /></span><div><b>Student records</b><small>Registered in office system</small></div><strong>{studentsList.length}</strong></div>
-                                        <div className="health-row"><span className="health-icon blue"><GraduationCap size={15} /></span><div><b>Fee-covered students</b><small>Eligible for hall ticket flow</small></div><strong>{dashboardPaidStudents}</strong></div>
-                                        <div className="health-row"><span className="health-icon violet"><CalendarDays size={15} /></span><div><b>Exam schedules</b><small>Timetable entries</small></div><strong>{examTimetables.length}</strong></div>
-                                        <div className="health-row"><span className="health-icon amber"><UserCheck size={15} /></span><div><b>Staff members</b><small>Office directory</small></div><strong>{staffList.length}</strong></div>
-                                    </div>
+                                    {openTaskList.length === 0 ? (
+                                        <div className="ov-empty">The task board is clear.</div>
+                                    ) : (
+                                        openTaskList.slice(0, 5).map(task => (
+                                            <div className="ov-item" key={task.id}>
+                                                <div className="ov-item-main">
+                                                    <b>{task.title}</b>
+                                                    <small>{task.assignedTo ? `Assigned to ${task.assignedTo}` : 'Unassigned'}{task.deadline ? `, due ${fmtDate(task.deadline)}` : ''}</small>
+                                                </div>
+                                                <span className={`ov-tag ${task.priority === 'Urgent' ? 'is-urgent' : task.priority === 'High' ? 'is-high' : ''}`}>{task.priority || 'Normal'}</span>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="overview-footer-strip">
-                                <div><span className="footer-dot" /><b>Office workspace is active</b><small>Real-time records are connected</small></div>
-                                <div><span>Total fee ledger</span><strong>₹{dashboardFeeTotal.toLocaleString('en-IN')}</strong></div>
-                                <button onClick={() => setActiveTab('hall-tickets')}>Open Hall Ticket Desk <ArrowLeft size={14} /></button>
+                            <div className="ov-start">
+                                <span>Start something</span>
+                                <button className="ov-btn" onClick={() => goTo('enquiries')}><UserPlus size={15} /> Log an enquiry</button>
+                                <button className="ov-btn" onClick={() => goTo('exam-timetable')}><CalendarDays size={15} /> Add an exam paper</button>
+                                <button className="ov-btn" onClick={() => goTo('hall-ticket-allocation')}><Ticket size={15} /> Publish hall tickets</button>
+                                <button className="ov-btn" onClick={() => goTo('tasks')}><PlusCircle size={15} /> Create a task</button>
                             </div>
                         </section>
                     )}
@@ -1520,7 +1566,7 @@ export default function OfficeDashboard() {
                                     <textarea rows="2" className="custom-textarea" placeholder="Enquiry details..." value={enquiryForm.notes} onChange={e => setEnquiryForm({ ...enquiryForm, notes: e.target.value })} />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: 'var(--accent)' }}>
                                         <PlusCircle size={15} /> Log New Enquiry Entry
                                     </button>
                                 </div>
@@ -2027,7 +2073,7 @@ export default function OfficeDashboard() {
                                 </div>
 
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: 'var(--accent)' }}>
                                         <PlusCircle size={15} /> Add Subject Exam Schedule
                                     </button>
                                 </div>
@@ -2910,7 +2956,7 @@ export default function OfficeDashboard() {
                             <div className="dash-card full-width alloc-hero">
                                 <div>
                                     <span className="alloc-kicker">EXAMINATION MANAGEMENT</span>
-                                    <h3>Allocate</h3>
+                                    <h3>Seating Allocations</h3>
                                     <p className="subtitle">Seat students in exam halls, then assign staff to invigilate them.</p>
                                 </div>
                                 <div className="alloc-hero-stats">
@@ -3499,13 +3545,16 @@ export default function OfficeDashboard() {
                                                             {leave.status || 'Pending'}
                                                         </span>
                                                     </td>
-                                                    <td style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')} style={{ background: '#6d5dfc', padding: '4px 8px' }}>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                        <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')} style={{ background: 'var(--accent)', padding: '4px 8px' }}>
                                                             <Check size={12} /> Approve
                                                         </button>
                                                         <button className="btn-save-grade" onClick={() => handleUpdateLeaveStatus(leave.id, 'Rejected')} style={{ background: '#dc2626', padding: '4px 8px' }}>
                                                             <X size={12} /> Reject
                                                         </button>
+                                                    
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -3553,7 +3602,7 @@ export default function OfficeDashboard() {
                                     <input type="date" className="table-input full-width-input" value={taskForm.deadline} onChange={e => setTaskForm({ ...taskForm, deadline: e.target.value })} required />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
+                                    <button type="submit" className="btn-primary" style={{ background: 'var(--accent)' }}>
                                         <PlusCircle size={15} /> Create Task Item
                                     </button>
                                 </div>
@@ -3577,7 +3626,7 @@ export default function OfficeDashboard() {
                                                 <td><strong>{task.title}</strong></td>
                                                 <td>{task.assignedTo}</td>
                                                 <td>
-                                                    <span className={`status-badge ${task.priority === 'Urgent' ? 'status-absent' : 'status-present'}`}>
+                                                    <span className={`status-badge ${task.priority === 'Urgent' ? 'status-absent' : task.priority === 'High' ? '' : 'is-neutral'}`}>
                                                         {task.priority}
                                                     </span>
                                                 </td>

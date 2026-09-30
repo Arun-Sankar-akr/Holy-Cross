@@ -7,10 +7,10 @@ import {
 import {
     Calendar, Shield, Award, Image as ImageIcon, Sun, Bell,
     PlusCircle, Trash2, LogOut, Radio, ChevronDown, Users, GraduationCap,
-    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu,
-    PanelLeftClose, PanelLeftOpen, User, RefreshCw, BarChart3, Settings,
-    Search, AlertTriangle, ShieldCheck, Database, Sliders, Activity, Save, Send,
-    FileText, CheckCircle, XCircle, Eye, Mail, MessageSquare, Upload, FolderPlus, Images, Filter
+    Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu, LayoutGrid,
+    User, RefreshCw, ChevronRight, Settings,
+    Search, AlertTriangle, ShieldCheck, Database, Sliders, Save, Send,
+    FileText, CheckCircle, XCircle, Eye, Mail, Upload, FolderPlus, Images
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
@@ -35,9 +35,9 @@ export default function AdminDashboard() {
     const [timetableOpen, setTimetableOpen] = useState(true);
     const [systemOpen, setSystemOpen] = useState(true);
 
-    // Mobile Navigation Drawer State & Desktop Sidebar Toggle State
+    // Mobile Navigation Drawer State & page-jump search
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [navQuery, setNavQuery] = useState('');
 
     // Real-time Firestore state
     const [calendarEvents, setCalendarEvents] = useState([]);
@@ -233,6 +233,7 @@ export default function AdminDashboard() {
         announcements: { title: 'Announcements', subtitle: 'Create and manage announcements.' },
         staff: { title: 'Teachers', subtitle: 'Manage staff directory and details.' },
         students: { title: 'Students', subtitle: 'Manage all student details and information.' },
+        class_incharge: { title: 'Class Incharge', subtitle: 'Assign teachers to classes and sections.' },
         results: { title: 'Results Management', subtitle: 'Publish and manage exam results.' },
         student_timetable: { title: 'Timetable', subtitle: 'Manage class schedules.' },
         staff_timetable: { title: 'Staff Timetable', subtitle: 'Manage staff work schedules.' },
@@ -613,6 +614,8 @@ export default function AdminDashboard() {
         setIsMobileMenuOpen(false);
         if (extraCallback) extraCallback();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        const contentPane = document.querySelector('.od-content');
+        if (contentPane) contentPane.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const fetchAdmissionApplications = async () => {
@@ -1196,184 +1199,168 @@ export default function AdminDashboard() {
         return <AdminLogin />;
     }
 
-    return (
+    // ---- Office-style navigation helpers ----
+    const tabCallbacks = {
+        admission_panel: fetchAdmissionApplications,
+        students: () => { setSelectedClass(null); setSelectedSection(null); },
+        class_incharge: () => { setSelectedInchargeClass(''); setSelectedInchargeSectionId(''); setSelectedInchargeTeacherId(''); },
+        results: () => { setSelectedClassResults(null); setSelectedSectionResults(null); },
+        student_timetable: () => { setSelectedClassTT(null); setSelectedSectionTT(null); },
+        staff_timetable: () => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); },
+    };
+    const goTo = (tab) => { handleTabClick(tab, tabCallbacks[tab]); setNavQuery(''); };
+    const searchMatches = navQuery.trim()
+        ? Object.entries(tabMeta).filter(([, m]) => m.title.toLowerCase().includes(navQuery.trim().toLowerCase()))
+        : [];
+    const navItem = (tab, Icon, label) => (
+        <button
+            type="button"
+            key={tab}
+            className={`od-nav-item ${activeTab === tab ? 'is-active' : ''}`}
+            aria-current={activeTab === tab ? 'page' : undefined}
+            onClick={() => goTo(tab)}
+        >
+            <Icon size={18} />
+            <span>{label}</span>
+        </button>
+    );
+    const navGroup = (label, Icon, isOpen, toggle, children) => (
         <>
-            <header className="mobile-header">
-                <div className="mobile-header-title">
-                    <div className="admin-seal" style={{ width: 30, height: 30, fontSize: '0.85rem' }}>AC</div>
-                    <h3>Admin Panel</h3>
+            <button
+                type="button"
+                className="od-nav-item od-nav-group-btn"
+                aria-expanded={isOpen}
+                onClick={toggle}
+            >
+                <Icon size={18} />
+                <span>{label}</span>
+                <ChevronDown size={16} className="od-chev" />
+            </button>
+            {isOpen && <div className="od-nav-children">{children}</div>}
+        </>
+    );
+    const longDate = currentTime.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+    const hour = currentTime.getHours();
+    const greetingWord = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    return (
+        <div className="od-app admin-od">
+            {isMobileMenuOpen && (
+                <button
+                    type="button"
+                    className="od-scrim is-shown"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="Close navigation"
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={`od-side od-glass ${isMobileMenuOpen ? 'is-open' : ''}`} ref={sidebarRef}>
+                <div className="od-profile">
+                    <div className="od-logo"><img src={logo} alt="School logo" id="logogs" /></div>
+                    <div className="od-profile-text">
+                        <b>Admin Control</b>
+                        <small>{user.email}</small>
+                        <span className="od-chip">Super Admin</span>
+                    </div>
                 </div>
-                <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-                </button>
-            </header>
 
-            {isMobileMenuOpen && <div className="sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />}
+                <nav className="od-nav" aria-label="Main">
+                    {navItem('analytics', LayoutGrid, 'Dashboard')}
 
-            <div className={`admin-containers ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-                <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`} ref={sidebarRef}>
-                    <div>
-                        <div className="sidebar-brand">
-                            <div className="admin-seal"><img src={logo} alt="Logo" id='logogs' /></div>
-                            <div>
-                                <h2>Admin Control</h2>
-                                <p>Dashboard</p>
-                            </div>
-                        </div>
+                    <div className="od-nav-label">Admissions</div>
+                    {navItem('admission_panel', FileText, 'Admission panel')}
 
-                        <nav className="admin-tabs">
-                            <button
-                                type="button"
-                                className={`admin-tab parent-tab ${activeTab === 'analytics' ? 'active' : ''}`}
-                                onClick={() => handleTabClick('analytics')}
-                            >
-                                <div className="tab-label"><BarChart3 size={16} /><span>Institution KPI</span></div>
-                            </button>
+                    <div className="od-nav-label">Website</div>
+                    {navGroup('Updates', Radio, updatesOpen, () => setUpdatesOpen(!updatesOpen), <>
+                        {navItem('announcements', Bell, 'Announcements')}
+                        {navItem('upcoming_events', Calendar, 'Upcoming events')}
+                        {navItem('toppers', Award, 'Toppers & achievers')}
+                        {navItem('calendar', Clock, 'Academic calendar')}
+                        {navItem('admins', Shield, 'Administrators')}
+                        {navItem('gallery', ImageIcon, 'Photo gallery')}
+                        {navItem('holidays', Sun, 'School holidays')}
+                    </>)}
 
-                            {/* ADMISSIONS TAB SECTION WITH PANEL */}
-                            <button type="button" className={`admin-tab parent-tab ${admissionsOpen ? 'expanded' : ''}`} onClick={() => setAdmissionsOpen(!admissionsOpen)}>
-                                <div className="tab-label"><UserCheck size={16} /><span>Admissions</span></div>
-                                <ChevronDown size={14} className={`chevron-icon ${admissionsOpen ? 'rotated' : ''}`} />
-                            </button>
-                            {admissionsOpen && (
-                                <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'admission_panel' ? 'active' : ''}`} onClick={() => handleTabClick('admission_panel', fetchAdmissionApplications)}>
-                                        <FileText size={15} /> Admission Panel
-                                    </button>
-                                </div>
-                            )}
+                    <div className="od-nav-label">School ERP</div>
+                    {navGroup('ERP management', Users, erpOpen, () => setErpOpen(!erpOpen), <>
+                        {navItem('staff', Users, 'Staff directory')}
+                        {navItem('students', GraduationCap, 'Students ERP')}
+                        {navItem('class_incharge', UserCheck, 'Class incharge')}
+                        {navItem('results', Award, 'Results & publish')}
+                    </>)}
+                    {navGroup('Timetables', Clock, timetableOpen, () => setTimetableOpen(!timetableOpen), <>
+                        {navItem('student_timetable', Clock, 'Student schedule')}
+                        {navItem('staff_timetable', Clock, 'Staff schedule')}
+                    </>)}
 
-                            {/* UPDATES TAB SECTION WITH SUBMENUS FOR EVENTS & TOPPERS */}
-                            <button type="button" className={`admin-tab parent-tab ${updatesOpen ? 'expanded' : ''}`} onClick={() => setUpdatesOpen(!updatesOpen)}>
-                                <div className="tab-label"><Radio size={16} /><span>Updates</span></div>
-                                <ChevronDown size={14} className={`chevron-icon ${updatesOpen ? 'rotated' : ''}`} />
-                            </button>
-                            {updatesOpen && (
-                                <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'announcements' ? 'active' : ''}`} onClick={() => handleTabClick('announcements')}>
-                                        <Bell size={15} /> Announcements
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'upcoming_events' ? 'active' : ''}`} onClick={() => handleTabClick('upcoming_events')}>
-                                        <Calendar size={15} /> Upcoming Events & Activities
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'toppers' ? 'active' : ''}`} onClick={() => handleTabClick('toppers')}>
-                                        <Award size={15} /> Board Exam Toppers & Achievers
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => handleTabClick('calendar')}>
-                                        <Clock size={15} /> Academic Calendar
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => handleTabClick('admins')}>
-                                        <Shield size={15} /> Administrators
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => handleTabClick('gallery')}>
-                                        <ImageIcon size={15} /> Photo Gallery
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'holidays' ? 'active' : ''}`} onClick={() => handleTabClick('holidays')}>
-                                        <Sun size={15} /> School Holidays
-                                    </button>
-                                </div>
-                            )}
+                    <div className="od-nav-label">System</div>
+                    {navItem('settings', Settings, 'System controls')}
+                    {navItem('idcards', ShieldCheck, 'ID card management')}
+                </nav>
 
-                            <button type="button" className={`admin-tab parent-tab ${erpOpen ? 'expanded' : ''}`} onClick={() => setErpOpen(!erpOpen)}>
-                                <div className="tab-label"><Users size={16} /><span>ERP Management</span></div>
-                                <ChevronDown size={14} className={`chevron-icon ${erpOpen ? 'rotated' : ''}`} />
-                            </button>
-                            {erpOpen && (
-                                <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => handleTabClick('staff')}>
-                                        <Users size={15} /> Staff Directory
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => handleTabClick('students', () => { setSelectedClass(null); setSelectedSection(null); })}>
-                                        <GraduationCap size={15} /> Students ERP
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'class_incharge' ? 'active' : ''}`} onClick={() => handleTabClick('class_incharge', () => { setSelectedInchargeClass(''); setSelectedInchargeSectionId(''); setSelectedInchargeTeacherId(''); })}>
-                                        <UserCheck size={15} /> Class Incharge
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'results' ? 'active' : ''}`} onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}>
-                                        <Award size={15} /> Results & Publish
-                                    </button>
+                <div className="od-side-foot">
+                    <button type="button" className="od-signout" onClick={() => signOut(auth)}>
+                        <LogOut size={17} /><span>Sign out</span>
+                    </button>
+                </div>
+            </aside>
 
-                                </div>
-                            )}
-
-                            <button type="button" className={`admin-tab parent-tab ${timetableOpen ? 'expanded' : ''}`} onClick={() => setTimetableOpen(!timetableOpen)}>
-                                <div className="tab-label"><Clock size={16} /><span>Timetables</span></div>
-                                <ChevronDown size={14} className={`chevron-icon ${timetableOpen ? 'rotated' : ''}`} />
-                            </button>
-                            {timetableOpen && (
-                                <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'student_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('student_timetable', () => { setSelectedClassTT(null); setSelectedSectionTT(null); })}>
-                                        <Clock size={15} /> Student Schedule
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'staff_timetable' ? 'active' : ''}`} onClick={() => handleTabClick('staff_timetable', () => { setSelectedStaffTT(null); setSelectedStaffDayTT(null); })}>
-                                        <Clock size={15} /> Staff Schedule
-                                    </button>
-                                </div>
-                            )}
-
-                            <button type="button" className={`admin-tab parent-tab ${systemOpen ? 'expanded' : ''}`} onClick={() => setSystemOpen(!systemOpen)}>
-                                <div className="tab-label"><Sliders size={16} /><span>System & Broadcast</span></div>
-                                <ChevronDown size={14} className={`chevron-icon ${systemOpen ? 'rotated' : ''}`} />
-                            </button>
-                            {systemOpen && (
-                                <div className="submenu-container">
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleTabClick('settings')}>
-                                        <Settings size={15} /> System Controls
-                                    </button>
-                                    <button type="button" className={`admin-tab child-tab ${activeTab === 'idcards' ? 'active' : ''}`} onClick={() => handleTabClick('idcards')}>
-                                        <ShieldCheck size={15} /> ID Card Management
-                                    </button>
-                                </div>
-                            )}
-                        </nav>
-                    </div>
-
-                    <div className="sidebar-footer">
-                        <div className="user-profile-info">
-                            <span className="user-label">Logged in as</span>
-                            <strong className="user-email">{user.email}</strong>
-                        </div>
-                        <button className="logout-btn" onClick={() => signOut(auth)}>
-                            <LogOut size={14} /> Log Out
+            {/* Main panel */}
+            <main className="od-main od-glass">
+                <header className="od-top">
+                    <div className="od-top-left">
+                        <button
+                            type="button"
+                            className="od-menu-btn"
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+                        >
+                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>
-                    </div>
-                </aside>
-
-                <main className="admin-main-content">
-                    <div className="admin-topbar">
-                        <div className="admin-topbar-left">
-                            <button className="sidebar-toggle-btn" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} title={isSidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}>
-                                {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-                            </button>
-                            <div className="admin-topbar-titles">
-                                <h2>{currentTabMeta.title}</h2>
-                                <p>{currentTabMeta.subtitle}</p>
-                            </div>
-                        </div>
-                        <div className="admin-topbar-search">
-                            <Search size={15} />
-                            <input
-                                type="text"
-                                placeholder="Search anything..."
-                                value={globalSearch}
-                                onChange={(e) => setGlobalSearch(e.target.value)}
-                            />
-                        </div>
-                        <div className="admin-topbar-right">
-                            <button className="topbar-icon-btn" title="Notifications"><Bell size={17} /><span className="topbar-icon-dot" /></button>
-                            <button className="topbar-icon-btn" title="Messages"><Mail size={17} /></button>
-                            <button className="topbar-icon-btn" title="Chat"><MessageSquare size={17} /></button>
-                            <div className="topbar-profile">
-                                <div className="topbar-avatar"><User size={16} /></div>
-                                <div className="topbar-profile-info">
-                                    <strong>Admin</strong>
-                                    <span>Super Admin</span>
-                                </div>
-                                <ChevronDown size={14} className="topbar-profile-caret" />
-                            </div>
-                        </div>
+                        <h1>{currentTabMeta.title}</h1>
                     </div>
 
+                    <div className="od-search">
+                        <Search size={17} />
+                        <input
+                            type="search"
+                            value={navQuery}
+                            placeholder="Jump to a page…"
+                            aria-label="Jump to a page"
+                            onChange={e => setNavQuery(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && searchMatches[0]) goTo(searchMatches[0][0]);
+                                if (e.key === 'Escape') setNavQuery('');
+                            }}
+                        />
+                        {navQuery.trim() && (
+                            <div className="od-results">
+                                {searchMatches.length === 0
+                                    ? <p>No page matches “{navQuery.trim()}”.</p>
+                                    : searchMatches.map(([tab, m]) => (
+                                        <button type="button" key={tab} onClick={() => goTo(tab)}>{m.title}</button>
+                                    ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="od-top-right">
+                        <span className="od-pill is-live">Live sync</span>
+                        <button
+                            type="button"
+                            className="od-bell"
+                            onClick={() => goTo('announcements')}
+                            title="Announcements"
+                            aria-label="Open announcements"
+                        >
+                            <Bell size={18} />
+                        </button>
+                        <button type="button" className="od-pill" onClick={() => goTo('settings')}><Settings size={16} /> Settings</button>
+                    </div>
+                </header>
+
+                <div className="od-content">
                     {/* UPCOMING EVENTS & ACTIVITIES SUBMENU PANEL */}
                     {activeTab === 'upcoming_events' && (
                         <div className="applications-management-card publish-management-card publish-events-section">
@@ -1632,127 +1619,99 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* INSTITUTION ANALYTICS & GLOBAL SEARCH */}
+                    {/* INSTITUTION OVERVIEW & DIRECTORY SEARCH */}
                     {activeTab === 'analytics' && (
-                        <div className="applications-management-card">
-                            <div className="welcome-banners">
-                                <div>
-                                    <h3 className="welcome-title">Welcome back, Admin <span role="img" aria-label="wave">👋</span></h3>
-                                    <p className="welcome-sub">Here's what's happening with your institution today.</p>
-                                </div>
-                                <div className="welcome-actions">
-                                    <div className="welcome-datetime">
-                                        <span className="welcome-date">{currentTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                                        <span className="welcome-time">{currentTime.toLocaleTimeString('en-GB')}</span>
+                        <section className="ov">
+                            <div className="ov-row3">
+                                <div className="ov-hero">
+                                    <span className="ov-hero-date">{longDate}</span>
+                                    <div>
+                                        <h2>{greetingWord}, Admin</h2>
+                                        <p>{studentsList.length} students, {staffList.length} staff and {announcements.length} published circulars are live across the institution.</p>
                                     </div>
-                                    <button type="button" className="add-notice-btn" onClick={handleDownloadReport}><FileText size={15} /> Download Report</button>
+                                    <button type="button" className="ov-hero-btn" onClick={handleDownloadReport}>
+                                        Download report <ChevronRight size={16} />
+                                    </button>
                                 </div>
-                            </div>
 
-                            <h3><Activity size={18} color="var(--primary)" /> Institution Overview & Live Analytics</h3>
-
-                            <div className="admin-kpi-grid">
-                                <div className="admin-kpi-card indigo">
-                                    <div className="kpi-icon-wrapper"><GraduationCap size={22} /></div>
-                                    <div className="kpi-info">
-                                        <span>Total Enrolled</span>
-                                        <h4>{studentsList.length} Students</h4>
-                                        <small>{sectionsList.length} Class Sections</small>
+                                <div className="ov-card">
+                                    <div className="ov-card-head"><h3>Institution at a glance</h3></div>
+                                    <div className="ov-nums">
+                                        <button type="button" className="ov-num" style={{ '--dot': '#6a5cf0' }} onClick={() => goTo('students')}><i /><span>Students enrolled<small>{sectionsList.length} class sections</small></span><strong>{studentsList.length}</strong></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#1fb27a' }} onClick={() => goTo('staff')}><i /><span>Faculty staff<small>{staffTimetables.length} work slots</small></span><strong>{staffList.length}</strong></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#e59a1a' }} onClick={() => goTo('student_timetable')}><i /><span>Timetable periods<small>Across 14 standards</small></span><strong>{studentTimetables.length}</strong></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#f0587a' }} onClick={() => goTo('announcements')}><i /><span>Campus circulars<small>{calendarEvents.length} events on record</small></span><strong>{announcements.length}</strong></button>
                                     </div>
                                 </div>
 
-                                <div className="admin-kpi-card emerald">
-                                    <div className="kpi-icon-wrapper"><Users size={22} /></div>
-                                    <div className="kpi-info">
-                                        <span>Faculty Staff</span>
-                                        <h4>{staffList.length} Members</h4>
-                                        <small>{staffTimetables.length} Work Slots</small>
-                                    </div>
-                                </div>
-
-                                <div className="admin-kpi-card amber">
-                                    <div className="kpi-icon-wrapper"><Clock size={22} /></div>
-                                    <div className="kpi-info">
-                                        <span>Schedule Matrix</span>
-                                        <h4>{studentTimetables.length} Periods</h4>
-                                        <small>Across 14 Standards</small>
-                                    </div>
-                                </div>
-
-                                <div className="admin-kpi-card rose">
-                                    <div className="kpi-icon-wrapper"><Bell size={22} /></div>
-                                    <div className="kpi-info">
-                                        <span>Campus Circulars</span>
-                                        <h4>{announcements.length} Published</h4>
-                                        <small>{calendarEvents.length} Events on Record</small>
+                                <div className="ov-card">
+                                    <div className="ov-card-head"><h3>Quick links</h3></div>
+                                    <div className="ov-nums">
+                                        <button type="button" className="ov-num" style={{ '--dot': '#8a7dfa' }} onClick={() => goTo('results')}><i /><span>Results &amp; publish</span><ChevronRight size={16} /></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#3b9be8' }} onClick={() => goTo('student_timetable')}><i /><span>Student timetable</span><ChevronRight size={16} /></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#f0587a' }} onClick={() => goTo('announcements')}><i /><span>Add announcement</span><ChevronRight size={16} /></button>
+                                        <button type="button" className="ov-num" style={{ '--dot': '#1fb27a' }} onClick={() => goTo('upcoming_events')}><i /><span>Create event</span><ChevronRight size={16} /></button>
                                     </div>
                                 </div>
                             </div>
 
-                            <h4 style={{ marginTop: '4px' }}>Quick Links</h4>
-                            <div className="quick-links-grid">
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('results', () => { setSelectedClassResults(null); setSelectedSectionResults(null); })}><Award size={15} /> Results</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('student_timetable', () => { setSelectedClassTT(null); setSelectedSectionTT(null); })}><Clock size={15} /> Timetable</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('announcements')}><Bell size={15} /> Add Announcement</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('upcoming_events')}><Calendar size={15} /> Create Event</button>
-                                <button type="button" className="quick-link-chip" onClick={() => handleTabClick('fees')}><Users size={15} /> Collect Fees</button>
-                            </div>
+                            <div className="ov-card">
+                                <div className="ov-card-head"><h3>Quick directory search</h3></div>
+                                <div className="admin-search-wrapper">
+                                    <Search size={16} color="var(--muted)" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by student name, admission no, staff name, or ID..."
+                                        value={globalSearch}
+                                        onChange={(e) => setGlobalSearch(e.target.value)}
+                                        className="admin-search-input"
+                                    />
+                                    {globalSearch && (
+                                        <button type="button" className="clear-search-btn" onClick={() => setGlobalSearch('')}><X size={14} /></button>
+                                    )}
+                                </div>
 
-                            <h4 style={{ marginTop: '24px' }}>Quick Directory Search</h4>
-                            <div className="admin-search-wrapper">
-                                <Search size={16} color="var(--text-muted)" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by student name, admission no, staff name, or ID..."
-                                    value={globalSearch}
-                                    onChange={(e) => setGlobalSearch(e.target.value)}
-                                    className="admin-search-input"
-                                />
-                                {globalSearch && (
-                                    <button className="clear-search-btn" onClick={() => setGlobalSearch('')}><X size={14} /></button>
+                                {globalSearch.trim() !== '' && (
+                                    <div className="search-results-box">
+                                        <h5>Search Results for "{globalSearch}"</h5>
+
+                                        <div className="search-column-grid">
+                                            <div>
+                                                <strong className="sub-title">Matched Students ({searchMatchStudents.length})</strong>
+                                                {searchMatchStudents.length === 0 ? <p className="no-res">No students found.</p> : (
+                                                    <ul className="search-res-list">
+                                                        {searchMatchStudents.map(st => (
+                                                            <li key={st.id}>
+                                                                <div>
+                                                                    <strong>{st.name}</strong> ({st.className} - {st.sectionName})
+                                                                    <small>Adm: #{st.admissionNo} • DOB: {st.dob}</small>
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <strong className="sub-title">Matched Staff ({searchMatchStaff.length})</strong>
+                                                {searchMatchStaff.length === 0 ? <p className="no-res">No staff found.</p> : (
+                                                    <ul className="search-res-list">
+                                                        {searchMatchStaff.map(stf => (
+                                                            <li key={stf.id}>
+                                                                <div>
+                                                                    <strong>{stf.name}</strong> ({stf.department})
+                                                                    <small>ID: {stf.staffId} • Email: {stf.email}</small>
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-
-                            {globalSearch.trim() !== '' && (
-                                <div className="search-results-box">
-                                    <h5>Search Results for "{globalSearch}"</h5>
-
-                                    <div className="search-column-grid">
-                                        <div>
-                                            <strong className="sub-title">Matched Students ({searchMatchStudents.length})</strong>
-                                            {searchMatchStudents.length === 0 ? <p className="no-res">No students found.</p> : (
-                                                <ul className="search-res-list">
-                                                    {searchMatchStudents.map(st => (
-                                                        <li key={st.id}>
-                                                            <div>
-                                                                <strong>{st.name}</strong> ({st.className} - {st.sectionName})
-                                                                <small>Adm: #{st.admissionNo} • DOB: {st.dob}</small>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <strong className="sub-title">Matched Staff ({searchMatchStaff.length})</strong>
-                                            {searchMatchStaff.length === 0 ? <p className="no-res">No staff found.</p> : (
-                                                <ul className="search-res-list">
-                                                    {searchMatchStaff.map(stf => (
-                                                        <li key={stf.id}>
-                                                            <div>
-                                                                <strong>{stf.name}</strong> ({stf.department})
-                                                                <small>ID: {stf.staffId} • Email: {stf.email}</small>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </section>
                     )}
 
                     {/* SYSTEM CONTROLS & EMERGENCY BROADCAST */}
@@ -2486,82 +2445,82 @@ export default function AdminDashboard() {
 
                                 {/* CREATE FORM */}
                                 {showAddStaffForm && (
-                                <form ref={staffFormRef} onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
-                                    <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div className="form-section-title" style={{ margin: 0 }}>New Staff Member</div>
-                                        <button type="button" className="directory-form-close-btn" onClick={() => setShowAddStaffForm(false)} title="Close">
-                                            <X size={16} />
+                                    <form ref={staffFormRef} onSubmit={handleAddStaff} className="admin-form-grid" style={{ marginBottom: '20px' }}>
+                                        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div className="form-section-title" style={{ margin: 0 }}>New Staff Member</div>
+                                            <button type="button" className="directory-form-close-btn" onClick={() => setShowAddStaffForm(false)} title="Close">
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Full Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Dr. John Doe"
+                                                value={staffForm.name}
+                                                onChange={e => setStaffForm({ ...staffForm, name: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Staff ID</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. STF102"
+                                                value={staffForm.staffId}
+                                                onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Password</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Login password"
+                                                value={staffForm.password}
+                                                onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Department</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Mathematics"
+                                                value={staffForm.department}
+                                                onChange={e => setStaffForm({ ...staffForm, department: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
+                                            <input
+                                                type="email"
+                                                placeholder="staff@school.edu"
+                                                value={staffForm.email}
+                                                onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                                Photo (Auto-compressed to &lt; 500 KB)
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onChange={e => handleImageUpload(e.target.files[0], (base64) => setStaffForm({ ...staffForm, photo: base64 }))}
+                                            />
+                                            {staffForm.photo && (
+                                                <div style={{ marginTop: '6px' }}>
+                                                    <img src={staffForm.photo} alt="Preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button type="submit" className="add-notice-btn" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+                                            <PlusCircle size={15} /> Add Staff Member
                                         </button>
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Full Name</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Dr. John Doe"
-                                            value={staffForm.name}
-                                            onChange={e => setStaffForm({ ...staffForm, name: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Staff ID</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. STF102"
-                                            value={staffForm.staffId}
-                                            onChange={e => setStaffForm({ ...staffForm, staffId: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Password</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Login password"
-                                            value={staffForm.password}
-                                            onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Department</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Mathematics"
-                                            value={staffForm.department}
-                                            onChange={e => setStaffForm({ ...staffForm, department: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
-                                        <input
-                                            type="email"
-                                            placeholder="staff@school.edu"
-                                            value={staffForm.email}
-                                            onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                            Photo (Auto-compressed to &lt; 500 KB)
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".jpg,.jpeg,.png,.webp"
-                                            onChange={e => handleImageUpload(e.target.files[0], (base64) => setStaffForm({ ...staffForm, photo: base64 }))}
-                                        />
-                                        {staffForm.photo && (
-                                            <div style={{ marginTop: '6px' }}>
-                                                <img src={staffForm.photo} alt="Preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button type="submit" className="add-notice-btn" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
-                                        <PlusCircle size={15} /> Add Staff Member
-                                    </button>
-                                </form>
+                                    </form>
                                 )}
 
                                 {/* DIRECTORY TOOLBAR */}
@@ -2635,107 +2594,107 @@ export default function AdminDashboard() {
 
                                         {filteredStaffList.map(member => (
                                             <div className="directory-card" key={member.id}>
-                                                    {editingStaffId === member.id ? (
-                                                        <div className="staff-edit-form">
-                                                            <input
-                                                                type="text"
-                                                                value={editStaffForm.name}
-                                                                onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
-                                                                placeholder="Name"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={editStaffForm.staffId}
-                                                                onChange={e => setEditStaffForm({ ...editStaffForm, staffId: e.target.value })}
-                                                                placeholder="Staff ID"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={editStaffForm.password}
-                                                                onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })}
-                                                                placeholder="Password"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={editStaffForm.department}
-                                                                onChange={e => setEditStaffForm({ ...editStaffForm, department: e.target.value })}
-                                                                placeholder="Department"
-                                                            />
-                                                            <input
-                                                                type="email"
-                                                                value={editStaffForm.email}
-                                                                onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
-                                                                placeholder="Email"
-                                                            />
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                                                                {editStaffForm.photo && (
-                                                                    <img src={editStaffForm.photo} alt="Preview" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                                                                )}
-                                                                <input
-                                                                    type="file"
-                                                                    accept=".jpg,.jpeg,.png,.webp"
-                                                                    style={{ fontSize: '0.7rem' }}
-                                                                    onChange={e => handleImageUpload(e.target.files[0], (base64) => setEditStaffForm({ ...editStaffForm, photo: base64 }))}
-                                                                />
-                                                            </div>
-                                                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                                                                <button className="save-btn" onClick={() => handleUpdateStaff(member.id)}>
-                                                                    <Check size={12} /> Save
-                                                                </button>
-                                                                <button className="cancel-btn" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => setEditingStaffId(null)}>
-                                                                    <X size={12} /> Cancel
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <button className="directory-delete-corner" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                            <div className="directory-card-top">
-                                                                <div className="directory-avatar-wrap">
-                                                                    {member.photo ? (
-                                                                        <img src={member.photo} alt={member.name} className="directory-avatar-img" />
-                                                                    ) : (
-                                                                        <div className="directory-avatar-fallback">
-                                                                            {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
-                                                                        </div>
-                                                                    )}
-                                                                    <span className="directory-status-dot" title="Active" />
-                                                                </div>
-                                                                <h5 className="directory-card-name">{member.name}</h5>
-                                                                <span className="directory-pill">{member.staffId}</span>
-                                                                <span className="directory-pill directory-pill-alt"><Users size={11} /> {member.department || 'General'}</span>
-                                                            </div>
-
-                                                            {viewStaffId === member.id && (
-                                                                <div className="directory-card-details">
-                                                                    <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
-                                                                    <div className="staff-detail-item"><strong>Email:</strong> {member.email || 'N/A'}</div>
-                                                                </div>
+                                                {editingStaffId === member.id ? (
+                                                    <div className="staff-edit-form">
+                                                        <input
+                                                            type="text"
+                                                            value={editStaffForm.name}
+                                                            onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
+                                                            placeholder="Name"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editStaffForm.staffId}
+                                                            onChange={e => setEditStaffForm({ ...editStaffForm, staffId: e.target.value })}
+                                                            placeholder="Staff ID"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editStaffForm.password}
+                                                            onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })}
+                                                            placeholder="Password"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editStaffForm.department}
+                                                            onChange={e => setEditStaffForm({ ...editStaffForm, department: e.target.value })}
+                                                            placeholder="Department"
+                                                        />
+                                                        <input
+                                                            type="email"
+                                                            value={editStaffForm.email}
+                                                            onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
+                                                            placeholder="Email"
+                                                        />
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                                            {editStaffForm.photo && (
+                                                                <img src={editStaffForm.photo} alt="Preview" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
                                                             )}
-
-                                                            <div className="directory-card-footer">
-                                                                <button className="directory-action-btn view" onClick={() => setViewStaffId(viewStaffId === member.id ? null : member.id)}>
-                                                                    <Eye size={14} /> View
-                                                                </button>
-                                                                {member.email ? (
-                                                                    <a className="directory-action-btn message" href={`mailto:${member.email}`}>
-                                                                        <Mail size={14} /> Message
-                                                                    </a>
+                                                            <input
+                                                                type="file"
+                                                                accept=".jpg,.jpeg,.png,.webp"
+                                                                style={{ fontSize: '0.7rem' }}
+                                                                onChange={e => handleImageUpload(e.target.files[0], (base64) => setEditStaffForm({ ...editStaffForm, photo: base64 }))}
+                                                            />
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                                            <button className="save-btn" onClick={() => handleUpdateStaff(member.id)}>
+                                                                <Check size={12} /> Save
+                                                            </button>
+                                                            <button className="cancel-btn" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => setEditingStaffId(null)}>
+                                                                <X size={12} /> Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <button className="directory-delete-corner" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
+                                                            <Trash2 size={13} />
+                                                        </button>
+                                                        <div className="directory-card-top">
+                                                            <div className="directory-avatar-wrap">
+                                                                {member.photo ? (
+                                                                    <img src={member.photo} alt={member.name} className="directory-avatar-img" />
                                                                 ) : (
-                                                                    <button className="directory-action-btn message" disabled title="No email on file">
-                                                                        <Mail size={14} /> Message
-                                                                    </button>
+                                                                    <div className="directory-avatar-fallback">
+                                                                        {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
+                                                                    </div>
                                                                 )}
-                                                                <button className="directory-action-btn edit" onClick={() => handleStartEditStaff(member)}>
-                                                                    <Edit2 size={14} /> Edit
-                                                                </button>
+                                                                <span className="directory-status-dot" title="Active" />
                                                             </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                            <h5 className="directory-card-name">{member.name}</h5>
+                                                            <span className="directory-pill">{member.staffId}</span>
+                                                            <span className="directory-pill directory-pill-alt"><Users size={11} /> {member.department || 'General'}</span>
+                                                        </div>
+
+                                                        {viewStaffId === member.id && (
+                                                            <div className="directory-card-details">
+                                                                <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
+                                                                <div className="staff-detail-item"><strong>Email:</strong> {member.email || 'N/A'}</div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="directory-card-footer">
+                                                            <button className="directory-action-btn view" onClick={() => setViewStaffId(viewStaffId === member.id ? null : member.id)}>
+                                                                <Eye size={14} /> View
+                                                            </button>
+                                                            {member.email ? (
+                                                                <a className="directory-action-btn message" href={`mailto:${member.email}`}>
+                                                                    <Mail size={14} /> Message
+                                                                </a>
+                                                            ) : (
+                                                                <button className="directory-action-btn message" disabled title="No email on file">
+                                                                    <Mail size={14} /> Message
+                                                                </button>
+                                                            )}
+                                                            <button className="directory-action-btn edit" onClick={() => handleStartEditStaff(member)}>
+                                                                <Edit2 size={14} /> Edit
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -2856,127 +2815,127 @@ export default function AdminDashboard() {
                                     </div>
 
                                     {showAddStudentForm && (
-                                    <form ref={studentFormRef} onSubmit={editingStudentId ? handleUpdateStudent : handleAddStudent} className="student-admission-form">
-                                        <div className="form-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>{editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}</span>
-                                            <button
-                                                type="button"
-                                                className="directory-form-close-btn"
-                                                onClick={() => { setShowAddStudentForm(false); setEditingStudentId(null); setStudentForm(initialStudentForm); }}
-                                                title="Close"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="student-form-grid">
-                                            <div>
-                                                <label>Admission No (User ID)</label>
-                                                <input type="text" placeholder="e.g. ADM2026-001" value={studentForm.admissionNo} onChange={e => setStudentForm({ ...studentForm, admissionNo: e.target.value })} required />
+                                        <form ref={studentFormRef} onSubmit={editingStudentId ? handleUpdateStudent : handleAddStudent} className="student-admission-form">
+                                            <div className="form-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span>{editingStudentId ? `Update Student Details (#${studentForm.admissionNo})` : 'Admission & Credentials'}</span>
+                                                <button
+                                                    type="button"
+                                                    className="directory-form-close-btn"
+                                                    onClick={() => { setShowAddStudentForm(false); setEditingStudentId(null); setStudentForm(initialStudentForm); }}
+                                                    title="Close"
+                                                >
+                                                    <X size={16} />
+                                                </button>
                                             </div>
-                                            <div>
-                                                <label>Admission Date</label>
-                                                <input type="date" value={studentForm.admissionDate} onChange={e => setStudentForm({ ...studentForm, admissionDate: e.target.value })} required />
+                                            <div className="student-form-grid">
+                                                <div>
+                                                    <label>Admission No (User ID)</label>
+                                                    <input type="text" placeholder="e.g. ADM2026-001" value={studentForm.admissionNo} onChange={e => setStudentForm({ ...studentForm, admissionNo: e.target.value })} required />
+                                                </div>
+                                                <div>
+                                                    <label>Admission Date</label>
+                                                    <input type="date" value={studentForm.admissionDate} onChange={e => setStudentForm({ ...studentForm, admissionDate: e.target.value })} required />
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="form-section-title">Personal Details</div>
-                                        <div className="student-form-grid">
-                                            <div>
-                                                <label>Student Name</label>
-                                                <input type="text" placeholder="e.g. Rahul Sharma" value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} required />
+                                            <div className="form-section-title">Personal Details</div>
+                                            <div className="student-form-grid">
+                                                <div>
+                                                    <label>Student Name</label>
+                                                    <input type="text" placeholder="e.g. Rahul Sharma" value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} required />
+                                                </div>
+                                                <div>
+                                                    <label>DOB (Password)</label>
+                                                    <input type="date" value={studentForm.dob} onChange={e => setStudentForm({ ...studentForm, dob: e.target.value })} required />
+                                                </div>
+                                                <div>
+                                                    <label>Blood Group</label>
+                                                    <select value={studentForm.bloodGroup} onChange={e => setStudentForm({ ...studentForm, bloodGroup: e.target.value })}>
+                                                        <option value="">Select Blood Group</option>
+                                                        <option value="A+">A+</option><option value="A-">A-</option>
+                                                        <option value="B+">B+</option><option value="B-">B-</option>
+                                                        <option value="O+">O+</option><option value="O-">O-</option>
+                                                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>Gender</label>
+                                                    <select value={studentForm.gender} onChange={e => setStudentForm({ ...studentForm, gender: e.target.value })}>
+                                                        <option value="">Select Gender</option>
+                                                        <option value="Male">Male</option>
+                                                        <option value="Female">Female</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>Roll Number</label>
+                                                    <input type="text" placeholder="Enter roll number" value={studentForm.rollNumber} onChange={e => setStudentForm({ ...studentForm, rollNumber: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label>Email Address</label>
+                                                    <input type="email" placeholder="Enter email address" value={studentForm.email} onChange={e => setStudentForm({ ...studentForm, email: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label>Status</label>
+                                                    <select value={studentForm.status} onChange={e => setStudentForm({ ...studentForm, status: e.target.value })}>
+                                                        <option value="Active">Active</option>
+                                                        <option value="Inactive">Inactive</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label>Student Photo</label>
+                                                    <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))} />
+                                                    {studentForm.photo && (
+                                                        <div style={{ marginTop: '4px' }}>
+                                                            <img src={studentForm.photo} alt="Student Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label>DOB (Password)</label>
-                                                <input type="date" value={studentForm.dob} onChange={e => setStudentForm({ ...studentForm, dob: e.target.value })} required />
-                                            </div>
-                                            <div>
-                                                <label>Blood Group</label>
-                                                <select value={studentForm.bloodGroup} onChange={e => setStudentForm({ ...studentForm, bloodGroup: e.target.value })}>
-                                                    <option value="">Select Blood Group</option>
-                                                    <option value="A+">A+</option><option value="A-">A-</option>
-                                                    <option value="B+">B+</option><option value="B-">B-</option>
-                                                    <option value="O+">O+</option><option value="O-">O-</option>
-                                                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label>Gender</label>
-                                                <select value={studentForm.gender} onChange={e => setStudentForm({ ...studentForm, gender: e.target.value })}>
-                                                    <option value="">Select Gender</option>
-                                                    <option value="Male">Male</option>
-                                                    <option value="Female">Female</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label>Roll Number</label>
-                                                <input type="text" placeholder="Enter roll number" value={studentForm.rollNumber} onChange={e => setStudentForm({ ...studentForm, rollNumber: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label>Email Address</label>
-                                                <input type="email" placeholder="Enter email address" value={studentForm.email} onChange={e => setStudentForm({ ...studentForm, email: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label>Status</label>
-                                                <select value={studentForm.status} onChange={e => setStudentForm({ ...studentForm, status: e.target.value })}>
-                                                    <option value="Active">Active</option>
-                                                    <option value="Inactive">Inactive</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label>Student Photo</label>
-                                                <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => handleImageUpload(e.target.files[0], (base64) => setStudentForm({ ...studentForm, photo: base64 }))} />
-                                                {studentForm.photo && (
-                                                    <div style={{ marginTop: '4px' }}>
-                                                        <img src={studentForm.photo} alt="Student Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
 
-                                        <div className="form-section-title">Parent / Guardian Information</div>
-                                        <div className="student-form-grid">
-                                            <div>
-                                                <label>Parent / Guardian Name</label>
-                                                <input type="text" placeholder="Parent's Name" value={studentForm.guardianName} onChange={e => setStudentForm({ ...studentForm, guardianName: e.target.value })} required />
+                                            <div className="form-section-title">Parent / Guardian Information</div>
+                                            <div className="student-form-grid">
+                                                <div>
+                                                    <label>Parent / Guardian Name</label>
+                                                    <input type="text" placeholder="Parent's Name" value={studentForm.guardianName} onChange={e => setStudentForm({ ...studentForm, guardianName: e.target.value })} required />
+                                                </div>
+                                                <div>
+                                                    <label>Phone Number</label>
+                                                    <input type="text" placeholder="Student Contact Number" value={studentForm.phone} onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })} required />
+                                                </div>
+                                                <div>
+                                                    <label>Parent Phone</label>
+                                                    <input type="text" placeholder="Enter parent phone" value={studentForm.parentPhone} onChange={e => setStudentForm({ ...studentForm, parentPhone: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label>Relationship</label>
+                                                    <select value={studentForm.relationship} onChange={e => setStudentForm({ ...studentForm, relationship: e.target.value })}>
+                                                        <option value="">Select Relationship</option>
+                                                        <option value="Father">Father</option>
+                                                        <option value="Mother">Mother</option>
+                                                        <option value="Guardian">Guardian</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label>Phone Number</label>
-                                                <input type="text" placeholder="Student Contact Number" value={studentForm.phone} onChange={e => setStudentForm({ ...studentForm, phone: e.target.value })} required />
-                                            </div>
-                                            <div>
-                                                <label>Parent Phone</label>
-                                                <input type="text" placeholder="Enter parent phone" value={studentForm.parentPhone} onChange={e => setStudentForm({ ...studentForm, parentPhone: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label>Relationship</label>
-                                                <select value={studentForm.relationship} onChange={e => setStudentForm({ ...studentForm, relationship: e.target.value })}>
-                                                    <option value="">Select Relationship</option>
-                                                    <option value="Father">Father</option>
-                                                    <option value="Mother">Mother</option>
-                                                    <option value="Guardian">Guardian</option>
-                                                </select>
-                                            </div>
-                                        </div>
 
-                                        <div style={{ marginTop: '4px', width: '100%' }}>
-                                            <label>Address</label>
-                                            <textarea rows="2" placeholder="Enter full address" value={studentForm.address} onChange={e => setStudentForm({ ...studentForm, address: e.target.value })} />
-                                        </div>
+                                            <div style={{ marginTop: '4px', width: '100%' }}>
+                                                <label>Address</label>
+                                                <textarea rows="2" placeholder="Enter full address" value={studentForm.address} onChange={e => setStudentForm({ ...studentForm, address: e.target.value })} />
+                                            </div>
 
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                            <button type="submit" className="add-notice-btn">
-                                                {editingStudentId ? <><RefreshCw size={15} /> Update Student Record</> : <><UserCheck size={15} /> Enroll & Generate Credentials</>}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="cancel-btn"
-                                                onClick={() => { setEditingStudentId(null); setStudentForm(initialStudentForm); setShowAddStudentForm(false); }}
-                                            >
-                                                <X size={14} /> {editingStudentId ? 'Cancel Edit' : 'Close'}
-                                            </button>
-                                        </div>
-                                    </form>
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                                <button type="submit" className="add-notice-btn">
+                                                    {editingStudentId ? <><RefreshCw size={15} /> Update Student Record</> : <><UserCheck size={15} /> Enroll & Generate Credentials</>}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="cancel-btn"
+                                                    onClick={() => { setEditingStudentId(null); setStudentForm(initialStudentForm); setShowAddStudentForm(false); }}
+                                                >
+                                                    <X size={14} /> {editingStudentId ? 'Cancel Edit' : 'Close'}
+                                                </button>
+                                            </div>
+                                        </form>
                                     )}
 
                                     {(() => {
@@ -2989,104 +2948,104 @@ export default function AdminDashboard() {
                                             String(st.rollNumber || '').toLowerCase().includes(dirQuery)
                                         );
                                         return (
-                                    <>
-                                    <h4>Enrolled Students Directory <span className="count-badge">{sectionStudents.length}</span></h4>
+                                            <>
+                                                <h4>Enrolled Students Directory <span className="count-badge">{sectionStudents.length}</span></h4>
 
-                                    <div className="directory-toolbar">
-                                        <input
-                                            type="text"
-                                            placeholder="Search by full name"
-                                            value={studentDirSearch}
-                                            onChange={(e) => setStudentDirSearch(e.target.value)}
-                                            className="directory-search-input"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Search by admission / roll no"
-                                            value={studentDirSearch}
-                                            onChange={(e) => setStudentDirSearch(e.target.value)}
-                                            className="directory-search-input"
-                                        />
-                                        <select className="directory-select" disabled value="">
-                                            <option value="">{selectedClass} - {selectedSection.name}</option>
-                                        </select>
-                                        <button type="button" className="directory-btn-search" onClick={(e) => e.currentTarget.blur()}>
-                                            <Search size={14} /> Search
-                                        </button>
-                                        <button type="button" className="directory-btn-reset" onClick={() => setStudentDirSearch('')}>
-                                            <RefreshCw size={14} /> Reset
-                                        </button>
-                                    </div>
-                                    <p className="directory-showing-text">Showing {visibleStudents.length} of {sectionStudents.length}</p>
-
-                                    <div className="directory-grid">
-                                        <div
-                                            className="directory-add-card"
-                                            onClick={() => {
-                                                setEditingStudentId(null);
-                                                setStudentForm(initialStudentForm);
-                                                setShowAddStudentForm(true);
-                                                setTimeout(() => studentFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                                            }}
-                                        >
-                                            <div className="directory-add-icon"><PlusCircle size={26} /></div>
-                                            <h5>Add New Student</h5>
-                                            <p>Click to enroll a new student</p>
-                                            <span className="directory-add-link">Create Account <ArrowLeft size={13} style={{ transform: 'rotate(180deg)' }} /></span>
-                                        </div>
-
-                                        {visibleStudents.length === 0 ? (
-                                            <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-                                                {dirQuery ? `No students found matching "${studentDirSearch}".` : 'No student records enrolled in this section yet.'}
-                                            </div>
-                                        ) : (
-                                            visibleStudents.map(st => (
-                                                <div key={st.id} className="directory-card">
-                                                    <button className="directory-delete-corner" onClick={() => handleDelete('students_records', st.id)} title="Delete Record">
-                                                        <Trash2 size={13} />
+                                                <div className="directory-toolbar">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by full name"
+                                                        value={studentDirSearch}
+                                                        onChange={(e) => setStudentDirSearch(e.target.value)}
+                                                        className="directory-search-input"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by admission / roll no"
+                                                        value={studentDirSearch}
+                                                        onChange={(e) => setStudentDirSearch(e.target.value)}
+                                                        className="directory-search-input"
+                                                    />
+                                                    <select className="directory-select" disabled value="">
+                                                        <option value="">{selectedClass} - {selectedSection.name}</option>
+                                                    </select>
+                                                    <button type="button" className="directory-btn-search" onClick={(e) => e.currentTarget.blur()}>
+                                                        <Search size={14} /> Search
                                                     </button>
-                                                    <div className="directory-card-top">
-                                                        <div className="directory-avatar-wrap">
-                                                            <img
-                                                                src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
-                                                                alt={st.name}
-                                                                className="directory-avatar-img"
-                                                            />
-                                                            <span
-                                                                className={`directory-status-dot ${(st.status || 'Active').toLowerCase() === 'active' ? '' : 'inactive'}`}
-                                                                title={st.status || 'Active'}
-                                                            />
-                                                        </div>
-                                                        <h5 className="directory-card-name">
-                                                            {st.name}
-                                                            {st.bloodGroup && <span className="blood-badge" style={{ marginLeft: '6px' }}>{st.bloodGroup}</span>}
-                                                        </h5>
-                                                        <span className="directory-pill">R.No: {st.rollNumber || 'N/A'}</span>
-                                                        <span className="directory-pill directory-pill-alt"><GraduationCap size={11} /> {selectedClass} - {selectedSection.name}</span>
+                                                    <button type="button" className="directory-btn-reset" onClick={() => setStudentDirSearch('')}>
+                                                        <RefreshCw size={14} /> Reset
+                                                    </button>
+                                                </div>
+                                                <p className="directory-showing-text">Showing {visibleStudents.length} of {sectionStudents.length}</p>
+
+                                                <div className="directory-grid">
+                                                    <div
+                                                        className="directory-add-card"
+                                                        onClick={() => {
+                                                            setEditingStudentId(null);
+                                                            setStudentForm(initialStudentForm);
+                                                            setShowAddStudentForm(true);
+                                                            setTimeout(() => studentFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                                        }}
+                                                    >
+                                                        <div className="directory-add-icon"><PlusCircle size={26} /></div>
+                                                        <h5>Add New Student</h5>
+                                                        <p>Click to enroll a new student</p>
+                                                        <span className="directory-add-link">Create Account <ArrowLeft size={13} style={{ transform: 'rotate(180deg)' }} /></span>
                                                     </div>
 
-                                                    <div className="directory-card-footer">
-                                                        <button className="directory-action-btn view" onClick={() => setPreviewStudent(st)}>
-                                                            <Eye size={14} /> View
-                                                        </button>
-                                                        {st.email ? (
-                                                            <a className="directory-action-btn message" href={`mailto:${st.email}`}>
-                                                                <Mail size={14} /> Message
-                                                            </a>
-                                                        ) : (
-                                                            <button className="directory-action-btn message" disabled title="No email on file">
-                                                                <Mail size={14} /> Message
-                                                            </button>
-                                                        )}
-                                                        <button className="directory-action-btn edit" onClick={() => startEditingStudent(st)}>
-                                                            <Edit2 size={14} /> Edit
-                                                        </button>
-                                                    </div>
+                                                    {visibleStudents.length === 0 ? (
+                                                        <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+                                                            {dirQuery ? `No students found matching "${studentDirSearch}".` : 'No student records enrolled in this section yet.'}
+                                                        </div>
+                                                    ) : (
+                                                        visibleStudents.map(st => (
+                                                            <div key={st.id} className="directory-card">
+                                                                <button className="directory-delete-corner" onClick={() => handleDelete('students_records', st.id)} title="Delete Record">
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                                <div className="directory-card-top">
+                                                                    <div className="directory-avatar-wrap">
+                                                                        <img
+                                                                            src={st.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                                            alt={st.name}
+                                                                            className="directory-avatar-img"
+                                                                        />
+                                                                        <span
+                                                                            className={`directory-status-dot ${(st.status || 'Active').toLowerCase() === 'active' ? '' : 'inactive'}`}
+                                                                            title={st.status || 'Active'}
+                                                                        />
+                                                                    </div>
+                                                                    <h5 className="directory-card-name">
+                                                                        {st.name}
+                                                                        {st.bloodGroup && <span className="blood-badge" style={{ marginLeft: '6px' }}>{st.bloodGroup}</span>}
+                                                                    </h5>
+                                                                    <span className="directory-pill">R.No: {st.rollNumber || 'N/A'}</span>
+                                                                    <span className="directory-pill directory-pill-alt"><GraduationCap size={11} /> {selectedClass} - {selectedSection.name}</span>
+                                                                </div>
+
+                                                                <div className="directory-card-footer">
+                                                                    <button className="directory-action-btn view" onClick={() => setPreviewStudent(st)}>
+                                                                        <Eye size={14} /> View
+                                                                    </button>
+                                                                    {st.email ? (
+                                                                        <a className="directory-action-btn message" href={`mailto:${st.email}`}>
+                                                                            <Mail size={14} /> Message
+                                                                        </a>
+                                                                    ) : (
+                                                                        <button className="directory-action-btn message" disabled title="No email on file">
+                                                                            <Mail size={14} /> Message
+                                                                        </button>
+                                                                    )}
+                                                                    <button className="directory-action-btn edit" onClick={() => startEditingStudent(st)}>
+                                                                        <Edit2 size={14} /> Edit
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
                                                 </div>
-                                            ))
-                                        )}
-                                    </div>
-                                    </>
+                                            </>
                                         );
                                     })()}
                                 </>
@@ -3811,7 +3770,7 @@ export default function AdminDashboard() {
                                             {staffTimetables
                                                 .filter(tt => (tt.staffId === selectedStaffTT.staffId || tt.staffName === selectedStaffTT.name) && tt.day === selectedStaffDayTT)
                                                 .map(item => (
-                                                    <div key={item.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div key={item.id} style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.85)', borderRadius: '14px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                             <span style={{ background: '#ecfdf5', color: '#059669', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{item.timeSlot}</span>
                                                             <div>
@@ -4043,8 +4002,8 @@ export default function AdminDashboard() {
                             </form>
                         </div>
                     )}
-                </main>
-            </div>
-        </>
+                </div>
+            </main>
+        </div>
     );
 }
