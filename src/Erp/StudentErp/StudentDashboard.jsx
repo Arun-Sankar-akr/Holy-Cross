@@ -203,6 +203,15 @@ export default function StudentDashboard() {
     const last7RafRef = useRef(null);
     const last7FocalKeyRef = useRef(null);
     const [scheduleCalDate, setScheduleCalDate] = useState(() => new Date());
+    const [profileSection, setProfileSection] = useState('all');
+    const [selectedScheduleDate, setSelectedScheduleDate] = useState(() => {
+        const now = new Date();
+        return [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0')
+        ].join('-');
+    });
 
     const [uploadingTaskId, setUploadingTaskId] = useState(null);
     const [pdfBase64Map, setPdfBase64Map] = useState({});
@@ -350,6 +359,14 @@ export default function StudentDashboard() {
 
         localStorage.setItem('studentReminders', JSON.stringify(updated));
         setReminders(updated);
+
+        // Jump the calendar to the day that was just scheduled
+        const [savedYear, savedMonth] = reminderDate.split('-').map(Number);
+        if (savedYear && savedMonth) {
+            setScheduleCalDate(new Date(savedYear, savedMonth - 1, 1));
+            setSelectedScheduleDate(reminderDate);
+        }
+
         setReminderTitle('');
         setReminderDate('');
         setReminderTime('');
@@ -1075,20 +1092,30 @@ export default function StudentDashboard() {
             .filter(Boolean)
     );
 
-    const attendanceByDate = attendanceRecords.reduce((map, record) => {
+    // Forenoon + Afternoon are combined per day (same rule as the counts above):
+    //   both present -> 'present'   both absent -> 'absent'
+    //   one present, one absent -> 'half'  (Half Day Present)
+    const attendanceSessionsByDate = attendanceRecords.reduce((map, record) => {
         const dateKey = normalizeAttendanceDate(record.date);
         if (!dateKey) return map;
 
         const status = String(record.status || '').trim().toLowerCase();
+        const sessionKey = String(record.session || '').trim().toLowerCase() === 'afternoon' ? 'afternoon' : 'forenoon';
 
-        if (!map[dateKey]) {
-            map[dateKey] = status;
-        } else if (status === 'absent') {
-            map[dateKey] = 'absent';
-        } else if (status === 'present' && map[dateKey] !== 'absent') {
-            map[dateKey] = 'present';
+        if (!map[dateKey]) map[dateKey] = { forenoon: null, afternoon: null };
+        map[dateKey][sessionKey] = status;
+        return map;
+    }, {});
+
+    const attendanceByDate = Object.entries(attendanceSessionsByDate).reduce((map, [dateKey, sessions]) => {
+        const { forenoon, afternoon } = sessions;
+        if (forenoon && afternoon) {
+            if (forenoon === 'present' && afternoon === 'present') map[dateKey] = 'present';
+            else if (forenoon === 'absent' && afternoon === 'absent') map[dateKey] = 'absent';
+            else map[dateKey] = 'half';
+        } else {
+            map[dateKey] = forenoon || afternoon || '';
         }
-
         return map;
     }, {});
 
@@ -1100,8 +1127,104 @@ export default function StudentDashboard() {
         if (dateKey === todayKey) return 'today';
         if (status === 'present') return 'attendance-present';
         if (status === 'absent') return 'attendance-absent';
+        if (status === 'half') return 'attendance-half';
         if (holidayDateSet.has(dateKey)) return 'attendance-holiday';
         return 'attendance-unmarked';
+    };
+
+    // ---- Schedules calendar: everything that happens on each date ----
+    // Staff deadlines (class_assignments.dueDate), the student's own schedules
+    // (reminders) and notices are grouped by YYYY-MM-DD so the calendar can put
+    // markers on the dates and show the full details when a date is clicked.
+    const toScheduleDateKey = (value) => {
+        if (!value) return '';
+        const direct = normalizeAttendanceDate(value);
+        if (direct) return direct;
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? '' : getLocalDateKey(parsed);
+    };
+
+    const dateKeyToDate = (key) => {
+        const [y, m, d] = String(key).split('-').map(Number);
+        return new Date(y, (m || 1) - 1, d || 1);
+    };
+
+    const scheduleTodayKey = getLocalDateKey(new Date());
+    const scheduleEventsByDate = {};
+    const pushScheduleEvent = (key, event) => {
+        if (!key) return;
+        if (!scheduleEventsByDate[key]) scheduleEventsByDate[key] = [];
+        scheduleEventsByDate[key].push(event);
+    };
+
+    studentAssignments.forEach((task) => {
+        const key = toScheduleDateKey(task.dueDate);
+        const submitted = submissionsList.some((sub) => sub.taskId === task.id);
+        const daysLeft = key ? Math.round((dateKeyToDate(key) - dateKeyToDate(scheduleTodayKey)) / 86400000) : 0;
+        pushScheduleEvent(key, {
+            kind: 'deadline',
+            id: task.id,
+            title: task.title,
+            subject: task.subject,
+            staffName: task.staffName,
+            type: task.type,
+            submitted,
+            overdue: !submitted && daysLeft < 0,
+            daysLeft,
+            raw: task
+        });
+    });
+
+    reminders.forEach((item) => {
+        pushScheduleEvent(toScheduleDateKey(item.date), {
+            kind: 'reminder',
+            id: item.id,
+            title: item.title,
+            time: item.time,
+            note: item.note
+        });
+    });
+
+    announcementsList.forEach((item) => {
+        pushScheduleEvent(toScheduleDateKey(item.createdAt || item.date), {
+            kind: 'notice',
+            id: item.id,
+            title: item.title || item.content || item.message,
+            raw: item
+        });
+    });
+
+    const selectedDayEvents = scheduleEventsByDate[selectedScheduleDate] || [];
+    const selectedDayDeadlines = selectedDayEvents.filter((e) => e.kind === 'deadline');
+    const selectedDayReminders = selectedDayEvents
+        .filter((e) => e.kind === 'reminder')
+        .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+    const selectedDayNotices = selectedDayEvents.filter((e) => e.kind === 'notice');
+    const selectedDayHoliday = holidaysList.find((h) => normalizeAttendanceDate(h.date) === selectedScheduleDate);
+    const selectedDayAttendance = attendanceByDate[selectedScheduleDate];
+    const selectedDayLabel = selectedScheduleDate
+        ? dateKeyToDate(selectedScheduleDate).toLocaleDateString('en-IN', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        })
+        : '';
+    const isSelectedDayEmpty =
+        selectedDayEvents.length === 0 && !selectedDayHoliday &&
+        selectedDayAttendance !== 'present' && selectedDayAttendance !== 'absent' && selectedDayAttendance !== 'half';
+    const selectedDaySessions = attendanceSessionsByDate[selectedScheduleDate];
+    const sessionWord = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Not marked');
+
+    const getDeadlineStatus = (event) => {
+        if (event.submitted) return { text: 'Submitted', cls: 'done' };
+        if (event.overdue) return { text: 'Overdue', cls: 'overdue' };
+        if (event.daysLeft === 0) return { text: 'Due today', cls: 'soon' };
+        if (event.daysLeft === 1) return { text: 'Due tomorrow', cls: 'soon' };
+        return { text: `Due in ${event.daysLeft} days`, cls: 'upcoming' };
+    };
+
+    // Opens the "Add Schedule" popup with the date already filled in
+    const openAddSchedule = (dateKey) => {
+        setReminderDate(dateKey || selectedScheduleDate || scheduleTodayKey);
+        setShowReminderModal(true);
     };
 
     // Day-chip strip: 7 days before today, today, and 7 days after — built as plain
@@ -1124,14 +1247,16 @@ export default function StudentDashboard() {
         const state =
             markedStatus === 'present' ? 'present' :
                 markedStatus === 'absent' ? 'absent' :
-                    isHoliday ? 'holiday' : 'off';
+                    markedStatus === 'half' ? 'half' :
+                        isHoliday ? 'holiday' : 'off';
 
         const label = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
         const statusText =
             state === 'present' ? 'Present' :
                 state === 'absent' ? 'Absent' :
-                    state === 'holiday' ? 'Holiday' :
-                        isFuture ? 'Upcoming' : 'Attendance not marked';
+                    state === 'half' ? 'Half Day Present' :
+                        state === 'holiday' ? 'Holiday' :
+                            isFuture ? 'Upcoming' : 'Attendance not marked';
 
         const fullDateLabel = dayDate.toLocaleDateString('en-US', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -1335,6 +1460,24 @@ export default function StudentDashboard() {
         },
     ];
 
+    const printProfile = () => {
+        // The print stylesheet shows only .profile-print-area (a clean A4 record
+        // sheet) and hides the on-screen dashboard. A temporary portrait @page
+        // rule is added for this one job and removed afterwards.
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'profile-print-page-style';
+        pageStyle.textContent = '@page { size: A4 portrait !important; margin: 8mm !important; }';
+        document.head.appendChild(pageStyle);
+
+        const cleanup = () => {
+            document.getElementById('profile-print-page-style')?.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
+
+        setTimeout(() => window.print(), 80);
+    };
+
     const printTimetable = () => {
         // The global @media print rule hides everything except a couple of
         // explicitly-allowed containers, and the page size is fixed to A4
@@ -1489,7 +1632,8 @@ export default function StudentDashboard() {
                     }
                     .receipt-modal-overlay, .receipt-modal-overlay *,
                     .hall-ticket-preview, .hall-ticket-preview *,
-                    .timetable-print-area, .timetable-print-area * {
+                    .timetable-print-area, .timetable-print-area *,
+                    .profile-print-area, .profile-print-area * {
                         visibility: visible !important;
                     }
                     .timetable-print-area {
@@ -2251,7 +2395,7 @@ export default function StudentDashboard() {
                                         <div className="ps-panel">
                                             <div className="ps-panel-header">
                                                 <h3>Schedules</h3>
-                                                <button className="ps-add-btn" onClick={() => setShowReminderModal(true)}>+ Add New</button>
+                                                <button className="ps-add-btn" onClick={() => openAddSchedule()}>+ Add Schedule</button>
                                             </div>
 
                                             <div className="ps-mini-cal-head">
@@ -2311,24 +2455,152 @@ export default function StudentDashboard() {
                                                     const attendanceClass = getCalendarAttendanceClass(year, monthIndex, dayNum);
                                                     const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                                                     const status = attendanceByDate[dateKey];
+                                                    const dayEvents = scheduleEventsByDate[dateKey] || [];
+                                                    const hasDeadline = dayEvents.some((ev) => ev.kind === 'deadline');
+                                                    const hasOverdueDeadline = dayEvents.some((ev) => ev.kind === 'deadline' && ev.overdue);
+                                                    const hasReminder = dayEvents.some((ev) => ev.kind === 'reminder');
+                                                    const isSelected = dateKey === selectedScheduleDate;
                                                     const statusLabel =
                                                         attendanceClass === 'attendance-present' ? 'Present' :
-                                                            attendanceClass === 'attendance-absent' ? 'Absent' :
-                                                                attendanceClass === 'attendance-holiday' ? 'Holiday' :
-                                                                    attendanceClass === 'today' ? 'Today / Attendance not marked' :
-                                                                        'Attendance not marked';
+                                                            attendanceClass === 'attendance-half' ? 'Half Day Present' :
+                                                                attendanceClass === 'attendance-absent' ? 'Absent' :
+                                                                    attendanceClass === 'attendance-holiday' ? 'Holiday' :
+                                                                        attendanceClass === 'today' ? 'Today / Attendance not marked' :
+                                                                            'Attendance not marked';
 
                                                     return (
-                                                        <span
+                                                        <button
+                                                            type="button"
                                                             key={dateKey}
-                                                            className={`ps-mini-cal-day ${attendanceClass}`}
-                                                            title={`${dateKey} — ${statusLabel}`}
-                                                            aria-label={`${dateKey} — ${statusLabel}`}
+                                                            className={`ps-mini-cal-day ${attendanceClass}${isSelected ? ' selected' : ''}${hasDeadline ? ' has-deadline' : ''}`}
+                                                            onClick={() => setSelectedScheduleDate(dateKey)}
+                                                            aria-pressed={isSelected}
+                                                            title={`${dateKey} — ${statusLabel}${hasDeadline ? ' • Deadline' : ''}${hasReminder ? ' • My schedule' : ''}`}
+                                                            aria-label={`${dateKey} — ${statusLabel}${hasDeadline ? ', deadline' : ''}${hasReminder ? ', personal schedule' : ''}`}
                                                         >
                                                             {dayNum}
-                                                        </span>
+                                                            {(hasDeadline || hasReminder) && (
+                                                                <span className="ps-cal-dots" aria-hidden="true">
+                                                                    {hasDeadline && <i className={`ps-cal-dot ${hasOverdueDeadline ? 'overdue' : 'deadline'}`} />}
+                                                                    {hasReminder && <i className="ps-cal-dot reminder" />}
+                                                                </span>
+                                                            )}
+                                                        </button>
                                                     );
                                                 })}
+                                            </div>
+
+                                            <div className="ps-cal-legend">
+                                                <span><i className="ps-cal-dot deadline" /> Staff deadline</span>
+                                                <span><i className="ps-cal-dot overdue" /> Overdue</span>
+                                                <span><i className="ps-cal-dot reminder" /> My schedule</span>
+                                            </div>
+
+                                            <div className="ps-day-detail">
+                                                <div className="ps-day-detail-head">
+                                                    <div>
+                                                        <h4>{selectedDayLabel}</h4>
+                                                        {selectedScheduleDate === scheduleTodayKey && <span className="ps-day-today-chip">Today</span>}
+                                                    </div>
+                                                    <button type="button" className="ps-day-add-btn" onClick={() => openAddSchedule(selectedScheduleDate)}>
+                                                        + Add
+                                                    </button>
+                                                </div>
+
+                                                <div className="ps-day-detail-list">
+                                                    {selectedDayHoliday && (
+                                                        <div className="ps-day-row holiday">
+                                                            <span className="ps-day-row-icon"><Sparkles size={13} /></span>
+                                                            <div className="ps-day-row-main">
+                                                                <strong>Holiday</strong>
+                                                                <span>{selectedDayHoliday.occasion || selectedDayHoliday.name || 'School holiday'}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {(selectedDayAttendance === 'present' || selectedDayAttendance === 'absent' || selectedDayAttendance === 'half') && (
+                                                        <div className={`ps-day-row attendance-${selectedDayAttendance}`}>
+                                                            <span className="ps-day-row-icon">
+                                                                {selectedDayAttendance === 'absent' ? <XCircle size={13} /> : <Check size={13} />}
+                                                            </span>
+                                                            <div className="ps-day-row-main">
+                                                                <strong>Attendance</strong>
+                                                                <span>
+                                                                    {selectedDayAttendance === 'present' ? 'Present' : selectedDayAttendance === 'absent' ? 'Absent' : 'Half Day Present'}
+                                                                    {selectedDayAttendance === 'half' && selectedDaySessions
+                                                                        ? ` • Forenoon ${sessionWord(selectedDaySessions.forenoon)}, Afternoon ${sessionWord(selectedDaySessions.afternoon)}`
+                                                                        : ''}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {selectedDayDeadlines.map((event) => {
+                                                        const status = getDeadlineStatus(event);
+                                                        return (
+                                                            <div
+                                                                key={`deadline-${event.id}`}
+                                                                className={`ps-day-row deadline ${status.cls}`}
+                                                                onClick={() => setDetailModalContent(event.raw)}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                            >
+                                                                <span className="ps-day-row-icon"><FileText size={13} /></span>
+                                                                <div className="ps-day-row-main">
+                                                                    <strong>{event.title}</strong>
+                                                                    <span>
+                                                                        Deadline{event.type ? ` • ${event.type}` : ''}
+                                                                        {event.subject ? ` • ${event.subject}` : ''}
+                                                                        {event.staffName ? ` • ${event.staffName}` : ''}
+                                                                    </span>
+                                                                </div>
+                                                                <span className={`ps-day-status ${status.cls}`}>{status.text}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {selectedDayReminders.map((event) => (
+                                                        <div key={`reminder-${event.id}`} className="ps-day-row reminder">
+                                                            <span className="ps-day-row-icon"><Clock size={13} /></span>
+                                                            <div className="ps-day-row-main">
+                                                                <strong>{event.title}</strong>
+                                                                <span>
+                                                                    My schedule{event.time ? ` • ${event.time}` : ''}
+                                                                    {event.note ? ` • ${event.note}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                className="ps-day-row-delete"
+                                                                onClick={() => deleteReminder(event.id)}
+                                                                title="Delete this schedule"
+                                                                aria-label="Delete this schedule"
+                                                            >
+                                                                <X size={13} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+
+                                                    {selectedDayNotices.map((event) => (
+                                                        <div
+                                                            key={`notice-${event.id}`}
+                                                            className="ps-day-row notice"
+                                                            onClick={() => setDetailModalContent(event.raw)}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                        >
+                                                            <span className="ps-day-row-icon"><Bell size={13} /></span>
+                                                            <div className="ps-day-row-main">
+                                                                <strong>Notice posted</strong>
+                                                                <span>{event.title}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+
+                                                    {isSelectedDayEmpty && (
+                                                        <p className="ps-day-empty">Nothing scheduled for this day.</p>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="ps-exams-header">Exams</div>
@@ -3365,10 +3637,10 @@ export default function StudentDashboard() {
                             ];
 
                             const fieldGroups = [
-                                { title: 'Personal Information', icon: User, tone: 'primary', fields: personalFields },
-                                { title: 'Academic Information', icon: BookOpen, tone: 'cyan', fields: academicFields },
-                                { title: 'Contact Information', icon: FileText, tone: 'emerald', fields: contactFields },
-                                { title: 'Parent / Guardian Details', icon: Award, tone: 'amber', fields: guardianFields },
+                                { id: 'personal', short: 'Personal', title: 'Personal Information', icon: User, tone: 'primary', fields: personalFields },
+                                { id: 'academic', short: 'Academic', title: 'Academic Information', icon: BookOpen, tone: 'cyan', fields: academicFields },
+                                { id: 'contact', short: 'Contact', title: 'Contact Information', icon: FileText, tone: 'emerald', fields: contactFields },
+                                { id: 'guardian', short: 'Guardian', title: 'Parent / Guardian Details', icon: Award, tone: 'amber', fields: guardianFields },
                             ];
 
                             const feeStatusLabel = feeRecords.length === 0
@@ -3406,31 +3678,44 @@ export default function StudentDashboard() {
                                 },
                             ];
 
-                            return (
-                                <div className="profile-tab-wrap">
-                                    <div className="profile-banner-card">
-                                        <div className="profile-banner-bg" />
-                                        <div className="profile-banner-main">
-                                            <div className="profile-avatar-xl">
-                                                {profilePhoto ? (
-                                                    <img src={profilePhoto} alt={studentData.name} />
-                                                ) : (
-                                                    <User size={44} />
-                                                )}
-                                            </div>
+                            const allProfileFields = fieldGroups.flatMap((g) => g.fields);
+                            const filledProfileFields = allProfileFields.filter(([, v]) => v && v !== '—').length;
+                            const profileCompleteness = allProfileFields.length
+                                ? Math.round((filledProfileFields / allProfileFields.length) * 100)
+                                : 0;
+                            const visibleGroups = profileSection === 'all'
+                                ? fieldGroups
+                                : fieldGroups.filter((g) => g.id === profileSection);
+                            const profileIdLabel = `#HCMS${(studentData.rollNo || '00000').toString().padStart(4, '0')}`;
+                            const printSummary = [
+                                ['Attendance', hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : '—'],
+                                ['Average Score', averageScore !== 'N/A' ? `${averageScore}%` : '—'],
+                                ['Class Rank', studentRank ? `#${studentRank}` : '—'],
+                                ['Fee Status', feeStatusLabel],
+                            ];
 
-                                            <div className="profile-banner-text">
-                                                <span className="profile-id-chip">
-                                                    <Sparkles size={11} /> #HCMS{(studentData.rollNo || '00000').toString().padStart(4, '0')}
-                                                </span>
+                            return (
+                                <div className="pf-wrap">
+                                    <div className="pf-layout">
+                                        <aside className="pf-side">
+                                            <div className="pf-idcard">
+                                                <div className="pf-idcard-cover" />
+                                                <div className="pf-avatar">
+                                                    {profilePhoto ? (
+                                                        <img src={profilePhoto} alt={studentData.name} />
+                                                    ) : (
+                                                        <User size={42} />
+                                                    )}
+                                                </div>
+                                                <span className="pf-id-chip"><Sparkles size={11} /> {profileIdLabel}</span>
                                                 <h2>{studentData.name || 'Student'}</h2>
-                                                <p className="profile-banner-sub">
+                                                <p className="pf-class-line">
                                                     Class {classLabel}
                                                     {sectionLabel !== '—' ? ` • Section ${sectionLabel}` : ''}
-                                                    {admissionNo !== '—' ? ` • Adm. No ${admissionNo}` : ''}
                                                 </p>
+                                                {admissionNo !== '—' && <p className="pf-adm-line">Admission No: {admissionNo}</p>}
 
-                                                <div className="profile-chip-row">
+                                                <div className="pf-badges">
                                                     <span className={`profile-status-chip ${isDefaulter ? 'is-alert' : 'is-ok'}`}>
                                                         <CheckCircle size={11} />
                                                         {hasStaffSubmittedAttendance ? `Attendance ${rawAttendanceRate}%` : 'Attendance Pending'}
@@ -3438,97 +3723,167 @@ export default function StudentDashboard() {
                                                     <span className={`profile-status-chip ${hasFeeClearance ? 'is-ok' : 'is-warn'}`}>
                                                         <Receipt size={11} /> Fees: {feeStatusLabel}
                                                     </span>
-                                                    <span className="profile-status-chip is-info">
-                                                        <Award size={11} />
-                                                        {averageScore !== 'N/A' ? `Avg ${averageScore}%` : 'No results yet'}
-                                                    </span>
+                                                </div>
+
+                                                <div className="pf-complete">
+                                                    <div className="pf-complete-head">
+                                                        <span>Profile completeness</span>
+                                                        <strong>{profileCompleteness}%</strong>
+                                                    </div>
+                                                    <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
+                                                    <small>{filledProfileFields} of {allProfileFields.length} details filled by the office</small>
                                                 </div>
                                             </div>
 
-                                            <div className="profile-banner-actions">
-                                                <button
-                                                    type="button"
-                                                    className="profile-action-btn ghost"
-                                                    onClick={() => setActiveTab('marks')}
-                                                >
-                                                    <Award size={14} /> Exam Results
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="profile-action-btn ghost"
-                                                    onClick={() => setActiveTab('attendance')}
-                                                >
-                                                    <BarChart2 size={14} /> Attendance
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="profile-action-btn solid"
-                                                    onClick={() => window.print()}
-                                                >
+                                            <div className="pf-actions">
+                                                <button type="button" className="pf-btn solid" onClick={printProfile}>
                                                     <Printer size={14} /> Print Profile
                                                 </button>
+                                                <button type="button" className="pf-btn" onClick={() => setActiveTab('marks')}>
+                                                    <Award size={14} /> Exam Results
+                                                </button>
+                                                <button type="button" className="pf-btn" onClick={() => setActiveTab('attendance')}>
+                                                    <BarChart2 size={14} /> Attendance
+                                                </button>
+                                                <button type="button" className="pf-btn" onClick={() => setActiveTab('fees-history')}>
+                                                    <Receipt size={14} /> Fee History
+                                                </button>
+                                            </div>
+                                        </aside>
+
+                                        <section className="pf-main">
+                                            {!liveStudentRecord && (
+                                                <div className="profile-sync-note">
+                                                    <AlertTriangle size={15} />
+                                                    <span>
+                                                        Your detailed school record is still syncing. Fields shown as “—” will fill
+                                                        in automatically once the office record loads.
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="pf-stats">
+                                                {quickStats.map((stat) => {
+                                                    const StatIcon = stat.icon;
+                                                    return (
+                                                        <div className={`pf-stat tone-${stat.tone}`} key={stat.label}>
+                                                            <span className="pf-stat-icon"><StatIcon size={16} /></span>
+                                                            <div>
+                                                                <span className="pf-stat-label">{stat.label}</span>
+                                                                <strong className="pf-stat-value">{stat.value}</strong>
+                                                                <span className="pf-stat-hint">{stat.hint}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="pf-tabs" role="tablist">
+                                                <button
+                                                    type="button"
+                                                    role="tab"
+                                                    aria-selected={profileSection === 'all'}
+                                                    className={`pf-tab ${profileSection === 'all' ? 'active' : ''}`}
+                                                    onClick={() => setProfileSection('all')}
+                                                >All Details</button>
+                                                {fieldGroups.map((g) => (
+                                                    <button
+                                                        type="button"
+                                                        role="tab"
+                                                        aria-selected={profileSection === g.id}
+                                                        key={g.id}
+                                                        className={`pf-tab ${profileSection === g.id ? 'active' : ''}`}
+                                                        onClick={() => setProfileSection(g.id)}
+                                                    >{g.short}</button>
+                                                ))}
+                                            </div>
+
+                                            <div className="pf-sections">
+                                                {visibleGroups.map((group) => {
+                                                    const GroupIcon = group.icon;
+                                                    return (
+                                                        <div className={`pf-section tone-${group.tone}`} key={group.id}>
+                                                            <div className="pf-section-head">
+                                                                <span className="pf-section-icon"><GroupIcon size={15} /></span>
+                                                                <h3>{group.title}</h3>
+                                                            </div>
+                                                            <dl className="pf-fields">
+                                                                {group.fields.map(([label, value]) => (
+                                                                    <div className={`pf-field ${label === 'Address' ? 'wide' : ''}`} key={label}>
+                                                                        <dt>{label}</dt>
+                                                                        <dd className={value === '—' ? 'is-empty' : ''}>{value}</dd>
+                                                                    </div>
+                                                                ))}
+                                                            </dl>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="profile-note-footer">
+                                                <FileText size={14} />
+                                                <span>
+                                                    These details are maintained by the school office. If anything here is
+                                                    incorrect, please contact your class advisor to have the record updated.
+                                                </span>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    {/* Print-only record sheet (hidden on screen, shown by @media print) */}
+                                    <div className="profile-print-area">
+                                        <div className="pp-head">
+                                            <img src={logo} alt="School Emblem" />
+                                            <div>
+                                                <h1>{HALL_TICKET_SCHOOL_NAME}</h1>
+                                                <p>{HALL_TICKET_SCHOOL_TAGLINE}</p>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div className="profile-stat-strip">
-                                        {quickStats.map(stat => {
-                                            const StatIcon = stat.icon;
-                                            return (
-                                                <div className={`profile-stat-card tone-${stat.tone}`} key={stat.label}>
-                                                    <div className="profile-stat-icon">
-                                                        <StatIcon size={16} />
-                                                    </div>
-                                                    <div className="profile-stat-body">
-                                                        <span className="profile-stat-label">{stat.label}</span>
-                                                        <strong className="profile-stat-value">{stat.value}</strong>
-                                                        <span className="profile-stat-hint">{stat.hint}</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {!liveStudentRecord && (
-                                        <div className="profile-sync-note">
-                                            <AlertTriangle size={15} />
-                                            <span>
-                                                Your detailed school record is still syncing. Fields shown as “—” will fill
-                                                in automatically once the office record loads.
-                                            </span>
+                                        <div className="pp-titlebar">
+                                            <h2>STUDENT PROFILE</h2>
+                                            <span>Generated: {new Date().toLocaleDateString('en-IN')}</span>
                                         </div>
-                                    )}
 
-                                    <div className="profile-detail-grid">
-                                        {fieldGroups.map(group => {
-                                            const GroupIcon = group.icon;
-                                            return (
-                                                <div className={`profile-detail-card tone-${group.tone}`} key={group.title}>
-                                                    <div className="profile-detail-head">
-                                                        <span className="profile-detail-icon">
-                                                            <GroupIcon size={15} />
-                                                        </span>
-                                                        <h3>{group.title}</h3>
-                                                    </div>
-                                                    <dl className="profile-field-list">
-                                                        {group.fields.map(([label, value]) => (
-                                                            <div className="profile-field-row" key={label}>
-                                                                <dt>{label}</dt>
-                                                                <dd className={value === '—' ? 'is-empty' : ''}>{value}</dd>
-                                                            </div>
-                                                        ))}
-                                                    </dl>
+                                        <div className="pp-identity">
+                                            <div className="pp-photo">
+                                                {profilePhoto ? <img src={profilePhoto} alt="" /> : <span>Photo</span>}
+                                            </div>
+                                            <div className="pp-identity-text">
+                                                <h3>{studentData.name || 'Student'}</h3>
+                                                <p>Admission No: <strong>{admissionNo}</strong></p>
+                                                <p>Class: <strong>{classLabel}{sectionLabel !== '—' ? ` - ${sectionLabel}` : ''}</strong></p>
+                                                <p>Student ID: <strong>{profileIdLabel}</strong></p>
+                                            </div>
+                                            <div className="pp-summary">
+                                                {printSummary.map(([label, value]) => (
+                                                    <div key={label}><span>{label}</span><strong>{value}</strong></div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {fieldGroups.map((group) => (
+                                            <div className="pp-section" key={group.id}>
+                                                <h4>{group.title}</h4>
+                                                <div className="pp-grid">
+                                                    {group.fields.map(([label, value]) => (
+                                                        <div className={`pp-cell ${label === 'Address' ? 'wide' : ''}`} key={label}>
+                                                            <span>{label}</span>
+                                                            <strong>{value}</strong>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            </div>
+                                        ))}
 
-                                    <div className="profile-note-footer">
-                                        <FileText size={14} />
-                                        <span>
-                                            These details are maintained by the school office. If anything here is
-                                            incorrect, please contact your class advisor to have the record updated.
-                                        </span>
+                                        <div className="pp-signs">
+                                            <div><i /> <span>Class Teacher</span></div>
+                                            <div><i /> <span>Parent / Guardian</span></div>
+                                            <div>
+                                                <img src={principalSignature} alt="" />
+                                                <span>Principal</span>
+                                            </div>
+                                        </div>
+                                        <p className="pp-foot">Computer-generated student profile — {HALL_TICKET_SCHOOL_NAME}</p>
                                     </div>
                                 </div>
                             );
@@ -3712,14 +4067,14 @@ export default function StudentDashboard() {
                 <div className="quick-preview-overlay">
                     <div className="quick-preview-modal" style={{ maxWidth: '420px' }}>
                         <div className="quick-preview-header">
-                            <h3><Calendar size={16} /> Schedule Personal Reminder</h3>
+                            <h3><Calendar size={16} /> Add Schedule</h3>
                             <button type="button" className="quick-preview-close" onClick={() => setShowReminderModal(false)} aria-label="Close">
                                 <X size={18} />
                             </button>
                         </div>
                         <div className="quick-preview-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div>
-                                <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Reminder Title</label>
+                                <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Schedule Title</label>
                                 <input
                                     type="text"
                                     className="custom-select"
@@ -3765,7 +4120,7 @@ export default function StudentDashboard() {
                         </div>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                             <button type="button" className="submit-pdf-btn" style={{ flex: 1 }} onClick={saveReminder}>
-                                <Check size={14} /> Save Reminder
+                                <Check size={14} /> Save Schedule
                             </button>
                             <button type="button" className="quick-preview-close-btn" style={{ marginTop: 0 }} onClick={() => setShowReminderModal(false)}>
                                 Cancel

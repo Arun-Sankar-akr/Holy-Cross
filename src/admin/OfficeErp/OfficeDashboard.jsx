@@ -60,6 +60,17 @@ export default function OfficeDashboard() {
     const [feeViewMode, setFeeViewMode] = useState('classes');
     const [selectedFeeClass, setSelectedFeeClass] = useState(null);
     const [selectedFeeSection, setSelectedFeeSection] = useState(null);
+    const [feeLedgerOpen, setFeeLedgerOpen] = useState(false);
+    const [feeStatusFilter, setFeeStatusFilter] = useState('all');
+    const [expandedFeeStudent, setExpandedFeeStudent] = useState(null);
+
+    // Bulk "set dues for a whole class" workflow
+    const [assignClass, setAssignClass] = useState('');
+    const [assignSection, setAssignSection] = useState('all');
+    const [assignSearch, setAssignSearch] = useState('');
+    const [assignSelectedIds, setAssignSelectedIds] = useState([]);
+    const [assignForm, setAssignForm] = useState({ term: 'Term 1', totalFee: '' });
+    const [isAssigningFees, setIsAssigningFees] = useState(false);
 
     // Form States
     const [enquiryForm, setEnquiryForm] = useState({ studentName: '', parentName: '', phone: '', grade: '10th Std', notes: '' });
@@ -501,6 +512,237 @@ export default function OfficeDashboard() {
     const dashboardPublishedTickets = hallTicketPublications.filter(item => item.published === true).length;
     const dashboardPaidStudents = studentsList.filter(student => getStudentFeeStatus(student).paid).length;
 
+
+    // ---------------- Fee collection helpers ----------------
+    const formatINR = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    const normFee = (value) => String(value ?? '').trim().toLowerCase();
+    const feeRecordBalance = (record) => {
+        const total = Number(record.totalFee || 0);
+        const paid = Number(record.paidAmount || 0);
+        return Number(record.balance ?? Math.max(total - paid, 0));
+    };
+    const isFeeRecordPaid = (record) => normFee(record.status) === 'paid' || feeRecordBalance(record) <= 0;
+
+    // Class -> Section -> Student tree with each student's fee records attached.
+    // Every fee record is attached to exactly one student (admission no. first,
+    // then name); records that match nobody are kept under their saved class label.
+    const buildFeeTree = () => {
+        const admMap = new Map();
+        const nameMap = new Map();
+        studentsList.forEach((st) => {
+            const a = normFee(st.admissionNo || st.rollNo);
+            const n = normFee(st.name);
+            if (a && !admMap.has(a)) admMap.set(a, st);
+            if (n && !nameMap.has(n)) nameMap.set(n, st);
+        });
+
+        const tree = {};
+        const bucketFor = (cls, sec) => {
+            tree[cls] = tree[cls] || {};
+            tree[cls][sec] = tree[cls][sec] || {};
+            return tree[cls][sec];
+        };
+
+        studentsList.forEach((st) => {
+            const cls = st.className || st.grade;
+            if (!cls) return;
+            const sec = st.sectionName || st.section || 'General';
+            bucketFor(cls, sec)[st.id] = {
+                key: st.id,
+                name: st.name || 'Unnamed',
+                admissionNo: st.admissionNo || st.rollNo || '',
+                phone: st.phone || st.parentPhone || '',
+                records: []
+            };
+        });
+
+        feesList.forEach((item) => {
+            const a = normFee(item.admissionNo || item.rollNo);
+            const n = normFee(item.studentName || item.name);
+            const st = (a && admMap.get(a)) || (n && nameMap.get(n)) || null;
+            if (st) {
+                const cls = st.className || st.grade;
+                const sec = st.sectionName || st.section || 'General';
+                const entry = cls && tree[cls] && tree[cls][sec] && tree[cls][sec][st.id];
+                if (entry) { entry.records.push(item); return; }
+            }
+            const label = String(item.class || '').trim();
+            const idx = label.lastIndexOf(' - ');
+            const cls = (idx > 0 ? label.slice(0, idx) : label) || 'Unassigned';
+            const sec = (idx > 0 ? label.slice(idx + 3) : '') || 'General';
+            const key = `orphan-${a || n || item.id}`;
+            const bucket = bucketFor(cls, sec);
+            if (!bucket[key]) {
+                bucket[key] = {
+                    key,
+                    name: item.studentName || item.name || 'Unknown student',
+                    admissionNo: item.admissionNo || '',
+                    phone: '',
+                    records: []
+                };
+            }
+            bucket[key].records.push(item);
+        });
+
+        const withStats = (entry) => {
+            const billed = entry.records.reduce((s, r) => s + Number(r.totalFee || 0), 0);
+            const collected = entry.records.reduce((s, r) => s + Number(r.paidAmount || 0), 0);
+            const balance = entry.records.reduce((s, r) => s + feeRecordBalance(r), 0);
+            const status = entry.records.length === 0
+                ? 'none'
+                : (entry.records.every(isFeeRecordPaid) ? 'paid' : 'pending');
+            return { ...entry, billed, collected, balance, status };
+        };
+
+        const summarize = (entries) => {
+            const acc = { students: entries.length, billed: 0, collected: 0, balance: 0, pending: 0, paid: 0, unset: 0 };
+            entries.forEach((e) => {
+                acc.billed += e.billed;
+                acc.collected += e.collected;
+                acc.balance += e.balance;
+                if (e.status === 'pending') acc.pending += 1;
+                else if (e.status === 'paid') acc.paid += 1;
+                else acc.unset += 1;
+            });
+            acc.percent = acc.billed ? Math.min(100, Math.round((acc.collected / acc.billed) * 100)) : 0;
+            return acc;
+        };
+
+        return Object.keys(tree)
+            .sort((x, y) => x.localeCompare(y, undefined, { numeric: true }))
+            .map((clsName) => {
+                const sections = Object.keys(tree[clsName])
+                    .sort((x, y) => x.localeCompare(y, undefined, { numeric: true }))
+                    .map((secName) => {
+                        const entries = Object.values(tree[clsName][secName])
+                            .map(withStats)
+                            .sort((x, y) => String(x.name).localeCompare(String(y.name)));
+                        return { name: secName, entries, stats: summarize(entries) };
+                    });
+                const allEntries = sections.flatMap((s) => s.entries);
+                return { name: clsName, sections, stats: summarize(allEntries) };
+            });
+    };
+
+    const feeClassTree = activeTab === 'fees' ? buildFeeTree() : [];
+    const feeClassNode = feeClassTree.find((c) => c.name === selectedFeeClass) || null;
+    const feeSectionNode = feeClassNode ? feeClassNode.sections.find((s) => s.name === selectedFeeSection) || null : null;
+
+    // Bulk dues assignment (whole class / section)
+    const assignSectionOptions = Array.from(new Set(
+        studentsList
+            .filter((s) => (s.className || s.grade) === assignClass)
+            .map((s) => s.sectionName || s.section || 'General')
+    )).sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+
+    const assignClassStudents = studentsList
+        .filter((s) => (s.className || s.grade) === assignClass &&
+            (assignSection === 'all' || (s.sectionName || s.section || 'General') === assignSection))
+        .sort((x, y) => {
+            const sx = String(x.sectionName || x.section || 'General');
+            const sy = String(y.sectionName || y.section || 'General');
+            return sx.localeCompare(sy) || String(x.name || '').localeCompare(String(y.name || ''));
+        });
+
+    const assignVisibleStudents = assignClassStudents.filter((s) => {
+        const q = assignSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [s.name, s.admissionNo, s.rollNo].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+    });
+
+    const assignAllVisibleSelected = assignVisibleStudents.length > 0 &&
+        assignVisibleStudents.every((s) => assignSelectedIds.includes(s.id));
+    const assignSelectedCount = assignClassStudents.filter((s) => assignSelectedIds.includes(s.id)).length;
+    const assignAmount = Number(assignForm.totalFee);
+    const assignAmountValid = Number.isFinite(assignAmount) && assignAmount > 0;
+
+    const toggleAssignStudent = (id) => {
+        setAssignSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    };
+
+    const toggleAssignAllVisible = () => {
+        const ids = assignVisibleStudents.map((s) => s.id);
+        setAssignSelectedIds((prev) => assignAllVisibleSelected
+            ? prev.filter((id) => !ids.includes(id))
+            : Array.from(new Set([...prev, ...ids])));
+    };
+
+    const handleBulkAssignFees = async () => {
+        const targets = assignClassStudents.filter((s) => assignSelectedIds.includes(s.id));
+        if (!assignClass || targets.length === 0 || !assignAmountValid) return;
+
+        const alreadyHaveTerm = targets.filter((s) =>
+            getStudentFeeStatus(s).records.some((r) => String(r.term) === assignForm.term)
+        ).length;
+        if (alreadyHaveTerm > 0 && !window.confirm(
+            `${alreadyHaveTerm} of the selected students already have ${assignForm.term} dues.\nAdd another ${assignForm.term} entry for them too?`
+        )) return;
+
+        setIsAssigningFees(true);
+        try {
+            await Promise.all(targets.map((st) => {
+                const sec = st.sectionName || st.section || 'General';
+                return addDoc(collection(db, 'fee_collections'), {
+                    admissionNo: st.admissionNo || st.rollNo || '',
+                    studentName: st.name || '',
+                    class: `${assignClass} - ${sec}`,
+                    className: assignClass,
+                    sectionName: sec,
+                    term: assignForm.term,
+                    totalFee: assignAmount,
+                    paidAmount: 0,
+                    balance: assignAmount,
+                    status: 'Pending',
+                    createdAt: serverTimestamp()
+                });
+            }));
+            alert(`Fee dues of ${formatINR(assignAmount)} assigned to ${targets.length} student${targets.length === 1 ? '' : 's'}. Student dashboards will show the alert.`);
+            setAssignSelectedIds([]);
+            setAssignForm((prev) => ({ ...prev, totalFee: '' }));
+        } catch (error) {
+            console.error('Error assigning class fees:', error);
+            alert('Could not assign the fees. Please try again.');
+        } finally {
+            setIsAssigningFees(false);
+        }
+    };
+
+    const handleMarkFeePaid = async (item) => {
+        try {
+            await updateDoc(doc(db, 'fee_collections', item.id), {
+                paidAmount: Number(item.totalFee || 0),
+                balance: 0,
+                status: 'Paid'
+            });
+            alert('Marked as Paid! Receipt generated for student.');
+        } catch (error) {
+            console.error('Error marking fee paid:', error);
+            alert('Could not update this record.');
+        }
+    };
+
+    const openFeeClass = (clsName) => {
+        setSelectedFeeClass(clsName);
+        setSelectedFeeSection(null);
+        setExpandedFeeStudent(null);
+        setFeeStatusFilter('all');
+        setFeeViewMode('sections');
+    };
+
+    const openFeeSection = (secName) => {
+        setSelectedFeeSection(secName);
+        setExpandedFeeStudent(null);
+        setFeeStatusFilter('all');
+        setFeeViewMode('students-fee');
+    };
+
+    const goFeeAllClasses = () => {
+        setFeeViewMode('classes');
+        setSelectedFeeClass(null);
+        setSelectedFeeSection(null);
+        setExpandedFeeStudent(null);
+    };
+
     // Group a class's timetable rows by exam; newest published exam comes first
     const getExamGroups = (classTimetables) => {
         const map = {};
@@ -889,224 +1131,422 @@ export default function OfficeDashboard() {
                         </div>
                     )}
 
-                    {/* FEES MODULE WITH DRILL-DOWN & SET FEES */}
+                    {/* FEES MODULE — bulk class dues + collapsible class-wise ledger */}
                     {activeTab === 'fees' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h3>Fee Collection & Class Directory</h3>
-                                    <p className="subtitle">
-                                        {feeViewMode === 'classes' && "Select a class to view its sections and students"}
-                                        {feeViewMode === 'sections' && `Class: ${selectedFeeClass} — Choose a Section`}
-                                        {feeViewMode === 'students-fee' && `Class: ${selectedFeeClass} (${selectedFeeSection}) — Select Student or Assign Fee`}
-                                    </p>
+                        <div className="fx-page">
+                            <div className="fx-hero">
+                                <div className="fx-hero-text">
+                                    <span className="fx-kicker">FEE COLLECTION DESK</span>
+                                    <h3>Fees & Dues</h3>
+                                    <p>Set dues for a whole class in one step, then track collections class by class.</p>
                                 </div>
-                                {feeViewMode !== 'classes' && (
-                                    <button
-                                        className="btn-primary"
-                                        style={{ background: '#64748b', padding: '6px 12px', fontSize: '0.8rem' }}
-                                        onClick={() => {
-                                            if (feeViewMode === 'students-fee') setFeeViewMode('sections');
-                                            else if (feeViewMode === 'sections') { setFeeViewMode('classes'); setSelectedFeeClass(null); }
-                                        }}
-                                    >
-                                        <ArrowLeft size={14} /> Back
-                                    </button>
-                                )}
+                                <div className="fx-hero-stats">
+                                    <div className="fx-stat">
+                                        <span>Total billed</span>
+                                        <strong>{formatINR(dashboardFeeTotal)}</strong>
+                                    </div>
+                                    <div className="fx-stat ok">
+                                        <span>Collected</span>
+                                        <strong>{formatINR(dashboardFeePaid)}</strong>
+                                    </div>
+                                    <div className="fx-stat warn">
+                                        <span>Outstanding</span>
+                                        <strong>{formatINR(dashboardFeeBalance)}</strong>
+                                    </div>
+                                    <div className="fx-stat ring">
+                                        <span>Collection rate</span>
+                                        <strong>{dashboardFeeTotal ? Math.round((dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%</strong>
+                                        <div className="fx-progress"><i style={{ width: `${dashboardFeeTotal ? Math.min(100, (dashboardFeePaid / dashboardFeeTotal) * 100) : 0}%` }} /></div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* VIEW MODE 1: CLASSES */}
-                            {feeViewMode === 'classes' && (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                                    {uniqueClasses.map(clsName => {
-                                        const classStudents = studentsList.filter(s => (s.className || s.grade) === clsName);
-                                        const sections = Array.from(new Set(classStudents.map(s => s.sectionName || 'General').filter(Boolean)));
-                                        return (
-                                            <div
-                                                key={clsName}
-                                                onClick={() => { setSelectedFeeClass(clsName); setFeeViewMode('sections'); }}
-                                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
-                                            >
-                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#6d5dfc' }}></div>
-                                                <div style={{ display: 'flex', items: 'center', gap: '10px', marginBottom: '10px' }}>
-                                                    <div style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#6d5dfc', padding: '8px', borderRadius: '8px' }}>
-                                                        <GraduationCap size={20} />
-                                                    </div>
-                                                    <h4 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>{clsName}</h4>
+                            {/* ---------- SET DUES FOR A CLASS ---------- */}
+                            <div className="fx-panel">
+                                <div className="fx-panel-head">
+                                    <span className="fx-panel-icon"><PlusCircle size={17} /></span>
+                                    <div>
+                                        <h4>Set Dues & Fees</h4>
+                                        <p>Pick a class, tick the students (or select the whole class) and publish the fee once.</p>
+                                    </div>
+                                </div>
+
+                                <div className="fx-assign-filters">
+                                    <div className="fx-field">
+                                        <label>1 · Class</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={assignClass}
+                                            onChange={(e) => {
+                                                setAssignClass(e.target.value);
+                                                setAssignSection('all');
+                                                setAssignSearch('');
+                                                setAssignSelectedIds([]);
+                                            }}
+                                        >
+                                            <option value="">Select class…</option>
+                                            {uniqueClasses
+                                                .slice()
+                                                .sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }))
+                                                .map((cls) => <option key={cls} value={cls}>{cls}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="fx-field">
+                                        <label>2 · Section</label>
+                                        <select
+                                            className="custom-select full-width"
+                                            value={assignSection}
+                                            disabled={!assignClass}
+                                            onChange={(e) => {
+                                                setAssignSection(e.target.value);
+                                                setAssignSelectedIds([]);
+                                            }}
+                                        >
+                                            <option value="all">All sections</option>
+                                            {assignSectionOptions.map((sec) => <option key={sec} value={sec}>Section {sec}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="fx-field fx-search-field">
+                                        <label>Find student</label>
+                                        <div className="fx-search">
+                                            <Search size={14} />
+                                            <input
+                                                type="text"
+                                                placeholder="Name or admission no."
+                                                value={assignSearch}
+                                                disabled={!assignClass}
+                                                onChange={(e) => setAssignSearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="fx-assign-grid">
+                                    <div className="fx-assign-students">
+                                        {!assignClass ? (
+                                            <div className="fx-empty">
+                                                <GraduationCap size={30} />
+                                                <b>Choose a class to begin</b>
+                                                <span>Its students will appear here so you can select them all at once.</span>
+                                            </div>
+                                        ) : assignClassStudents.length === 0 ? (
+                                            <div className="fx-empty">
+                                                <Users size={30} />
+                                                <b>No students found</b>
+                                                <span>There are no students enrolled in this selection.</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="fx-select-bar">
+                                                    <label className="fx-check-all">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={assignAllVisibleSelected}
+                                                            onChange={toggleAssignAllVisible}
+                                                        />
+                                                        <span>{assignSearch.trim() ? 'Select all shown' : `Select all students in ${assignSection === 'all' ? assignClass : `${assignClass} - ${assignSection}`}`}</span>
+                                                    </label>
+                                                    <span className="fx-selected-count">{assignSelectedCount} of {assignClassStudents.length} selected</span>
                                                 </div>
-                                                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0' }}>{sections.length} Sections • {classStudents.length} Students</p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
 
-                            {/* VIEW MODE 2: SECTIONS */}
-                            {feeViewMode === 'sections' && (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                                    {(() => {
-                                        const classStudents = studentsList.filter(s => (s.className || s.grade) === selectedFeeClass);
-                                        const sectionsMap = {};
-                                        classStudents.forEach(s => {
-                                            const sec = s.sectionName || 'General';
-                                            if (!sectionsMap[sec]) sectionsMap[sec] = [];
-                                            sectionsMap[sec].push(s);
-                                        });
+                                                <div className="fx-student-list">
+                                                    {assignVisibleStudents.length === 0 && (
+                                                        <div className="fx-empty small"><span>No student matches “{assignSearch}”.</span></div>
+                                                    )}
+                                                    {assignVisibleStudents.map((st) => {
+                                                        const checked = assignSelectedIds.includes(st.id);
+                                                        const hasTerm = getStudentFeeStatus(st).records.some((r) => String(r.term) === assignForm.term);
+                                                        return (
+                                                            <label key={st.id} className={`fx-student-row ${checked ? 'checked' : ''}`}>
+                                                                <input type="checkbox" checked={checked} onChange={() => toggleAssignStudent(st.id)} />
+                                                                <span className="fx-avatar">{String(st.name || '?').trim().charAt(0).toUpperCase()}</span>
+                                                                <span className="fx-student-meta">
+                                                                    <b>{st.name || 'Unnamed'}</b>
+                                                                    <small>#{st.admissionNo || st.rollNo || 'N/A'} • Section {st.sectionName || st.section || 'General'}</small>
+                                                                </span>
+                                                                {hasTerm && <span className="fx-pill info">Has {assignForm.term}</span>}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
-                                        return Object.entries(sectionsMap).map(([secName, secStudents]) => (
-                                            <div
-                                                key={secName}
-                                                onClick={() => { setSelectedFeeSection(secName); setFeeViewMode('students-fee'); }}
-                                                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                                    <div className="fx-assign-side">
+                                        <h5>3 · Fee details</h5>
+                                        <div className="fx-field">
+                                            <label>Term</label>
+                                            <select
+                                                className="custom-select full-width"
+                                                value={assignForm.term}
+                                                onChange={(e) => setAssignForm({ ...assignForm, term: e.target.value })}
                                             >
-                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#1e293b' }}>Section: {secName}</h4>
-                                                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>{secStudents.length} Students Enrolled</p>
-                                            </div>
-                                        ));
-                                    })()}
-                                </div>
-                            )}
-
-                            {/* VIEW MODE 3: STUDENTS & FEE ASSIGNMENT FORM */}
-                            {feeViewMode === 'students-fee' && (
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <h4 style={{ margin: 0 }}>Students in {selectedFeeClass} - Section {selectedFeeSection}</h4>
-                                    </div>
-
-                                    <div className="table-responsive" style={{ marginBottom: '2rem' }}>
-                                        <table className="custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Adm No</th>
-                                                    <th>Student Name</th>
-                                                    <th>Parent Phone</th>
-                                                    <th style={{ textAlign: 'right' }}>Set Fee for Student</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {studentsList
-                                                    .filter(s => (s.className || s.grade) === selectedFeeClass && (s.sectionName || 'General') === selectedFeeSection)
-                                                    .map(st => (
-                                                        <tr key={st.id}>
-                                                            <td><code>#{st.admissionNo || 'N/A'}</code></td>
-                                                            <td><strong>{st.name}</strong></td>
-                                                            <td>{st.phone || st.parentPhone || 'N/A'}</td>
-                                                            <td style={{ textAlign: 'right' }}>
-                                                                <button
-                                                                    className="btn-save-grade"
-                                                                    onClick={() => {
-                                                                        setFeeForm({
-                                                                            admissionNo: st.admissionNo || '',
-                                                                            studentName: st.name || '',
-                                                                            class: `${selectedFeeClass} - ${selectedFeeSection}`,
-                                                                            totalFee: '',
-                                                                            paidAmount: '0',
-                                                                            term: 'Term 1'
-                                                                        });
-                                                                    }}
-                                                                >
-                                                                    Select & Set Fee
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Set Fee Entry Form */}
-                                    <form onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handlePublish('fee_collections', {
-                                            ...feeForm,
-                                            balance: Number(feeForm.totalFee) - Number(feeForm.paidAmount),
-                                            status: Number(feeForm.paidAmount) >= Number(feeForm.totalFee) ? 'Paid' : 'Pending'
-                                        }, () => {
-                                            setFeeForm({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
-                                            alert("Fee dues assigned successfully! Student dashboard alert triggered.");
-                                        });
-                                    }} className="form-grid" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-                                        <h4 style={{ gridColumn: '1 / -1', margin: '0 0 5px 0' }}>Set Dues for: <span style={{ color: '#6d5dfc' }}>{feeForm.studentName || 'None Selected'}</span></h4>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Admission No</label>
-                                            <input type="text" className="table-input full-width-input" value={feeForm.admissionNo} onChange={e => setFeeForm({ ...feeForm, admissionNo: e.target.value })} required />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Student Name</label>
-                                            <input type="text" className="table-input full-width-input" value={feeForm.studentName} onChange={e => setFeeForm({ ...feeForm, studentName: e.target.value })} required />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Term</label>
-                                            <select className="custom-select full-width" value={feeForm.term} onChange={e => setFeeForm({ ...feeForm, term: e.target.value })}>
                                                 <option value="Term 1">Term 1</option>
                                                 <option value="Term 2">Term 2</option>
                                                 <option value="Annual">Annual Full Fee</option>
                                             </select>
                                         </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Total Fee Amount (₹)</label>
-                                            <input type="number" className="table-input full-width-input" placeholder="Total Amount" value={feeForm.totalFee} onChange={e => setFeeForm({ ...feeForm, totalFee: e.target.value })} required />
+                                        <div className="fx-field">
+                                            <label>Fee per student (₹)</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. 15000"
+                                                value={assignForm.totalFee}
+                                                onChange={(e) => setAssignForm({ ...assignForm, totalFee: e.target.value })}
+                                            />
                                         </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <button type="submit" className="btn-primary" style={{ background: '#6d5dfc' }}>
-                                                <PlusCircle size={15} /> Publish Fee Dues to Student
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            )}
 
-                            {/* Fee Collections Master List & Quick Mark Paid */}
-                            <h4>Fee Ledgers & Records ({feesList.length})</h4>
-                            <div className="table-responsive" style={{ marginBottom: '2rem' }}>
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Adm No</th>
-                                            <th>Student Name</th>
-                                            <th>Term</th>
-                                            <th>Total / Paid</th>
-                                            <th>Balance</th>
-                                            <th>Status</th>
-                                            <th style={{ textAlign: 'right' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {feesList.map(item => (
-                                            <tr key={item.id}>
-                                                <td><code>#{item.admissionNo}</code></td>
-                                                <td><strong>{item.studentName}</strong></td>
-                                                <td>{item.term}</td>
-                                                <td>₹{item.totalFee} / ₹{item.paidAmount}</td>
-                                                <td style={{ color: item.balance > 0 ? 'red' : 'green', fontWeight: 700 }}>₹{item.balance}</td>
-                                                <td>
-                                                    <span className={`status-badge ${item.status === 'Paid' ? 'status-present' : 'status-absent'}`}>
-                                                        {item.status || 'Pending'}
-                                                    </span>
-                                                </td>
-                                                <td style={{ textAlign: 'right' }}>
-                                                    {item.status !== 'Paid' && (
-                                                        <button
-                                                            className="btn-save-grade"
-                                                            onClick={async () => {
-                                                                await updateDoc(doc(db, 'fee_collections', item.id), {
-                                                                    paidAmount: item.totalFee,
-                                                                    balance: 0,
-                                                                    status: 'Paid'
-                                                                });
-                                                                alert("Marked as Paid! Receipt generated for student.");
-                                                            }}
-                                                        >
-                                                            <Check size={13} /> Mark Paid & Send Receipt
+                                        <div className="fx-summary">
+                                            <div><span>Class</span><b>{assignClass ? `${assignClass}${assignSection === 'all' ? '' : ` - ${assignSection}`}` : '—'}</b></div>
+                                            <div><span>Students selected</span><b>{assignSelectedCount}</b></div>
+                                            <div><span>Term</span><b>{assignForm.term}</b></div>
+                                            <div className="total"><span>Total dues to publish</span><b>{assignAmountValid ? formatINR(assignAmount * assignSelectedCount) : '—'}</b></div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="fx-publish-btn"
+                                            disabled={isAssigningFees || assignSelectedCount === 0 || !assignAmountValid}
+                                            onClick={handleBulkAssignFees}
+                                        >
+                                            <PlusCircle size={15} />
+                                            {isAssigningFees
+                                                ? 'Publishing…'
+                                                : assignSelectedCount > 0
+                                                    ? `Publish dues to ${assignSelectedCount} student${assignSelectedCount === 1 ? '' : 's'}`
+                                                    : 'Select students to continue'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ---------- FEE LEDGERS & RECORDS (dropdown) ---------- */}
+                            <div className={`fx-panel fx-ledger ${feeLedgerOpen ? 'open' : ''}`}>
+                                <button
+                                    type="button"
+                                    className="fx-ledger-toggle"
+                                    aria-expanded={feeLedgerOpen}
+                                    onClick={() => setFeeLedgerOpen((open) => !open)}
+                                >
+                                    <span className="fx-panel-icon alt"><ClipboardList size={17} /></span>
+                                    <span className="fx-ledger-title">
+                                        <b>Fee Ledgers & Records</b>
+                                        <small>Class → Section → Students · {feesList.length} record{feesList.length === 1 ? '' : 's'}</small>
+                                    </span>
+                                    <span className="fx-ledger-count">{feesList.length}</span>
+                                    {feeLedgerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                </button>
+
+                                {feeLedgerOpen && (
+                                    <div className="fx-ledger-body">
+                                        <div className="fx-crumbs">
+                                            <button type="button" className={feeViewMode === 'classes' ? 'current' : ''} onClick={goFeeAllClasses}>All Classes</button>
+                                            {feeClassNode && (
+                                                <>
+                                                    <span>›</span>
+                                                    <button type="button" className={feeViewMode === 'sections' ? 'current' : ''} onClick={() => openFeeClass(feeClassNode.name)}>{feeClassNode.name}</button>
+                                                </>
+                                            )}
+                                            {feeSectionNode && feeViewMode === 'students-fee' && (
+                                                <>
+                                                    <span>›</span>
+                                                    <button type="button" className="current">Section {feeSectionNode.name}</button>
+                                                </>
+                                            )}
+                                            {feeViewMode !== 'classes' && (
+                                                <button
+                                                    type="button"
+                                                    className="fx-back"
+                                                    onClick={() => (feeViewMode === 'students-fee' ? openFeeClass(selectedFeeClass) : goFeeAllClasses())}
+                                                >
+                                                    <ArrowLeft size={13} /> Back
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* LEVEL 1 — CLASS CARDS */}
+                                        {feeViewMode === 'classes' && (
+                                            feeClassTree.length === 0 ? (
+                                                <div className="fx-empty"><GraduationCap size={30} /><b>No classes yet</b><span>Add students to see their fee records here.</span></div>
+                                            ) : (
+                                                <div className="fx-card-grid">
+                                                    {feeClassTree.map((cls) => (
+                                                        <button type="button" key={cls.name} className="fx-card" onClick={() => openFeeClass(cls.name)}>
+                                                            <div className="fx-card-top">
+                                                                <span className="fx-card-icon"><GraduationCap size={18} /></span>
+                                                                <div>
+                                                                    <h5>{cls.name}</h5>
+                                                                    <small>{cls.sections.length} section{cls.sections.length === 1 ? '' : 's'} • {cls.stats.students} student{cls.stats.students === 1 ? '' : 's'}</small>
+                                                                </div>
+                                                            </div>
+                                                            <div className="fx-progress"><i style={{ width: `${cls.stats.percent}%` }} /></div>
+                                                            <div className="fx-card-money">
+                                                                <span><small>Billed</small><b>{formatINR(cls.stats.billed)}</b></span>
+                                                                <span><small>Collected</small><b className="ok">{formatINR(cls.stats.collected)}</b></span>
+                                                                <span><small>Balance</small><b className={cls.stats.balance > 0 ? 'bad' : 'ok'}>{formatINR(cls.stats.balance)}</b></span>
+                                                            </div>
+                                                            <div className="fx-card-pills">
+                                                                {cls.stats.pending > 0 && <span className="fx-pill bad">{cls.stats.pending} pending</span>}
+                                                                {cls.stats.paid > 0 && <span className="fx-pill ok">{cls.stats.paid} paid</span>}
+                                                                {cls.stats.unset > 0 && <span className="fx-pill muted">{cls.stats.unset} no dues</span>}
+                                                            </div>
                                                         </button>
-                                                    )}
-                                                    <button className="delete-task-btn" onClick={() => handleDelete('fee_collections', item.id)} title="Delete"><X size={14} /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                    ))}
+                                                </div>
+                                            )
+                                        )}
+
+                                        {/* LEVEL 2 — SECTION CARDS */}
+                                        {feeViewMode === 'sections' && feeClassNode && (
+                                            <div className="fx-card-grid">
+                                                {feeClassNode.sections.map((sec) => (
+                                                    <button type="button" key={sec.name} className="fx-card" onClick={() => openFeeSection(sec.name)}>
+                                                        <div className="fx-card-top">
+                                                            <span className="fx-card-icon alt"><Users size={18} /></span>
+                                                            <div>
+                                                                <h5>Section {sec.name}</h5>
+                                                                <small>{feeClassNode.name} • {sec.stats.students} student{sec.stats.students === 1 ? '' : 's'}</small>
+                                                            </div>
+                                                        </div>
+                                                        <div className="fx-progress"><i style={{ width: `${sec.stats.percent}%` }} /></div>
+                                                        <div className="fx-card-money">
+                                                            <span><small>Billed</small><b>{formatINR(sec.stats.billed)}</b></span>
+                                                            <span><small>Collected</small><b className="ok">{formatINR(sec.stats.collected)}</b></span>
+                                                            <span><small>Balance</small><b className={sec.stats.balance > 0 ? 'bad' : 'ok'}>{formatINR(sec.stats.balance)}</b></span>
+                                                        </div>
+                                                        <div className="fx-card-pills">
+                                                            {sec.stats.pending > 0 && <span className="fx-pill bad">{sec.stats.pending} pending</span>}
+                                                            {sec.stats.paid > 0 && <span className="fx-pill ok">{sec.stats.paid} paid</span>}
+                                                            {sec.stats.unset > 0 && <span className="fx-pill muted">{sec.stats.unset} no dues</span>}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* LEVEL 3 — STUDENTS LIST */}
+                                        {feeViewMode === 'students-fee' && feeSectionNode && (
+                                            <div>
+                                                <div className="fx-students-head">
+                                                    <div>
+                                                        <h5>{feeClassNode.name} · Section {feeSectionNode.name}</h5>
+                                                        <small>
+                                                            {feeSectionNode.stats.students} students • Billed {formatINR(feeSectionNode.stats.billed)} • Collected {formatINR(feeSectionNode.stats.collected)} • Balance {formatINR(feeSectionNode.stats.balance)}
+                                                        </small>
+                                                    </div>
+                                                    <div className="fx-filter-chips">
+                                                        {[
+                                                            ['all', 'All'],
+                                                            ['pending', 'Pending'],
+                                                            ['paid', 'Paid'],
+                                                            ['none', 'No dues']
+                                                        ].map(([value, label]) => (
+                                                            <button
+                                                                type="button"
+                                                                key={value}
+                                                                className={feeStatusFilter === value ? 'active' : ''}
+                                                                onClick={() => setFeeStatusFilter(value)}
+                                                            >{label}</button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="table-responsive">
+                                                    <table className="custom-table fx-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Adm No</th>
+                                                                <th>Student</th>
+                                                                <th>Billed</th>
+                                                                <th>Paid</th>
+                                                                <th>Balance</th>
+                                                                <th>Status</th>
+                                                                <th style={{ textAlign: 'right' }}>Records</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {feeSectionNode.entries
+                                                                .filter((e) => feeStatusFilter === 'all' || e.status === feeStatusFilter)
+                                                                .map((entry) => {
+                                                                    const expanded = expandedFeeStudent === entry.key;
+                                                                    return (
+                                                                        <React.Fragment key={entry.key}>
+                                                                            <tr className={expanded ? 'fx-row-open' : ''}>
+                                                                                <td><code>#{entry.admissionNo || 'N/A'}</code></td>
+                                                                                <td><strong>{entry.name}</strong></td>
+                                                                                <td>{entry.records.length ? formatINR(entry.billed) : '—'}</td>
+                                                                                <td>{entry.records.length ? formatINR(entry.collected) : '—'}</td>
+                                                                                <td style={{ color: entry.balance > 0 ? '#dc2626' : '#059669', fontWeight: 800 }}>
+                                                                                    {entry.records.length ? formatINR(entry.balance) : '—'}
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span className={`fx-pill ${entry.status === 'paid' ? 'ok' : entry.status === 'pending' ? 'bad' : 'muted'}`}>
+                                                                                        {entry.status === 'paid' ? 'Paid' : entry.status === 'pending' ? 'Pending' : 'No dues set'}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td style={{ textAlign: 'right' }}>
+                                                                                    {entry.records.length > 0 ? (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="fx-link-btn"
+                                                                                            onClick={() => setExpandedFeeStudent(expanded ? null : entry.key)}
+                                                                                        >
+                                                                                            {entry.records.length} record{entry.records.length === 1 ? '' : 's'}
+                                                                                            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <span className="fx-muted-text">—</span>
+                                                                                    )}
+                                                                                </td>
+                                                                            </tr>
+                                                                            {expanded && (
+                                                                                <tr className="fx-detail-row">
+                                                                                    <td colSpan={7}>
+                                                                                        <div className="fx-records">
+                                                                                            {entry.records.map((item) => (
+                                                                                                <div className="fx-record" key={item.id}>
+                                                                                                    <div className="fx-record-main">
+                                                                                                        <b>{item.term || 'Fee'}</b>
+                                                                                                        <small>{formatINR(item.totalFee)} total • {formatINR(item.paidAmount)} paid</small>
+                                                                                                    </div>
+                                                                                                    <span className="fx-record-balance" style={{ color: feeRecordBalance(item) > 0 ? '#dc2626' : '#059669' }}>
+                                                                                                        {formatINR(feeRecordBalance(item))} due
+                                                                                                    </span>
+                                                                                                    <span className={`fx-pill ${isFeeRecordPaid(item) ? 'ok' : 'bad'}`}>
+                                                                                                        {isFeeRecordPaid(item) ? 'Paid' : (item.status || 'Pending')}
+                                                                                                    </span>
+                                                                                                    <div className="fx-record-actions">
+                                                                                                        {!isFeeRecordPaid(item) && (
+                                                                                                            <button type="button" className="btn-save-grade" onClick={() => handleMarkFeePaid(item)}>
+                                                                                                                <Check size={13} /> Mark Paid & Send Receipt
+                                                                                                            </button>
+                                                                                                        )}
+                                                                                                        <button type="button" className="delete-task-btn" onClick={() => handleDelete('fee_collections', item.id)} title="Delete record">
+                                                                                                            <X size={14} />
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </React.Fragment>
+                                                                    );
+                                                                })}
+                                                            {feeSectionNode.entries.filter((e) => feeStatusFilter === 'all' || e.status === feeStatusFilter).length === 0 && (
+                                                                <tr><td colSpan={7} className="fx-empty-cell">No students match this filter.</td></tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
