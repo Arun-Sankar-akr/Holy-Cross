@@ -7,7 +7,7 @@ import {
     Menu, X, Clock, FileText, User, Ticket, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
     ChevronRight, ChevronLeft, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
-    Download, Sparkles, Eye, ChevronDown, BookMarked
+    Download, Sparkles, Eye, ChevronDown, BookMarked, MapPin
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
@@ -183,6 +183,7 @@ export default function StudentDashboard() {
     const [holidaysList, setHolidaysList] = useState(MANUAL_GOVT_HOLIDAYS);
     const [studentExamHallAllocations, setStudentExamHallAllocations] = useState([]);
     const [hallTicketPublications, setHallTicketPublications] = useState([]);
+    const [studentExamHallMaster, setStudentExamHallMaster] = useState([]); // hall master: block / location details
     const [examTimetableList, setExamTimetableList] = useState([]);
     const [showFeeAlertModal, setShowFeeAlertModal] = useState(false);
     const [hallTicketMeta, setHallTicketMeta] = useState({ downloadedAt: null, ip: null });
@@ -724,6 +725,10 @@ export default function StudentDashboard() {
             setHallTicketPublications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
+        const unsubExamHallMaster = onSnapshot(collection(db, 'exam_hall_master'), (snap) => {
+            setStudentExamHallMaster(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (err) => console.error('Could not read exam hall master:', err));
+
         const unsubExamTimetables = onSnapshot(collection(db, 'exam_timetables'), (snap) => {
             setExamTimetableList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -751,6 +756,7 @@ export default function StudentDashboard() {
             unsubFees();
             unsubExamHalls();
             unsubHallTicketPublications();
+            unsubExamHallMaster();
             unsubExamTimetables();
         };
     }, [studentData, liveStudentRecord]);
@@ -788,6 +794,22 @@ export default function StudentDashboard() {
             (st.name && cleanString(st.name) === cleanString(studentData.name))
         );
         return mine?.seatNo || null;
+    };
+
+    // Block / location of the exam hall, read from the hall master (falls back to the allocation itself)
+    const getHallLocation = (alloc, publication) => {
+        const hallId = alloc?.hallId || publication?.hallId;
+        const hallNoKey = cleanString(alloc?.hallNo || publication?.hallNo);
+        const hall =
+            (hallId && studentExamHallMaster.find(h => h.id === hallId)) ||
+            (hallNoKey && studentExamHallMaster.find(h => cleanString(h.hallNo) === hallNoKey)) ||
+            null;
+        const pick = (...vals) => vals.find(v => typeof v === 'string' ? v.trim() : v) || '';
+        const block = String(pick(hall?.blockName, hall?.block, hall?.buildingName, hall?.building, alloc?.blockName, alloc?.block, publication?.blockName, publication?.block)).trim();
+        const location = String(pick(hall?.location, hall?.locationName, hall?.venue, hall?.roomLocation, hall?.address, alloc?.location, alloc?.venue, publication?.location)).trim();
+        const floor = String(pick(hall?.floor, hall?.floorName, hall?.floorNo, alloc?.floor, publication?.floor)).trim();
+        const text = [block, floor, location].filter(Boolean).join(', ');
+        return { block, location, floor, text };
     };
 
     const myExamHallAllocations = studentExamHallAllocations.filter(item => {
@@ -1806,7 +1828,7 @@ export default function StudentDashboard() {
                     background: 'rgba(0,0,0,0.65)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, overflowY: 'auto', padding: '15px'
                 }}>
                     <div className="official-receipt-card" style={{
-                        background: '#ffffff', width: '100%', maxWidth: '580px', padding: '20px 24px', borderRadius: '12px',
+                        background: '#ffffff', width: '100%', maxWidth: '520px', padding: '20px 24px', borderRadius: '12px', top: '30px', zIndex: '1000',
                         border: '2px solid #cbd5e1', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', position: 'relative', color: '#1e293b', fontFamily: 'Arial, sans-serif'
                     }}>
                         <button
@@ -1834,7 +1856,7 @@ export default function StudentDashboard() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '10px', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px' }}>
-                            <div><strong>Receipt No:</strong> RCPT-{selectedPrintReceipt.id ? selectedPrintReceipt.id.substring(0, 8).toUpperCase() : '2026/001'}</div>
+                            <div><strong>Receipt No:</strong> HCMS-{selectedPrintReceipt.id ? selectedPrintReceipt.id.substring(0, 8).toUpperCase() : '2026/001'}</div>
                             <div><strong>Date:</strong> {selectedPrintReceipt.date || new Date().toLocaleDateString()}</div>
                         </div>
 
@@ -1877,12 +1899,10 @@ export default function StudentDashboard() {
                             <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0284c7' }}>₹{selectedPrintReceipt.totalFee || selectedPrintReceipt.paidAmount || '0.00'}</span>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.74rem', color: '#64748b' }}>
+                        <div style={{ display: 'block', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.74rem', color: '#64748b' }}>
+
                             <div style={{ textAlign: 'center' }}>
-                                <div style={{ borderTop: '1px solid #94a3b8', width: '130px', paddingTop: '3px', margin: '0 auto' }}>Student Signature</div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ borderTop: '1px solid #94a3b8', width: '130px', paddingTop: '3px', margin: '0 auto' }}>Authorized Signatory</div>
+                                <div style={{ width: '100%', paddingTop: '3px', margin: '0 auto' }}> <p>this is computer generated no signature required </p> </div>
                             </div>
                         </div>
 
@@ -2195,7 +2215,7 @@ export default function StudentDashboard() {
                                                     )}
                                                 </div>
                                                 <div className="ps-profile-info">
-                                                    <span className="ps-profile-id">#ST{(studentData.rollNo || '00000').toString().padStart(5, '0')}</span>
+                                                    <span className="ps-profile-id">#HCMS{(studentData.rollNo || '00000').toString().padStart(5, '0')}</span>
                                                     <h4>{studentData.name}</h4>
                                                     <p>Class: {studentData.grade || 'N/A'} {studentData.section ? `- ${studentData.section}` : ''} &nbsp; Roll No: {studentData.rollNo || 'N/A'}</p>
                                                 </div>
@@ -3307,21 +3327,40 @@ export default function StudentDashboard() {
                                                 <tr>
                                                     <th>Exam Name</th>
                                                     <th>Hall / Room No</th>
+                                                    <th>Block / Location</th>
                                                     <th>Seat No</th>
                                                     <th>Target Class</th>
                                                     <th>Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {myExamHallAllocations.map((alloc) => (
-                                                    <tr key={alloc.id}>
-                                                        <td><strong>{alloc.examName || alloc.title || 'Examination'}</strong></td>
-                                                        <td><span className="topic-badge">{alloc.hallNo || alloc.roomNo || 'Hall 1'}</span></td>
-                                                        <td><strong>{getMySeatNo(alloc) || alloc.seatNo || 'Unassigned'}</strong></td>
-                                                        <td>{alloc.targetClass || alloc.className || studentData.grade}</td>
-                                                        <td><span className="status-badge status-present">ALLOCATED</span></td>
-                                                    </tr>
-                                                ))}
+                                                {myExamHallAllocations.map((alloc) => {
+                                                    const loc = getHallLocation(alloc);
+                                                    return (
+                                                        <tr key={alloc.id}>
+                                                            <td><strong>{alloc.examName || alloc.title || 'Examination'}</strong></td>
+                                                            <td><span className="topic-badge">{alloc.hallNo || alloc.roomNo || 'Hall 1'}</span></td>
+                                                            <td>
+                                                                {loc.text ? (
+                                                                    <div className="hall-loc-cell">
+                                                                        <MapPin size={14} />
+                                                                        <span>
+                                                                            <strong>{loc.block || loc.location}</strong>
+                                                                            {(loc.block ? [loc.floor, loc.location] : [loc.floor]).filter(Boolean).length > 0 && (
+                                                                                <small>{(loc.block ? [loc.floor, loc.location] : [loc.floor]).filter(Boolean).join(', ')}</small>
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{ color: 'var(--staff-text-muted)', fontSize: '0.78rem' }}>Not specified</span>
+                                                                )}
+                                                            </td>
+                                                            <td><strong>{getMySeatNo(alloc) || alloc.seatNo || 'Unassigned'}</strong></td>
+                                                            <td>{alloc.targetClass || alloc.className || studentData.grade}</td>
+                                                            <td><span className="status-badge status-present">ALLOCATED</span></td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
@@ -3412,6 +3451,8 @@ export default function StudentDashboard() {
                                             <div><span>Year</span><strong>{myHallTicketPublication.year || '—'}</strong></div>
                                             <div><span>Hall No</span><strong>{myHallTicketAllocation.hallNo || myHallTicketPublication.hallNo || '—'}</strong></div>
                                             <div><span>Seat No</span><strong>{getMySeatNo(myHallTicketAllocation) || myHallTicketPublication.seatNo || '—'}</strong></div>
+                                            <div><span>Block</span><strong>{getHallLocation(myHallTicketAllocation, myHallTicketPublication).block || '—'}</strong></div>
+                                            <div><span>Location</span><strong>{[getHallLocation(myHallTicketAllocation, myHallTicketPublication).floor, getHallLocation(myHallTicketAllocation, myHallTicketPublication).location].filter(Boolean).join(', ') || '—'}</strong></div>
                                         </div>
 
                                         <div className="hall-ticket-actions">
@@ -3433,6 +3474,7 @@ export default function StudentDashboard() {
                                     const classValue = studentData.grade || 'Senior Secondary';
                                     const examCenterCode = myHallTicketPublication.examCenterCode || selectedHallTicket.hallNo || myHallTicketPublication.hallNo || '—';
                                     const seatNoValue = getMySeatNo(selectedHallTicket) || myHallTicketPublication.seatNo || '—';
+                                    const hallLocationValue = getHallLocation(selectedHallTicket, myHallTicketPublication).text || '—';
                                     const matchedExamTimetable = examTimetableList.filter(t =>
                                         cleanString(t.className) === cleanString(classValue) &&
                                         cleanString(t.examName) === cleanString(examNameValue)
@@ -3521,6 +3563,10 @@ export default function StudentDashboard() {
                                                         <div className="ht-meta-cell">
                                                             <span className="m-label">Seat Number</span>
                                                             <span className="m-value">{seatNoValue}</span>
+                                                        </div>
+                                                        <div className="ht-meta-cell ht-meta-wide">
+                                                            <span className="m-label">Block / Location</span>
+                                                            <span className="m-value">{hallLocationValue}</span>
                                                         </div>
                                                     </div>
 

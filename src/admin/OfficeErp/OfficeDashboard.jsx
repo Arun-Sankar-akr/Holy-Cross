@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
-    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, Sparkles, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2, MapPin
 } from 'lucide-react';
 import HallManagement from './Hallmanagement';
 import './OfficeDashboard.css';
@@ -352,6 +352,8 @@ export default function OfficeDashboard() {
                 year: Number(hallTicketYear),
                 allocationId: allocation.id,
                 hallNo: allocation.hallNo || '',
+                blockName: hallOfAlloc(allocation)?.blockName || allocation.blockName || '',
+                location: hallOfAlloc(allocation)?.location || allocation.location || '',
                 seatNo: (allocation.studentList || []).find(x => x.id === student.id)?.seatNo || '',
                 published: true,
                 publishedAt: serverTimestamp()
@@ -426,6 +428,8 @@ export default function OfficeDashboard() {
         try {
             await updateDoc(doc(db, 'hall_ticket_publications', htxEdit.id), {
                 hallNo: htxEditForm.hallNo.trim(),
+                blockName: hallMaster.find(h => normHall(h.hallNo) === normHall(htxEditForm.hallNo))?.blockName || '',
+                location: hallMaster.find(h => normHall(h.hallNo) === normHall(htxEditForm.hallNo))?.location || '',
                 seatNo: htxEditForm.seatNo === '' ? '' : Number(htxEditForm.seatNo),
                 exam: htxEditForm.exam,
                 year: Number(htxEditForm.year),
@@ -503,7 +507,7 @@ export default function OfficeDashboard() {
             : `<tr><td colSpan="3" style="text-align:center;">No Exam Schedule Available</td></tr>`;
 
         const win = window.open('', '_blank', 'width=900,height=700');
-        win.document.write(`<html><head><title>Hall Ticket</title><style>body{font-family:Arial;padding:30px}.ticket{border:3px solid #111;padding:25px;max-width:750px;margin:auto}h1{text-align:center;margin-bottom:5px}h3{text-align:center;margin-top:0;color:#555}table{width:100%;border-collapse:collapse;margin-top:15px}td,th{padding:9px;border:1px solid #ccc;text-align:left}th{background:#f2f2f2}.info-table td{border:none;padding:6px 0}</style></head><body><div class="ticket"><h1>EXAMINATION HALL TICKET</h1><h3>${currentExam}</h3><table class="info-table"><tr><td><strong>Student Name:</strong> ${student.name || 'Student'}</td><td><strong>Admission No:</strong> ${student.admissionNo || student.rollNo || '—'}</td></tr><tr><td><strong>Class / Sec:</strong> ${stClass} / ${student.sectionName || student.section || ''}</td><td><strong>Hall / Seat:</strong> ${allocation.hallNo || '—'} / Seat ${seat}</td></tr></table><h4 style="margin-top:20px;margin-bottom:8px">EXAM TIMETABLE</h4><table><thead><tr><th>Date</th><th>Subject</th><th>Timing</th></tr></thead><tbody>${timetableHtml}</tbody></table><p style="margin-top:30px;text-align:right"><strong>Authorized Signatory</strong></p></div><script>window.print()</script></body></html>`);
+        win.document.write(`<html><head><title>Hall Ticket</title><style>body{font-family:Arial;padding:30px}.ticket{border:3px solid #111;padding:25px;max-width:750px;margin:auto}h1{text-align:center;margin-bottom:5px}h3{text-align:center;margin-top:0;color:#555}table{width:100%;border-collapse:collapse;margin-top:15px}td,th{padding:9px;border:1px solid #ccc;text-align:left}th{background:#f2f2f2}.info-table td{border:none;padding:6px 0}</style></head><body><div class="ticket"><h1>EXAMINATION HALL TICKET</h1><h3>${currentExam}</h3><table class="info-table"><tr><td><strong>Student Name:</strong> ${student.name || 'Student'}</td><td><strong>Admission No:</strong> ${student.admissionNo || student.rollNo || '—'}</td></tr><tr><td><strong>Class / Sec:</strong> ${stClass} / ${student.sectionName || student.section || ''}</td><td><strong>Hall / Seat:</strong> ${allocation.hallNo || '—'} / Seat ${seat}</td></tr><tr><td colspan="2"><strong>Block / Location:</strong> ${placeOfAlloc(allocation) || '—'}</td></tr></table><h4 style="margin-top:20px;margin-bottom:8px">EXAM TIMETABLE</h4><table><thead><tr><th>Date</th><th>Subject</th><th>Timing</th></tr></thead><tbody>${timetableHtml}</tbody></table><p style="margin-top:30px;text-align:right"><strong>Authorized Signatory</strong></p></div><script>window.print()</script></body></html>`);
         win.document.close();
     };
 
@@ -558,6 +562,8 @@ export default function OfficeDashboard() {
             await addDoc(collection(db, 'exam_hall_allocations'), {
                 hallId: hall.id,
                 hallNo: hall.hallNo,
+                blockName: hall.blockName || '',
+                location: hall.location || '',
                 examName: exam,
                 targetClass: examStudentClass,
                 targetSection: examStudentSection,
@@ -713,7 +719,7 @@ export default function OfficeDashboard() {
             studentCount: kept.length,
             studentIds: kept.map(s => s.id),
             studentList: kept,
-            ...(hall ? { hallId: hall.id, hallNo: hall.hallNo, capacity: Number(hall.capacity) || kept.length } : {})
+            ...(hall ? { hallId: hall.id, hallNo: hall.hallNo, blockName: hall.blockName || '', location: hall.location || '', capacity: Number(hall.capacity) || kept.length } : {})
         };
         try {
             await updateDoc(doc(db, 'exam_hall_allocations', editHall.id), { ...payload, updatedAt: serverTimestamp() });
@@ -1177,6 +1183,13 @@ export default function OfficeDashboard() {
     // ---------- Hall Management sync helpers ----------
     const normHall = (v) => String(v || '').trim().toLowerCase();
     const allocInHall = (a, hall) => a.hallId ? a.hallId === hall.id : normHall(a.hallNo) === normHall(hall.hallNo);
+
+    // Block name + location of an exam hall ("Block A, 2nd floor")
+    const hallPlace = (h) => [h?.blockName, h?.location].map(v => String(v || '').trim()).filter(Boolean).join(', ');
+    const hallOfAlloc = (a) => (a ? hallMaster.find(h => allocInHall(a, h)) : null) || null;
+    const placeOfAlloc = (a) => hallPlace(hallOfAlloc(a)) || hallPlace(a);
+    const placeOfRecord = (rec) =>
+        hallPlace(hallMaster.find(h => (rec.hallId && h.id === rec.hallId) || normHall(h.hallNo) === normHall(rec.hallNo))) || hallPlace(rec);
     // seats already taken in a hall for one exam (optionally ignoring one allocation)
     const hallUsage = (hall, exam, excludeId) => {
         const taken = new Set();
@@ -2267,6 +2280,7 @@ export default function OfficeDashboard() {
                             ? ts.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                             : '—';
                         const hallOptions = Array.from(new Set([...(hallMaster || []).map(h => h.hallNo).filter(Boolean), htxEditForm.hallNo].filter(Boolean)));
+                        const hallLabel = no => { const p = hallPlace((hallMaster || []).find(h => normHall(h.hallNo) === normHall(no))); return p ? `${no} (${p})` : no; };
 
                         return (
                             <div className="htx">
@@ -2458,6 +2472,8 @@ export default function OfficeDashboard() {
                                     .htx-modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-top:22px}
                                     .htx-save{width:auto;min-width:150px;padding:0 20px;height:44px}
 
+                                    .htx-loc{display:inline-flex;align-items:center;gap:4px;color:var(--brand-dark)}
+                                    .htx-loc svg{flex:0 0 auto}
                                     /* ---------- responsive ---------- */
                                     @media(max-width:980px){
                                         .htx-work{grid-template-columns:1fr}
@@ -2633,6 +2649,7 @@ export default function OfficeDashboard() {
                                                                         <span className="htx-who">
                                                                             <strong>{student.name || 'Student'}</strong>
                                                                             <small>Adm. {student.admissionNo || student.rollNo || '—'}</small>
+                                                                            {allocation && placeOfAlloc(allocation) && <small className="htx-loc"><MapPin size={12} /> {placeOfAlloc(allocation)}</small>}
                                                                         </span>
                                                                         <span className="htx-tags">
                                                                             <span className={`htx-chip ${fee.paid ? 'paid' : 'unpaid'}`}>{fee.paid ? <CheckCircle size={13} /> : <XCircle size={13} />}{fee.paid ? 'Paid' : 'Not paid'}</span>
@@ -2776,7 +2793,7 @@ export default function OfficeDashboard() {
                                                                                     </td>
                                                                                     <td>{recSection(rec)}</td>
                                                                                     <td>{rec.exam || '—'}<small className="htx-sub">{rec.year || ''}</small></td>
-                                                                                    <td><span className="htx-seat">{rec.hallNo || '—'}</span> <small>Seat {rec.seatNo === '' || rec.seatNo === undefined ? '—' : rec.seatNo}</small></td>
+                                                                                    <td><span className="htx-seat">{rec.hallNo || '—'}</span> <small>Seat {rec.seatNo === '' || rec.seatNo === undefined ? '—' : rec.seatNo}</small>{placeOfRecord(rec) && <small className="htx-sub htx-loc"><MapPin size={12} /> {placeOfRecord(rec)}</small>}</td>
                                                                                     <td>
                                                                                         {rec.published === true
                                                                                             ? <span className="htx-chip published"><CheckCircle size={13} /> Published</span>
@@ -2828,7 +2845,7 @@ export default function OfficeDashboard() {
                                                 <label>Hall
                                                     <select value={htxEditForm.hallNo} onChange={e => setHtxEditForm(f => ({ ...f, hallNo: e.target.value }))}>
                                                         <option value="">No hall</option>
-                                                        {hallOptions.map(h => <option key={h} value={h}>{h}</option>)}
+                                                        {hallOptions.map(h => <option key={h} value={h}>{hallLabel(h)}</option>)}
                                                     </select>
                                                 </label>
                                                 <label>Seat number
@@ -3072,7 +3089,7 @@ export default function OfficeDashboard() {
                                                         <option value="">{hallMaster.length ? 'Select a hall' : 'No halls added yet'}</option>
                                                         {hallMaster.filter(h => h.status !== 'Maintenance').map(h => {
                                                             const u = hallUsage(h, allocExam);
-                                                            return <option key={h.id} value={h.id} disabled={u.free <= 0}>{h.hallNo} — {u.free} of {h.capacity} seats free{u.free <= 0 ? ' (full)' : ''}</option>;
+                                                            return <option key={h.id} value={h.id} disabled={u.free <= 0}>{h.hallNo}{hallPlace(h) ? ` (${hallPlace(h)})` : ''} — {u.free} of {h.capacity} seats free{u.free <= 0 ? ' (full)' : ''}</option>;
                                                         })}
                                                     </select>
                                                     {hallMaster.length === 0 && (
@@ -3081,7 +3098,7 @@ export default function OfficeDashboard() {
                                                 </div>
                                                 {allocSelectedHall && (
                                                     <div className="alloc-hall-preview">
-                                                        <strong>{allocSelectedHall.hallNo}{allocSelectedHall.location ? ` · ${allocSelectedHall.location}` : ''}</strong>
+                                                        <strong>{allocSelectedHall.hallNo}{hallPlace(allocSelectedHall) ? ` · ${hallPlace(allocSelectedHall)}` : ''}</strong>
                                                         <span>{allocSelectedHall.capacity} seats · {allocFree} free for {allocExam}</span>
                                                         <div className="hm-bar" style={{ marginTop: 6 }}>
                                                             <i className={allocOverflow ? 'full' : 'ok'} style={{ width: `${Math.min(100, Math.round(((allocSelectedHall.capacity - allocFree + selectedExamStudents.length) / allocSelectedHall.capacity) * 100))}%` }} />
@@ -3164,7 +3181,7 @@ export default function OfficeDashboard() {
                                                 <label>Hall</label>
                                                 <select value={selectedStaffHall} onChange={e => setSelectedStaffHall(e.target.value)} required>
                                                     <option value="">Select allocated hall</option>
-                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''} ({hall.studentCount || hall.studentIds?.length || 0})</option>)}
+                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo}{placeOfAlloc(hall) ? ` (${placeOfAlloc(hall)})` : ''} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''} ({hall.studentCount || hall.studentIds?.length || 0})</option>)}
                                                 </select>
                                                 {examHalls.length === 0 && <small className="alloc-hint">Allocate students to a hall first.</small>}
                                             </div>
@@ -3277,6 +3294,7 @@ export default function OfficeDashboard() {
                                                             <div key={hall.id} className="seat-hall">
                                                                 <div className="seat-hall-head">
                                                                     <strong>{hall.hallNo}</strong>
+                                                                    {placeOfAlloc(hall) && <span className="seat-hall-place"><MapPin size={13} /> {placeOfAlloc(hall)}</span>}
                                                                     <span className="task-target-tag">{hall.targetClass || '—'} / {hall.targetSection || '—'}</span>
                                                                     <small className="seat-hall-exam">{hall.examName || 'Examination'}</small>
                                                                 </div>
@@ -3371,7 +3389,7 @@ export default function OfficeDashboard() {
                                                     <label>Hall</label>
                                                     <select value={editHallForm.hallId} onChange={e => changeEditHallTarget(e.target.value, editHallForm.examName)}>
                                                         {!editHallForm.hallId && <option value="">{editHall.hallNo} (not in Hall Management)</option>}
-                                                        {hallMaster.map(h => <option key={h.id} value={h.id}>{h.hallNo} — {h.capacity} seats{h.status === 'Maintenance' ? ' (maintenance)' : ''}</option>)}
+                                                        {hallMaster.map(h => <option key={h.id} value={h.id}>{h.hallNo}{hallPlace(h) ? ` (${hallPlace(h)})` : ''} — {h.capacity} seats{h.status === 'Maintenance' ? ' (maintenance)' : ''}</option>)}
                                                     </select>
                                                 </div>
                                                 <div className="alloc-field">
@@ -3426,7 +3444,7 @@ export default function OfficeDashboard() {
                                                 <label>Hall</label>
                                                 <select value={editDutyForm.hallId} onChange={e => setEditDutyForm(f => ({ ...f, hallId: e.target.value }))} required>
                                                     <option value="">Select allocated hall</option>
-                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''}</option>)}
+                                                    {examHalls.map(hall => <option key={hall.id} value={hall.id}>{hall.hallNo}{placeOfAlloc(hall) ? ` (${placeOfAlloc(hall)})` : ''} — {hall.targetClass || ''}{hall.targetSection ? ` / ${hall.targetSection}` : ''}</option>)}
                                                 </select>
                                             </div>
                                             <div className="alloc-field">

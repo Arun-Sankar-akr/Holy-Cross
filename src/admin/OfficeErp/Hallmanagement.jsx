@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { db } from '../../service/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import {
-    Building2, Plus, Pencil, Trash2, Search, X, ChevronDown, ChevronUp, AlertTriangle, CheckCircle
+    Building2, Plus, Pencil, Trash2, Search, X, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, MapPin
 } from 'lucide-react';
 
 const norm = (v) => String(v || '').trim().toLowerCase();
-const EMPTY_FORM = { hallNo: '', location: '', capacity: '', status: 'Available' };
+const EMPTY_FORM = { hallNo: '', blockName: '', location: '', capacity: '', status: 'Available' };
+// "Block A, 2nd floor" style text built from the hall's block name and location
+const placeOf = (h) => [h?.blockName, h?.location].map(v => String(v || '').trim()).filter(Boolean).join(', ');
 
 /**
  * Hall Management
- * Master list of exam halls (name, location, number of seats, status).
+ * Master list of exam halls (name, block, location, number of seats, status).
  * The Allocate section reads this list, so seat capacity and free seats stay in sync.
  *
  * Props (all data comes from OfficeDashboard's live Firestore listeners):
@@ -47,7 +49,7 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
 
     const q = search.trim().toLowerCase();
     const visible = halls
-        .filter(h => !q || [h.hallNo, h.location, h.status].filter(Boolean).some(v => String(v).toLowerCase().includes(q)))
+        .filter(h => !q || [h.hallNo, h.blockName, h.location, h.status].filter(Boolean).some(v => String(v).toLowerCase().includes(q)))
         .slice()
         .sort((a, b) => String(a.hallNo).localeCompare(String(b.hallNo), undefined, { numeric: true }));
 
@@ -74,7 +76,7 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
     // ---------- create / update ----------
     const openAdd = () => { setForm(EMPTY_FORM); setError(''); setModal({ mode: 'add' }); };
     const openEdit = (hall) => {
-        setForm({ hallNo: hall.hallNo || '', location: hall.location || '', capacity: String(hall.capacity || ''), status: hall.status || 'Available' });
+        setForm({ hallNo: hall.hallNo || '', blockName: hall.blockName || '', location: hall.location || '', capacity: String(hall.capacity || ''), status: hall.status || 'Available' });
         setError('');
         setModal({ mode: 'edit', hall });
     };
@@ -91,7 +93,7 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
 
         setBusy(true);
         try {
-            const data = { hallNo, location: form.location.trim(), capacity, status: form.status };
+            const data = { hallNo, blockName: form.blockName.trim(), location: form.location.trim(), capacity, status: form.status };
             if (modal.mode === 'add') {
                 await addDoc(collection(db, 'exam_hall_master'), { ...data, createdAt: serverTimestamp() });
             } else {
@@ -105,7 +107,7 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
                 // keep allocations + staff duties for this hall in sync
                 const allocIds = allocs.map(a => a.id);
                 await Promise.all([
-                    ...allocs.map(a => updateDoc(doc(db, 'exam_hall_allocations', a.id), { hallId: hall.id, hallNo, capacity })),
+                    ...allocs.map(a => updateDoc(doc(db, 'exam_hall_allocations', a.id), { hallId: hall.id, hallNo, capacity, blockName: data.blockName, location: data.location })),
                     ...duties.filter(d => allocIds.includes(d.hallAllocationId))
                         .map(d => updateDoc(doc(db, 'staff_exam_halls', d.id), { hallNo }))
                 ]);
@@ -151,7 +153,7 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
                 const maxSeat = Math.max(0, ...g.allocs.flatMap(a => getSeatList(a).map(s => Number(s.seatNo || 0))));
                 const capacity = Math.max(1, maxSeat, ...Object.values(perExam), ...g.allocs.map(a => Number(a.capacity || 0)));
                 const ref = await addDoc(collection(db, 'exam_hall_master'), {
-                    hallNo: g.hallNo, location: '', capacity, status: 'Available', createdAt: serverTimestamp()
+                    hallNo: g.hallNo, blockName: '', location: '', capacity, status: 'Available', createdAt: serverTimestamp()
                 });
                 await Promise.all(g.allocs.map(a => updateDoc(doc(db, 'exam_hall_allocations', a.id), { hallId: ref.id, capacity })));
             }
@@ -190,12 +192,13 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
                 </div>
             )}
 
+            <style>{`.hm-place{display:inline-flex;align-items:center;gap:4px}.hm-place svg{flex:0 0 auto}`}</style>
             <div className="dash-card">
                 {/* Toolbar */}
                 <div className="alloc-records-bar hm-toolbar">
                     <div className="alloc-search">
                         <Search size={16} />
-                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hall, location or status" />
+                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hall, block, location or status" />
                     </div>
                     <select className="hm-exam-select" value={exam} onChange={e => setExam(e.target.value)} title="Seat usage is shown for this exam">
                         {examTypes.map(t => <option key={t} value={t}>{t}</option>)}
@@ -238,7 +241,10 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
                                         <span className="hm-card-icon"><Building2 size={18} /></span>
                                         <div className="hm-card-title">
                                             <strong>{hall.hallNo}</strong>
-                                            <small>{hall.location || 'No location set'}</small>
+                                            <small className="hm-place">
+                                                <MapPin size={12} />
+                                                {placeOf(hall) || 'No block / location set'}
+                                            </small>
                                         </div>
                                         <span className={`alloc-tag ${maintenance ? 'warn' : 'ok'}`}>{maintenance ? 'Maintenance' : 'Available'}</span>
                                     </div>
@@ -299,9 +305,15 @@ export default function HallManagement({ halls, allocations, duties, examTypes, 
                                 <label>Hall name / number</label>
                                 <input value={form.hallNo} onChange={e => setForm(f => ({ ...f, hallNo: e.target.value }))} placeholder="e.g. Hall 101" autoFocus required />
                             </div>
-                            <div className="alloc-field">
-                                <label>Location / block <em>(optional)</em></label>
-                                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Main block, 1st floor" />
+                            <div className="hm-form-row">
+                                <div className="alloc-field">
+                                    <label>Block name <em>(optional)</em></label>
+                                    <input value={form.blockName} onChange={e => setForm(f => ({ ...f, blockName: e.target.value }))} placeholder="e.g. Block A" />
+                                </div>
+                                <div className="alloc-field">
+                                    <label>Location <em>(optional)</em></label>
+                                    <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. 2nd floor, east wing" />
+                                </div>
                             </div>
                             <div className="hm-form-row">
                                 <div className="alloc-field">

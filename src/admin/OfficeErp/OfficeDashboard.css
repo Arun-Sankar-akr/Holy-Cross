@@ -6585,3 +6585,13 @@ button.alloc-step:disabled {
     background: #fee2e2;
     color: #b91c1c;
 }
+
+/* Exam hall block / location tag (Seating Arrangement) */
+.seat-hall-place {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--office-primary-dark, #5848e8);
+}
