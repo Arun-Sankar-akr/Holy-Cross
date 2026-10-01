@@ -8701,3 +8701,332 @@ button.ps-mini-cal-day {
     color: #64748b;
   }
 }
+
+
+/* ============================================================
+   PROFILE ID CARD — flippable school identity card (front / back)
+   Printed-card look stays light in both themes, like the real card.
+   ============================================================ */
+.pf-idflip-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pf-idflip {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 460 / 690;
+  perspective: 1200px;
+}
+
+.pf-idflip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+  border-radius: 18px;
+  outline: none;
+}
+
+.pf-idflip-inner:focus-visible {
+  box-shadow: 0 0 0 3px var(--dash-primary-border);
+}
+
+.pf-idflip.is-flipped .pf-idflip-inner {
+  transform: rotateY(180deg);
+}
+
+.pf-idface {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef6f8 100%);
+  border: 6px solid #d9dfe3;
+  box-shadow: 0 18px 40px rgba(40, 55, 90, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  color: #1f2937;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* subtle glossy sheen like laminated plastic */
+.pf-idface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 38%);
+}
+
+.idc-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(180deg, #f1f4ee 0%, #e6ebe2 100%);
+}
+
+/* ---- front ---- */
+.idc-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 4px;
+}
+
+.idc-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.idc-head-text {
+  min-width: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.idc-head-text h4 {
+  margin: 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 0.66rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #c1121f;
+  letter-spacing: 0.01em;
+}
+
+.idc-head-text p {
+  margin: 1px 0 0;
+  font-size: 0.45rem;
+  font-weight: 800;
+  color: #1d4e89;
+  line-height: 1.2;
+}
+
+.idc-band {
+  margin: 2px 8px 0;
+  padding: 2px 0;
+  text-align: center;
+  background: #2457a6;
+  color: #fff;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.idc-year {
+  margin: 2px 10px 0;
+  text-align: right;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #1b7a3a;
+}
+
+.idc-photo-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.idc-photo {
+  width: 36%;
+  aspect-ratio: 3 / 3.7;
+  background: #2d4e9c;
+  border: 2px solid #1d3a7a;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.idc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.idc-photo svg {
+  align-self: center;
+}
+
+.idc-blood {
+  position: absolute;
+  right: 14%;
+  top: 34%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.56rem;
+  color: #1f2937;
+}
+
+.idc-name {
+  margin: 8px 6px 2px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #d6403b;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.idc-lines {
+  align-self: center;
+  margin-top: 2px;
+}
+
+.idc-lines p {
+  display: grid;
+  grid-template-columns: 52px 10px auto;
+  margin: 2px 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.idc-building {
+  width: calc(100% - 12px);
+  height: 46px;
+  margin: auto 6px 0;
+  border-radius: 3px;
+}
+
+.idc-sign {
+  height: 26px;
+  margin: 2px 12px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.idc-sign img {
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.idc-principal {
+  margin: 0 8px 8px;
+  padding: 2px 10px;
+  text-align: right;
+  background: #2457a6;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* ---- back ---- */
+.idc-back-slot {
+  width: 38px;
+  height: 7px;
+  margin: 10px auto 6px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.2);
+}
+
+.idc-back-list {
+  margin: 8px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idc-back-list>div {
+  display: flex;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #2b2f33;
+  line-height: 1.3;
+}
+
+.idc-back-list>div.stack {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.idc-back-list dt {
+  flex: 0 0 86px;
+  margin: 0;
+}
+
+.idc-back-list>div.stack dt {
+  flex: none;
+}
+
+.idc-back-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.idc-back-list>div.stack dd {
+  text-transform: uppercase;
+}
+
+.idc-back-foot {
+  margin: auto 10px 10px;
+  text-align: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #4b5563;
+}
+
+/* ---- controls and meta under the card ---- */
+.pf-flip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--dash-primary-border);
+  background: var(--dash-primary-light);
+  color: var(--dash-primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pf-flip-btn:hover {
+  background: var(--dash-primary);
+  color: #fff;
+}
+
+.pf-idmeta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: 18px;
+  box-shadow: var(--dash-shadow-sm);
+}
+
+.pf-idmeta .pf-badges {
+  margin: 0;
+}
+
+.pf-idmeta .pf-complete {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-idflip-inner {
+    transition: none;
+  }
+}

@@ -1619,100 +1619,240 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* INSTITUTION OVERVIEW & DIRECTORY SEARCH */}
-                    {activeTab === 'analytics' && (
-                        <section className="ov">
-                            <div className="ov-row3">
-                                <div className="ov-hero">
-                                    <span className="ov-hero-date">{longDate}</span>
-                                    <div>
+                    {/* DASHBOARD — OVERVIEW, QUICK ACTIONS & DIRECTORY SEARCH */}
+                    {activeTab === 'analytics' && (() => {
+                        const pendingApps = admissionApplications.filter(a => (a.status || 'Pending') === 'Pending').length;
+                        const approvedApps = admissionApplications.filter(a => a.status === 'Approved').length;
+                        const approvedPct = admissionApplications.length ? Math.round((approvedApps / admissionApplications.length) * 100) : 0;
+                        const recentEvents = upcomingEvents.slice(0, 4);
+                        const recentNotices = announcements.slice(0, 4);
+
+                        return (
+                            <section className="dx">
+                                {/* HERO */}
+                                <div className="dx-hero">
+                                    <span className="dx-orb dx-orb-a" aria-hidden="true" />
+                                    <span className="dx-orb dx-orb-b" aria-hidden="true" />
+                                    <div className="dx-hero-text">
+                                        <span className="dx-date"><Calendar size={14} /> {longDate}</span>
                                         <h2>{greetingWord}, Admin</h2>
                                         <p>{studentsList.length} students, {staffList.length} staff and {announcements.length} published circulars are live across the institution.</p>
+                                        <div className="dx-hero-actions">
+                                            <button type="button" className="dx-btn is-light" onClick={handleDownloadReport}>
+                                                Download report <ChevronRight size={16} />
+                                            </button>
+                                            <button type="button" className="dx-btn is-ghost" onClick={() => goTo('announcements')}>
+                                                <Bell size={15} /> New announcement
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button type="button" className="ov-hero-btn" onClick={handleDownloadReport}>
-                                        Download report <ChevronRight size={16} />
+                                    <div className="dx-hero-stats">
+                                        <button type="button" onClick={() => goTo('admission_panel')}>
+                                            <strong>{pendingApps}</strong><span>Pending admissions</span>
+                                        </button>
+                                        <button type="button" onClick={() => goTo('upcoming_events')}>
+                                            <strong>{upcomingEvents.length}</strong><span>Upcoming events</span>
+                                        </button>
+                                        <button type="button" onClick={() => goTo('calendar')}>
+                                            <strong>{calendarEvents.length}</strong><span>Calendar entries</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* KPI CARDS */}
+                                <div className="dx-kpis">
+                                    <button type="button" className="dx-kpi" style={{ '--tone': '#6a5cf0', '--tone-soft': '#ece9ff' }} onClick={() => goTo('students')}>
+                                        <span className="dx-kpi-icon"><GraduationCap size={22} /></span>
+                                        <span className="dx-kpi-body">
+                                            <small>Students enrolled</small>
+                                            <strong>{studentsList.length}</strong>
+                                            <em>{sectionsList.length} class sections</em>
+                                        </span>
+                                        <ChevronRight size={18} className="dx-kpi-go" />
+                                    </button>
+                                    <button type="button" className="dx-kpi" style={{ '--tone': '#1fb27a', '--tone-soft': '#e2f7ee' }} onClick={() => goTo('staff')}>
+                                        <span className="dx-kpi-icon"><Users size={22} /></span>
+                                        <span className="dx-kpi-body">
+                                            <small>Faculty staff</small>
+                                            <strong>{staffList.length}</strong>
+                                            <em>{staffTimetables.length} work slots</em>
+                                        </span>
+                                        <ChevronRight size={18} className="dx-kpi-go" />
+                                    </button>
+                                    <button type="button" className="dx-kpi" style={{ '--tone': '#e59a1a', '--tone-soft': '#fff2d9' }} onClick={() => goTo('student_timetable')}>
+                                        <span className="dx-kpi-icon"><Clock size={22} /></span>
+                                        <span className="dx-kpi-body">
+                                            <small>Timetable periods</small>
+                                            <strong>{studentTimetables.length}</strong>
+                                            <em>Across 14 standards</em>
+                                        </span>
+                                        <ChevronRight size={18} className="dx-kpi-go" />
+                                    </button>
+                                    <button type="button" className="dx-kpi" style={{ '--tone': '#f0587a', '--tone-soft': '#ffe9ee' }} onClick={() => goTo('announcements')}>
+                                        <span className="dx-kpi-icon"><Bell size={22} /></span>
+                                        <span className="dx-kpi-body">
+                                            <small>Campus circulars</small>
+                                            <strong>{announcements.length}</strong>
+                                            <em>{calendarEvents.length} events on record</em>
+                                        </span>
+                                        <ChevronRight size={18} className="dx-kpi-go" />
                                     </button>
                                 </div>
 
-                                <div className="ov-card">
-                                    <div className="ov-card-head"><h3>Institution at a glance</h3></div>
-                                    <div className="ov-nums">
-                                        <button type="button" className="ov-num" style={{ '--dot': '#6a5cf0' }} onClick={() => goTo('students')}><i /><span>Students enrolled<small>{sectionsList.length} class sections</small></span><strong>{studentsList.length}</strong></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#1fb27a' }} onClick={() => goTo('staff')}><i /><span>Faculty staff<small>{staffTimetables.length} work slots</small></span><strong>{staffList.length}</strong></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#e59a1a' }} onClick={() => goTo('student_timetable')}><i /><span>Timetable periods<small>Across 14 standards</small></span><strong>{studentTimetables.length}</strong></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#f0587a' }} onClick={() => goTo('announcements')}><i /><span>Campus circulars<small>{calendarEvents.length} events on record</small></span><strong>{announcements.length}</strong></button>
-                                    </div>
-                                </div>
-
-                                <div className="ov-card">
-                                    <div className="ov-card-head"><h3>Quick links</h3></div>
-                                    <div className="ov-nums">
-                                        <button type="button" className="ov-num" style={{ '--dot': '#8a7dfa' }} onClick={() => goTo('results')}><i /><span>Results &amp; publish</span><ChevronRight size={16} /></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#3b9be8' }} onClick={() => goTo('student_timetable')}><i /><span>Student timetable</span><ChevronRight size={16} /></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#f0587a' }} onClick={() => goTo('announcements')}><i /><span>Add announcement</span><ChevronRight size={16} /></button>
-                                        <button type="button" className="ov-num" style={{ '--dot': '#1fb27a' }} onClick={() => goTo('upcoming_events')}><i /><span>Create event</span><ChevronRight size={16} /></button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="ov-card">
-                                <div className="ov-card-head"><h3>Quick directory search</h3></div>
-                                <div className="admin-search-wrapper">
-                                    <Search size={16} color="var(--muted)" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search by student name, admission no, staff name, or ID..."
-                                        value={globalSearch}
-                                        onChange={(e) => setGlobalSearch(e.target.value)}
-                                        className="admin-search-input"
-                                    />
-                                    {globalSearch && (
-                                        <button type="button" className="clear-search-btn" onClick={() => setGlobalSearch('')}><X size={14} /></button>
-                                    )}
-                                </div>
-
-                                {globalSearch.trim() !== '' && (
-                                    <div className="search-results-box">
-                                        <h5>Search Results for "{globalSearch}"</h5>
-
-                                        <div className="search-column-grid">
-                                            <div>
-                                                <strong className="sub-title">Matched Students ({searchMatchStudents.length})</strong>
-                                                {searchMatchStudents.length === 0 ? <p className="no-res">No students found.</p> : (
-                                                    <ul className="search-res-list">
-                                                        {searchMatchStudents.map(st => (
-                                                            <li key={st.id}>
-                                                                <div>
-                                                                    <strong>{st.name}</strong> ({st.className} - {st.sectionName})
-                                                                    <small>Adm: #{st.admissionNo} • DOB: {st.dob}</small>
-                                                                </div>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
+                                {/* MAIN GRID */}
+                                <div className="dx-grid">
+                                    <div className="dx-col">
+                                        {/* QUICK ACTIONS */}
+                                        <div className="dx-card">
+                                            <div className="dx-card-head">
+                                                <h3>Quick actions</h3>
+                                                <span>Jump straight to a task</span>
                                             </div>
-
-                                            <div>
-                                                <strong className="sub-title">Matched Staff ({searchMatchStaff.length})</strong>
-                                                {searchMatchStaff.length === 0 ? <p className="no-res">No staff found.</p> : (
-                                                    <ul className="search-res-list">
-                                                        {searchMatchStaff.map(stf => (
-                                                            <li key={stf.id}>
-                                                                <div>
-                                                                    <strong>{stf.name}</strong> ({stf.department})
-                                                                    <small>ID: {stf.staffId} • Email: {stf.email}</small>
-                                                                </div>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
+                                            <div className="dx-actions">
+                                                <button type="button" style={{ '--tone': '#8a7dfa', '--tone-soft': '#efecff' }} onClick={() => goTo('results')}>
+                                                    <i><Award size={20} /></i><b>Results &amp; publish</b><small>Manage exam results</small>
+                                                </button>
+                                                <button type="button" style={{ '--tone': '#3b9be8', '--tone-soft': '#e3f1ff' }} onClick={() => goTo('student_timetable')}>
+                                                    <i><Clock size={20} /></i><b>Student timetable</b><small>Class schedules</small>
+                                                </button>
+                                                <button type="button" style={{ '--tone': '#f0587a', '--tone-soft': '#ffe9ee' }} onClick={() => goTo('announcements')}>
+                                                    <i><Send size={20} /></i><b>Add announcement</b><small>Notify the campus</small>
+                                                </button>
+                                                <button type="button" style={{ '--tone': '#1fb27a', '--tone-soft': '#e2f7ee' }} onClick={() => goTo('upcoming_events')}>
+                                                    <i><PlusCircle size={20} /></i><b>Create event</b><small>Publish an activity</small>
+                                                </button>
+                                                <button type="button" style={{ '--tone': '#e59a1a', '--tone-soft': '#fff2d9' }} onClick={() => goTo('admission_panel')}>
+                                                    <i><FileText size={20} /></i><b>Admissions</b><small>Review applications</small>
+                                                </button>
+                                                <button type="button" style={{ '--tone': '#12a5b8', '--tone-soft': '#dff6f9' }} onClick={() => goTo('staff_timetable')}>
+                                                    <i><UserCheck size={20} /></i><b>Staff timetable</b><small>Work schedules</small>
+                                                </button>
                                             </div>
                                         </div>
+
+                                        {/* DIRECTORY SEARCH */}
+                                        <div className="dx-card">
+                                            <div className="dx-card-head">
+                                                <h3>Quick directory search</h3>
+                                                <span>Students &amp; staff</span>
+                                            </div>
+                                            <div className="dx-search">
+                                                <Search size={18} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search by student name, admission no, staff name, or ID..."
+                                                    value={globalSearch}
+                                                    onChange={(e) => setGlobalSearch(e.target.value)}
+                                                />
+                                                {globalSearch && (
+                                                    <button type="button" aria-label="Clear search" onClick={() => setGlobalSearch('')}><X size={14} /></button>
+                                                )}
+                                            </div>
+
+                                            {globalSearch.trim() !== '' && (
+                                                <div className="dx-results">
+                                                    <h5>Search results for "{globalSearch}"</h5>
+                                                    <div className="dx-results-grid">
+                                                        <div>
+                                                            <strong className="dx-results-title">Matched students ({searchMatchStudents.length})</strong>
+                                                            {searchMatchStudents.length === 0 ? <p className="dx-none">No students found.</p> : (
+                                                                <ul>
+                                                                    {searchMatchStudents.map(st => (
+                                                                        <li key={st.id}>
+                                                                            <span className="dx-avatar is-student">{(st.name || '?').charAt(0).toUpperCase()}</span>
+                                                                            <div>
+                                                                                <b>{st.name} <em>({st.className} - {st.sectionName})</em></b>
+                                                                                <small>Adm: #{st.admissionNo} • DOB: {st.dob}</small>
+                                                                            </div>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <strong className="dx-results-title">Matched staff ({searchMatchStaff.length})</strong>
+                                                            {searchMatchStaff.length === 0 ? <p className="dx-none">No staff found.</p> : (
+                                                                <ul>
+                                                                    {searchMatchStaff.map(stf => (
+                                                                        <li key={stf.id}>
+                                                                            <span className="dx-avatar is-staff">{(stf.name || '?').charAt(0).toUpperCase()}</span>
+                                                                            <div>
+                                                                                <b>{stf.name} <em>({stf.department})</em></b>
+                                                                                <small>ID: {stf.staffId} • Email: {stf.email}</small>
+                                                                            </div>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        </section>
-                    )}
+
+                                    <div className="dx-col">
+                                        {/* ADMISSIONS SNAPSHOT */}
+                                        <div className="dx-card">
+                                            <div className="dx-card-head">
+                                                <h3>Admissions</h3>
+                                                <button type="button" className="dx-link" onClick={() => goTo('admission_panel')}>View all <ChevronRight size={14} /></button>
+                                            </div>
+                                            <div className="dx-adm">
+                                                <div><strong>{admissionApplications.length}</strong><span>Total</span></div>
+                                                <div><strong>{pendingApps}</strong><span>Pending</span></div>
+                                                <div><strong>{approvedApps}</strong><span>Approved</span></div>
+                                            </div>
+                                            <div className="dx-bar" role="progressbar" aria-valuenow={approvedPct} aria-valuemin="0" aria-valuemax="100">
+                                                <span style={{ width: `${approvedPct}%` }} />
+                                            </div>
+                                            <p className="dx-bar-note">{approvedPct}% of applications approved</p>
+                                        </div>
+
+                                        {/* UPCOMING EVENTS */}
+                                        <div className="dx-card">
+                                            <div className="dx-card-head">
+                                                <h3>Upcoming events</h3>
+                                                <button type="button" className="dx-link" onClick={() => goTo('upcoming_events')}>Manage <ChevronRight size={14} /></button>
+                                            </div>
+                                            {recentEvents.length === 0 ? (
+                                                <div className="dx-empty">No upcoming events published yet.</div>
+                                            ) : (
+                                                <ul className="dx-list">
+                                                    {recentEvents.map(ev => (
+                                                        <li key={ev.id}>
+                                                            <span className="dx-datebox"><b>{ev.day}</b><small>{ev.month}</small></span>
+                                                            <div><b>{ev.title}</b><small>{ev.time}</small></div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+
+                                        {/* LATEST CIRCULARS */}
+                                        <div className="dx-card">
+                                            <div className="dx-card-head">
+                                                <h3>Latest circulars</h3>
+                                                <button type="button" className="dx-link" onClick={() => goTo('announcements')}>Manage <ChevronRight size={14} /></button>
+                                            </div>
+                                            {recentNotices.length === 0 ? (
+                                                <div className="dx-empty">No announcements published yet.</div>
+                                            ) : (
+                                                <ul className="dx-list">
+                                                    {recentNotices.map(n => (
+                                                        <li key={n.id}>
+                                                            <span className="dx-dot"><Bell size={15} /></span>
+                                                            <div><b className="dx-clamp">{n.content}</b></div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        );
+                    })()}
 
                     {/* SYSTEM CONTROLS & EMERGENCY BROADCAST */}
                     {activeTab === 'settings' && (

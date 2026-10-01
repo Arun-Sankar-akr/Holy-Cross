@@ -7,7 +7,7 @@ import {
     Menu, X, Clock, FileText, User, Ticket, Layers, Check, XCircle,
     Upload, FileCheck, ExternalLink, Loader2, AlertTriangle, Printer,
     ChevronRight, ChevronLeft, BarChart2, Filter, DollarSign, Receipt, Sun, Moon,
-    Download, Sparkles, Eye, ChevronDown, BookMarked, MapPin
+    Download, Sparkles, Eye, ChevronDown, BookMarked, MapPin, RotateCw
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
@@ -205,6 +205,7 @@ export default function StudentDashboard() {
     const last7FocalKeyRef = useRef(null);
     const [scheduleCalDate, setScheduleCalDate] = useState(() => new Date());
     const [profileSection, setProfileSection] = useState('all');
+    const [idCardFlipped, setIdCardFlipped] = useState(false);
     const [selectedScheduleDate, setSelectedScheduleDate] = useState(() => {
         const now = new Date();
         return [
@@ -3733,6 +3734,15 @@ export default function StudentDashboard() {
                                 ? fieldGroups
                                 : fieldGroups.filter((g) => g.id === profileSection);
                             const profileIdLabel = `#HCMS${(studentData.rollNo || '00000').toString().padStart(4, '0')}`;
+                            // ---- ID card (front / back) values ----
+                            const idSection = sectionLabel !== '—' ? sectionLabel.replace(/^section\s*/i, '') : '';
+                            const idClass = `${classLabel}${idSection ? ` - ${idSection}` : ''}`;
+                            const idYear = pickField(rec, ['academicYear', 'session'], '2026 - 2027');
+                            const idDob = formatHallTicketDate(pickField(rec, ['dob', 'dateOfBirth', 'birthDate'], ''));
+                            const idBlood = pickField(rec, ['bloodGroup', 'blood']);
+                            const idFather = pickField(rec, ['fatherName', 'father']);
+                            const idAddress = pickField(rec, ['address', 'residentialAddress', 'permanentAddress']);
+                            const idCell = pickField(rec, ['phone', 'mobile', 'contactNumber', 'phoneNumber', 'guardianPhone', 'parentPhone']);
                             const printSummary = [
                                 ['Attendance', hasStaffSubmittedAttendance ? `${rawAttendanceRate}%` : '—'],
                                 ['Average Score', averageScore !== 'N/A' ? `${averageScore}%` : '—'],
@@ -3744,40 +3754,117 @@ export default function StudentDashboard() {
                                 <div className="pf-wrap">
                                     <div className="pf-layout">
                                         <aside className="pf-side">
-                                            <div className="pf-idcard">
-                                                <div className="pf-idcard-cover" />
-                                                <div className="pf-avatar">
-                                                    {profilePhoto ? (
-                                                        <img src={profilePhoto} alt={studentData.name} />
-                                                    ) : (
-                                                        <User size={42} />
-                                                    )}
-                                                </div>
-                                                <span className="pf-id-chip"><Sparkles size={11} /> {profileIdLabel}</span>
-                                                <h2>{studentData.name || 'Student'}</h2>
-                                                <p className="pf-class-line">
-                                                    Class {classLabel}
-                                                    {sectionLabel !== '—' ? ` • Section ${sectionLabel}` : ''}
-                                                </p>
-                                                {admissionNo !== '—' && <p className="pf-adm-line">Admission No: {admissionNo}</p>}
+                                            <div className="pf-idflip-wrap">
+                                                <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
+                                                    <div
+                                                        className="pf-idflip-inner"
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        aria-label={idCardFlipped ? 'ID card back side. Click to flip to the front' : 'ID card front side. Click to flip to the back'}
+                                                        onClick={() => setIdCardFlipped((v) => !v)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault();
+                                                                setIdCardFlipped((v) => !v);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {/* ---------- FRONT ---------- */}
+                                                        <div className="pf-idface idc-front" aria-hidden={idCardFlipped}>
+                                                            <div className="idc-head">
+                                                                <img src={logo} alt="" className="idc-logo" />
+                                                                <div className="idc-head-text">
+                                                                    <h4>HOLY CROSS MATRIC HR. SEC. SCHOOL</h4>
+                                                                    <p>SOMARASAMPETTAI, TRICHY - 620 102.</p>
+                                                                    <p>Phone : 0431 - 2607175, 9597172383</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="idc-band"><span>IDENTITY CARD</span></div>
+                                                            <div className="idc-year">{idYear}</div>
 
-                                                <div className="pf-badges">
-                                                    <span className={`profile-status-chip ${isDefaulter ? 'is-alert' : 'is-ok'}`}>
-                                                        <CheckCircle size={11} />
-                                                        {hasStaffSubmittedAttendance ? `Attendance ${rawAttendanceRate}%` : 'Attendance Pending'}
-                                                    </span>
-                                                    <span className={`profile-status-chip ${hasFeeClearance ? 'is-ok' : 'is-warn'}`}>
-                                                        <Receipt size={11} /> Fees: {feeStatusLabel}
-                                                    </span>
-                                                </div>
+                                                            <div className="idc-photo-row">
+                                                                <div className="idc-photo">
+                                                                    {profilePhoto ? (
+                                                                        <img src={profilePhoto} alt={studentData.name} />
+                                                                    ) : (
+                                                                        <User size={46} />
+                                                                    )}
+                                                                </div>
+                                                                <div className="idc-blood">
+                                                                    <svg viewBox="0 0 24 32" width="20" height="26" aria-hidden="true">
+                                                                        <path d="M12 2C12 2 3 13 3 20a9 9 0 0 0 18 0C21 13 12 2 12 2z" fill="#c1121f" />
+                                                                    </svg>
+                                                                    <b>{idBlood !== '—' ? idBlood : ''}</b>
+                                                                </div>
+                                                            </div>
 
-                                                <div className="pf-complete">
-                                                    <div className="pf-complete-head">
-                                                        <span>Profile completeness</span>
-                                                        <strong>{profileCompleteness}%</strong>
+                                                            <h3 className="idc-name">{studentData.name || 'Student'}</h3>
+                                                            <div className="idc-lines">
+                                                                <p><span>Class</span><span>:</span><b>{idClass}</b></p>
+                                                                <p><span>Ad.No.</span><span>:</span><b>{admissionNo}</b></p>
+                                                            </div>
+
+                                                            <svg className="idc-building" viewBox="0 0 240 46" preserveAspectRatio="none" aria-hidden="true">
+                                                                <rect x="0" y="6" width="240" height="40" fill="#f2c94c" />
+                                                                <rect x="0" y="2" width="240" height="6" fill="#d98e3a" />
+                                                                {Array.from({ length: 18 }).map((_, i) => (
+                                                                    <React.Fragment key={i}>
+                                                                        <rect x={8 + i * 13} y="12" width="7" height="8" fill="#7a3b3b" />
+                                                                        <rect x={8 + i * 13} y="28" width="7" height="8" fill="#7a3b3b" />
+                                                                    </React.Fragment>
+                                                                ))}
+                                                            </svg>
+
+                                                            <div className="idc-sign">
+                                                                <img src={principalSignature} alt="" />
+                                                            </div>
+                                                            <div className="idc-principal">Principal</div>
+                                                        </div>
+
+                                                        {/* ---------- BACK ---------- */}
+                                                        <div className="pf-idface idc-back" aria-hidden={!idCardFlipped}>
+                                                            <div className="idc-back-slot" />
+                                                            <dl className="idc-back-list">
+                                                                <div><dt>Date of Birth</dt><dd>: {idDob}</dd></div>
+                                                                <div><dt>Blood Group</dt><dd>: {idBlood}</dd></div>
+                                                                <div className="stack"><dt>Father's Name :</dt><dd>{idFather}</dd></div>
+                                                                <div className="stack"><dt>Address :</dt>
+                                                                    <dd>
+                                                                        <strong>{studentData.name || 'Student'}</strong>
+                                                                        <br />
+                                                                        {idAddress}
+                                                                    </dd>
+                                                                </div>
+                                                                <div><dt>Cell</dt><dd>: {idCell}</dd></div>
+                                                            </dl>
+                                                            <p className="idc-back-foot">{HALL_TICKET_SCHOOL_NAME}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
-                                                    <small>{filledProfileFields} of {allProfileFields.length} details filled by the office</small>
+                                                </div>
+
+                                                <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
+                                                    <RotateCw size={13} /> {idCardFlipped ? 'Show Front' : 'Show Back'}
+                                                </button>
+
+                                                <div className="pf-idmeta">
+                                                    <span className="pf-id-chip"><Sparkles size={11} /> {profileIdLabel}</span>
+                                                    <div className="pf-badges">
+                                                        <span className={`profile-status-chip ${isDefaulter ? 'is-alert' : 'is-ok'}`}>
+                                                            <CheckCircle size={11} />
+                                                            {hasStaffSubmittedAttendance ? `Attendance ${rawAttendanceRate}%` : 'Attendance Pending'}
+                                                        </span>
+                                                        <span className={`profile-status-chip ${hasFeeClearance ? 'is-ok' : 'is-warn'}`}>
+                                                            <Receipt size={11} /> Fees: {feeStatusLabel}
+                                                        </span>
+                                                    </div>
+                                                    <div className="pf-complete">
+                                                        <div className="pf-complete-head">
+                                                            <span>Profile completeness</span>
+                                                            <strong>{profileCompleteness}%</strong>
+                                                        </div>
+                                                        <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
+                                                        <small>{filledProfileFields} of {allProfileFields.length} details filled by the office</small>
+                                                    </div>
                                                 </div>
                                             </div>
 
