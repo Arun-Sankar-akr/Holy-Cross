@@ -8716,7 +8716,7 @@ button.ps-mini-cal-day {
 
 .pf-idflip {
   width: 100%;
-  max-width: 280px;
+  max-width: 300px;
   aspect-ratio: 460 / 690;
   perspective: 1200px;
 }
@@ -8766,7 +8766,7 @@ button.ps-mini-cal-day {
 
 .idc-back {
   transform: rotateY(180deg);
-  background: linear-gradient(180deg, #f1f4ee 0%, #e6ebe2 100%);
+  background: linear-gradient(180deg, #fff 0%, #fff 100%);
 }
 
 /* ---- front ---- */
@@ -8795,7 +8795,7 @@ button.ps-mini-cal-day {
 .idc-head-text h4 {
   margin: 0;
   font-family: 'Georgia', 'Times New Roman', serif;
-  font-size: 0.66rem;
+  font-size: 0.70rem;
   line-height: 1.15;
   font-weight: 800;
   color: #c1121f;
@@ -8804,7 +8804,7 @@ button.ps-mini-cal-day {
 
 .idc-head-text p {
   margin: 1px 0 0;
-  font-size: 0.45rem;
+  font-size: 0.60rem;
   font-weight: 800;
   color: #1d4e89;
   line-height: 1.2;

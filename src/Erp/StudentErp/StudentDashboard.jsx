@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import './StudentDashboard.css';
 import logo from "../../assets/logo.png"
+import id from "../../assets/id1.png"
 import principalSignature from "../../assets/signature.png"
 
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
@@ -3804,7 +3805,7 @@ export default function StudentDashboard() {
                                                                 <p><span>Ad.No.</span><span>:</span><b>{admissionNo}</b></p>
                                                             </div>
 
-                                                            <svg className="idc-building" viewBox="0 0 240 46" preserveAspectRatio="none" aria-hidden="true">
+                                                            {/* <svg className="idc-building" viewBox="0 0 240 46" preserveAspectRatio="none" aria-hidden="true">
                                                                 <rect x="0" y="6" width="240" height="40" fill="#f2c94c" />
                                                                 <rect x="0" y="2" width="240" height="6" fill="#d98e3a" />
                                                                 {Array.from({ length: 18 }).map((_, i) => (
@@ -3813,8 +3814,8 @@ export default function StudentDashboard() {
                                                                         <rect x={8 + i * 13} y="28" width="7" height="8" fill="#7a3b3b" />
                                                                     </React.Fragment>
                                                                 ))}
-                                                            </svg>
-
+                                                            </svg> */}
+                                                            <img src={id} alt="" />
                                                             <div className="idc-sign">
                                                                 <img src={principalSignature} alt="" />
                                                             </div>
