@@ -86,7 +86,13 @@ export default function OfficeDashboard() {
     // Form States
     const [enquiryForm, setEnquiryForm] = useState({ studentName: '', parentName: '', phone: '', grade: '10th Std', notes: '' });
     const [feeForm, setFeeForm] = useState({ admissionNo: '', studentName: '', class: '', totalFee: '', paidAmount: '', term: 'Term 1' });
-    const [taskForm, setTaskForm] = useState({ title: '', assignedTo: '', priority: 'Normal', deadline: '' });
+    const [taskForm, setTaskForm] = useState({ title: '', category: 'General', assessmentType: '', notes: '', priority: 'Normal', deadline: '' });
+    const [taskScope, setTaskScope] = useState('selected');      // 'all' | 'selected'
+    const [taskStaffIds, setTaskStaffIds] = useState([]);
+    const [taskStaffSearch, setTaskStaffSearch] = useState('');
+    const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const taskCategories = ['General', 'Assessment', 'Exam Duty', 'Marks / Records', 'Meeting', 'Event', 'Admin / Office'];
+    const assessmentTypes = ['Unit Test', 'Quarterly Exam', 'Half-yearly Exam', 'Annual Exam', 'Assignment / Project', 'Practical / Lab', 'Marks Entry', 'Paper Correction'];
 
     // Exam Hall Allocation - Student/Staff workflow
     const [examStudentClass, setExamStudentClass] = useState('');
@@ -867,7 +873,88 @@ export default function OfficeDashboard() {
     const dashboardFeePaid = feesList.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
     const dashboardFeeBalance = feesList.reduce((sum, item) => sum + Number(item.balance || 0), 0);
     const dashboardPendingLeaves = leaveRequests.filter(item => String(item.status || 'Pending').toLowerCase() === 'pending').length;
-    const dashboardPendingTasks = officeTasks.filter(item => !['completed', 'done'].includes(String(item.status || '').toLowerCase())).length;
+    const isTaskDone = (t) => ['completed', 'done'].includes(String(t.status || '').toLowerCase());
+    // One row per created task: a task sent to many staff is stored as one doc per staff, joined by groupId
+    const taskGroups = (() => {
+        const map = new Map();
+        officeTasks.forEach(t => {
+            const key = t.groupId || t.id;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(t);
+        });
+        return Array.from(map.values()).map(items => {
+            const first = items[0];
+            const names = items.map(i => i.assignedTo).filter(Boolean);
+            const total = items.length;
+            const done = items.filter(isTaskDone).length;
+            return {
+                ...first,
+                key: first.groupId || first.id,
+                ids: items.map(i => i.id),
+                names, total, done,
+                assignedTo: total === 1 ? (names[0] || 'Unassigned') : (first.assignedScope === 'all' ? `All Staff (${total})` : `${total} staff`)
+            };
+        });
+    })();
+    const dashboardPendingTasks = taskGroups.filter(g => g.done < g.total).length;
+
+    const taskStaffVisible = staffList.filter(s => {
+        const q = taskStaffSearch.trim().toLowerCase();
+        if (!q) return true;
+        return [s.name, s.staffName, s.staffId, s.department, s.subject, s.designation].filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+    });
+    const staffLabel = (s) => s.name || s.staffName || 'Staff';
+    const toggleTaskStaff = (id) => setTaskStaffIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+    const handleCreateTask = async (e) => {
+        e.preventDefault();
+        const targets = taskScope === 'all' ? staffList : staffList.filter(s => taskStaffIds.includes(s.id));
+        if (targets.length === 0) {
+            alert(taskScope === 'all' ? 'There are no staff members to assign this task to.' : 'Please select at least one staff member.');
+            return;
+        }
+        if (taskForm.category === 'Assessment' && !taskForm.assessmentType) {
+            alert('Please choose the assessment type.');
+            return;
+        }
+        setIsCreatingTask(true);
+        try {
+            const groupId = `tg_${Date.now()}`;
+            await Promise.all(targets.map(s => addDoc(collection(db, 'office_tasks'), {
+                title: taskForm.title,
+                category: taskForm.category,
+                assessmentType: taskForm.category === 'Assessment' ? taskForm.assessmentType : '',
+                notes: taskForm.notes || '',
+                priority: taskForm.priority,
+                deadline: taskForm.deadline,
+                status: 'Pending',
+                groupId,
+                assignedScope: taskScope,
+                assignedTo: staffLabel(s),
+                assignedToId: s.id,
+                assignedStaffId: s.staffId || '',
+                createdAt: serverTimestamp()
+            })));
+            setTaskForm({ title: '', category: 'General', assessmentType: '', notes: '', priority: 'Normal', deadline: '' });
+            setTaskStaffIds([]);
+            setTaskStaffSearch('');
+        } catch (error) {
+            console.error('Error creating task:', error);
+            alert('Failed to create the task.');
+        } finally {
+            setIsCreatingTask(false);
+        }
+    };
+
+    const handleDeleteTaskGroup = async (group) => {
+        const msg = group.total > 1 ? `Delete this task for all ${group.total} staff?` : 'Delete this task?';
+        if (!window.confirm(msg)) return;
+        try {
+            await Promise.all(group.ids.map(id => deleteDoc(doc(db, 'office_tasks', id))));
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
+    };
     const dashboardPublishedTickets = hallTicketPublications.filter(item => item.published === true).length;
     const dashboardPaidStudents = studentsList.filter(student => getStudentFeeStatus(student).paid).length;
 
@@ -1264,7 +1351,7 @@ export default function OfficeDashboard() {
     const longDate = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const pendingLeaveList = leaveRequests.filter(item => String(item.status || 'Pending').toLowerCase() === 'pending');
-    const openTaskList = officeTasks.filter(item => !['completed', 'done'].includes(String(item.status || '').toLowerCase()));
+    const openTaskList = taskGroups.filter(g => g.done < g.total);
     const attentionCount = dashboardPendingLeaves + dashboardPendingTasks;
     const feePercent = dashboardFeeTotal ? Math.min(100, Math.round((dashboardFeePaid / dashboardFeeTotal) * 100)) : 0;
     const ringLen = 2 * Math.PI * 62;
@@ -3575,64 +3662,137 @@ export default function OfficeDashboard() {
                                 </div>
                             </div>
 
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('office_tasks', taskForm, () =>
-                                    setTaskForm({ title: '', assignedTo: '', priority: 'Normal', deadline: '' })
-                                );
-                            }} className="form-grid" style={{ marginBottom: '1.25rem' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Task Title</label>
+                            <form onSubmit={handleCreateTask} className="tk-form">
+                                <div className="tk-field tk-span-2">
+                                    <label>Task Title</label>
                                     <input type="text" className="table-input full-width-input" placeholder="Task description..." value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} required />
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Assigned To</label>
-                                    <input type="text" className="table-input full-width-input" placeholder="Staff Name" value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Priority</label>
-                                    <select className="custom-select full-width" value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
-                                        <option value="Normal">Normal</option>
-                                        <option value="High">High Priority</option>
-                                        <option value="Urgent">Urgent</option>
+
+                                <div className="tk-field">
+                                    <label>Task Type</label>
+                                    <select className="custom-select full-width" value={taskForm.category} onChange={e => setTaskForm({ ...taskForm, category: e.target.value, assessmentType: e.target.value === 'Assessment' ? taskForm.assessmentType : '' })}>
+                                        {taskCategories.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 700 }}>Deadline</label>
+                                {taskForm.category === 'Assessment' ? (
+                                    <div className="tk-field">
+                                        <label>Assessment Type</label>
+                                        <select className="custom-select full-width" value={taskForm.assessmentType} onChange={e => setTaskForm({ ...taskForm, assessmentType: e.target.value })} required>
+                                            <option value="">Select assessment...</option>
+                                            {assessmentTypes.map(a => <option key={a} value={a}>{a}</option>)}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="tk-field">
+                                        <label>Priority</label>
+                                        <select className="custom-select full-width" value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                                            <option value="Normal">Normal</option>
+                                            <option value="High">High Priority</option>
+                                            <option value="Urgent">Urgent</option>
+                                        </select>
+                                    </div>
+                                )}
+                                {taskForm.category === 'Assessment' && (
+                                    <div className="tk-field">
+                                        <label>Priority</label>
+                                        <select className="custom-select full-width" value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                                            <option value="Normal">Normal</option>
+                                            <option value="High">High Priority</option>
+                                            <option value="Urgent">Urgent</option>
+                                        </select>
+                                    </div>
+                                )}
+                                <div className="tk-field">
+                                    <label>Deadline</label>
                                     <input type="date" className="table-input full-width-input" value={taskForm.deadline} onChange={e => setTaskForm({ ...taskForm, deadline: e.target.value })} required />
                                 </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" style={{ background: 'var(--accent)' }}>
-                                        <PlusCircle size={15} /> Create Task Item
+
+                                <div className="tk-field tk-span-all">
+                                    <label>Notes (optional)</label>
+                                    <input type="text" className="table-input full-width-input" placeholder="Any extra instructions for the staff..." value={taskForm.notes} onChange={e => setTaskForm({ ...taskForm, notes: e.target.value })} />
+                                </div>
+
+                                <div className="tk-field tk-span-all">
+                                    <label>Assign To</label>
+                                    <div className="tk-scope">
+                                        <button type="button" className={taskScope === 'all' ? 'is-active' : ''} onClick={() => setTaskScope('all')}>
+                                            All Staff <small>({staffList.length})</small>
+                                        </button>
+                                        <button type="button" className={taskScope === 'selected' ? 'is-active' : ''} onClick={() => setTaskScope('selected')}>
+                                            Particular Staff {taskStaffIds.length > 0 && <small>({taskStaffIds.length})</small>}
+                                        </button>
+                                    </div>
+
+                                    {taskScope === 'all' ? (
+                                        <div className="tk-all-note">This task will be sent to every staff member ({staffList.length}). Each one tracks and completes it separately.</div>
+                                    ) : (
+                                        <div className="tk-picker">
+                                            <div className="tk-picker-bar">
+                                                <input type="text" className="table-input" placeholder="Search staff by name, ID or department..." value={taskStaffSearch} onChange={e => setTaskStaffSearch(e.target.value)} />
+                                                <button type="button" onClick={() => setTaskStaffIds(Array.from(new Set([...taskStaffIds, ...taskStaffVisible.map(s => s.id)])))}>Select shown</button>
+                                                <button type="button" onClick={() => setTaskStaffIds([])} disabled={taskStaffIds.length === 0}>Clear</button>
+                                            </div>
+                                            <div className="tk-picker-list">
+                                                {taskStaffVisible.length === 0 ? (
+                                                    <div className="tk-picker-empty">No staff found.</div>
+                                                ) : taskStaffVisible.map(s => (
+                                                    <label key={s.id} className={`tk-staff-chip ${taskStaffIds.includes(s.id) ? 'is-on' : ''}`}>
+                                                        <input type="checkbox" checked={taskStaffIds.includes(s.id)} onChange={() => toggleTaskStaff(s.id)} />
+                                                        <span className="tk-staff-name">{staffLabel(s)}</span>
+                                                        <span className="tk-staff-sub">{[s.staffId, s.department || s.subject].filter(Boolean).join(' · ')}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="tk-span-all">
+                                    <button type="submit" className="btn-primary" style={{ background: 'var(--accent)' }} disabled={isCreatingTask}>
+                                        <PlusCircle size={15} /> {isCreatingTask ? 'Creating...' : taskScope === 'all' ? 'Assign to All Staff' : `Assign to ${taskStaffIds.length || ''} Staff`.replace('  ', ' ')}
                                     </button>
                                 </div>
                             </form>
 
-                            <h4>Pending Front-Office Tasks ({officeTasks.length})</h4>
+                            <h4>Front-Office Tasks ({taskGroups.length})</h4>
                             <div className="table-responsive">
                                 <table className="custom-table">
                                     <thead>
                                         <tr>
                                             <th>Task Description</th>
+                                            <th>Type</th>
                                             <th>Assigned Staff</th>
                                             <th>Priority</th>
                                             <th>Deadline</th>
+                                            <th>Status</th>
                                             <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {officeTasks.map(task => (
-                                            <tr key={task.id}>
-                                                <td><strong>{task.title}</strong></td>
-                                                <td>{task.assignedTo}</td>
+                                        {taskGroups.length === 0 && (
+                                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1.2rem', opacity: 0.7 }}>No tasks created yet.</td></tr>
+                                        )}
+                                        {taskGroups.map(task => (
+                                            <tr key={task.key}>
+                                                <td><strong>{task.title}</strong>{task.notes && <div style={{ fontSize: '0.72rem', opacity: 0.7 }}>{task.notes}</div>}</td>
+                                                <td>
+                                                    <span className="task-target-tag">{task.category || 'General'}</span>
+                                                    {task.assessmentType && <div style={{ fontSize: '0.72rem', opacity: 0.75, marginTop: 2 }}>{task.assessmentType}</div>}
+                                                </td>
+                                                <td title={task.names.join(', ')}>{task.assignedTo}</td>
                                                 <td>
                                                     <span className={`status-badge ${task.priority === 'Urgent' ? 'status-absent' : task.priority === 'High' ? '' : 'is-neutral'}`}>
                                                         {task.priority}
                                                     </span>
                                                 </td>
                                                 <td>{task.deadline}</td>
+                                                <td>
+                                                    <span className={`status-badge ${task.done === task.total ? '' : 'is-neutral'}`}>
+                                                        {task.total > 1 ? `${task.done}/${task.total} done` : task.done === 1 ? 'Completed' : 'Pending'}
+                                                    </span>
+                                                </td>
                                                 <td style={{ textAlign: 'right' }}>
-                                                    <button className="delete-task-btn" onClick={() => handleDelete('office_tasks', task.id)} title="Delete Task"><X size={14} /></button>
+                                                    <button className="delete-task-btn" onClick={() => handleDeleteTaskGroup(task)} title="Delete Task"><X size={14} /></button>
                                                 </td>
                                             </tr>
                                         ))}

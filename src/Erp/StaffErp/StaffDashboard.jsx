@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../service/firebase';
 import { Html5Qrcode } from 'html5-qrcode';
 import logo from "../../assets/logo.png"
+import idBuilding from "../../assets/id1.png"
+import principalSignature from "../../assets/signature.png"
 import {
     collection, onSnapshot, doc, updateDoc, writeBatch, addDoc, deleteDoc, serverTimestamp, deleteField, query, where,
     setDoc, orderBy, limit, arrayUnion, arrayRemove, increment
@@ -16,9 +18,22 @@ import {
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
     Library, PartyPopper, Moon, CalendarClock, MoreVertical,
     BookMarked, Upload, Loader2,
-    PersonStanding
+    PersonStanding, Printer, RotateCw
 } from 'lucide-react';
 import './StaffDashboard.css';
+
+const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
+const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
+
+const SIDEBAR_TAB_GROUP = {
+    profile: 'workspace', schedule: 'workspace', departments: 'workspace', assignments: 'workspace',
+    syllabus: 'workspace', marks: 'workspace', attendance: 'workspace', submissions: 'workspace',
+    students: 'workspace', analytics: 'workspace',
+    'exam-halls': 'exams',
+    chats: 'comms', staffroom: 'comms', schoolnews: 'comms',
+    mytasks: 'alerts', leaves: 'alerts',
+    downloads: 'others', library: 'others', events: 'others'
+};
 
 export default function StaffDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
@@ -26,8 +41,17 @@ export default function StaffDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const [academicMenuOpen, setAcademicMenuOpen] = useState(true);
-    const [examHallMenuOpen, setExamHallMenuOpen] = useState(true);
+    const [academicMenuOpen, setAcademicMenuOpen] = useState(false);
+    const [examHallMenuOpen, setExamHallMenuOpen] = useState(false);
+    const [openGroup, setOpenGroup] = useState(null);   // sidebar section accordion: only one open at a time
+
+    // when the page changes (sidebar, bell, profile menu...), open the section that holds it
+    useEffect(() => {
+        const g = SIDEBAR_TAB_GROUP[activeTab];
+        if (g) setOpenGroup(g);
+        if (['students', 'analytics'].includes(activeTab)) setAcademicMenuOpen(true);
+        if (activeTab === 'exam-halls') setExamHallMenuOpen(true);
+    }, [activeTab]);
     const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('holy-cross-theme') === 'dark');
     const [showAiHint, setShowAiHint] = useState(false);
     const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
@@ -42,8 +66,12 @@ export default function StaffDashboard() {
     const [isProfileSaving, setIsProfileSaving] = useState(false);
     const [profileSaveStatus, setProfileSaveStatus] = useState('');
     const [profileForm, setProfileForm] = useState({ email: '', phone: '', qualification: '', bio: '' });
+    const [profileSection, setProfileSection] = useState('all');
+    const [idCardFlipped, setIdCardFlipped] = useState(false);
 
     const [staffLeaveList, setStaffLeaveList] = useState([]);
+    const [officeTaskList, setOfficeTaskList] = useState([]);
+    const [taskFilter, setTaskFilter] = useState('pending');
     const [leaveForm, setLeaveForm] = useState({
         leaveType: 'Casual Leave',
         startDate: '',
@@ -301,6 +329,10 @@ export default function StaffDashboard() {
             setStaffLeaveList(leaves);
         });
 
+        const unsubOfficeTasks = onSnapshot(collection(db, 'office_tasks'), (snap) => {
+            setOfficeTaskList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
         const unsubStaffMembers = onSnapshot(collection(db, 'staff_members'), (snap) => {
             setAllStaffMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -324,6 +356,7 @@ export default function StaffDashboard() {
             unsubStaffExamHalls();
             unsubLeaves();
             unsubStaffMembers();
+            unsubOfficeTasks();
             unsubStaffRoom();
         };
     }, []);
@@ -739,6 +772,51 @@ export default function StaffDashboard() {
     const handleLogout = () => {
         localStorage.removeItem('staffUser');
         navigate('/');
+    };
+
+    // PROFILE HELPERS — staff docs are written by several admin screens over time,
+    // so the same info can live under different key names. pickField returns the
+    // first key that actually has a value.
+    const pickField = (source, keys, fallback = '—') => {
+        if (!source) return fallback;
+        for (const key of keys) {
+            const value = source[key];
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                return String(value).trim();
+            }
+        }
+        return fallback;
+    };
+
+    const formatProfileDate = (value) => {
+        if (!value || value === '—') return value || '—';
+        let date = null;
+        if (value?.toDate && typeof value.toDate === 'function') date = value.toDate();
+        else if (value instanceof Date) date = value;
+        else if (typeof value === 'string' || typeof value === 'number') date = new Date(value);
+        if (!date || Number.isNaN(date.getTime())) return String(value);
+        return [
+            String(date.getDate()).padStart(2, '0'),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            date.getFullYear()
+        ].join('-');
+    };
+
+    const printProfile = () => {
+        // The print stylesheet shows only .profile-print-area (a clean A4 record sheet).
+        // A temporary portrait @page rule is added for this one job and removed afterwards.
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'profile-print-page-style';
+        pageStyle.textContent = '@page { size: A4 portrait !important; margin: 8mm !important; }';
+        document.head.appendChild(pageStyle);
+
+        const cleanup = () => {
+            document.getElementById('profile-print-page-style')?.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
+
+        setTimeout(() => window.print(), 80);
     };
 
     const handleSaveProfile = async (e) => {
@@ -1650,6 +1728,43 @@ export default function StaffDashboard() {
             }))
     ].slice(0, 3);
 
+    const isTaskDone = (t) => ['completed', 'done'].includes(String(t.status || '').toLowerCase());
+    const myOfficeTasks = officeTaskList
+        .filter(t =>
+            (myStaffDocId && t.assignedToId === myStaffDocId) ||
+            (staffData.staffId && t.assignedStaffId === staffData.staffId) ||
+            (t.assignedTo && staffData.name && String(t.assignedTo).trim().toLowerCase() === String(staffData.name).trim().toLowerCase())
+        )
+        .sort((a, b) => (isTaskDone(a) - isTaskDone(b)) || String(a.deadline || '').localeCompare(String(b.deadline || '')));
+    const pendingOfficeTasks = myOfficeTasks.filter(t => !isTaskDone(t));
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    const isTaskOverdue = (t) => !isTaskDone(t) && t.deadline && new Date(t.deadline) < todayStart;
+    const isTaskAssessment = (t) => t.category === 'Assessment';
+    const overdueTaskCount = pendingOfficeTasks.filter(isTaskOverdue).length;
+    const assessmentTaskCount = myOfficeTasks.filter(t => isTaskAssessment(t) && !isTaskDone(t)).length;
+    const completedTaskCount = myOfficeTasks.length - pendingOfficeTasks.length;
+    const visibleOfficeTasks = myOfficeTasks.filter(t =>
+        taskFilter === 'pending' ? !isTaskDone(t)
+        : taskFilter === 'assessment' ? isTaskAssessment(t)
+        : taskFilter === 'done' ? isTaskDone(t)
+        : true
+    );
+    const fmtTaskDate = (d) => {
+        if (!d) return 'No deadline';
+        const dt = new Date(d);
+        return isNaN(dt) ? d : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+    const handleCompleteOfficeTask = async (task, done) => {
+        try {
+            await updateDoc(doc(db, 'office_tasks', task.id), {
+                status: done ? 'Completed' : 'Pending',
+                completedAt: done ? serverTimestamp() : deleteField()
+            });
+        } catch (err) {
+            console.error('Error updating task status:', err);
+            alert('Could not update the task. Please try again.');
+        }
+    };
     const pendingLeaveCount = myLeaveRequests.filter(l => (l.status || 'Pending') === 'Pending').length;
     const ungradedSubmissionsCount = submissionsList.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
     const dueSoonAssignmentsCount = assignmentsList.filter(a => a.dueDate && new Date(a.dueDate) >= new Date(new Date().setHours(0, 0, 0, 0))).length;
@@ -1777,9 +1892,7 @@ export default function StaffDashboard() {
                 </div>
 
                 <nav className="sidebar-nav">
-                    <div className="sidebar-group">
-                        <span className="sidebar-group-label">My Workspace</span>
-
+                    <div className="sidebar-pinned">
                         <button
                             className={`nav-links ${activeTab === 'overview' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
@@ -1789,264 +1902,345 @@ export default function StaffDashboard() {
                                 <span>Dashboard</span>
                             </div>
                         </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'profile' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <User size={18} />
-                                <span>My Profile</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <Calendar size={18} />
-                                <span>Timetable</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'departments' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('departments'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <Building2 size={18} />
-                                <span>Departments</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <ClipboardList size={18} />
-                                <span>Tasks</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'syllabus' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <BookMarked size={18} />
-                                <span>Syllabus</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'marks' ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveTab('marks');
-                                setSelectedClass('10th Std');
-                                setSelectedSection(null);
-                                setIsMobileMenuOpen(false);
-                            }}
-                        >
-                            <div className="nav-links-content">
-                                <Award size={18} />
-                                <span>Marks Entry</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'attendance' ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveTab('attendance');
-                                setSelectedClass('10th Std');
-                                setSelectedSection(null);
-                                setIsMobileMenuOpen(false);
-                            }}
-                        >
-                            <div className="nav-links-content">
-                                <CheckCircle size={18} />
-                                <span>Attendance</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveTab('submissions');
-                                setSubClassFilter(null);
-                                setSubSectionFilter(null);
-                                setSubmissionFilterStatus('all');
-                                setIsMobileMenuOpen(false);
-                            }}
-                        >
-                            <div className="nav-links-content">
-                                <FileCheck size={18} />
-                                <span>Assessments</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <div className="nav-group">
-                            <button
-                                className={`nav-links ${academicMenuOpen ? 'expanded' : ''} ${['students', 'analytics'].includes(activeTab) ? 'active-parent' : ''}`}
-                                onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
-                            >
-                                <div className="nav-links-content">
-                                    <GraduationCap size={18} />
-                                    <span>More Academic Tools</span>
-                                </div>
-                                <ChevronDown size={16} className="chevron" />
-                            </button>
-
-                            {academicMenuOpen && (
-                                <div className="sub-menu">
-                                    <button
-                                        className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setActiveTab('students');
-                                            setSelectedClass(null);
-                                            setSelectedSection(null);
-                                            setIsMobileMenuOpen(false);
-                                        }}
-                                    >
-                                        Student Roster
-                                    </button>
-                                    <button
-                                        className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setActiveTab('analytics');
-                                            setSelectedClass('10th Std');
-                                            setSelectedSection(null);
-                                            setIsMobileMenuOpen(false);
-                                        }}
-                                    >
-                                        Attendance Analytics
-                                    </button>
-                                </div>
-                            )}
-                        </div>
                     </div>
 
                     <div className="sidebar-group">
-                        <span className="sidebar-group-label">Examinations</span>
-                        <div className="nav-group">
+                        <button
+                            type="button"
+                            className={`sidebar-group-head ${openGroup === 'workspace' ? 'is-open' : ''} ${SIDEBAR_TAB_GROUP[activeTab] === 'workspace' ? 'has-active' : ''}`}
+                            onClick={() => setOpenGroup(openGroup === 'workspace' ? null : 'workspace')}
+                            aria-expanded={openGroup === 'workspace'}
+                        >
+                            <span>My Workspace</span>
+                            
+                            <ChevronDown size={14} className="sg-chevron" />
+                        </button>
+                        {openGroup === 'workspace' && (
+                            <div className="sidebar-group-body">
+
                             <button
-                                type="button"
-                                className={`nav-links ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active-parent' : ''}`}
-                                onClick={() => setExamHallMenuOpen(prev => !prev)}
+                                className={`nav-links ${activeTab === 'profile' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <User size={18} />
+                                    <span>My Profile</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
                             >
                                 <div className="nav-links-content">
                                     <Calendar size={18} />
-                                    <span>Exam Hall Allocation</span>
+                                    <span>Timetable</span>
                                 </div>
-                                <ChevronDown size={15} className={`chevron ${examHallMenuOpen ? 'open' : ''}`} />
+                                <ChevronRight size={15} className="nav-arrow" />
                             </button>
-                            {examHallMenuOpen && (
-                                <div className="sub-menu">
-                                    <button
-                                        type="button"
-                                        className={`sub-link ${activeTab === 'exam-halls' ? 'active' : ''}`}
-                                        onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
-                                    >
-                                        <CheckCircle size={13} /> My Invigilation Duty
-                                    </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'departments' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('departments'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <Building2 size={18} />
+                                    <span>Departments</span>
                                 </div>
-                            )}
-                        </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <ClipboardList size={18} />
+                                    <span>Tasks</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'syllabus' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <BookMarked size={18} />
+                                    <span>Syllabus</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'marks' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setActiveTab('marks');
+                                    setSelectedClass('10th Std');
+                                    setSelectedSection(null);
+                                    setIsMobileMenuOpen(false);
+                                }}
+                            >
+                                <div className="nav-links-content">
+                                    <Award size={18} />
+                                    <span>Marks Entry</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'attendance' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setActiveTab('attendance');
+                                    setSelectedClass('10th Std');
+                                    setSelectedSection(null);
+                                    setIsMobileMenuOpen(false);
+                                }}
+                            >
+                                <div className="nav-links-content">
+                                    <CheckCircle size={18} />
+                                    <span>Attendance</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setActiveTab('submissions');
+                                    setSubClassFilter(null);
+                                    setSubSectionFilter(null);
+                                    setSubmissionFilterStatus('all');
+                                    setIsMobileMenuOpen(false);
+                                }}
+                            >
+                                <div className="nav-links-content">
+                                    <FileCheck size={18} />
+                                    <span>Assessments</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <div className="nav-group">
+                                <button
+                                    className={`nav-links ${academicMenuOpen ? 'expanded' : ''} ${['students', 'analytics'].includes(activeTab) ? 'active-parent' : ''}`}
+                                    onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
+                                >
+                                    <div className="nav-links-content">
+                                        <GraduationCap size={18} />
+                                        <span>More Academic Tools</span>
+                                    </div>
+                                    <ChevronDown size={16} className="chevron" />
+                                </button>
+
+                                {academicMenuOpen && (
+                                    <div className="sub-menu">
+                                        <button
+                                            className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setActiveTab('students');
+                                                setSelectedClass(null);
+                                                setSelectedSection(null);
+                                                setIsMobileMenuOpen(false);
+                                            }}
+                                        >
+                                            Student Roster
+                                        </button>
+                                        <button
+                                            className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setActiveTab('analytics');
+                                                setSelectedClass('10th Std');
+                                                setSelectedSection(null);
+                                                setIsMobileMenuOpen(false);
+                                            }}
+                                        >
+                                            Attendance Analytics
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="sidebar-group">
-                        <span className="sidebar-group-label">Communication</span>
-
                         <button
-                            className={`nav-links ${activeTab === 'chats' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('chats'); setIsMobileMenuOpen(false); }}
+                            type="button"
+                            className={`sidebar-group-head ${openGroup === 'exams' ? 'is-open' : ''} ${SIDEBAR_TAB_GROUP[activeTab] === 'exams' ? 'has-active' : ''}`}
+                            onClick={() => setOpenGroup(openGroup === 'exams' ? null : 'exams')}
+                            aria-expanded={openGroup === 'exams'}
                         >
-                            <div className="nav-links-content">
-                                <MessageCircle size={18} />
-                                <span>Chats</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
+                            <span>Examinations</span>
+                            
+                            <ChevronDown size={14} className="sg-chevron" />
                         </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'staffroom' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('staffroom'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <Users size={18} />
-                                <span>Staff Room</span>
+                        {openGroup === 'exams' && (
+                            <div className="sidebar-group-body">
+                            <div className="nav-group">
+                                <button
+                                    type="button"
+                                    className={`nav-links ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active-parent' : ''}`}
+                                    onClick={() => setExamHallMenuOpen(prev => !prev)}
+                                >
+                                    <div className="nav-links-content">
+                                        <Calendar size={18} />
+                                        <span>Exam Hall Allocation</span>
+                                    </div>
+                                    <ChevronDown size={15} className={`chevron ${examHallMenuOpen ? 'open' : ''}`} />
+                                </button>
+                                {examHallMenuOpen && (
+                                    <div className="sub-menu">
+                                        <button
+                                            type="button"
+                                            className={`sub-link ${activeTab === 'exam-halls' ? 'active' : ''}`}
+                                            onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
+                                        >
+                                            <CheckCircle size={13} /> My Invigilation Duty
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
-
-                        <button
-                            className={`nav-links ${activeTab === 'schoolnews' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('schoolnews'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <Newspaper size={18} />
-                                <span>School News</span>
                             </div>
-                            <ChevronRight size={15} className="nav-arrow" />
-                        </button>
+                        )}
                     </div>
 
                     <div className="sidebar-group">
-                        <span className="sidebar-group-label">Approval & Alerts</span>
-
                         <button
-                            className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
+                            type="button"
+                            className={`sidebar-group-head ${openGroup === 'comms' ? 'is-open' : ''} ${SIDEBAR_TAB_GROUP[activeTab] === 'comms' ? 'has-active' : ''}`}
+                            onClick={() => setOpenGroup(openGroup === 'comms' ? null : 'comms')}
+                            aria-expanded={openGroup === 'comms'}
                         >
-                            <div className="nav-links-content">
-                                <SendHorizonal size={18} />
-                                <span>Leave Requests</span>
-                            </div>
-                            <ChevronRight size={15} className="nav-arrow" />
+                            <span>Communication</span>
+                            
+                            <ChevronDown size={14} className="sg-chevron" />
                         </button>
+                        {openGroup === 'comms' && (
+                            <div className="sidebar-group-body">
+
+                            <button
+                                className={`nav-links ${activeTab === 'chats' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('chats'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <MessageCircle size={18} />
+                                    <span>Chats</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'staffroom' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('staffroom'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <Users size={18} />
+                                    <span>Staff Room</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'schoolnews' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('schoolnews'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <Newspaper size={18} />
+                                    <span>School News</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="sidebar-group">
-                        <span className="sidebar-group-label">Others</span>
-
                         <button
-                            className={`nav-links ${activeTab === 'downloads' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('downloads'); setIsMobileMenuOpen(false); }}
+                            type="button"
+                            className={`sidebar-group-head ${openGroup === 'alerts' ? 'is-open' : ''} ${SIDEBAR_TAB_GROUP[activeTab] === 'alerts' ? 'has-active' : ''}`}
+                            onClick={() => setOpenGroup(openGroup === 'alerts' ? null : 'alerts')}
+                            aria-expanded={openGroup === 'alerts'}
                         >
-                            <div className="nav-links-content">
-                                <Download size={18} />
-                                <span>Downloads</span>
-                            </div>
+                            <span>Approval & Alerts</span>
+                            {pendingOfficeTasks.length > 0 && <em className="sg-badge">{pendingOfficeTasks.length}</em>}
+                            <ChevronDown size={14} className="sg-chevron" />
                         </button>
+                        {openGroup === 'alerts' && (
+                            <div className="sidebar-group-body">
 
-                        <button
-                            className={`nav-links ${activeTab === 'library' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('library'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <Library size={18} />
-                                <span>Library</span>
-                            </div>
-                        </button>
+                            <button
+                                className={`nav-links ${activeTab === 'mytasks' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('mytasks'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <ClipboardList size={18} />
+                                    <span>My Tasks</span>
+                                    {pendingOfficeTasks.length > 0 && <span className="task-count-pill">{pendingOfficeTasks.length}</span>}
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
 
-                        <button
-                            className={`nav-links ${activeTab === 'events' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }}
-                        >
-                            <div className="nav-links-content">
-                                <PartyPopper size={18} />
-                                <span>Events</span>
+                            <button
+                                className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <SendHorizonal size={18} />
+                                    <span>Leave Requests</span>
+                                </div>
+                                <ChevronRight size={15} className="nav-arrow" />
+                            </button>
                             </div>
+                        )}
+                    </div>
+
+                    <div className="sidebar-group">
+                        <button
+                            type="button"
+                            className={`sidebar-group-head ${openGroup === 'others' ? 'is-open' : ''} ${SIDEBAR_TAB_GROUP[activeTab] === 'others' ? 'has-active' : ''}`}
+                            onClick={() => setOpenGroup(openGroup === 'others' ? null : 'others')}
+                            aria-expanded={openGroup === 'others'}
+                        >
+                            <span>Others</span>
+                            
+                            <ChevronDown size={14} className="sg-chevron" />
                         </button>
+                        {openGroup === 'others' && (
+                            <div className="sidebar-group-body">
+
+                            <button
+                                className={`nav-links ${activeTab === 'downloads' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('downloads'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <Download size={18} />
+                                    <span>Downloads</span>
+                                </div>
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'library' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('library'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <Library size={18} />
+                                    <span>Library</span>
+                                </div>
+                            </button>
+
+                            <button
+                                className={`nav-links ${activeTab === 'events' ? 'active' : ''}`}
+                                onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }}
+                            >
+                                <div className="nav-links-content">
+                                    <PartyPopper size={18} />
+                                    <span>Events</span>
+                                </div>
+                            </button>
+                            </div>
+                        )}
                     </div>
                 </nav>
 
@@ -2084,15 +2278,26 @@ export default function StaffDashboard() {
                             <div className="notification-wrapper" style={{ position: 'relative' }}>
                                 <button className="icon-btn" onClick={() => { setShowNotifications(!showNotifications); setShowAiHint(false); }}>
                                     <Bell size={17} />
-                                    <span className="notification-badge">{announcements.length}</span>
+                                    <span className="notification-badge">{announcements.length + pendingOfficeTasks.length}</span>
                                 </button>
                                 {showNotifications && (
                                     <div className="notification-dropdown">
                                         <div className="dropdown-header">
                                             <h4>Notifications</h4>
-                                            <span className="badge-count">{announcements.length} New</span>
+                                            <span className="badge-count">{announcements.length + pendingOfficeTasks.length} New</span>
                                         </div>
                                         <ul>
+                                            {pendingOfficeTasks.map((t) => (
+                                                <li
+                                                    key={t.id}
+                                                    className={`notify-item ${t.priority === 'Urgent' ? 'urgent' : 'info'}`}
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() => { setActiveTab('mytasks'); setShowNotifications(false); }}
+                                                >
+                                                    <strong>{t.category === 'Assessment' ? `Assessment: ${t.title}` : `New task: ${t.title}`}</strong>
+                                                    <span>{t.priority || 'Normal'}{t.deadline ? ` · Due ${t.deadline}` : ''}</span>
+                                                </li>
+                                            ))}
                                             {announcements.map((a) => (
                                                 <li key={a.id} className={`notify-item ${a.type}`}>
                                                     <strong>{a.title}</strong>
@@ -2444,6 +2649,13 @@ export default function StaffDashboard() {
                                         </span>
                                     </div>
                                     <div className="rail-notify-list">
+                                        <div className="rail-notify-item accent-rose" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('mytasks')}>
+                                            <div className="rail-notify-head">
+                                                <strong>Office Tasks</strong>
+                                                <MoreVertical size={14} />
+                                            </div>
+                                            <span>{pendingOfficeTasks.length} task{pendingOfficeTasks.length === 1 ? '' : 's'} assigned by the office</span>
+                                        </div>
                                         <div className="rail-notify-item accent-rose">
                                             <div className="rail-notify-head">
                                                 <strong>Leave Approval</strong>
@@ -2471,210 +2683,459 @@ export default function StaffDashboard() {
                         </div>
                     )}
 
-                    {activeTab === 'profile' && (
-                        <div className="profile-page">
-                            <div className="dash-card full-width profile-header-card">
-                                <div className="profile-header-identity">
-                                    <div className="profile-avatar-lg">{(staffData.name || '?').charAt(0)}</div>
-                                    <div>
-                                        <h3 className="profile-header-name">{staffData.name}</h3>
-                                        <div className="profile-header-tags">
-                                            <span className="topic-badge">{staffData.department || 'Faculty'}</span>
-                                            {staffData.staffId && <span className="profile-id-badge">ID: {staffData.staffId}</span>}
-                                            {isClassIncharge && <span className="profile-id-badge profile-badge-accent">Class Incharge</span>}
-                                        </div>
-                                    </div>
-                                </div>
+                    {activeTab === 'profile' && (() => {
+                        const rec = myStaffRecord || {};
+                        const profilePhoto = rec.photo || rec.photoURL || rec.imageUrl || '';
+                        const displayName = staffData.name || 'Staff';
+                        const staffIdLabel = staffData.staffId || pickField(rec, ['staffId', 'employeeId', 'empId']);
+                        const designation = pickField(rec, ['designation', 'role', 'position'], 'Faculty');
+                        const departmentLabel = staffData.department || pickField(rec, ['department', 'subject']);
 
-                                {!isEditingProfile && (
-                                    <button type="button" className="btn-secondary" onClick={() => setIsEditingProfile(true)}>
-                                        <Edit3 size={14} /> Edit Profile
-                                    </button>
-                                )}
-                            </div>
+                        const personalFields = [
+                            ['Full Name', displayName],
+                            ['Date of Birth', formatProfileDate(pickField(rec, ['dob', 'dateOfBirth', 'birthDate']))],
+                            ['Gender', pickField(rec, ['gender', 'sex'])],
+                            ['Blood Group', pickField(rec, ['bloodGroup', 'blood'])],
+                            ['Mother Tongue', pickField(rec, ['motherTongue', 'language'])],
+                            ['Nationality', pickField(rec, ['nationality'])],
+                        ];
 
-                            <div className="profile-stats-grid">
-                                <div className="stat-card stat-card-1">
-                                    <div className="stat-icon"><BookOpen size={18} /></div>
-                                    <div>
-                                        <span className="stat-title">Classes Taught</span>
-                                        <span className="stat-value">{myTaughtClasses.length}</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card stat-card-2">
-                                    <div className="stat-icon"><Layers size={18} /></div>
-                                    <div>
-                                        <span className="stat-title">Subjects</span>
-                                        <span className="stat-value">{[...new Set(myTaughtAssignments.map(a => a.subject))].length}</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card stat-card-3">
-                                    <div className="stat-icon"><GraduationCap size={18} /></div>
-                                    <div>
-                                        <span className="stat-title">Sections In-Charge</span>
-                                        <span className="stat-value">{myInchargeSections.length}</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card stat-card-4">
-                                    <div className="stat-icon"><SendHorizonal size={18} /></div>
-                                    <div>
-                                        <span className="stat-title">Leave Requests</span>
-                                        <span className="stat-value">{myLeaveRequests.length}</span>
-                                    </div>
-                                </div>
-                            </div>
+                        const professionalFields = [
+                            ['Staff ID', staffIdLabel],
+                            ['Department', departmentLabel || '—'],
+                            ['Designation', designation],
+                            ['Qualification', profileForm.qualification || pickField(rec, ['qualification'])],
+                            ['Date of Joining', formatProfileDate(pickField(rec, ['joiningDate', 'dateOfJoining', 'doj']))],
+                            ['Experience', pickField(rec, ['experience', 'totalExperience'])],
+                        ];
 
-                            <div className="dash-card full-width">
-                                <div className="card-header">
-                                    <div>
-                                        <h3>Contact & Personal Details</h3>
-                                        <p className="subtitle">
-                                            {isEditingProfile
-                                                ? 'Update how colleagues and administration can reach you.'
-                                                : 'Your Staff ID and Department are assigned by Admin and cannot be edited here.'}
-                                        </p>
-                                    </div>
-                                </div>
+                        const contactFields = [
+                            ['Mobile Number', profileForm.phone || pickField(rec, ['phone', 'mobile', 'contactNumber', 'phoneNumber'])],
+                            ['Email Address', profileForm.email || pickField(rec, ['email', 'emailId', 'mailId'])],
+                            ['Address', pickField(rec, ['address', 'residentialAddress', 'permanentAddress'])],
+                            ['City / Town', pickField(rec, ['city', 'town', 'district'])],
+                            ['State', pickField(rec, ['state'])],
+                            ['PIN Code', pickField(rec, ['pincode', 'pinCode', 'zip'])],
+                        ];
 
-                                {profileSaveStatus && (
-                                    <div style={{
-                                        color: profileSaveStatus.includes('success') ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                                        padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px'
-                                    }}>
-                                        {profileSaveStatus.includes('success') ? <Check size={18} /> : <AlertCircle size={18} />} {profileSaveStatus}
-                                    </div>
-                                )}
+                        const aboutFields = [
+                            ['Short Bio', profileForm.bio || pickField(rec, ['bio'])],
+                        ];
 
-                                {isEditingProfile ? (
-                                    <form onSubmit={handleSaveProfile} className="assignment-form-grid" style={{ marginTop: '10px' }}>
-                                        <div>
-                                            <label>Email Address</label>
-                                            <input
-                                                type="email"
-                                                className="table-input full-width-input"
-                                                placeholder="you@holycross.edu"
-                                                value={profileForm.email}
-                                                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label>Phone Number</label>
-                                            <input
-                                                type="tel"
-                                                className="table-input full-width-input"
-                                                placeholder="+91 90000 00000"
-                                                value={profileForm.phone}
-                                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label>Qualification</label>
-                                            <input
-                                                type="text"
-                                                className="table-input full-width-input"
-                                                placeholder="e.g. M.Sc, B.Ed"
-                                                value={profileForm.qualification}
-                                                onChange={(e) => setProfileForm({ ...profileForm, qualification: e.target.value })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label>Department</label>
-                                            <input
-                                                type="text"
-                                                className="table-input full-width-input"
-                                                value={staffData.department || ''}
-                                                disabled
-                                            />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <label>Short Bio</label>
-                                            <textarea
-                                                rows="3"
-                                                className="custom-textarea"
-                                                placeholder="A short note about your role, experience or interests..."
-                                                value={profileForm.bio}
-                                                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                                            />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
-                                            <button type="submit" className="btn-primary" disabled={isProfileSaving}>
-                                                <Save size={15} /> {isProfileSaving ? 'Saving...' : 'Save Changes'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn-secondary"
-                                                onClick={() => {
-                                                    setIsEditingProfile(false);
-                                                    setProfileForm({
-                                                        email: myStaffRecord?.email || '',
-                                                        phone: myStaffRecord?.phone || '',
-                                                        qualification: myStaffRecord?.qualification || '',
-                                                        bio: myStaffRecord?.bio || ''
-                                                    });
-                                                }}
-                                                disabled={isProfileSaving}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <div className="profile-details-grid">
-                                        <div className="profile-field">
-                                            <span className="profile-field-label">Staff ID</span>
-                                            <span className="profile-field-value">{staffData.staffId || '—'}</span>
-                                        </div>
-                                        <div className="profile-field">
-                                            <span className="profile-field-label">Department</span>
-                                            <span className="profile-field-value">{staffData.department || '—'}</span>
-                                        </div>
-                                        <div className="profile-field">
-                                            <span className="profile-field-label">Email Address</span>
-                                            <span className="profile-field-value">{profileForm.email || 'Not provided'}</span>
-                                        </div>
-                                        <div className="profile-field">
-                                            <span className="profile-field-label">Phone Number</span>
-                                            <span className="profile-field-value">{profileForm.phone || 'Not provided'}</span>
-                                        </div>
-                                        <div className="profile-field">
-                                            <span className="profile-field-label">Qualification</span>
-                                            <span className="profile-field-value">{profileForm.qualification || 'Not provided'}</span>
-                                        </div>
-                                        <div className="profile-field profile-field-wide">
-                                            <span className="profile-field-label">Short Bio</span>
-                                            <span className="profile-field-value">{profileForm.bio || 'Not provided'}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                        const fieldGroups = [
+                            { id: 'personal', short: 'Personal', title: 'Personal Information', icon: User, tone: 'primary', fields: personalFields },
+                            { id: 'professional', short: 'Professional', title: 'Professional Information', icon: BookOpen, tone: 'cyan', fields: professionalFields },
+                            { id: 'contact', short: 'Contact', title: 'Contact Information', icon: FileText, tone: 'emerald', fields: contactFields },
+                            { id: 'about', short: 'About', title: 'About Me', icon: Award, tone: 'amber', fields: aboutFields },
+                        ];
 
-                            {myTaughtClasses.length > 0 && (
-                                <div className="dash-card full-width">
-                                    <div className="card-header">
-                                        <div>
-                                            <h3>Classes You Teach</h3>
-                                            <p className="subtitle">Synced live from the Admin timetable.</p>
-                                        </div>
-                                    </div>
-                                    <div className="class-cards-grid">
-                                        {myTaughtClasses.map((cls) => (
-                                            <div key={cls} className="class-card">
-                                                <div className="class-card-icon">
-                                                    <BookOpen size={24} />
-                                                </div>
-                                                <div>
-                                                    <h4 style={{ margin: 0 }}>{cls}</h4>
-                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                        {getMyTaughtSubjectsForClass(cls).join(', ') || 'No subjects listed'}
-                                                    </span>
+                        const subjectCount = [...new Set(myTaughtAssignments.map(a => a.subject))].length;
+                        const quickStats = [
+                            { label: 'Classes Teaching', value: myTaughtClasses.length, hint: 'Synced from timetable', tone: 'primary', icon: BookOpen },
+                            { label: 'Subjects', value: subjectCount, hint: subjectCount === 1 ? '1 subject assigned' : `${subjectCount} subjects assigned`, tone: 'purple', icon: Layers },
+                            { label: 'Sections In-Charge', value: myInchargeSections.length, hint: isClassIncharge ? 'Class Incharge' : 'Not assigned', tone: 'emerald', icon: GraduationCap },
+                            { label: 'Leave Requests', value: myLeaveRequests.length, hint: 'Submitted so far', tone: 'amber', icon: SendHorizonal },
+                        ];
+
+                        const allProfileFields = fieldGroups.flatMap((g) => g.fields);
+                        const filledProfileFields = allProfileFields.filter(([, v]) => v && v !== '—').length;
+                        const profileCompleteness = allProfileFields.length
+                            ? Math.round((filledProfileFields / allProfileFields.length) * 100)
+                            : 0;
+                        const visibleGroups = profileSection === 'all'
+                            ? fieldGroups
+                            : fieldGroups.filter((g) => g.id === profileSection);
+                        const profileIdLabel = staffIdLabel && staffIdLabel !== '—' ? `#${staffIdLabel}` : '#STAFF';
+
+                        // ---- ID card (front / back) values ----
+                        const idYear = pickField(rec, ['academicYear', 'session'], '2026 - 2027');
+                        const idDob = formatProfileDate(pickField(rec, ['dob', 'dateOfBirth', 'birthDate'], ''));
+                        const idBlood = pickField(rec, ['bloodGroup', 'blood']);
+                        const idAddress = pickField(rec, ['address', 'residentialAddress', 'permanentAddress']);
+                        const idCell = profileForm.phone || pickField(rec, ['phone', 'mobile', 'contactNumber', 'phoneNumber']);
+                        const idEmail = profileForm.email || pickField(rec, ['email', 'emailId', 'mailId']);
+                        const printSummary = [
+                            ['Classes Teaching', myTaughtClasses.length],
+                            ['Subjects', subjectCount],
+                            ['Sections In-Charge', myInchargeSections.length],
+                            ['Leave Requests', myLeaveRequests.length],
+                        ];
+
+                        return (
+                            <div className="pf-wrap">
+                                <div className="pf-layout">
+                                    <aside className="pf-side">
+                                        <div className="pf-idflip-wrap">
+                                            <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
+                                                <div
+                                                    className="pf-idflip-inner"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={idCardFlipped ? 'ID card back side. Click to flip to the front' : 'ID card front side. Click to flip to the back'}
+                                                    onClick={() => setIdCardFlipped((v) => !v)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            setIdCardFlipped((v) => !v);
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* ---------- FRONT ---------- */}
+                                                    <div className="pf-idface idc-front" aria-hidden={idCardFlipped}>
+                                                        <div className="idc-head">
+                                                            <img src={logo} alt="" className="idc-logo" />
+                                                            <div className="idc-head-text">
+                                                                <h4>HOLY CROSS MATRIC HR. SEC. SCHOOL</h4>
+                                                                <p>SOMARASAMPETTAI, TRICHY - 620 102.</p>
+                                                                <p>Phone : 0431 - 2607175, 9597172383</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="idc-band"><span>STAFF IDENTITY CARD</span></div>
+                                                        <div className="idc-year">{idYear}</div>
+
+                                                        <div className="idc-photo-row">
+                                                            <div className="idc-photo">
+                                                                {profilePhoto ? (
+                                                                    <img src={profilePhoto} alt={displayName} />
+                                                                ) : (
+                                                                    <User size={46} />
+                                                                )}
+                                                            </div>
+                                                            <div className="idc-blood">
+                                                                <svg viewBox="0 0 24 32" width="20" height="26" aria-hidden="true">
+                                                                    <path d="M12 2C12 2 3 13 3 20a9 9 0 0 0 18 0C21 13 12 2 12 2z" fill="#c1121f" />
+                                                                </svg>
+                                                                <b>{idBlood !== '—' ? idBlood : ''}</b>
+                                                            </div>
+                                                        </div>
+
+                                                        <h3 className="idc-name">{displayName}</h3>
+                                                        <div className="idc-lines">
+                                                            <p><span>Post</span><span>:</span><b>{designation}</b></p>
+                                                            <p><span>Staff ID</span><span>:</span><b>{staffIdLabel}</b></p>
+                                                        </div>
+
+                                                        <img src={idBuilding} alt="" />
+                                                        <div className="idc-sign">
+                                                            <img src={principalSignature} alt="" />
+                                                        </div>
+                                                        <div className="idc-principal">Principal</div>
+                                                    </div>
+
+                                                    {/* ---------- BACK ---------- */}
+                                                    <div className="pf-idface idc-back" aria-hidden={!idCardFlipped}>
+                                                        <div className="idc-back-slot" />
+                                                        <dl className="idc-back-list">
+                                                            <div><dt>Date of Birth</dt><dd>: {idDob}</dd></div>
+                                                            <div><dt>Blood Group</dt><dd>: {idBlood}</dd></div>
+                                                            <div className="stack"><dt>Department :</dt><dd>{departmentLabel || '—'}</dd></div>
+                                                            <div className="stack"><dt>Address :</dt>
+                                                                <dd>
+                                                                    <strong>{displayName}</strong>
+                                                                    <br />
+                                                                    {idAddress}
+                                                                </dd>
+                                                            </div>
+                                                            <div><dt>Cell</dt><dd>: {idCell}</dd></div>
+                                                        </dl>
+                                                        <p className="idc-back-foot">{HALL_TICKET_SCHOOL_NAME}</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+
+                                            <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
+                                                <RotateCw size={13} /> {idCardFlipped ? 'Show Front' : 'Show Back'}
+                                            </button>
+
+                                            <div className="pf-idmeta">
+                                                <span className="pf-id-chip"><Sparkles size={11} /> {profileIdLabel}</span>
+                                                <div className="pf-badges">
+                                                    <span className="profile-status-chip is-info">
+                                                        <BookOpen size={11} /> {departmentLabel || 'Faculty'}
+                                                    </span>
+                                                    {isClassIncharge && (
+                                                        <span className="profile-status-chip is-ok">
+                                                            <CheckCircle size={11} /> Class Incharge
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="pf-complete">
+                                                    <div className="pf-complete-head">
+                                                        <span>Profile completeness</span>
+                                                        <strong>{profileCompleteness}%</strong>
+                                                    </div>
+                                                    <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
+                                                    <small>{filledProfileFields} of {allProfileFields.length} details filled</small>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pf-actions">
+                                            <button type="button" className="pf-btn solid" onClick={printProfile}>
+                                                <Printer size={14} /> Print Profile
+                                            </button>
+                                            {!isEditingProfile && (
+                                                <button type="button" className="pf-btn" onClick={() => setIsEditingProfile(true)}>
+                                                    <Edit3 size={14} /> Edit Profile
+                                                </button>
+                                            )}
+                                            <button type="button" className="pf-btn" onClick={() => setActiveTab('leaves')}>
+                                                <SendHorizonal size={14} /> My Leaves
+                                            </button>
+                                        </div>
+                                    </aside>
+
+                                    <section className="pf-main">
+                                        {!myStaffRecord && (
+                                            <div className="profile-sync-note">
+                                                <AlertTriangle size={15} />
+                                                <span>
+                                                    Your detailed staff record is still syncing. Fields shown as “—” will fill
+                                                    in automatically once the record loads.
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className="pf-stats">
+                                            {quickStats.map((stat) => {
+                                                const StatIcon = stat.icon;
+                                                return (
+                                                    <div className={`pf-stat tone-${stat.tone}`} key={stat.label}>
+                                                        <span className="pf-stat-icon"><StatIcon size={16} /></span>
+                                                        <div>
+                                                            <span className="pf-stat-label">{stat.label}</span>
+                                                            <strong className="pf-stat-value">{stat.value}</strong>
+                                                            <span className="pf-stat-hint">{stat.hint}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {profileSaveStatus && (
+                                            <div className={`profile-save-note ${profileSaveStatus.includes('success') ? 'is-ok' : 'is-alert'}`}>
+                                                {profileSaveStatus.includes('success') ? <Check size={16} /> : <AlertCircle size={16} />} {profileSaveStatus}
+                                            </div>
+                                        )}
+
+                                        {isEditingProfile ? (
+                                            <div className="pf-section tone-primary">
+                                                <div className="pf-section-head">
+                                                    <span className="pf-section-icon"><Edit3 size={15} /></span>
+                                                    <h3>Edit Contact & Personal Details</h3>
+                                                </div>
+                                                <p className="pf-edit-hint">Staff ID and Department are assigned by Admin and cannot be edited here.</p>
+                                                <form onSubmit={handleSaveProfile} className="assignment-form-grid">
+                                                    <div>
+                                                        <label>Email Address</label>
+                                                        <input
+                                                            type="email"
+                                                            className="table-input full-width-input"
+                                                            placeholder="you@holycross.edu"
+                                                            value={profileForm.email}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Phone Number</label>
+                                                        <input
+                                                            type="tel"
+                                                            className="table-input full-width-input"
+                                                            placeholder="+91 90000 00000"
+                                                            value={profileForm.phone}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Qualification</label>
+                                                        <input
+                                                            type="text"
+                                                            className="table-input full-width-input"
+                                                            placeholder="e.g. M.Sc, B.Ed"
+                                                            value={profileForm.qualification}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, qualification: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Department</label>
+                                                        <input
+                                                            type="text"
+                                                            className="table-input full-width-input"
+                                                            value={staffData.department || ''}
+                                                            disabled
+                                                        />
+                                                    </div>
+                                                    <div style={{ gridColumn: '1 / -1' }}>
+                                                        <label>Short Bio</label>
+                                                        <textarea
+                                                            rows="3"
+                                                            className="custom-textarea"
+                                                            placeholder="A short note about your role, experience or interests..."
+                                                            value={profileForm.bio}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+                                                        <button type="submit" className="btn-primary" disabled={isProfileSaving}>
+                                                            <Save size={15} /> {isProfileSaving ? 'Saving...' : 'Save Changes'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-secondary"
+                                                            onClick={() => {
+                                                                setIsEditingProfile(false);
+                                                                setProfileForm({
+                                                                    email: myStaffRecord?.email || '',
+                                                                    phone: myStaffRecord?.phone || '',
+                                                                    qualification: myStaffRecord?.qualification || '',
+                                                                    bio: myStaffRecord?.bio || ''
+                                                                });
+                                                            }}
+                                                            disabled={isProfileSaving}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="pf-tabs" role="tablist">
+                                                    <button
+                                                        type="button"
+                                                        role="tab"
+                                                        aria-selected={profileSection === 'all'}
+                                                        className={`pf-tab ${profileSection === 'all' ? 'active' : ''}`}
+                                                        onClick={() => setProfileSection('all')}
+                                                    >All Details</button>
+                                                    {fieldGroups.map((g) => (
+                                                        <button
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={profileSection === g.id}
+                                                            key={g.id}
+                                                            className={`pf-tab ${profileSection === g.id ? 'active' : ''}`}
+                                                            onClick={() => setProfileSection(g.id)}
+                                                        >{g.short}</button>
+                                                    ))}
+                                                </div>
+
+                                                <div className="pf-sections">
+                                                    {visibleGroups.map((group) => {
+                                                        const GroupIcon = group.icon;
+                                                        return (
+                                                            <div className={`pf-section tone-${group.tone}`} key={group.id}>
+                                                                <div className="pf-section-head">
+                                                                    <span className="pf-section-icon"><GroupIcon size={15} /></span>
+                                                                    <h3>{group.title}</h3>
+                                                                </div>
+                                                                <dl className="pf-fields">
+                                                                    {group.fields.map(([label, value]) => (
+                                                                        <div className={`pf-field ${label === 'Address' || label === 'Short Bio' ? 'wide' : ''}`} key={label}>
+                                                                            <dt>{label}</dt>
+                                                                            <dd className={value === '—' ? 'is-empty' : ''}>{value}</dd>
+                                                                        </div>
+                                                                    ))}
+                                                                </dl>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {myTaughtClasses.length > 0 && (
+                                            <div className="pf-section tone-cyan">
+                                                <div className="pf-section-head">
+                                                    <span className="pf-section-icon"><BookOpen size={15} /></span>
+                                                    <h3>Classes You Teach</h3>
+                                                </div>
+                                                <div className="class-cards-grid">
+                                                    {myTaughtClasses.map((cls) => (
+                                                        <div key={cls} className="class-card">
+                                                            <div className="class-card-icon">
+                                                                <BookOpen size={24} />
+                                                            </div>
+                                                            <div>
+                                                                <h4 style={{ margin: 0 }}>{cls}</h4>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    {getMyTaughtSubjectsForClass(cls).join(', ') || 'No subjects listed'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="profile-note-footer">
+                                            <FileText size={14} />
+                                            <span>
+                                                Your Staff ID and Department are assigned by the Admin. If anything else
+                                                here is incorrect, please contact the school office to have the record updated.
+                                            </span>
+                                        </div>
+                                    </section>
                                 </div>
-                            )}
-                        </div>
-                    )}
+
+                                {/* Print-only record sheet (hidden on screen, shown by @media print) */}
+                                <div className="profile-print-area">
+                                    <div className="pp-head">
+                                        <img src={logo} alt="School Emblem" />
+                                        <div>
+                                            <h1>{HALL_TICKET_SCHOOL_NAME}</h1>
+                                            <p>{HALL_TICKET_SCHOOL_TAGLINE}</p>
+                                        </div>
+                                    </div>
+                                    <div className="pp-titlebar">
+                                        <h2>STAFF PROFILE</h2>
+                                        <span>Generated: {new Date().toLocaleDateString('en-IN')}</span>
+                                    </div>
+
+                                    <div className="pp-identity">
+                                        <div className="pp-photo">
+                                            {profilePhoto ? <img src={profilePhoto} alt="" /> : <span>Photo</span>}
+                                        </div>
+                                        <div className="pp-identity-text">
+                                            <h3>{displayName}</h3>
+                                            <p>Staff ID: <strong>{staffIdLabel}</strong></p>
+                                            <p>Designation: <strong>{designation}</strong></p>
+                                            <p>Department: <strong>{departmentLabel || '—'}</strong></p>
+                                        </div>
+                                        <div className="pp-summary">
+                                            {printSummary.map(([label, value]) => (
+                                                <div key={label}><span>{label}</span><strong>{value}</strong></div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {fieldGroups.map((group) => (
+                                        <div className="pp-section" key={group.id}>
+                                            <h4>{group.title}</h4>
+                                            <div className="pp-grid">
+                                                {group.fields.map(([label, value]) => (
+                                                    <div className={`pp-cell ${label === 'Address' || label === 'Short Bio' ? 'wide' : ''}`} key={label}>
+                                                        <span>{label}</span>
+                                                        <strong>{value}</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <div className="pp-signs">
+                                        <div><i /> <span>Staff Signature</span></div>
+                                        <div><i /> <span>Date</span></div>
+                                        <div>
+                                            <img src={principalSignature} alt="" />
+                                            <span>Principal</span>
+                                        </div>
+                                    </div>
+                                    <p className="pp-foot">Computer-generated staff profile — {HALL_TICKET_SCHOOL_NAME}</p>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {activeTab === 'students' && (
                         <div className="dash-card full-width">
@@ -4831,6 +5292,65 @@ export default function StaffDashboard() {
 
                                 <p style={{ textAlign: 'center', margin: '12px 0', fontSize: '0.85rem' }}>{scannerStatus}</p>
                                 <div style={{ marginTop: '14px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Only students included in this invigilation duty allocation can be verified. A successful scan marks the student <strong>Present</strong> and <strong>Verified</strong>, then the scanner automatically gets ready for the next student.</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'mytasks' && (
+                        <div className="mt-page">
+                            <div className="mt-stats">
+                                <div className="mt-stat is-blue"><ClipboardList size={18} /><div><b>{pendingOfficeTasks.length}</b><span>Pending</span></div></div>
+                                <div className="mt-stat is-purple"><Award size={18} /><div><b>{assessmentTaskCount}</b><span>Assessments</span></div></div>
+                                <div className="mt-stat is-rose"><AlertTriangle size={18} /><div><b>{overdueTaskCount}</b><span>Overdue</span></div></div>
+                                <div className="mt-stat is-green"><CheckCircle size={18} /><div><b>{completedTaskCount}</b><span>Completed</span></div></div>
+                            </div>
+
+                            <div className="dash-card full-width mt-card">
+                                <div className="card-header compact">
+                                    <div>
+                                        <h3>My Tasks</h3>
+                                        <p className="subtitle">Assigned to you by the front office.</p>
+                                    </div>
+                                    <div className="mt-tabs">
+                                        {[['pending', 'Pending'], ['assessment', 'Assessment'], ['done', 'Completed'], ['all', 'All']].map(([key, label]) => (
+                                            <button key={key} className={taskFilter === key ? 'is-active' : ''} onClick={() => setTaskFilter(key)}>{label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {visibleOfficeTasks.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <ClipboardList size={28} />
+                                        <p>{myOfficeTasks.length === 0 ? 'No tasks assigned to you.' : 'Nothing in this view.'}</p>
+                                    </div>
+                                ) : (
+                                    <div className="mt-grid">
+                                        {visibleOfficeTasks.map(task => {
+                                            const done = isTaskDone(task);
+                                            const overdue = isTaskOverdue(task);
+                                            return (
+                                                <div key={task.id} className={`mt-item ${done ? 'is-done' : ''} ${overdue ? 'is-overdue' : ''} ${isTaskAssessment(task) ? 'is-assessment' : ''}`}>
+                                                    <div className="mt-item-top">
+                                                        <span className={`mt-chip ${isTaskAssessment(task) ? 'chip-purple' : 'chip-blue'}`}>
+                                                            {isTaskAssessment(task) ? <Award size={12} /> : <ClipboardList size={12} />}
+                                                            {task.category || 'General'}
+                                                        </span>
+                                                        <span className={`mt-chip ${task.priority === 'Urgent' ? 'chip-rose' : task.priority === 'High' ? 'chip-amber' : 'chip-grey'}`}>{task.priority || 'Normal'}</span>
+                                                    </div>
+                                                    <h4>{task.title}</h4>
+                                                    {task.assessmentType && <div className="mt-assess">{task.assessmentType}</div>}
+                                                    {task.notes && <p className="mt-notes">{task.notes}</p>}
+                                                    <div className="mt-item-foot">
+                                                        <span className={`mt-due ${overdue ? 'is-late' : ''}`}><CalendarClock size={13} /> {overdue ? 'Overdue · ' : 'Due '}{fmtTaskDate(task.deadline)}</span>
+                                                        <button className={`mt-btn ${done ? 'is-ghost' : ''}`} onClick={() => handleCompleteOfficeTask(task, !done)}>
+                                                            {done ? <><RotateCcw size={13} /> Reopen</> : <><Check size={13} /> Mark done</>}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
