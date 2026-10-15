@@ -5437,7 +5437,6 @@ body {
   /* Lock the drawer to the actual viewport height again */
   .staff-sidebar {
     top: 70px !important;
-    left: 10px;
     bottom: 0 !important;
     height: calc(98dvh - var(--mobile-topbar-h)) !important;
     max-height: unset !important;
