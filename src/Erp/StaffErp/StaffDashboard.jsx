@@ -431,6 +431,118 @@ export default function StaffDashboard() {
         (item.staffName && item.staffName.toLowerCase() === staffData.name.toLowerCase())
     );
 
+    // ---- weekly timetable grid (day rows x period columns) ----
+    const TT_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const normSlot = (slot) => extractTimeRange(slot).toLowerCase().replace(/\s+/g, '');
+
+    const slotStartMinutes = (range) => {
+        const m = String(range).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+        if (!m) return 0;
+        let hour = parseInt(m[1], 10);
+        const minute = parseInt(m[2], 10);
+        const endHour = parseInt(m[4], 10);
+        let suffix = (m[3] || m[6] || 'AM').toUpperCase();
+        // "11:15 - 12:00 PM" starts in the morning
+        if (!m[3] && m[6] && m[6].toUpperCase() === 'PM' && (hour % 12) > (endHour % 12)) suffix = 'AM';
+        hour = (hour % 12) + (suffix === 'PM' ? 12 : 0);
+        return hour * 60 + minute;
+    };
+
+    const ttColumns = (() => {
+        const map = new Map();
+        periodList.forEach((p) => map.set(normSlot(p), extractTimeRange(p)));
+        mySchedule.forEach((item) => {
+            if (!item.timeSlot) return;
+            const key = normSlot(item.timeSlot);
+            if (!map.has(key)) map.set(key, extractTimeRange(item.timeSlot));
+        });
+        return [...map.entries()]
+            .map(([key, label]) => ({ key, label }))
+            .sort((a, b) => slotStartMinutes(a.label) - slotStartMinutes(b.label));
+    })();
+
+    const sameDay = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+
+    const ttDays = [
+        ...TT_DAYS,
+        ...[...new Set(mySchedule.map((i) => String(i.day || '').trim()).filter(Boolean))]
+            .filter((d) => !TT_DAYS.some((x) => sameDay(x, d)))
+    ];
+
+    const ttCell = (day, key) =>
+        mySchedule.filter((item) => sameDay(item.day, day) && normSlot(item.timeSlot) === key);
+
+    const ttClassLabel = (item) => {
+        const cls = item.className || item.class || 'General';
+        const sec = String(item.sectionName || item.section || '').trim();
+        if (!sec) return cls;
+        return `${cls} · ${sec.toLowerCase().startsWith('section') ? sec : `Sec ${sec}`}`;
+    };
+
+    const exportTimetableCsv = () => {
+        const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const header = ['Day', ...ttColumns.map((c) => c.label)];
+        const rows = ttDays.map((day) => [
+            day,
+            ...ttColumns.map((c) =>
+                ttCell(day, c.key)
+                    .map((i) => `${i.subject || 'Subject'} (${ttClassLabel(i)}, Rm ${i.roomNo || 'N/A'})`)
+                    .join(' / ')
+            )
+        ]);
+        const csv = '\uFEFF' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'my-timetable.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const printTimetable = () => {
+        const escH = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+        const head = ttColumns.map((c) => `<th>${escH(c.label)}</th>`).join('');
+        const body = ttDays.map((day) => {
+            const cells = ttColumns.map((c) => {
+                const items = ttCell(day, c.key);
+                return `<td>${items.map((i) =>
+                    `<div class="slot"><b>${escH(i.subject || 'Subject')}</b><span>${escH(ttClassLabel(i))}</span><em>Rm: ${escH(i.roomNo || 'N/A')}</em></div>`
+                ).join('')}</td>`;
+            }).join('');
+            return `<tr><th class="day">${escH(day)}</th>${cells}</tr>`;
+        }).join('');
+
+        const w = window.open('', '_blank', 'width=1100,height=800');
+        if (!w) return;
+        w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Timetable</title>
+<style>
+@page { size: A4 landscape; margin: 10mm; }
+* { box-sizing: border-box; }
+body { font-family: Outfit, Arial, sans-serif; color: #182033; margin: 0; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+p { margin: 0 0 12px; font-size: 11px; color: #718096; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { border: 1px solid #e4e8f1; padding: 6px 4px; text-align: center; font-size: 10px; vertical-align: middle; }
+thead th { background: #f3f5fb; color: #5b6478; text-transform: uppercase; font-size: 9px; }
+th.day { background: #f6f8ff; font-size: 11px; width: 78px; }
+.slot { border-top: 3px solid #5b5cf0; border-radius: 8px 8px 6px 6px; background: #f1f0ff; padding: 5px 3px; margin: 2px 0; }
+.slot b { display: block; color: #5b5cf0; font-size: 11px; }
+.slot span { display: block; color: #718096; font-weight: 600; margin-top: 1px; }
+.slot em { display: block; color: #718096; font-style: normal; font-size: 9px; margin-top: 1px; }
+tr { height: 54px; }
+</style></head><body>
+<h1>Weekly Timetable — ${escH(staffData.name || '')}</h1>
+<p>Synchronized live with administrator and faculty allocations</p>
+<table><thead><tr><th class="day">Day</th>${head}</tr></thead><tbody>${body}</tbody></table>
+</body></html>`);
+        w.document.close();
+        w.focus();
+        setTimeout(() => w.print(), 300);
+    };
+
     const myTaughtAssignments = mySchedule
         .map(item => ({
             className: item.className || item.class || '',
@@ -1745,9 +1857,9 @@ export default function StaffDashboard() {
     const completedTaskCount = myOfficeTasks.length - pendingOfficeTasks.length;
     const visibleOfficeTasks = myOfficeTasks.filter(t =>
         taskFilter === 'pending' ? !isTaskDone(t)
-        : taskFilter === 'assessment' ? isTaskAssessment(t)
-        : taskFilter === 'done' ? isTaskDone(t)
-        : true
+            : taskFilter === 'assessment' ? isTaskAssessment(t)
+                : taskFilter === 'done' ? isTaskDone(t)
+                    : true
     );
     const fmtTaskDate = (d) => {
         if (!d) return 'No deadline';
@@ -1912,155 +2024,152 @@ export default function StaffDashboard() {
                             aria-expanded={openGroup === 'workspace'}
                         >
                             <span>My Workspace</span>
-                            
+
                             <ChevronDown size={14} className="sg-chevron" />
                         </button>
                         {openGroup === 'workspace' && (
                             <div className="sidebar-group-body">
 
-                            <button
-                                className={`nav-links ${activeTab === 'profile' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <User size={18} />
-                                    <span>My Profile</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Calendar size={18} />
-                                    <span>Timetable</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'departments' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('departments'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Building2 size={18} />
-                                    <span>Departments</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <ClipboardList size={18} />
-                                    <span>Tasks</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'syllabus' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <BookMarked size={18} />
-                                    <span>Syllabus</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'marks' ? 'active' : ''}`}
-                                onClick={() => {
-                                    setActiveTab('marks');
-                                    setSelectedClass('10th Std');
-                                    setSelectedSection(null);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                            >
-                                <div className="nav-links-content">
-                                    <Award size={18} />
-                                    <span>Marks Entry</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'attendance' ? 'active' : ''}`}
-                                onClick={() => {
-                                    setActiveTab('attendance');
-                                    setSelectedClass('10th Std');
-                                    setSelectedSection(null);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                            >
-                                <div className="nav-links-content">
-                                    <CheckCircle size={18} />
-                                    <span>Attendance</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
-                                onClick={() => {
-                                    setActiveTab('submissions');
-                                    setSubClassFilter(null);
-                                    setSubSectionFilter(null);
-                                    setSubmissionFilterStatus('all');
-                                    setIsMobileMenuOpen(false);
-                                }}
-                            >
-                                <div className="nav-links-content">
-                                    <FileCheck size={18} />
-                                    <span>Assessments</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
-
-                            <div className="nav-group">
                                 <button
-                                    className={`nav-links ${academicMenuOpen ? 'expanded' : ''} ${['students', 'analytics'].includes(activeTab) ? 'active-parent' : ''}`}
-                                    onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
+                                    className={`nav-links ${activeTab === 'profile' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
                                 >
                                     <div className="nav-links-content">
-                                        <GraduationCap size={18} />
-                                        <span>More Academic Tools</span>
+                                        <User size={18} />
+                                        <span>My Profile</span>
                                     </div>
-                                    <ChevronDown size={16} className="chevron" />
+                                    <ChevronRight size={15} className="nav-arrow" />
                                 </button>
 
-                                {academicMenuOpen && (
-                                    <div className="sub-menu">
-                                        <button
-                                            className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
-                                            onClick={() => {
-                                                setActiveTab('students');
-                                                setSelectedClass(null);
-                                                setSelectedSection(null);
-                                                setIsMobileMenuOpen(false);
-                                            }}
-                                        >
-                                            Student Roster
-                                        </button>
-                                        <button
-                                            className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
-                                            onClick={() => {
-                                                setActiveTab('analytics');
-                                                setSelectedClass('10th Std');
-                                                setSelectedSection(null);
-                                                setIsMobileMenuOpen(false);
-                                            }}
-                                        >
-                                            Attendance Analytics
-                                        </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'schedule' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('schedule'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Calendar size={18} />
+                                        <span>Timetable</span>
                                     </div>
-                                )}
-                            </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'marks' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('marks');
+                                        setSelectedClass('10th Std');
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Award size={18} />
+                                        <span>Marks Entry</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+
+                                <button
+                                    className={`nav-links ${activeTab === 'syllabus' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('syllabus'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <BookMarked size={18} />
+                                        <span>Syllabus</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+
+                                <button
+                                    className={`nav-links ${activeTab === 'attendance' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('attendance');
+                                        setSelectedClass('10th Std');
+                                        setSelectedSection(null);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
+                                    <div className="nav-links-content">
+                                        <CheckCircle size={18} />
+                                        <span>Attendance</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+
+                                <button
+                                    className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('submissions');
+                                        setSubClassFilter(null);
+                                        setSubSectionFilter(null);
+                                        setSubmissionFilterStatus('all');
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
+                                    <div className="nav-links-content">
+                                        <FileCheck size={18} />
+                                        <span>Assessments</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <ClipboardList size={18} />
+                                        <span>Tasks</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'departments' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('departments'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Building2 size={18} />
+                                        <span>Departments</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
+
+                                <div className="nav-group">
+                                    <button
+                                        className={`nav-links ${academicMenuOpen ? 'expanded' : ''} ${['students', 'analytics'].includes(activeTab) ? 'active-parent' : ''}`}
+                                        onClick={() => setAcademicMenuOpen(!academicMenuOpen)}
+                                    >
+                                        <div className="nav-links-content">
+                                            <GraduationCap size={18} />
+                                            <span>More Academic Tools</span>
+                                        </div>
+                                        <ChevronDown size={16} className="chevron" />
+                                    </button>
+
+                                    {academicMenuOpen && (
+                                        <div className="sub-menu">
+                                            <button
+                                                className={`sub-link ${activeTab === 'students' ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setActiveTab('students');
+                                                    setSelectedClass(null);
+                                                    setSelectedSection(null);
+                                                    setIsMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                Student Roster
+                                            </button>
+                                            <button
+                                                className={`sub-link ${activeTab === 'analytics' ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setActiveTab('analytics');
+                                                    setSelectedClass('10th Std');
+                                                    setSelectedSection(null);
+                                                    setIsMobileMenuOpen(false);
+                                                }}
+                                            >
+                                                Attendance Analytics
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -2073,35 +2182,35 @@ export default function StaffDashboard() {
                             aria-expanded={openGroup === 'exams'}
                         >
                             <span>Examinations</span>
-                            
+
                             <ChevronDown size={14} className="sg-chevron" />
                         </button>
                         {openGroup === 'exams' && (
                             <div className="sidebar-group-body">
-                            <div className="nav-group">
-                                <button
-                                    type="button"
-                                    className={`nav-links ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active-parent' : ''}`}
-                                    onClick={() => setExamHallMenuOpen(prev => !prev)}
-                                >
-                                    <div className="nav-links-content">
-                                        <Calendar size={18} />
-                                        <span>Exam Hall Allocation</span>
-                                    </div>
-                                    <ChevronDown size={15} className={`chevron ${examHallMenuOpen ? 'open' : ''}`} />
-                                </button>
-                                {examHallMenuOpen && (
-                                    <div className="sub-menu">
-                                        <button
-                                            type="button"
-                                            className={`sub-link ${activeTab === 'exam-halls' ? 'active' : ''}`}
-                                            onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
-                                        >
-                                            <CheckCircle size={13} /> My Invigilation Duty
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                                <div className="nav-group">
+                                    <button
+                                        type="button"
+                                        className={`nav-links ${examHallMenuOpen ? 'expanded' : ''} ${activeTab === 'exam-halls' ? 'active-parent' : ''}`}
+                                        onClick={() => setExamHallMenuOpen(prev => !prev)}
+                                    >
+                                        <div className="nav-links-content">
+                                            <Calendar size={18} />
+                                            <span>Exam Hall Allocation</span>
+                                        </div>
+                                        <ChevronDown size={15} className={`chevron ${examHallMenuOpen ? 'open' : ''}`} />
+                                    </button>
+                                    {examHallMenuOpen && (
+                                        <div className="sub-menu">
+                                            <button
+                                                type="button"
+                                                className={`sub-link ${activeTab === 'exam-halls' ? 'active' : ''}`}
+                                                onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
+                                            >
+                                                <CheckCircle size={13} /> My Invigilation Duty
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -2114,44 +2223,44 @@ export default function StaffDashboard() {
                             aria-expanded={openGroup === 'comms'}
                         >
                             <span>Communication</span>
-                            
+
                             <ChevronDown size={14} className="sg-chevron" />
                         </button>
                         {openGroup === 'comms' && (
                             <div className="sidebar-group-body">
 
-                            <button
-                                className={`nav-links ${activeTab === 'chats' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('chats'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <MessageCircle size={18} />
-                                    <span>Chats</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'chats' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('chats'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <MessageCircle size={18} />
+                                        <span>Chats</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
 
-                            <button
-                                className={`nav-links ${activeTab === 'staffroom' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('staffroom'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Users size={18} />
-                                    <span>Staff Room</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'staffroom' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('staffroom'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Users size={18} />
+                                        <span>Staff Room</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
 
-                            <button
-                                className={`nav-links ${activeTab === 'schoolnews' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('schoolnews'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Newspaper size={18} />
-                                    <span>School News</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'schoolnews' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('schoolnews'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Newspaper size={18} />
+                                        <span>School News</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
                             </div>
                         )}
                     </div>
@@ -2170,28 +2279,28 @@ export default function StaffDashboard() {
                         {openGroup === 'alerts' && (
                             <div className="sidebar-group-body">
 
-                            <button
-                                className={`nav-links ${activeTab === 'mytasks' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('mytasks'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <ClipboardList size={18} />
-                                    <span>My Tasks</span>
-                                    {pendingOfficeTasks.length > 0 && <span className="task-count-pill">{pendingOfficeTasks.length}</span>}
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'mytasks' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('mytasks'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <ClipboardList size={18} />
+                                        <span>My Tasks</span>
+                                        {pendingOfficeTasks.length > 0 && <span className="task-count-pill">{pendingOfficeTasks.length}</span>}
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
 
-                            <button
-                                className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <SendHorizonal size={18} />
-                                    <span>Leave Requests</span>
-                                </div>
-                                <ChevronRight size={15} className="nav-arrow" />
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'leaves' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('leaves'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <SendHorizonal size={18} />
+                                        <span>Leave Requests</span>
+                                    </div>
+                                    <ChevronRight size={15} className="nav-arrow" />
+                                </button>
                             </div>
                         )}
                     </div>
@@ -2204,41 +2313,31 @@ export default function StaffDashboard() {
                             aria-expanded={openGroup === 'others'}
                         >
                             <span>Others</span>
-                            
+
                             <ChevronDown size={14} className="sg-chevron" />
                         </button>
                         {openGroup === 'others' && (
                             <div className="sidebar-group-body">
 
-                            <button
-                                className={`nav-links ${activeTab === 'downloads' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('downloads'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Download size={18} />
-                                    <span>Downloads</span>
-                                </div>
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'downloads' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('downloads'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <Download size={18} />
+                                        <span>Downloads</span>
+                                    </div>
+                                </button>
 
-                            <button
-                                className={`nav-links ${activeTab === 'library' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('library'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <Library size={18} />
-                                    <span>Library</span>
-                                </div>
-                            </button>
-
-                            <button
-                                className={`nav-links ${activeTab === 'events' ? 'active' : ''}`}
-                                onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }}
-                            >
-                                <div className="nav-links-content">
-                                    <PartyPopper size={18} />
-                                    <span>Events</span>
-                                </div>
-                            </button>
+                                <button
+                                    className={`nav-links ${activeTab === 'events' ? 'active' : ''}`}
+                                    onClick={() => { setActiveTab('events'); setIsMobileMenuOpen(false); }}
+                                >
+                                    <div className="nav-links-content">
+                                        <PartyPopper size={18} />
+                                        <span>Events</span>
+                                    </div>
+                                </button>
                             </div>
                         )}
                     </div>
@@ -4492,26 +4591,59 @@ export default function StaffDashboard() {
                     )}
 
                     {activeTab === 'schedule' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
+                        <div className="dash-card full-width stt-card">
+                            <div className="stt-head">
                                 <div>
-                                    <h3>Weekly Timetable</h3>
-                                    <p className="subtitle">Overview of routine classes</p>
+                                    <h3>My Weekly Timetable</h3>
+                                    <p className="stt-sub">Synchronized live with administrator and faculty allocations</p>
+                                </div>
+                                <div className="stt-actions">
+                                    <button type="button" className="stt-btn" onClick={exportTimetableCsv}>
+                                        <Download size={15} /> Export CSV
+                                    </button>
+                                    <button type="button" className="stt-btn primary" onClick={printTimetable}>
+                                        <Printer size={15} /> Print Timetable
+                                    </button>
                                 </div>
                             </div>
-                            <div className="timetable-grid">
-                                {mySchedule.map((item, idx) => (
-                                    <div key={item.id || idx} className="timetable-card">
-                                        <div className="time-pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
-                                            {item.day} — {item.timeSlot}
-                                        </div>
-                                        <h4 style={{ margin: '0 0 4px 0' }}>{item.subject}</h4>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            Class: {item.className || 'General'} | Room: {item.roomNo || 'N/A'}
-                                        </p>
-                                    </div>
-                                ))}
+
+                            <div className="stt-wrap">
+                                <table className="stt-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="stt-corner">Day</th>
+                                            {ttColumns.map((col) => (
+                                                <th key={col.key}>{col.label}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {ttDays.map((day) => (
+                                            <tr key={day}>
+                                                <th className="stt-day">{day}</th>
+                                                {ttColumns.map((col) => {
+                                                    const items = ttCell(day, col.key);
+                                                    return (
+                                                        <td key={col.key}>
+                                                            {items.map((item, idx) => (
+                                                                <div key={item.id || idx} className="stt-slot">
+                                                                    <strong>{item.subject || 'Subject'}</strong>
+                                                                    <span>{ttClassLabel(item)}</span>
+                                                                    <em>Rm: {item.roomNo || 'N/A'}</em>
+                                                                </div>
+                                                            ))}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
+
+                            {mySchedule.length === 0 && (
+                                <p className="stt-empty">No timetable slots mapped to your staff profile yet.</p>
+                            )}
                         </div>
                     )}
 
