@@ -3,8 +3,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../service/firebase';
 import {
     X, Edit2, KeyRound, Mail, Phone, MapPin, GraduationCap,
-    Award, TrendingUp, ClipboardList, Users, Sparkles,
-    CalendarCheck, Wallet, ClipboardCheck, ChevronDown
+    Award, TrendingUp, Users, CalendarCheck, Wallet, ClipboardCheck, User
 } from 'lucide-react';
 import './Previewmodal.css';
 
@@ -46,12 +45,12 @@ const belongsToStudent = (record, student) => {
 };
 
 export default function StudentPreviewModal({ student, sectionName, className, onClose, onEdit }) {
-    
+
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
     const [classAssignments, setClassAssignments] = useState([]);
     const [assignmentSubmissions, setAssignmentSubmissions] = useState([]);
-    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('marks');
 
     const studentId = student?.id;
 
@@ -165,250 +164,202 @@ export default function StudentPreviewModal({ student, sectionName, className, o
     const submittedAssignments = relevantAssignments.filter((a) => submittedTaskIds.has(a.id)).length;
     const pendingAssignments = totalAssignments - submittedAssignments;
 
+    const photoSrc = student.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop';
+    const isActive = (student.status || 'Active').toLowerCase() === 'active';
+    const classLabel = `${className || student.className || 'N/A'}${sectionName ? ` • Sec ${sectionName}` : ''}`;
+    const feeTone = feeStatus === 'Paid' ? 'good' : feeStatus === 'Partial' ? 'warn' : feeStatus === 'Pending' ? 'bad' : '';
+
+    const tabs = [
+        { id: 'marks', label: 'Marks', icon: Award, count: subjectsWithData.length },
+        { id: 'attendance', label: 'Attendance', icon: CalendarCheck, count: totalAttendanceLogged },
+        { id: 'fees', label: 'Fees', icon: Wallet, count: feeRecords.length },
+        { id: 'tasks', label: 'Tasks', icon: ClipboardCheck, count: totalAssignments },
+        { id: 'profile', label: 'Profile', icon: User, count: 0 }
+    ];
+
     return (
-        <div className="sp-backdrop" onClick={onClose}>
-            <div className="sp-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="sp-close-btn" onClick={onClose} title="Close Preview">
-                    <X size={18} />
-                </button>
-
-                {/* SIDEBAR — Student Details */}
-                <aside className="sp-sidebar">
-                    <div className="sp-sidebar-top">
-                        <img
-                            src={student.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop'}
-                            alt={student.name}
-                            className="sp-avatar"
-                        />
-                        <div className="sp-identity-text">
-                            <h3>{student.name}</h3>
-                            <div className="sp-badges">
-                                {student.bloodGroup && <span className="blood-badge">{student.bloodGroup}</span>}
-                                <span className={`status-pill ${(student.status || 'Active').toLowerCase() === 'active' ? 'status-present' : 'status-absent'}`}>
-                                    {student.status || 'Active'}
-                                </span>
-                            </div>
-                            <p className="sp-class-line">
-                                <GraduationCap size={13} /> {className || student.className || 'N/A'}{sectionName ? ` — Section ${sectionName}` : ''}
-                            </p>
+        <div className="pm-backdrop" onClick={onClose}>
+            <div
+                className="pm-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${student.name} preview`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* ---------- Header ---------- */}
+                <header className="pm-header">
+                    <img src={photoSrc} alt={student.name} className="pm-avatar" />
+                    <div className="pm-identity">
+                        <h3>{student.name}</h3>
+                        <p className="pm-class">
+                            <GraduationCap size={12} /> {classLabel}
+                        </p>
+                        <div className="pm-badges">
+                            {student.bloodGroup && <span className="pm-badge pm-badge-blood">{student.bloodGroup}</span>}
+                            <span className={`pm-badge ${isActive ? 'pm-badge-ok' : 'pm-badge-off'}`}>
+                                {student.status || 'Active'}
+                            </span>
+                            {student.admissionNo && <span className="pm-badge pm-badge-muted">#{student.admissionNo}</span>}
                         </div>
                     </div>
-
-                    <button
-                        type="button"
-                        className="sp-details-toggle"
-                        onClick={() => setDetailsOpen((v) => !v)}
-                        aria-expanded={detailsOpen}
-                    >
-                        <span>{detailsOpen ? 'Hide Full Details' : 'View Full Details'}</span>
-                        <ChevronDown size={16} className={`sp-toggle-arrow ${detailsOpen ? 'open' : ''}`} />
-                    </button>
-
-                    <div className={`sp-sidebar-details ${detailsOpen ? 'open' : ''}`}>
-                        <div className="sp-sidebar-details-inner">
-                            <div className="sp-sidebar-section">
-                                <span className="sp-sidebar-label">Identity</span>
-                                <p><strong>Adm No:</strong> <code>{student.admissionNo || 'N/A'}</code></p>
-                                <p><strong>Roll No:</strong> {student.rollNumber || 'N/A'}</p>
-                                <p><strong>Gender:</strong> {student.gender || 'N/A'}</p>
-                                <p><strong>Adm Date:</strong> {student.admissionDate || 'N/A'}</p>
-                                <p><strong>DOB:</strong> {student.dob || 'N/A'}</p>
-                            </div>
-
-                            <div className="sp-sidebar-section">
-                                <span className="sp-sidebar-label">Guardian & Contact</span>
-                                <p><Users size={13} /> {student.guardianName || 'N/A'} <em>({student.relationship || 'Guardian'})</em></p>
-                                <p><Phone size={13} /> {student.phone || 'N/A'}{student.parentPhone ? ` / ${student.parentPhone}` : ''}</p>
-                                {student.email && <p><Mail size={13} /> {student.email}</p>}
-                                {student.address && <p className="sp-address"><MapPin size={13} /> {student.address}</p>}
-                            </div>
-
-                            <div className="sp-credentials-box">
-                                <KeyRound size={14} />
-                                <span>ERP Login — User: <strong>{student.admissionNo}</strong> | Pass: <strong>{student.dob}</strong></span>
-                            </div>
-
-                            {onEdit && (
-                                <button className="sp-edit-btn" onClick={() => onEdit(student)}>
-                                    <Edit2 size={14} /> Edit Student Record
-                                </button>
-                            )}
-                        </div>
+                    <div className="pm-header-actions">
+                        {onEdit && (
+                            <button type="button" className="pm-icon-btn" onClick={() => onEdit(student)} title="Edit student record">
+                                <Edit2 size={14} />
+                            </button>
+                        )}
+                        <button type="button" className="pm-icon-btn pm-close" onClick={onClose} title="Close preview">
+                            <X size={16} />
+                        </button>
                     </div>
-                </aside>
+                </header>
 
-                {/* MAIN — Stats + Academic Progress + Attendance + Fees + Assignments */}
-                <main className="sp-main">
-                    <div className="sp-main-heading">
-                        <h3>Student Overview</h3>
-                        <p>Full record summary — academics, attendance, fees and assignments — for {student.name}.</p>
+                {/* ---------- KPI strip ---------- */}
+                <section className="pm-kpis">
+                    <div className="pm-kpi pm-kpi-indigo">
+                        <span className="pm-kpi-label"><TrendingUp size={11} /> Average</span>
+                        <strong>{overallAverage !== null ? `${overallAverage.toFixed(1)}%` : '—'}</strong>
+                        <em>{bestSubject ? `Best: ${bestSubject.subject}` : 'No marks yet'}</em>
                     </div>
-
-                    <div className="sp-stats-grid">
-                        <div className="sp-stat-card indigo">
-                            <div className="sp-stat-icon"><TrendingUp size={20} /></div>
-                            <div>
-                                <span>Overall Average</span>
-                                <h4>{overallAverage !== null ? `${overallAverage.toFixed(1)}%` : '—'}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card emerald">
-                            <div className="sp-stat-icon"><Award size={20} /></div>
-                            <div>
-                                <span>Best Subject</span>
-                                <h4>{bestSubject ? bestSubject.subject : '—'}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card amber">
-                            <div className="sp-stat-icon"><ClipboardList size={20} /></div>
-                            <div>
-                                <span>Exams Recorded</span>
-                                <h4>{totalPublished}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card rose">
-                            <div className="sp-stat-icon"><Sparkles size={20} /></div>
-                            <div>
-                                <span>Pending Publish</span>
-                                <h4>{pendingPublishCount}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card sky">
-                            <div className="sp-stat-icon"><CalendarCheck size={20} /></div>
-                            <div>
-                                <span>Attendance Rate</span>
-                                <h4>{attendanceRate !== null ? `${attendanceRate}%` : '—'}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card amber">
-                            <div className="sp-stat-icon"><Wallet size={20} /></div>
-                            <div>
-                                <span>Fee Status</span>
-                                <h4>{feeStatus || '—'}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card emerald">
-                            <div className="sp-stat-icon"><ClipboardCheck size={20} /></div>
-                            <div>
-                                <span>Assignments Done</span>
-                                <h4>{totalAssignments ? `${submittedAssignments}/${totalAssignments}` : '—'}</h4>
-                            </div>
-                        </div>
-                        <div className="sp-stat-card rose">
-                            <div className="sp-stat-icon"><Users size={20} /></div>
-                            <div>
-                                <span>Classes Present</span>
-                                <h4>{totalAttendanceLogged ? `${presentCount}/${totalAttendanceLogged}` : '—'}</h4>
-                            </div>
-                        </div>
+                    <div className="pm-kpi pm-kpi-sky">
+                        <span className="pm-kpi-label"><CalendarCheck size={11} /> Attendance</span>
+                        <strong>{attendanceRate !== null ? `${attendanceRate}%` : '—'}</strong>
+                        <em>{totalAttendanceLogged ? `${presentCount}/${totalAttendanceLogged} present` : 'No records'}</em>
                     </div>
+                    <div className={`pm-kpi pm-kpi-amber ${feeTone ? `tone-${feeTone}` : ''}`}>
+                        <span className="pm-kpi-label"><Wallet size={11} /> Fees</span>
+                        <strong>{feeStatus || '—'}</strong>
+                        <em>{feeStatus ? `Due ₹${feeTotals.due.toLocaleString()}` : 'No records'}</em>
+                    </div>
+                    <div className="pm-kpi pm-kpi-emerald">
+                        <span className="pm-kpi-label"><ClipboardCheck size={11} /> Tasks</span>
+                        <strong>{totalAssignments ? `${submittedAssignments}/${totalAssignments}` : '—'}</strong>
+                        <em>{totalAssignments ? `${pendingAssignments} pending` : 'None assigned'}</em>
+                    </div>
+                </section>
 
-                    <div className="sp-progress-section">
-                        <h4>Academic Progress</h4>
-                        {examTypesWithData.length === 0 ? (
-                            <div className="empty-state">No published marks recorded for this student yet.</div>
+                {/* ---------- Tabs ---------- */}
+                <nav className="pm-tabs" role="tablist">
+                    {tabs.map(({ id, label, icon: Icon, count }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === id}
+                            className={`pm-tab ${activeTab === id ? 'active' : ''}`}
+                            onClick={() => setActiveTab(id)}
+                        >
+                            <Icon size={13} />
+                            <span>{label}</span>
+                            {count > 0 && <b>{count}</b>}
+                        </button>
+                    ))}
+                </nav>
+
+                {/* ---------- Panel ---------- */}
+                <div className="pm-panel" role="tabpanel">
+                    {activeTab === 'marks' && (
+                        examTypesWithData.length === 0 ? (
+                            <div className="pm-empty">No published marks recorded yet.</div>
                         ) : (
-                            <div className="table-responsive sp-progress-table-wrap">
-                                <table className="custom-table sp-progress-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Subject</th>
-                                            {examTypesWithData.map((exam) => (
-                                                <th key={exam}>{exam}</th>
-                                            ))}
-                                            <th>Average</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {subjectsWithData.map((subject) => {
-                                            const rowScores = examTypesWithData
-                                                .map((exam) => marks[`${exam} - ${subject}`])
-                                                .filter((v) => v !== undefined)
-                                                .map(Number);
-                                            const rowAvg = rowScores.length
-                                                ? rowScores.reduce((a, b) => a + b, 0) / rowScores.length
-                                                : null;
-                                            return (
-                                                <tr key={subject}>
-                                                    <td><strong>{subject}</strong></td>
-                                                    {examTypesWithData.map((exam) => {
-                                                        const score = marks[`${exam} - ${subject}`];
-                                                        return (
-                                                            <td key={exam}>
-                                                                {score !== undefined ? (
-                                                                    <span className={`sp-grade-chip ${getGradeLabel(score).tone}`}>
-                                                                        {score}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="sp-no-score">—</span>
-                                                                )}
-                                                            </td>
-                                                        );
-                                                    })}
+                            <>
+                                <div className="pm-table-wrap">
+                                    <table className="pm-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Subject</th>
+                                                {examTypesWithData.map((exam) => (
+                                                    <th key={exam}>{exam.replace(/ exam$/i, '')}</th>
+                                                ))}
+                                                <th>Avg</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {subjectsWithData.map((subject) => {
+                                                const rowScores = examTypesWithData
+                                                    .map((exam) => marks[`${exam} - ${subject}`])
+                                                    .filter((v) => v !== undefined)
+                                                    .map(Number);
+                                                const rowAvg = rowScores.length
+                                                    ? rowScores.reduce((a, b) => a + b, 0) / rowScores.length
+                                                    : null;
+                                                return (
+                                                    <tr key={subject}>
+                                                        <td><strong>{subject}</strong></td>
+                                                        {examTypesWithData.map((exam) => {
+                                                            const score = marks[`${exam} - ${subject}`];
+                                                            return (
+                                                                <td key={exam}>
+                                                                    {score !== undefined ? (
+                                                                        <span className={`pm-chip ${getGradeLabel(score).tone}`}>{score}</span>
+                                                                    ) : (
+                                                                        <span className="pm-dash">—</span>
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                        <td>{rowAvg !== null ? <strong>{rowAvg.toFixed(1)}</strong> : '—'}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="pm-note">
+                                    {totalPublished} published score{totalPublished === 1 ? '' : 's'}
+                                    {pendingPublishCount > 0 ? ` • ${pendingPublishCount} awaiting publish` : ''}
+                                </p>
+                            </>
+                        )
+                    )}
+
+                    {activeTab === 'attendance' && (
+                        recentAttendance.length === 0 ? (
+                            <div className="pm-empty">No attendance records found yet.</div>
+                        ) : (
+                            <>
+                                <div className="pm-table-wrap">
+                                    <table className="pm-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Period</th>
+                                                <th>Subject</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {recentAttendance.map((r) => (
+                                                <tr key={r.id}>
+                                                    <td>{r.date || 'N/A'}</td>
+                                                    <td>{r.period || 'N/A'}</td>
+                                                    <td>{r.subject || 'N/A'}</td>
                                                     <td>
-                                                        {rowAvg !== null ? (
-                                                            <strong>{rowAvg.toFixed(1)}</strong>
-                                                        ) : '—'}
+                                                        <span className={`pm-chip ${r.status === 'present' ? 'grade-excellent' : 'grade-poor'}`}>
+                                                            {(r.status || 'N/A').toUpperCase()}
+                                                        </span>
                                                     </td>
                                                 </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="pm-note">
+                                    Latest {recentAttendance.length} of {totalAttendanceLogged} sessions • {presentCount} present, {absentCount} absent
+                                </p>
+                            </>
+                        )
+                    )}
 
-                    <div className="sp-progress-section">
-                        <h4>Attendance Log</h4>
-                        {recentAttendance.length === 0 ? (
-                            <div className="empty-state">No attendance records found for this student yet.</div>
+                    {activeTab === 'fees' && (
+                        feeRecords.length === 0 ? (
+                            <div className="pm-empty">No fee records found yet.</div>
                         ) : (
-                            <div className="table-responsive sp-progress-table-wrap">
-                                <table className="custom-table sp-progress-table">
+                            <div className="pm-table-wrap">
+                                <table className="pm-table">
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
-                                            <th>Period</th>
-                                            <th>Subject</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {recentAttendance.map((r) => (
-                                            <tr key={r.id}>
-                                                <td>{r.date || 'N/A'}</td>
-                                                <td>{r.period || 'N/A'}</td>
-                                                <td>{r.subject || 'N/A'}</td>
-                                                <td>
-                                                    <span className={`sp-grade-chip ${r.status === 'present' ? 'grade-excellent' : 'grade-poor'}`}>
-                                                        {(r.status || 'N/A').toUpperCase()}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                        {totalAttendanceLogged > 0 && (
-                            <p className="sp-no-score" style={{ marginTop: '8px', fontSize: '0.75rem' }}>
-                                Showing latest {recentAttendance.length} of {totalAttendanceLogged} logged sessions
-                                ({presentCount} present, {absentCount} absent).
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="sp-progress-section">
-                        <h4>Fee Records</h4>
-                        {feeRecords.length === 0 ? (
-                            <div className="empty-state">No fee records found for this student yet.</div>
-                        ) : (
-                            <div className="table-responsive sp-progress-table-wrap">
-                                <table className="custom-table sp-progress-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Total Fee</th>
+                                            <th>Total</th>
                                             <th>Paid</th>
                                             <th>Due</th>
                                             <th>Status</th>
@@ -421,7 +372,7 @@ export default function StudentPreviewModal({ student, sectionName, className, o
                                                 <td>₹{Number(f.paid || 0).toLocaleString()}</td>
                                                 <td>₹{Number(f.due || 0).toLocaleString()}</td>
                                                 <td>
-                                                    <span className={`sp-grade-chip ${f.status === 'Paid' ? 'grade-excellent' : f.status === 'Partial' ? 'grade-average' : 'grade-poor'}`}>
+                                                    <span className={`pm-chip ${f.status === 'Paid' ? 'grade-excellent' : f.status === 'Partial' ? 'grade-average' : 'grade-poor'}`}>
                                                         {f.status || 'N/A'}
                                                     </span>
                                                 </td>
@@ -430,52 +381,74 @@ export default function StudentPreviewModal({ student, sectionName, className, o
                                     </tbody>
                                 </table>
                             </div>
-                        )}
-                    </div>
+                        )
+                    )}
 
-                    <div className="sp-progress-section">
-                        <h4>Assignment Submissions</h4>
-                        {totalAssignments === 0 ? (
-                            <div className="empty-state">No assignments recorded for this student's class yet.</div>
+                    {activeTab === 'tasks' && (
+                        totalAssignments === 0 ? (
+                            <div className="pm-empty">No assignments recorded for this class yet.</div>
                         ) : (
-                            <div className="table-responsive sp-progress-table-wrap">
-                                <table className="custom-table sp-progress-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Title</th>
-                                            <th>Subject</th>
-                                            <th>Due Date</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {relevantAssignments.map((a) => {
-                                            const isSubmitted = submittedTaskIds.has(a.id);
-                                            return (
-                                                <tr key={a.id}>
-                                                    <td><strong>{a.title || 'Untitled'}</strong></td>
-                                                    <td>{a.subject || 'N/A'}</td>
-                                                    <td>{a.dueDate || 'N/A'}</td>
-                                                    <td>
-                                                        <span className={`sp-grade-chip ${isSubmitted ? 'grade-excellent' : 'grade-poor'}`}>
-                                                            {isSubmitted ? 'SUBMITTED' : 'PENDING'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                            <>
+                                <div className="pm-table-wrap">
+                                    <table className="pm-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Title</th>
+                                                <th>Subject</th>
+                                                <th>Due</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {relevantAssignments.map((a) => {
+                                                const isSubmitted = submittedTaskIds.has(a.id);
+                                                return (
+                                                    <tr key={a.id}>
+                                                        <td><strong>{a.title || 'Untitled'}</strong></td>
+                                                        <td>{a.subject || 'N/A'}</td>
+                                                        <td>{a.dueDate || 'N/A'}</td>
+                                                        <td>
+                                                            <span className={`pm-chip ${isSubmitted ? 'grade-excellent' : 'grade-poor'}`}>
+                                                                {isSubmitted ? 'DONE' : 'PENDING'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="pm-note">{submittedAssignments} submitted, {pendingAssignments} pending</p>
+                            </>
+                        )
+                    )}
+
+                    {activeTab === 'profile' && (
+                        <div className="pm-profile">
+                            <div className="pm-info-grid">
+                                <div className="pm-info"><span>Adm No</span><b>{student.admissionNo || 'N/A'}</b></div>
+                                <div className="pm-info"><span>Roll No</span><b>{student.rollNumber || 'N/A'}</b></div>
+                                <div className="pm-info"><span>Gender</span><b>{student.gender || 'N/A'}</b></div>
+                                <div className="pm-info"><span>DOB</span><b>{student.dob || 'N/A'}</b></div>
+                                <div className="pm-info"><span>Adm Date</span><b>{student.admissionDate || 'N/A'}</b></div>
+                                <div className="pm-info"><span>Class</span><b>{classLabel}</b></div>
                             </div>
-                        )}
-                        {totalAssignments > 0 && (
-                            <p className="sp-no-score" style={{ marginTop: '8px', fontSize: '0.75rem' }}>
-                                {submittedAssignments} submitted, {pendingAssignments} pending.
-                            </p>
-                        )}
-                    </div>
-                </main>
+
+                            <div className="pm-contact">
+                                <p><Users size={13} /> {student.guardianName || 'N/A'} <em>({student.relationship || 'Guardian'})</em></p>
+                                <p><Phone size={13} /> {student.phone || 'N/A'}{student.parentPhone ? ` / ${student.parentPhone}` : ''}</p>
+                                {student.email && <p><Mail size={13} /> {student.email}</p>}
+                                {student.address && <p><MapPin size={13} /> {student.address}</p>}
+                            </div>
+
+                            <div className="pm-credentials">
+                                <KeyRound size={13} />
+                                <span>ERP Login — User: <strong>{student.admissionNo}</strong> • Pass: <strong>{student.dob}</strong></span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
-}
+}   

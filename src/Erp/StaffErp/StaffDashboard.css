@@ -55,14 +55,13 @@ button {
     display: flex;
     background: #ffffff;
     border-radius: 34px;
+    padding: 25px;
     overflow: hidden;
     box-shadow: 0 22px 65px rgba(22, 55, 37, .16);
     border: 1px solid rgba(255, 255, 255, .7);
 }
 
 .dashboard-sidebar {
-    width: 106px !important;
-    min-width: 106px !important;
     flex: 0 0 106px !important;
     background: linear-gradient(180deg, var(--sidebar-1), var(--sidebar-2));
     padding: 24px 11px !important;
@@ -213,7 +212,7 @@ button {
 .dashboard-main {
     min-width: 0;
     flex: 1;
-    background: #ffffff;
+    backdrop-filter: var(--glass-blur);
     overflow: hidden
 }
 
@@ -1794,7 +1793,7 @@ body,
 }
 
 .dashboard-sidebar {
-    height: 100vh;
+    height: 1000px;
     overflow-y: auto !important;
     overflow-x: hidden;
 }
@@ -1952,7 +1951,7 @@ body,
     min-height: 100% !important;
     flex: 1 !important;
     overflow: hidden !important;
-    background: #ffffff !important;
+    /* background: #ffffff !important; */
 }
 
 .dashboard-topbar {
@@ -2654,7 +2653,7 @@ input[type="date"],
         bottom: 0 !important;
         width: 270px !important;
         min-width: 270px !important;
-        height: 100vh !important;
+        height: 100% !important;
         transform: translateX(-105%);
         transition: transform .28s ease;
         z-index: 300;
@@ -3870,10 +3869,6 @@ body {
 .logout-btn:hover {
     background: #f3fdee !important;
     color: #30a915 !important;
-}
-
-.dashboard-main {
-    background: var(--bg);
 }
 
 .dashboard-topbar {
@@ -6435,16 +6430,16 @@ body::after {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    padding: 45px;
     overflow: visible !important;
     gap: 18px;
 }
 
 .dashboard-main {
-    background: rgba(255, 255, 255, .48) !important;
     border: 1px solid rgba(255, 255, 255, .82) !important;
     border-radius: 30px !important;
     box-shadow: 0 18px 55px rgba(64, 113, 93, .08) !important;
-    backdrop-filter: blur(18px) saturate(145%);
+    backdrop-filter: blur(18px) saturate(15%);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
     overflow: hidden;
 }
@@ -6594,10 +6589,6 @@ body {
     border-color: var(--sd-line) !important;
     box-shadow: var(--sd-shadow) !important;
     transition: background .35s ease, border-color .35s ease, box-shadow .35s ease;
-}
-
-.dashboard-main {
-    background: var(--sd-bg) !important;
 }
 
 .dashboard-sidebar {
@@ -9089,7 +9080,7 @@ html[data-theme="dark"] .profile-page .assignment-form-grid .table-input:disable
 .dashboard-sidebar {
     display: flex !important;
     flex-direction: column;
-    overflow: hidden !important;
+    /* overflow: hidden !important; */
     padding: 16px 12px !important;
 }
 
@@ -9106,7 +9097,8 @@ html[data-theme="dark"] .profile-page .assignment-form-grid .table-input:disable
 
 .dashboard-sidebar .sidebar-nav {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: fit-content;
+    width: 200px;
     display: flex;
     flex-direction: column;
     gap: 4px !important;
@@ -9847,7 +9839,6 @@ html[data-theme="dark"],
 }
 
 .dashboard-main {
-    background: var(--fp-panel) !important;
     border: 1px solid var(--glass-border) !important;
     border-radius: 32px !important;
     box-shadow: var(--fp-shadow) !important;
@@ -9864,8 +9855,8 @@ html[data-theme="dark"],
     }
 
     .dashboard-sidebar {
-        width: 300px !important;
-        min-width: 300px !important;
+        width: 248px !important;
+        max-width: 248px !important;
         flex: 0 0 300px !important;
         position: sticky !important;
         top: 28px;
@@ -10223,5 +10214,70 @@ input[type="date"] {
     .dashboard-sidebar {
         border-radius: 0 28px 28px 0 !important;
         background: var(--fp-card) !important;
+    }
+}
+
+/* =========================================================
+   SIDEBAR HEIGHT FIX  (keep this block at the very end)
+   - sidebar always fits the screen: no cut-off at the bottom
+   - header + profile stay on top, Sign Out stays at the bottom
+   - only the menu list scrolls in between
+   ========================================================= */
+.dashboard-sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+.dashboard-sidebar .sidebar-header,
+.dashboard-sidebar .sidebar-user,
+.dashboard-sidebar .sidebar-footer {
+    flex: 0 0 auto !important;
+}
+
+.dashboard-sidebar .sidebar-nav {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    width: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+.dashboard-sidebar .sidebar-footer {
+    margin-top: auto !important;
+}
+
+@media (min-width: 901px) {
+    .dashboard-containers {
+        align-items: flex-start !important;
+    }
+
+    .dashboard-sidebar {
+        position: sticky !important;
+        top: 28px !important;
+        width: 248px !important;
+        min-width: 248px !important;
+        max-width: 248px !important;
+        flex: 0 0 248px !important;
+        height: calc(100vh - 56px) !important;
+        height: calc(100dvh - 56px) !important;
+        max-height: calc(100vh - 56px) !important;
+        max-height: calc(100dvh - 56px) !important;
+    }
+
+    .dashboard-main {
+        min-height: calc(100vh - 56px) !important;
+        min-height: calc(100dvh - 56px) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .dashboard-sidebar {
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: none !important;
     }
 }

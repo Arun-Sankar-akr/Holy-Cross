@@ -2513,7 +2513,7 @@ export default function StudentDashboard() {
                                             </div>
 
                                             <div className="ps-cal-legend">
-                                                <span><i className="ps-cal-dot deadline" /> Staff deadline</span>
+                                                <span><i className="ps-cal-dot deadline" /> Work deadline</span>
                                                 <span><i className="ps-cal-dot overdue" /> Overdue</span>
                                                 <span><i className="ps-cal-dot reminder" /> My schedule</span>
                                             </div>
