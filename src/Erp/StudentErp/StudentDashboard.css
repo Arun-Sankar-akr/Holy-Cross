@@ -5436,14 +5436,14 @@ body {
 
   /* Lock the drawer to the actual viewport height again */
   .staff-sidebar {
-    top: var(--mobile-topbar-h) !important;
+    top: 70px !important;
+    left: 10px;
     bottom: 0 !important;
-    height: calc(100vh - var(--mobile-topbar-h)) !important;
-    height: calc(100dvh - var(--mobile-topbar-h)) !important;
+    height: calc(98dvh - var(--mobile-topbar-h)) !important;
     max-height: unset !important;
     width: 82vw !important;
-    max-width: 302px !important;
-    border-radius: 0 26px 26px 0 !important;
+    max-width: 342px !important;
+    border-radius: 26px 26px 26px 26px !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
