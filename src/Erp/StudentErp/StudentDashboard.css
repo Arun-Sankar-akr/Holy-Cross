@@ -1837,6 +1837,7 @@ td {
 
   .topbar-actions {
     order: 2;
+    display: none;
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;

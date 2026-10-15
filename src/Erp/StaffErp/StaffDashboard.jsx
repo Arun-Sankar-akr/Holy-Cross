@@ -21,6 +21,7 @@ import {
     PersonStanding, Printer, RotateCw
 } from 'lucide-react';
 import './StaffDashboard.css';
+import './StaffDashboardLayout.css';
 
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
 const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
@@ -54,7 +55,7 @@ export default function StaffDashboard() {
     }, [activeTab]);
     const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('holy-cross-theme') === 'dark');
     const [showAiHint, setShowAiHint] = useState(false);
-    const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
+    const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
     const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date().toDateString());
     const [dayEvents, setDayEvents] = useState({});
     const [showAddEventForm, setShowAddEventForm] = useState(false);
@@ -1736,14 +1737,16 @@ tr { height: 54px; }
 
     const todayRef = new Date();
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const startOfCurrentWeek = new Date(todayRef);
-    startOfCurrentWeek.setDate(todayRef.getDate() - todayRef.getDay() + (calendarWeekOffset * 7));
-    const calendarWeekDays = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(startOfCurrentWeek);
-        d.setDate(startOfCurrentWeek.getDate() + i);
-        return d;
-    });
-    const calendarMonthLabel = calendarWeekDays[3].toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const greetingText = todayRef.getHours() < 12 ? 'Good morning' : todayRef.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+    const calendarMonthDate = new Date(todayRef.getFullYear(), todayRef.getMonth() + calendarMonthOffset, 1);
+    const calendarMonthLabel = calendarMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const calendarCells = [
+        ...Array(calendarMonthDate.getDay()).fill(null),
+        ...Array.from(
+            { length: new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth() + 1, 0).getDate() },
+            (_, i) => new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth(), i + 1)
+        )
+    ];
     const selectedDayEvents = dayEvents[selectedCalendarDate] || [];
 
     const persistDayEvents = (updated) => {
@@ -1781,7 +1784,7 @@ tr { height: 54px; }
     const todaysPlanItems = (mySchedule.filter(i => i.day === todayWeekdayName).length > 0
         ? mySchedule.filter(i => i.day === todayWeekdayName)
         : mySchedule
-    ).slice(0, 3);
+    ).slice(0, 8);
 
     const recentDocuments = [...submissionsList]
         .sort((a, b) => {
@@ -1990,18 +1993,31 @@ tr { height: 54px; }
             )}
 
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                <div className="sidebar-header">
-                    <div className="brand-icon"><img src={logo} alt="" id='logog' /></div>
-                    <span className="brand-titles">HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
-                </div>
-
                 <div className="sidebar-user">
                     <div className="user-avatar">{staffData.name.charAt(0)}</div>
                     <div className="user-info">
                         <span className="user-name">{staffData.name}</span>
                         <span className="user-role">{staffData.department}</span>
+                        {staffData.staffId && <span className="user-id">ID: #{staffData.staffId}</span>}
                     </div>
                 </div>
+
+                <div className="sidebar-tools">
+                    <button className={isDarkMode ? 'on' : ''} onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode">
+                        {isDarkMode ? <Sparkles size={18} /> : <Moon size={18} />}
+                        <span>{isDarkMode ? 'Light' : 'Dark'}</span>
+                    </button>
+                    <button onClick={() => { setActiveTab('mytasks'); setIsMobileMenuOpen(false); }} aria-label="Notifications">
+                        <Bell size={18} />
+                        <span>Alerts</span>
+                        {(announcements.length + pendingOfficeTasks.length) > 0 && <em>{announcements.length + pendingOfficeTasks.length}</em>}
+                    </button>
+                    <button className={showAiHint ? 'on' : ''} onClick={() => setShowAiHint(!showAiHint)} aria-label="AI assistant">
+                        <Sparkles size={18} />
+                        <span>AI</span>
+                    </button>
+                </div>
+                {showAiHint && <div className="sidebar-hint">Smart suggestions for your day are coming soon.</div>}
 
                 <nav className="sidebar-nav">
                     <div className="sidebar-pinned">
@@ -2353,8 +2369,6 @@ tr { height: 54px; }
 
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
-                    <h1 className="dashboard-page-title">Staff Dashboard</h1>
-
                     <div className="topbar-right">
                         <div className="search-bar">
                             <Search size={18} className="search-icon" />
@@ -2366,6 +2380,12 @@ tr { height: 54px; }
                             />
                         </div>
                         <div className="topbar-actions">
+                            <button className="topbar-pill" onClick={() => setActiveTab('mytasks')}>
+                                <ClipboardList size={15} /> My Tasks{pendingOfficeTasks.length > 0 && <em>{pendingOfficeTasks.length}</em>}
+                            </button>
+                            <button className="topbar-pill" onClick={() => setActiveTab('leaves')}>
+                                <SendHorizonal size={15} /> Leaves
+                            </button>
                             <button
                                 className={`icon-btn ${isDarkMode ? 'icon-btn-on' : ''}`}
                                 onClick={() => setIsDarkMode(!isDarkMode)}
@@ -2408,21 +2428,7 @@ tr { height: 54px; }
                                 )}
                             </div>
 
-                            <div className="notification-wrapper" style={{ position: 'relative' }}>
-                                <button className="icon-btn icon-btn-accent" onClick={() => { setShowAiHint(!showAiHint); setShowNotifications(false); }}>
-                                    <Sparkles size={17} />
-                                </button>
-                                {showAiHint && (
-                                    <div className="notification-dropdown ai-hint-dropdown">
-                                        <div className="dropdown-header">
-                                            <h4>AI Assistant</h4>
-                                        </div>
-                                        <div style={{ padding: '14px 16px', fontSize: '.8rem', color: 'var(--muted)' }}>
-                                            Smart suggestions for your day are coming soon.
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                           
                         </div>
 
                         <div className="notification-wrapper" style={{ position: 'relative' }}>
@@ -2456,329 +2462,270 @@ tr { height: 54px; }
 
                 <div className="dashboard-content">
                     {activeTab === 'overview' && (
-                        <div className="overview-layout">
-                            <div className="overview-left">
-                                <div className="welcome-banner">
-                                    <div className="welcome-copy">
-                                        <h2>Good morning, {staffData.name.split(' ')[0]}!</h2>
-                                        <p>Have a great day at work!</p>
-                                        {announcements[0] && (
-                                            <p className="welcome-notice">
-                                                <strong>Important notice:</strong> {announcements[0].title} — {announcements[0].date}. Don't miss it!
-                                            </p>
-                                        )}
+                        <div className="ov-grid">
+                            {/* greeting + live numbers */}
+                            <section className="ov-hero span-8">
+                                <div className="ov-hero-head">
+                                    <div>
+                                        <span className="ov-eyebrow">{greetingText}, {staffData.name.split(' ')[0]}</span>
+                                        <h2>Your Workspace</h2>
                                     </div>
-                                    <div className="welcome-visual" aria-hidden="true">
-                                        <div className="welcome-check"><Check size={22} /></div>
-                                        <div className="welcome-laptop"><div className="laptop-dot" /></div>
-                                        <div className="welcome-person">
-                                            <div className="person-head" />
-                                            <div className="person-body" />
-                                        </div>
+                                    <span className="ov-date"><Calendar size={14} /> {todayRef.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                </div>
+                                {announcements[0] && (
+                                    <p className="ov-notice"><Bell size={14} /> {announcements[0].title} · {announcements[0].date}</p>
+                                )}
+                                <div className="ov-hero-stats">
+                                    <div>
+                                        <span>Total Students</span>
+                                        <strong>{allStudents.length}</strong>
+                                        <em>{mySchedule.length} sessions / week</em>
+                                    </div>
+                                    <div>
+                                        <span>Attendance</span>
+                                        <strong>{classAttendanceRate}%</strong>
+                                        <em>{absentStudentsCount} absent today</em>
+                                    </div>
+                                    <div>
+                                        <span>Pending Tasks</span>
+                                        <strong>{pendingOfficeTasks.length}</strong>
+                                        <em>{ungradedSubmissionsCount} to grade</em>
                                     </div>
                                 </div>
+                            </section>
 
-                                <div className="dash-card quick-links-card">
-                                    <div className="card-header compact">
-                                        <div><h3>Quick Links</h3></div>
-                                    </div>
-                                    <div className="quick-links-grid">
-                                        <button className="quick-link-item" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}>
-                                            <div className="quick-link-icon bg-indigo"><Folder size={20} /></div>
-                                            <span>Class Roster</span>
-                                        </button>
-                                        <button className="quick-link-item" onClick={() => setActiveTab('schedule')}>
-                                            <div className="quick-link-icon bg-rose"><Calendar size={20} /></div>
-                                            <span>Time Table</span>
-                                        </button>
-                                        <button className="quick-link-item" onClick={() => setActiveTab('assignments')}>
-                                            <div className="quick-link-icon bg-amber"><ClipboardList size={20} /></div>
-                                            <span>Lesson Plans</span>
-                                        </button>
-                                        <button className="quick-link-item" onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}>
-                                            <div className="quick-link-icon bg-indigo"><Award size={20} /></div>
-                                            <span>Marks Entry</span>
-                                        </button>
-                                        <button className="quick-link-item" onClick={() => setActiveTab('attendance')}>
-                                            <div className="quick-link-icon bg-emerald"><CheckCircle size={20} /> </div>
-                                            <span>Attendance</span>
-                                        </button>
-                                    </div>
+                            {/* quick actions */}
+                            <section className="ov-card span-4">
+                                <div className="ov-card-head"><h3>Quick Actions</h3></div>
+                                <div className="quick-grid">
+                                    <button onClick={() => setActiveTab('schedule')}><i><Calendar size={20} /></i><span>Time Table</span></button>
+                                    <button onClick={() => setActiveTab('attendance')}><i><CheckCircle size={20} /></i><span>Attendance</span></button>
+                                    <button onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}><i><Award size={20} /></i><span>Marks</span></button>
+                                    <button onClick={() => setActiveTab('assignments')}><i><ClipboardList size={20} /></i><span>Lessons</span></button>
+                                    <button onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}><i><Folder size={20} /></i><span>Roster</span></button>
+                                    <button onClick={() => setActiveTab('leaves')}><i><SendHorizonal size={20} /></i><span>Leaves</span></button>
                                 </div>
+                            </section>
 
-                                <div className="stats-grid">
-                                    {stats.map((stat, idx) => {
-                                        const IconComponent = stat.icon;
-                                        return (
-                                            <div key={idx} className={`stat-card stat-card-${idx + 1}`}>
-                                                <div className="stat-details">
-                                                    <span className="stat-title">{stat.title}</span>
-                                                    <div className="stat-value">{stat.value}</div>
-                                                </div>
-                                                <div className={`stat-icon bg-${stat.color}`}>
-                                                    <IconComponent size={22} />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                            {/* today's class strip */}
+                            <section className="ov-card span-12">
+                                <div className="ov-card-head">
+                                    <h3>Today's Class</h3>
+                                    <button className="ov-link" onClick={() => setActiveTab('schedule')}>Full timetable <ChevronRight size={14} /></button>
                                 </div>
-
-                                <div className="content-grid overview-grid">
-                                    <div className="dash-card overview-main-card">
-                                        <div className="card-header">
-                                            <div>
-                                                <h3>Today's Plan</h3>
-                                                <p className="subtitle">Classes lined up for you today</p>
-                                            </div>
-                                            <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>
-                                                See All <span>→</span>
-                                            </button>
-                                        </div>
-
-                                        {todaysPlanItems.length === 0 ? (
-                                            <div className="overview-empty">
-                                                No timetable slots mapped to your staff profile yet.
-                                            </div>
-                                        ) : (
-                                            <div className="todays-plan-list">
-                                                {todaysPlanItems.map((item, idx) => (
-                                                    <div key={item.id || idx} className="plan-row">
-                                                        <div className="plan-avatar">{(item.subject || 'S').charAt(0)}</div>
-                                                        <div className="plan-info">
-                                                            <strong>{item.subject || 'Subject'}</strong>
-                                                            <button className="plan-class-link" onClick={() => setActiveTab('students')}>
-                                                                {item.className || 'General Class'}
-                                                            </button>
-                                                        </div>
-                                                        <div className="plan-meta">
-                                                            <span><Layers size={13} /> {item.roomNo || 'Room N/A'}</span>
-                                                            <span><Clock size={13} /> {item.timeSlot || 'TBA'}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="dash-card">
-                                        <div className="card-header compact">
-                                            <div>
-                                                <h3>Documents</h3>
-                                                <p className="subtitle">Recently turned-in files</p>
-                                            </div>
-                                            <button className="see-all-btn" onClick={() => setActiveTab('downloads')}>See all</button>
-                                        </div>
-                                        {recentDocuments.length === 0 ? (
-                                            <div className="overview-empty">No documents submitted yet.</div>
-                                        ) : (
-                                            <div className="documents-list">
-                                                {recentDocuments.map((doc) => (
-                                                    <div key={doc.id} className="document-row">
-                                                        <div className="document-icon"><FileText size={16} /></div>
-                                                        <div className="document-info">
-                                                            <strong>{doc.taskTitle || 'Assignment'}</strong>
-                                                            <span>{doc.submittedAt?.toDate ? doc.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="dash-card full-width">
-                                    <div className="card-header compact">
-                                        <div>
-                                            <h3>Class Progress</h3>
-                                            <p className="subtitle">Live attendance rate by class</p>
-                                        </div>
-                                        <button className="see-all-btn" onClick={() => setActiveTab('analytics')}>See all</button>
-                                    </div>
-                                    {classProgressData.length === 0 ? (
-                                        <div className="overview-empty">No enrolled students found yet.</div>
-                                    ) : (
-                                        <div className="class-progress-list">
-                                            {classProgressData.map((c) => (
-                                                <div key={c.className} className="progress-row">
-                                                    <div className="progress-row-info">
-                                                        <strong>{c.className}</strong>
-                                                        <span>{c.count} Students</span>
-                                                    </div>
-                                                    <div className="progress-bar-track">
-                                                        <div
-                                                            className={`progress-bar-fill ${c.rate < 75 ? 'low' : ''}`}
-                                                            style={{ width: `${c.rate}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="progress-rate">{c.rate}%</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <aside className="overview-right-rail">
-                                <div className="dash-card schedule-widget">
-                                    <div className="card-header compact">
-                                        <div><h3>Schedule</h3></div>
-                                        <span className="schedule-month-label">{calendarMonthLabel}</span>
-                                    </div>
-                                    <div className="calendar-week-nav">
-                                        <button className="calendar-nav-btn" onClick={() => setCalendarWeekOffset(calendarWeekOffset - 1)}>
-                                            <ChevronLeft size={15} />
-                                        </button>
-                                        <span>Weekly</span>
-                                        <button className="calendar-nav-btn" onClick={() => setCalendarWeekOffset(calendarWeekOffset + 1)}>
-                                            <ChevronRight size={15} />
-                                        </button>
-                                    </div>
-                                    <div className="calendar-days-row">
-                                        {calendarWeekDays.map((d) => (
-                                            <button
-                                                key={d.toDateString()}
-                                                className={`calendar-day-pill ${selectedCalendarDate === d.toDateString() ? 'selected' : ''} ${d.toDateString() === todayRef.toDateString() ? 'is-today' : ''}`}
-                                                onClick={() => setSelectedCalendarDate(d.toDateString())}
-                                            >
-                                                <span className="cal-dow">{dayLabels[d.getDay()]}</span>
-                                                <span className="cal-date">{d.getDate()}</span>
+                                {todaysPlanItems.length === 0 ? (
+                                    <div className="overview-empty">No timetable slots mapped to your staff profile yet.</div>
+                                ) : (
+                                    <div className="class-strip">
+                                        {todaysPlanItems.map((item, idx) => (
+                                            <button key={item.id || idx} className={`class-chip tone-${idx % 3}`} onClick={() => setActiveTab('students')}>
+                                                <span className="class-chip-time"><Clock size={12} /> {item.timeSlot || 'TBA'}</span>
+                                                <strong>{item.subject || 'Subject'}</strong>
+                                                <span className="class-chip-meta">{item.className || 'General Class'}{item.roomNo ? ` · ${item.roomNo}` : ''}</span>
                                             </button>
                                         ))}
                                     </div>
+                                )}
+                            </section>
 
-                                    <div className="schedule-day-panel">
-                                        <div className="schedule-day-panel-header">
-                                            <span className="schedule-day-panel-date">
-                                                {new Date(selectedCalendarDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <button
-                                                className="schedule-add-btn"
-                                                onClick={() => setShowAddEventForm(!showAddEventForm)}
-                                            >
-                                                <PlusCircle size={14} /> Add New
-                                            </button>
-                                        </div>
-
-                                        {showAddEventForm && (
-                                            <div className="schedule-add-form">
-                                                <input
-                                                    type="text"
-                                                    className="table-input full-width-input"
-                                                    placeholder="What's scheduled?"
-                                                    value={newEventForm.title}
-                                                    onChange={(e) => setNewEventForm({ ...newEventForm, title: e.target.value })}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddScheduleEvent()}
-                                                    autoFocus
-                                                />
-                                                <input
-                                                    type="time"
-                                                    className="table-input"
-                                                    value={newEventForm.time}
-                                                    onChange={(e) => setNewEventForm({ ...newEventForm, time: e.target.value })}
-                                                />
-                                                <div className="schedule-add-form-actions">
-                                                    <button className="btn-primary" onClick={handleAddScheduleEvent}>Save</button>
-                                                    <button
-                                                        className="btn-secondary"
-                                                        onClick={() => { setShowAddEventForm(false); setNewEventForm({ title: '', time: '' }); }}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {selectedDayEvents.length === 0 ? (
-                                            <div className="overview-empty">Nothing added for this day yet.</div>
-                                        ) : (
-                                            <div className="schedule-day-events">
-                                                {selectedDayEvents
-                                                    .slice()
-                                                    .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-                                                    .map((ev) => (
-                                                        <div key={ev.id} className="schedule-day-event-row">
-                                                            <div className="schedule-day-event-info">
-                                                                <strong>{ev.title}</strong>
-                                                                {ev.time && <span>{ev.time}</span>}
-                                                            </div>
-                                                            <button
-                                                                className="schedule-day-event-delete"
-                                                                onClick={() => handleDeleteScheduleEvent(selectedCalendarDate, ev.id)}
-                                                                title="Remove"
-                                                            >
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        )}
+                            {/* attendance */}
+                            <section className="ov-card span-4">
+                                <div className="ov-card-head">
+                                    <h3>Attendance</h3>
+                                    <button className="ov-link" onClick={() => setActiveTab('analytics')}>Analytics <ChevronRight size={14} /></button>
+                                </div>
+                                <div className="att-ring" style={{ '--p': classAttendanceRate }}>
+                                    <div className="att-ring-inner">
+                                        <strong>{classAttendanceRate}%</strong>
+                                        <span>Attendance</span>
                                     </div>
                                 </div>
+                                <div className="att-tiles">
+                                    <div><strong>{activeStudents.length}</strong><span>Total</span></div>
+                                    <div><strong>{activeStudents.length - absentStudentsCount}</strong><span>Present</span></div>
+                                    <div><strong>{absentStudentsCount}</strong><span>Absent</span></div>
+                                </div>
+                            </section>
 
-                                <div className="dash-card">
-                                    <div className="card-header compact">
-                                        <div><h3>Upcoming Activities</h3></div>
-                                        <button className="see-all-btn" onClick={() => setActiveTab('schedule')}>See all</button>
+                            {/* class progress */}
+                            <section className="ov-card span-4">
+                                <div className="ov-card-head"><h3>Class Progress</h3></div>
+                                {classProgressData.length === 0 ? (
+                                    <div className="overview-empty">No enrolled students found yet.</div>
+                                ) : (
+                                    <div className="class-progress-list">
+                                        {classProgressData.map((c) => (
+                                            <div key={c.className} className="progress-row">
+                                                <div className="progress-row-info">
+                                                    <strong>{c.className}</strong>
+                                                    <span>{c.count} Students</span>
+                                                </div>
+                                                <span className="progress-rate">{c.rate}%</span>
+                                                <div className="progress-bar-track">
+                                                    <div className={`progress-bar-fill ${c.rate < 75 ? 'low' : ''}`} style={{ width: `${c.rate}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    {upcomingActivities.length === 0 ? (
-                                        <div className="overview-empty">Nothing scheduled right now.</div>
+                                )}
+                            </section>
+
+                            {/* schedules */}
+                            <section className="ov-card span-4 row-2 schedule-widget">
+                                <div className="ov-card-head">
+                                    <h3>Schedules</h3>
+                                    <button className="ov-pill" onClick={() => setShowAddEventForm(true)}>+ Add</button>
+                                </div>
+                                <div className="calendar-nav">
+                                    <button className="calendar-nav-btn" onClick={() => setCalendarMonthOffset(calendarMonthOffset - 1)} aria-label="Previous month"><ChevronLeft size={15} /></button>
+                                    <span className="calendar-month-label">{calendarMonthLabel}</span>
+                                    <button className="calendar-nav-btn" onClick={() => setCalendarMonthOffset(calendarMonthOffset + 1)} aria-label="Next month"><ChevronRight size={15} /></button>
+                                </div>
+                                <div className="calendar-grid">
+                                    {dayLabels.map((l) => <span key={l} className="cal-dow">{l.charAt(0)}</span>)}
+                                    {calendarCells.map((d, i) => d ? (
+                                        <button
+                                            key={d.toDateString()}
+                                            className={`cal-cell ${selectedCalendarDate === d.toDateString() ? 'selected' : ''} ${d.toDateString() === todayRef.toDateString() ? 'is-today' : ''} ${(dayEvents[d.toDateString()] || []).length ? 'has-event' : ''}`}
+                                            onClick={() => setSelectedCalendarDate(d.toDateString())}
+                                        >
+                                            {d.getDate()}
+                                        </button>
+                                    ) : <span key={`pad-${i}`} />)}
+                                </div>
+
+                                <div className="schedule-day-panel">
+                                    <div className="schedule-day-panel-header">
+                                        <span className="schedule-day-panel-date">
+                                            {new Date(selectedCalendarDate).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long' })}
+                                        </span>
+                                        {selectedCalendarDate === todayRef.toDateString() && <span className="ov-pill soft">Today</span>}
+                                    </div>
+                                    {showAddEventForm && (
+                                        <div className="schedule-add-form">
+                                            <input
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="What's scheduled?"
+                                                value={newEventForm.title}
+                                                onChange={(e) => setNewEventForm({ ...newEventForm, title: e.target.value })}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddScheduleEvent()}
+                                                autoFocus
+                                            />
+                                            <input
+                                                type="time"
+                                                className="table-input"
+                                                value={newEventForm.time}
+                                                onChange={(e) => setNewEventForm({ ...newEventForm, time: e.target.value })}
+                                            />
+                                            <div className="schedule-add-form-actions">
+                                                <button className="btn-primary" onClick={handleAddScheduleEvent}>Save</button>
+                                                <button className="btn-secondary" onClick={() => { setShowAddEventForm(false); setNewEventForm({ title: '', time: '' }); }}>Cancel</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {selectedDayEvents.length === 0 ? (
+                                        <div className="overview-empty">Nothing scheduled for this day.</div>
                                     ) : (
-                                        <div className="activity-list">
-                                            {upcomingActivities.map((a) => {
-                                                const AIcon = a.icon;
-                                                return (
-                                                    <div key={a.id} className="activity-row">
-                                                        <div className="activity-icon"><AIcon size={17} /></div>
-                                                        <div className="activity-info">
-                                                            <strong>{a.title}</strong>
-                                                            <span>{a.meta}</span>
+                                        <div className="schedule-day-events">
+                                            {selectedDayEvents
+                                                .slice()
+                                                .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                                                .map((ev) => (
+                                                    <div key={ev.id} className="schedule-day-event-row">
+                                                        <div className="schedule-day-event-info">
+                                                            <strong>{ev.title}</strong>
+                                                            {ev.time && <span>{ev.time}</span>}
                                                         </div>
+                                                        <button className="schedule-day-event-delete" onClick={() => handleDeleteScheduleEvent(selectedCalendarDate, ev.id)} title="Remove"><Trash2 size={13} /></button>
                                                     </div>
-                                                );
-                                            })}
+                                                ))}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="dash-card">
-                                    <div className="card-header compact">
-                                        <div><h3>Notifications</h3></div>
-                                        <span className="see-all-btn" style={{ cursor: 'default' }}>
-                                            <ChevronDown size={15} />
-                                        </span>
+                                <div className="ov-subhead">Upcoming</div>
+                                {upcomingActivities.length === 0 ? (
+                                    <div className="overview-empty">Nothing scheduled right now.</div>
+                                ) : (
+                                    <div className="activity-list">
+                                        {upcomingActivities.map((a) => {
+                                            const AIcon = a.icon;
+                                            return (
+                                                <div key={a.id} className="activity-row">
+                                                    <div className="activity-icon"><AIcon size={16} /></div>
+                                                    <div className="activity-info"><strong>{a.title}</strong><span>{a.meta}</span></div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                    <div className="rail-notify-list">
-                                        <div className="rail-notify-item accent-rose" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('mytasks')}>
-                                            <div className="rail-notify-head">
-                                                <strong>Office Tasks</strong>
-                                                <MoreVertical size={14} />
-                                            </div>
-                                            <span>{pendingOfficeTasks.length} task{pendingOfficeTasks.length === 1 ? '' : 's'} assigned by the office</span>
+                                )}
+                            </section>
+
+                            {/* notice board */}
+                            <section className="ov-card span-4">
+                                <div className="ov-card-head"><h3>Notice Board</h3><span className="ov-pill soft">{announcements.length + pendingOfficeTasks.length} new</span></div>
+                                <div className="notice-list">
+                                    {pendingOfficeTasks.slice(0, 2).map((t) => (
+                                        <button key={t.id} className="notice-row" onClick={() => setActiveTab('mytasks')}>
+                                            <i className="warm"><ClipboardList size={16} /></i>
+                                            <div><strong>{t.title}</strong><span>{t.priority || 'Normal'}{t.deadline ? ` · Due ${t.deadline}` : ''}</span></div>
+                                        </button>
+                                    ))}
+                                    {announcements.map((a) => (
+                                        <div key={a.id} className="notice-row">
+                                            <i className={a.type === 'urgent' ? 'warm' : ''}><Bell size={16} /></i>
+                                            <div><strong>{a.title}</strong><span>{a.date}</span></div>
                                         </div>
-                                        <div className="rail-notify-item accent-rose">
-                                            <div className="rail-notify-head">
-                                                <strong>Leave Approval</strong>
-                                                <MoreVertical size={14} />
-                                            </div>
-                                            <span>{pendingLeaveCount} pending leave request{pendingLeaveCount === 1 ? '' : 's'}</span>
-                                        </div>
-                                        <div className="rail-notify-item accent-blue">
-                                            <div className="rail-notify-head">
-                                                <strong>Homework</strong>
-                                                <MoreVertical size={14} />
-                                            </div>
-                                            <span>{dueSoonAssignmentsCount} task{dueSoonAssignmentsCount === 1 ? '' : 's'} due soon</span>
-                                        </div>
-                                        <div className="rail-notify-item accent-amber">
-                                            <div className="rail-notify-head">
-                                                <strong>Class Assessment</strong>
-                                                <MoreVertical size={14} />
-                                            </div>
-                                            <span>{ungradedSubmissionsCount} submission{ungradedSubmissionsCount === 1 ? '' : 's'} awaiting grading</span>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            </aside>
+                            </section>
+
+                            {/* leave status */}
+                            <section className="ov-card span-4">
+                                <div className="ov-card-head">
+                                    <h3>Leave Status</h3>
+                                    <button className="ov-link" onClick={() => setActiveTab('leaves')}>Apply <ChevronRight size={14} /></button>
+                                </div>
+                                {myLeaveRequests.length === 0 ? (
+                                    <div className="overview-empty">No leave requests yet.</div>
+                                ) : (
+                                    <div className="leave-list">
+                                        {myLeaveRequests.slice(0, 4).map((l, i) => (
+                                            <div key={l.id || i} className="leave-row">
+                                                <div>
+                                                    <strong>{l.leaveType}</strong>
+                                                    <span>{l.startDate}{l.endDate && l.endDate !== l.startDate ? ` → ${l.endDate}` : ''}</span>
+                                                </div>
+                                                <em className={`status-${String(l.status || 'Pending').toLowerCase()}`}>{l.status || 'Pending'}</em>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            {/* documents */}
+                            <section className="ov-card span-8">
+                                <div className="ov-card-head">
+                                    <h3>Recent Documents</h3>
+                                    <button className="ov-link" onClick={() => setActiveTab('downloads')}>See all <ChevronRight size={14} /></button>
+                                </div>
+                                {recentDocuments.length === 0 ? (
+                                    <div className="overview-empty">No documents submitted yet.</div>
+                                ) : (
+                                    <div className="documents-list">
+                                        {recentDocuments.map((doc) => (
+                                            <div key={doc.id} className="document-row">
+                                                <div className="document-icon"><FileText size={16} /></div>
+                                                <div className="document-info">
+                                                    <strong>{doc.taskTitle || 'Assignment'}</strong>
+                                                    <span>{doc.submittedAt?.toDate ? doc.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
                         </div>
                     )}
 
@@ -5660,6 +5607,14 @@ tr { height: 54px; }
                     )}
                 </div>
             </main>
+
+            <nav className="bottom-nav" aria-label="Quick navigation">
+                <button className={activeTab === 'overview' ? 'on' : ''} onClick={() => setActiveTab('overview')} aria-label="Home"><LayoutGrid size={20} /><span>Home</span></button>
+                <button className={activeTab === 'students' ? 'on' : ''} onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label="Students"><Users size={20} /><span>Students</span></button>
+                <button className="bottom-fab" onClick={() => setActiveTab('schedule')} aria-label="Timetable"><CalendarClock size={22} /></button>
+                <button className={activeTab === 'mytasks' ? 'on' : ''} onClick={() => setActiveTab('mytasks')} aria-label="Tasks"><ClipboardList size={20} /><span>Tasks</span></button>
+                <button className={activeTab === 'profile' ? 'on' : ''} onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); }} aria-label="Profile"><User size={20} /><span>Profile</span></button>
+            </nav>
         </div>
     );
 }
