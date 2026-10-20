@@ -710,3 +710,187 @@
         transition: none !important;
     }
 }
+
+/* ============================================================
+   WINDOW CONTROLS: maximize + minimized floating window
+   ============================================================ */
+.pm-modal {
+    transition: width 0.2s ease, max-height 0.2s ease, border-radius 0.2s ease;
+}
+
+/* maximized: fills the screen, panel gets all the spare height */
+.pm-backdrop.is-max {
+    padding: 0;
+}
+
+.pm-modal.is-max {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: 0;
+}
+
+.pm-modal.is-max .pm-kpis {
+    max-width: 980px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.pm-modal.is-max .pm-panel {
+    padding: 16px max(16px, calc((100% - 980px) / 2)) 24px;
+}
+
+.pm-modal.is-max .pm-tabs {
+    padding: 0 max(12px, calc((100% - 980px) / 2));
+}
+
+.pm-modal.is-max .pm-table {
+    font-size: 0.8rem;
+}
+
+/* minimized: small floating window, draggable anywhere on screen,
+   the dashboard behind it stays fully usable (no backdrop) */
+.pm-mini {
+    --pm-font-display: 'Outfit', 'Segoe UI', sans-serif;
+    --pm-font-body: 'Inter', 'Segoe UI', sans-serif;
+    --pm-primary: #4f46e5;
+    --pm-primary-soft: #eef1ff;
+    --pm-rose: #e11d48;
+    --pm-rose-soft: #fff1f2;
+    --pm-line: #edeef4;
+    --pm-line-strong: #e2e4ee;
+    --pm-text: #1c2130;
+    --pm-text-soft: #5a6376;
+    --pm-muted: #8991a5;
+
+    position: fixed;
+    z-index: 9999;
+    width: min(300px, calc(100vw - 16px));
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 6px;
+    box-sizing: border-box;
+
+    font-family: var(--pm-font-body);
+    color: var(--pm-text);
+    background: linear-gradient(135deg, #f4f5ff 0%, #ffffff 70%);
+    border: 1px solid var(--pm-line-strong);
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(20, 24, 41, 0.22), 0 4px 10px rgba(20, 24, 41, 0.08);
+
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: pmPop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pm-mini *,
+.pm-mini *::before,
+.pm-mini *::after {
+    box-sizing: border-box;
+}
+
+.pm-mini.is-dragging {
+    cursor: grabbing;
+    box-shadow: 0 22px 48px rgba(20, 24, 41, 0.3), 0 6px 14px rgba(20, 24, 41, 0.12);
+}
+
+.pm-mini:focus-visible {
+    outline: 2px solid var(--pm-primary);
+    outline-offset: 2px;
+}
+
+.pm-mini-grip {
+    flex: none;
+    color: #b6bbcc;
+}
+
+.pm-mini-avatar {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1.5px var(--pm-line-strong);
+    background: var(--pm-primary-soft);
+    pointer-events: none;
+}
+
+.pm-mini-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.pm-mini-text strong {
+    font-family: var(--pm-font-display);
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pm-mini-text span {
+    color: var(--pm-muted);
+    font-size: 0.66rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pm-mini .pm-icon-btn {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #fff;
+    color: var(--pm-text-soft);
+    border: 1px solid var(--pm-line-strong);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pm-mini .pm-icon-btn:hover {
+    background: var(--pm-primary-soft);
+    color: var(--pm-primary);
+    border-color: rgba(79, 70, 229, 0.25);
+}
+
+.pm-mini .pm-icon-btn.pm-close:hover {
+    background: var(--pm-rose-soft);
+    color: var(--pm-rose);
+    border-color: rgba(225, 29, 72, 0.25);
+}
+
+.pm-mini .pm-icon-btn:focus-visible {
+    outline: 2px solid var(--pm-primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    /* the bottom-sheet rule above would otherwise round only the top */
+    .pm-modal.is-max {
+        border-radius: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pm-mini {
+        animation: none !important;
+        transition: none !important;
+    }
+}

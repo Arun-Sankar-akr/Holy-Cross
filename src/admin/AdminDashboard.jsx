@@ -1,5 +1,6 @@
 import { db, auth } from '../service/firebase';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
     collection, onSnapshot, deleteDoc, doc, addDoc, updateDoc, serverTimestamp, setDoc, writeBatch, getDocs, query, where
@@ -10,13 +11,121 @@ import {
     Edit2, Check, X, ArrowLeft, Folder, UserCheck, KeyRound, Clock, Menu, LayoutGrid,
     User, RefreshCw, ChevronRight, Settings,
     Search, AlertTriangle, ShieldCheck, Database, Sliders, Save, Send,
-    FileText, CheckCircle, XCircle, Eye, Mail, Upload, FolderPlus, Images
+    FileText, CheckCircle, XCircle, Eye, Mail, Upload, FolderPlus, Images,
+    Camera, Briefcase, Lock, Copy, EyeOff, Hash,
+    Megaphone, Link2, Phone, Trophy, CalendarDays,
+    Minus, Maximize2, Minimize2, GripVertical
 } from 'lucide-react';
 import AdminLogin from '../admin/AdminLogin';
 import './AdminDashboard.css';
 import logo from "../assets/logo.png";
 
 import Previewmodal from "./Previewmodal"
+
+// Shared building blocks for the website-content pages (announcements, events,
+// toppers, calendar, administrators, gallery, holidays).
+function PxHead({ icon: Icon, title, desc, count, countLabel }) {
+    return (
+        <header className="px-head">
+            <span className="px-head-icon"><Icon size={24} /></span>
+            <div className="px-head-text">
+                <h2>{title}</h2>
+                <p>{desc}</p>
+            </div>
+            <div className="px-head-count">
+                <strong>{count}</strong>
+                <span>{countLabel}</span>
+            </div>
+        </header>
+    );
+}
+
+function PxEmpty({ icon: Icon, title, text }) {
+    return (
+        <div className="px-empty">
+            <span><Icon size={22} /></span>
+            <strong>{title}</strong>
+            <p>{text}</p>
+        </div>
+    );
+}
+
+// Attendance per student for a class roster. Matches each attendance record to a
+// student by id, then admission number, then (only for records with neither) name.
+const normKey = (v) => String(v || '').trim().toLowerCase();
+function buildAttendanceStats(students, records) {
+    const byId = new Map();
+    const byAdm = new Map();
+    const byName = new Map();
+    students.forEach(st => {
+        byId.set(st.id, st.id);
+        const adm = normKey(st.admissionNo || st.rollNumber);
+        if (adm && !byAdm.has(adm)) byAdm.set(adm, st.id);
+        const nm = normKey(st.name);
+        if (nm && !byName.has(nm)) byName.set(nm, st.id);
+    });
+    const stats = new Map(students.map(st => [st.id, { present: 0, total: 0 }]));
+    records.forEach(r => {
+        const sid = (r.studentId && byId.get(r.studentId))
+            || byAdm.get(normKey(r.admissionNo))
+            || (!r.studentId && !r.admissionNo ? byName.get(normKey(r.studentName)) : undefined);
+        if (!sid) return;
+        const s = stats.get(sid);
+        s.total += 1;
+        if (r.status === 'present') s.present += 1;
+    });
+    return stats;
+}
+
+// Academic progress for a class roster, from published marks (keys look like
+// "Quarterly Exam - Mathematics", scores out of 100).
+const PROGRESS_EXAM_ORDER = [
+    '1st Mid-Term exam', 'Quarterly Exam', '2nd Mid-Term exam', 'Halferly Exam',
+    '3rd Mid-Term exam', 'Annual Exam', 'Class Unit Test'
+];
+function buildProgressStats(students) {
+    const subjects = {};
+    const exams = {};
+    const perStudent = new Map();
+    let publishedCount = 0;
+    let pendingCount = 0;
+    students.forEach(st => {
+        const marks = st.marks || {};
+        let total = 0;
+        let count = 0;
+        Object.entries(marks).forEach(([key, value]) => {
+            const score = Number(value);
+            if (value === undefined || value === null || value === '' || Number.isNaN(score)) return;
+            total += score;
+            count += 1;
+            const cut = key.indexOf(' - ');
+            const exam = cut >= 0 ? key.slice(0, cut) : key;
+            const subject = cut >= 0 ? key.slice(cut + 3) : 'Other';
+            (subjects[subject] = subjects[subject] || { sum: 0, n: 0 });
+            subjects[subject].sum += score; subjects[subject].n += 1;
+            (exams[exam] = exams[exam] || { sum: 0, n: 0 });
+            exams[exam].sum += score; exams[exam].n += 1;
+        });
+        publishedCount += count;
+        pendingCount += Object.keys(st.marksDraft || {}).filter(k => marks[k] === undefined).length;
+        perStudent.set(st.id, { avg: count ? total / count : null, count });
+    });
+    const withMarks = [...perStudent.values()].filter(p => p.avg !== null);
+    const round = (n) => Math.round(n * 10) / 10;
+    return {
+        perStudent,
+        publishedCount,
+        pendingCount,
+        classAvg: withMarks.length ? round(withMarks.reduce((a, p) => a + p.avg, 0) / withMarks.length) : null,
+        passRate: withMarks.length ? Math.round((withMarks.filter(p => p.avg >= 35).length / withMarks.length) * 100) : null,
+        subjects: Object.entries(subjects).map(([subject, v]) => ({ subject, avg: round(v.sum / v.n), count: v.n })).sort((a, b) => b.avg - a.avg),
+        exams: Object.entries(exams).map(([exam, v]) => ({ exam, avg: round(v.sum / v.n) }))
+            .sort((a, b) => {
+                const ia = PROGRESS_EXAM_ORDER.indexOf(a.exam); const ib = PROGRESS_EXAM_ORDER.indexOf(b.exam);
+                return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+            })
+    };
+}
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -150,8 +259,93 @@ export default function AdminDashboard() {
     const [showAddStaffForm, setShowAddStaffForm] = useState(false);
     const [showAddStudentForm, setShowAddStudentForm] = useState(false);
     const [viewStaffId, setViewStaffId] = useState(null);
+    const [staffViewTab, setStaffViewTab] = useState('details');
+    const [staffViewSectionId, setStaffViewSectionId] = useState(null);
+    const [staffViewSort, setStaffViewSort] = useState('name');
+    const [staffClassView, setStaffClassView] = useState('attendance');
+
+    // Staff profile window: normal | maximized | minimized (floating, draggable)
+    const STAFF_MINI_W = 300;
+    const STAFF_MINI_H = 64;
+    const [staffWinMode, setStaffWinMode] = useState('normal');
+    const [staffMiniPos, setStaffMiniPos] = useState(null);
+    const [staffMiniDragging, setStaffMiniDragging] = useState(false);
+    const staffMiniOffset = useRef(null);
+    const clampStaffMini = (x, y) => ({
+        x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - Math.min(STAFF_MINI_W, window.innerWidth - 16) - 8)),
+        y: Math.min(Math.max(8, y), Math.max(8, window.innerHeight - STAFF_MINI_H - 8))
+    });
+    const minimizeStaffView = () => {
+        setStaffMiniPos(p => clampStaffMini(p ? p.x : 20, p ? p.y : window.innerHeight - STAFF_MINI_H - 20));
+        setStaffWinMode('minimized');
+    };
+    const onStaffMiniPointerDown = (e) => {
+        if (e.target.closest('button')) return;
+        const pos = staffMiniPos || { x: 0, y: 0 };
+        staffMiniOffset.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setStaffMiniDragging(true);
+    };
+    const onStaffMiniPointerMove = (e) => {
+        if (!staffMiniOffset.current) return;
+        setStaffMiniPos(clampStaffMini(e.clientX - staffMiniOffset.current.dx, e.clientY - staffMiniOffset.current.dy));
+    };
+    const onStaffMiniPointerUp = (e) => {
+        if (!staffMiniOffset.current) return;
+        staffMiniOffset.current = null;
+        setStaffMiniDragging(false);
+        if (e.currentTarget.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+    const onStaffMiniKeyDown = (e) => {
+        if (e.target !== e.currentTarget) return;
+        const step = e.shiftKey ? 60 : 20;
+        const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+        if (moves[e.key]) {
+            e.preventDefault();
+            const [mx, my] = moves[e.key];
+            setStaffMiniPos(p => clampStaffMini((p ? p.x : 0) + mx, (p ? p.y : 0) + my));
+        } else if (e.key === 'Enter') {
+            setStaffWinMode('normal');
+        }
+    };
+    useEffect(() => {
+        if (staffWinMode !== 'minimized') return undefined;
+        const onResize = () => setStaffMiniPos(p => (p ? clampStaffMini(p.x, p.y) : p));
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [staffWinMode]);
+    // null = not loaded yet. Only subscribed while a staff profile is open.
+    const [attendanceRecords, setAttendanceRecords] = useState(null);
     const [studentDirSearch, setStudentDirSearch] = useState('');
     const staffFormRef = useRef(null);
+    const [showStaffPwd, setShowStaffPwd] = useState(false);
+    const [copiedStaffField, setCopiedStaffField] = useState('');
+
+    // Close staff popups with the Escape key
+    useEffect(() => {
+        if (!viewStaffId && !editingStaffId) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                if (staffWinMode !== 'minimized') setViewStaffId(null);
+                setEditingStaffId(null);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [viewStaffId, editingStaffId, staffWinMode]);
+
+    // Attendance is only needed for the "My class" tab of a staff profile.
+    useEffect(() => {
+        if (!user || !viewStaffId) return undefined;
+        setAttendanceRecords(null);
+        const unsub = onSnapshot(
+            collection(db, 'attendance_records'),
+            snap => setAttendanceRecords(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+            err => { console.error('Attendance load failed:', err); setAttendanceRecords([]); }
+        );
+        return () => unsub();
+    }, [user, viewStaffId]);
 
     // Section CRUD States
     const [sectionForm, setSectionForm] = useState({ name: '', roomNo: '' });
@@ -1361,112 +1555,155 @@ export default function AdminDashboard() {
                 </header>
 
                 <div className="od-content">
-                    {/* UPCOMING EVENTS & ACTIVITIES SUBMENU PANEL */}
+                    {/* UPCOMING EVENTS */}
                     {activeTab === 'upcoming_events' && (
-                        <div className="applications-management-card publish-management-card publish-events-section">
-                            <h3>Publish Upcoming Event & Activity</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('upcoming_events', eventForm, () =>
-                                    setEventForm({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Month Abbr (e.g., SEP)" value={eventForm.month} onChange={e => setEventForm({ ...eventForm, month: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Day Number (e.g., 12)" value={eventForm.day} onChange={e => setEventForm({ ...eventForm, day: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Event Title" value={eventForm.title} onChange={e => setEventForm({ ...eventForm, title: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Time Details (e.g., 9:00 AM Onwards)" value={eventForm.time} onChange={e => setEventForm({ ...eventForm, time: e.target.value })} required /></div>
-                                <textarea placeholder="Event Description" value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Event</button>
-                            </form>
-
-                            <h4>Published Events <span className="count-badge">{upcomingEvents.length}</span></h4>
-                            {upcomingEvents.length === 0 ? <div className="empty-state">No upcoming events published yet.</div> : (
-                                <ul>
-                                    {upcomingEvents.map(item => (
-                                        <li key={item.id}>
-                                            <span><strong>[{item.month} {item.day}]</strong> {item.title} ({item.time})</span>
-                                            <button onClick={() => handleDelete('upcoming_events', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    )}
-
-                    {/* BOARD EXAM TOPPERS & ACHIEVERS SUBMENU PANEL */}
-                    {activeTab === 'toppers' && (
-                        <div className="applications-management-card publish-management-card publish-toppers-section">
-                            <h3>Publish Board Exam Topper & Achiever</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('exam_toppers', topperForm, () =>
-                                    setTopperForm({ name: '', streamOrGrade: '', scoreOrPercentage: '', photo: '', rank: '1' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Student Name (e.g., Aarthi S.)" value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                        Class
-                                    </label>
-                                    <select value={topperForm.streamOrGrade} onChange={e => setTopperForm({ ...topperForm, streamOrGrade: e.target.value })} required>
-                                        <option value="">Select Class</option>
-                                        <option value="Class X">Class X</option>
-                                        <option value="Class XII">Class XII</option>
-                                    </select>
-                                </div>
-                                <div><input type="text" placeholder="Score / Achievement (e.g., 491 / 500 (District Rank))" value={topperForm.scoreOrPercentage} onChange={e => setTopperForm({ ...topperForm, scoreOrPercentage: e.target.value })} required /></div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                        Rank
-                                    </label>
-                                    <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: e.target.value })}>
-                                        <option value="1">1st (Gold)</option>
-                                        <option value="2">2nd (Silver)</option>
-                                        <option value="3">3rd (Bronze)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                        Student Photo (Auto-compressed to &lt; 500 KB)
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.webp"
-                                        onChange={e => handleImageUpload(e.target.files[0], (base64) => setTopperForm({ ...topperForm, photo: base64 }))}
-                                    />
-                                    {topperForm.photo && (
-                                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <img src={topperForm.photo} alt="Preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                                            <button
-                                                type="button"
-                                                onClick={() => setTopperForm({ ...topperForm, photo: '' })}
-                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
-                                            >
-                                                Remove
-                                            </button>
+                        <section className="px-page" style={{ '--tone': '#1fb27a', '--tone-soft': '#e2f7ee' }}>
+                            <PxHead icon={Calendar} title="Upcoming events" desc="Events and activities shown to parents and students on the school website." count={upcomingEvents.length} countLabel="published" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('upcoming_events', eventForm, () =>
+                                            setEventForm({ month: 'SEP', day: '12', title: '', description: '', time: '9:00 AM Onwards' })
+                                        );
+                                    }}
+                                >
+                                    <h3>Publish an event</h3>
+                                    <div className="px-preview px-preview-event" aria-hidden="true">
+                                        <span className="px-datetile"><b>{eventForm.day || '--'}</b><small>{eventForm.month || '---'}</small></span>
+                                        <div>
+                                            <strong>{eventForm.title || 'Event title'}</strong>
+                                            <span>{eventForm.time || 'Time details'}</span>
                                         </div>
+                                    </div>
+                                    <div className="px-row2">
+                                        <label className="px-field"><span>Month</span><input type="text" placeholder="SEP" value={eventForm.month} onChange={e => setEventForm({ ...eventForm, month: e.target.value })} required /></label>
+                                        <label className="px-field"><span>Day</span><input type="text" placeholder="12" value={eventForm.day} onChange={e => setEventForm({ ...eventForm, day: e.target.value })} required /></label>
+                                    </div>
+                                    <label className="px-field"><span>Event title</span><input type="text" placeholder="Annual Sports Day" value={eventForm.title} onChange={e => setEventForm({ ...eventForm, title: e.target.value })} required /></label>
+                                    <label className="px-field"><span>Time</span><input type="text" placeholder="9:00 AM Onwards" value={eventForm.time} onChange={e => setEventForm({ ...eventForm, time: e.target.value })} required /></label>
+                                    <label className="px-field"><span>Description</span><textarea rows="3" placeholder="What should families know about this event?" value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} required /></label>
+                                    <button type="submit" className="px-btn primary"><PlusCircle size={16} /> Publish event</button>
+                                </form>
+
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published events</h3><span className="px-count">{upcomingEvents.length}</span></div>
+                                    {upcomingEvents.length === 0 ? (
+                                        <PxEmpty icon={Calendar} title="No events published yet" text="Events you publish will appear here and on the website." />
+                                    ) : (
+                                        <ul className="px-list">
+                                            {upcomingEvents.map(item => (
+                                                <li className="px-item px-event" key={item.id}>
+                                                    <span className="px-datetile"><b>{item.day}</b><small>{item.month}</small></span>
+                                                    <div className="px-item-body">
+                                                        <h4>{item.title}</h4>
+                                                        {item.description && <p>{item.description}</p>}
+                                                        <span className="px-chip"><Clock size={12} /> {item.time}</span>
+                                                    </div>
+                                                    <button type="button" className="px-icon-btn danger" onClick={() => handleDelete('upcoming_events', item.id)} aria-label={`Delete ${item.title}`} title="Delete event"><Trash2 size={15} /></button>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     )}
                                 </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Topper Profile</button>
-                            </form>
+                            </div>
+                        </section>
+                    )}
 
-                            <h4>Published Toppers & Achievers <span className="count-badge">{toppers.length}</span></h4>
-                            {toppers.length === 0 ? <div className="empty-state">No toppers published yet.</div> : (
-                                <ul>
-                                    {sortToppers(toppers).map(item => (
-                                        <li key={item.id}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                {item.photo ? (
-                                                    <img src={item.photo} alt={item.name} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)', flexShrink: 0 }} />
-                                                ) : null}
-                                                <span><strong>{item.name}</strong> ({item.streamOrGrade}) — {item.scoreOrPercentage} — Rank #{item.rank || '3'}</span>
+                    {/* TOPPERS & ACHIEVERS */}
+                    {activeTab === 'toppers' && (
+                        <section className="px-page" style={{ '--tone': '#e59a1a', '--tone-soft': '#fff2d9' }}>
+                            <PxHead icon={Trophy} title="Toppers & achievers" desc="Celebrate board exam toppers. Class X is listed first, then Class XII, ordered by rank." count={toppers.length} countLabel="profiles" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('exam_toppers', topperForm, () =>
+                                            setTopperForm({ name: '', streamOrGrade: '', scoreOrPercentage: '', photo: '', rank: '1' })
+                                        );
+                                    }}
+                                >
+                                    <h3>Publish a topper</h3>
+                                    <label className="px-field"><span>Student name</span><input type="text" placeholder="Aarthi S." value={topperForm.name} onChange={e => setTopperForm({ ...topperForm, name: e.target.value })} required /></label>
+                                    <div className="px-row2">
+                                        <label className="px-field">
+                                            <span>Class</span>
+                                            <select value={topperForm.streamOrGrade} onChange={e => setTopperForm({ ...topperForm, streamOrGrade: e.target.value })} required>
+                                                <option value="">Select class</option>
+                                                <option value="Class X">Class X</option>
+                                                <option value="Class XII">Class XII</option>
+                                            </select>
+                                        </label>
+                                        <label className="px-field">
+                                            <span>Rank</span>
+                                            <select value={topperForm.rank} onChange={e => setTopperForm({ ...topperForm, rank: e.target.value })}>
+                                                <option value="1">1st (Gold)</option>
+                                                <option value="2">2nd (Silver)</option>
+                                                <option value="3">3rd (Bronze)</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                    <label className="px-field"><span>Score or achievement</span><input type="text" placeholder="491 / 500 (District Rank)" value={topperForm.scoreOrPercentage} onChange={e => setTopperForm({ ...topperForm, scoreOrPercentage: e.target.value })} required /></label>
+                                    <div className="px-field">
+                                        <span>Student photo</span>
+                                        <label className="px-upload">
+                                            <input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onChange={e => handleImageUpload(e.target.files[0], (base64) => setTopperForm({ ...topperForm, photo: base64 }))}
+                                            />
+                                            {topperForm.photo
+                                                ? <img src={topperForm.photo} alt="Preview" />
+                                                : <span className="px-upload-ico"><Camera size={18} /></span>}
+                                            <span className="px-upload-text">
+                                                <b>{topperForm.photo ? 'Change photo' : 'Upload photo'}</b>
+                                                <small>JPG, PNG or WEBP. Compressed automatically.</small>
                                             </span>
-                                            <button onClick={() => handleDelete('exam_toppers', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                                        </label>
+                                        {topperForm.photo && (
+                                            <button type="button" className="px-link-danger" onClick={() => setTopperForm({ ...topperForm, photo: '' })}>Remove photo</button>
+                                        )}
+                                    </div>
+                                    <button type="submit" className="px-btn primary"><PlusCircle size={16} /> Publish topper</button>
+                                </form>
+
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published toppers</h3><span className="px-count">{toppers.length}</span></div>
+                                    {toppers.length === 0 ? (
+                                        <PxEmpty icon={Trophy} title="No toppers published yet" text="Add your first topper to feature them on the website." />
+                                    ) : (() => {
+                                        const sorted = sortToppers(toppers);
+                                        const groups = [
+                                            ['Class X', sorted.filter(t => getTopperClassOrder(t.streamOrGrade) === 1)],
+                                            ['Class XII', sorted.filter(t => getTopperClassOrder(t.streamOrGrade) === 2)],
+                                            ['Other achievers', sorted.filter(t => getTopperClassOrder(t.streamOrGrade) === 99)]
+                                        ].filter(g => g[1].length > 0);
+                                        const ordinal = (r) => ({ '1': '1st', '2': '2nd', '3': '3rd' }[String(r)] || `${r || 3}th`);
+                                        return groups.map(([label, items]) => (
+                                            <div className="px-group" key={label}>
+                                                <h4 className="px-group-title">{label}<small>{items.length}</small></h4>
+                                                <div className="px-topper-grid">
+                                                    {items.map(item => (
+                                                        <article className={`px-topper rank-${['1', '2', '3'].includes(String(item.rank)) ? item.rank : '3'}`} key={item.id}>
+                                                            <button type="button" className="px-icon-btn danger px-corner" onClick={() => handleDelete('exam_toppers', item.id)} aria-label={`Delete ${item.name}`} title="Delete topper"><Trash2 size={14} /></button>
+                                                            <div className="px-topper-photo">
+                                                                {item.photo ? <img src={item.photo} alt={item.name} /> : <span>{(item.name || '?').charAt(0).toUpperCase()}</span>}
+                                                                <em className="px-medal">{ordinal(item.rank)}</em>
+                                                            </div>
+                                                            <h5>{item.name}</h5>
+                                                            <p>{item.scoreOrPercentage}</p>
+                                                            <span className="px-chip">{item.streamOrGrade}</span>
+                                                        </article>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                        </section>
                     )}
 
                     {/* ADMISSIONS ADMINISTRATION PANEL */}
@@ -2032,161 +2269,179 @@ export default function AdminDashboard() {
 
                     {/* ACADEMIC CALENDAR */}
                     {activeTab === 'calendar' && (
-                        <div className="applications-management-card publish-management-card publish-calendar-section">
-                            <h3>Publish Academic Calendar Event</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('academic_calendar', calendarForm, () =>
-                                    setCalendarForm({ month: '', date: '', day: '', title: '', category: 'General' })
-                                );
-                            }}>
-                                <div className="academic-calendar-date-field">
-                                    <label>Event Date</label>
-                                    <input
-                                        type="date"
-                                        value={calendarForm.date || ''}
-                                        onChange={e => {
-                                            const value = e.target.value;
-                                            if (!value) {
-                                                setCalendarForm({ ...calendarForm, month: '', date: '', day: '' });
-                                                return;
-                                            }
+                        <section className="px-page" style={{ '--tone': '#3b9be8', '--tone-soft': '#e3f1ff' }}>
+                            <PxHead icon={CalendarDays} title="Academic calendar" desc="Exams, meetings and key dates for the school year, grouped by month." count={calendarEvents.length} countLabel="dates" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('academic_calendar', calendarForm, () =>
+                                            setCalendarForm({ month: '', date: '', day: '', title: '', category: 'General' })
+                                        );
+                                    }}
+                                >
+                                    <h3>Add a calendar date</h3>
+                                    <label className="px-field">
+                                        <span>Event date</span>
+                                        <input
+                                            type="date"
+                                            value={calendarForm.date || ''}
+                                            onChange={e => {
+                                                const value = e.target.value;
+                                                if (!value) {
+                                                    setCalendarForm({ ...calendarForm, month: '', date: '', day: '' });
+                                                    return;
+                                                }
 
-                                            const selectedDate = new Date(`${value}T00:00:00`);
-                                            const month = selectedDate.toLocaleDateString('en-IN', {
-                                                month: 'long',
-                                                year: 'numeric'
-                                            });
-                                            const day = selectedDate.toLocaleDateString('en-IN', {
-                                                weekday: 'short'
-                                            });
+                                                const selectedDate = new Date(`${value}T00:00:00`);
+                                                const month = selectedDate.toLocaleDateString('en-IN', {
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                });
+                                                const day = selectedDate.toLocaleDateString('en-IN', {
+                                                    weekday: 'short'
+                                                });
 
-                                            setCalendarForm({
-                                                ...calendarForm,
-                                                month,
-                                                date: value,
-                                                day
-                                            });
-                                        }}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <input
-                                        type="text"
-                                        placeholder="Event Title"
-                                        value={calendarForm.title}
-                                        onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <select
-                                        value={calendarForm.category}
-                                        onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}
-                                    >
-                                        <option value="General">General</option>
-                                        <option value="Exam">Exam</option>
-                                        <option value="Meeting">Meeting</option>
-                                        <option value="Event">Event</option>
-                                    </select>
-                                </div>
-
-                                <div className="academic-calendar-helper">
-                                    <Calendar size={13} />
-                                    <span>Select a date from the calendar. Month and day are filled automatically.</span>
-                                </div>
-
-                                {calendarForm.date && (
-                                    <div className="academic-calendar-preview">
-                                        <div className="preview-date">
-                                            {calendarForm.date.slice(8, 10)}
+                                                setCalendarForm({
+                                                    ...calendarForm,
+                                                    month,
+                                                    date: value,
+                                                    day
+                                                });
+                                            }}
+                                            required
+                                        />
+                                        <small className="px-hint">Month and weekday are filled in from the date you pick.</small>
+                                    </label>
+                                    <label className="px-field"><span>Event title</span><input type="text" placeholder="Quarterly exams begin" value={calendarForm.title} onChange={e => setCalendarForm({ ...calendarForm, title: e.target.value })} required /></label>
+                                    <label className="px-field">
+                                        <span>Category</span>
+                                        <select value={calendarForm.category} onChange={e => setCalendarForm({ ...calendarForm, category: e.target.value })}>
+                                            <option value="General">General</option>
+                                            <option value="Exam">Exam</option>
+                                            <option value="Meeting">Meeting</option>
+                                            <option value="Event">Event</option>
+                                        </select>
+                                    </label>
+                                    {calendarForm.date && (
+                                        <div className="px-preview px-preview-event" aria-hidden="true">
+                                            <span className="px-datetile"><b>{calendarForm.date.slice(8, 10)}</b><small>{calendarForm.day}</small></span>
+                                            <div>
+                                                <strong>{calendarForm.title || 'New calendar event'}</strong>
+                                                <span>{calendarForm.month} · {calendarForm.category}</span>
+                                            </div>
                                         </div>
-                                        <div className="preview-text">
-                                            <strong>{calendarForm.title || 'New calendar event'}</strong>
-                                            <br />
-                                            {calendarForm.month} • {calendarForm.day}
-                                            {calendarForm.category ? ` • ${calendarForm.category}` : ''}
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
+                                    <button type="submit" className="px-btn primary"><PlusCircle size={16} /> Publish date</button>
+                                </form>
 
-                                <button type="submit" className="add-notice-btn">
-                                    <PlusCircle size={15} /> Publish Event
-                                </button>
-                            </form>
-
-                            <h4>Published Calendar Events <span className="count-badge">{calendarEvents.length}</span></h4>
-                            {calendarEvents.length === 0 ? <div className="empty-state">No calendar events published yet.</div> : (
-                                <ul>
-                                    {calendarEvents.map(item => (
-                                        <li key={item.id}>
-                                            <span><strong>{item.month}</strong>: {item.title} ({item.date} {item.day})</span>
-                                            <button onClick={() => handleDelete('academic_calendar', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published dates</h3><span className="px-count">{calendarEvents.length}</span></div>
+                                    {calendarEvents.length === 0 ? (
+                                        <PxEmpty icon={CalendarDays} title="No calendar dates yet" text="Add exam schedules, meetings and events for the year." />
+                                    ) : (() => {
+                                        const sorted = [...calendarEvents].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+                                        const months = [];
+                                        sorted.forEach(ev => {
+                                            const key = ev.month || 'Undated';
+                                            let group = months.find(m => m.key === key);
+                                            if (!group) { group = { key, items: [] }; months.push(group); }
+                                            group.items.push(ev);
+                                        });
+                                        return months.map(group => (
+                                            <div className="px-group" key={group.key}>
+                                                <h4 className="px-group-title">{group.key}<small>{group.items.length}</small></h4>
+                                                <ul className="px-list">
+                                                    {group.items.map(item => {
+                                                        const cat = item.category || 'General';
+                                                        return (
+                                                            <li className="px-item px-cal-row" key={item.id}>
+                                                                <span className="px-datetile slim"><b>{item.date ? item.date.slice(8, 10) : '–'}</b><small>{item.day || ''}</small></span>
+                                                                <div className="px-item-body">
+                                                                    <h4>{item.title}</h4>
+                                                                    <span className={`px-tag cat-${cat.toLowerCase()}`}>{cat}</span>
+                                                                </div>
+                                                                <button type="button" className="px-icon-btn danger" onClick={() => handleDelete('academic_calendar', item.id)} aria-label={`Delete ${item.title}`} title="Delete date"><Trash2 size={15} /></button>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                        </section>
                     )}
 
                     {/* ADMINISTRATORS */}
                     {activeTab === 'admins' && (
-                        <div className="applications-management-card publish-management-card publish-admin-section">
-                            <h3>Publish Administrator Profile</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('administrators', adminForm, () =>
-                                    setAdminForm({ name: '', role: '', qualification: '', message: '', email: '', phone: '' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Full Name" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Role / Position" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Qualifications" value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required /></div>
-                                <div><input type="email" placeholder="Email Address" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Phone Number" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required /></div>
-                                <textarea placeholder="Administrator's Message" value={adminForm.message} onChange={e => setAdminForm({ ...adminForm, message: e.target.value })} required />
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Administrator</button>
-                            </form>
+                        <section className="px-page" style={{ '--tone': '#6a5cf0', '--tone-soft': '#efecff' }}>
+                            <PxHead icon={Shield} title="Administrators" desc="Leadership profiles and messages shown on the school website." count={administrators.length} countLabel="profiles" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('administrators', adminForm, () =>
+                                            setAdminForm({ name: '', role: '', qualification: '', message: '', email: '', phone: '' })
+                                        );
+                                    }}
+                                >
+                                    <h3>Publish a profile</h3>
+                                    <label className="px-field"><span>Full name</span><input type="text" placeholder="Dr. Meera Krishnan" value={adminForm.name} onChange={e => setAdminForm({ ...adminForm, name: e.target.value })} required /></label>
+                                    <div className="px-row2">
+                                        <label className="px-field"><span>Role</span><input type="text" placeholder="Principal" value={adminForm.role} onChange={e => setAdminForm({ ...adminForm, role: e.target.value })} required /></label>
+                                        <label className="px-field"><span>Qualifications</span><input type="text" placeholder="M.Sc., B.Ed." value={adminForm.qualification} onChange={e => setAdminForm({ ...adminForm, qualification: e.target.value })} required /></label>
+                                    </div>
+                                    <div className="px-row2">
+                                        <label className="px-field"><span>Email</span><input type="email" placeholder="name@school.edu" value={adminForm.email} onChange={e => setAdminForm({ ...adminForm, email: e.target.value })} required /></label>
+                                        <label className="px-field"><span>Phone</span><input type="text" placeholder="+91 98765 43210" value={adminForm.phone} onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })} required /></label>
+                                    </div>
+                                    <label className="px-field"><span>Message to families</span><textarea rows="4" placeholder="A short welcome or message from this administrator" value={adminForm.message} onChange={e => setAdminForm({ ...adminForm, message: e.target.value })} required /></label>
+                                    <button type="submit" className="px-btn primary"><PlusCircle size={16} /> Publish profile</button>
+                                </form>
 
-                            <h4>Published Administrators <span className="count-badge">{administrators.length}</span></h4>
-                            {administrators.length === 0 ? <div className="empty-state">No administrators published yet.</div> : (
-                                <ul>
-                                    {administrators.map(item => (
-                                        <li key={item.id}>
-                                            <span><strong>{item.name}</strong> - {item.role}</span>
-                                            <button onClick={() => handleDelete('administrators', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published profiles</h3><span className="px-count">{administrators.length}</span></div>
+                                    {administrators.length === 0 ? (
+                                        <PxEmpty icon={Shield} title="No administrators published yet" text="Add the principal and leadership team to introduce them to families." />
+                                    ) : (
+                                        <div className="px-admin-grid">
+                                            {administrators.map(item => (
+                                                <article className="px-admin" key={item.id}>
+                                                    <button type="button" className="px-icon-btn danger px-corner" onClick={() => handleDelete('administrators', item.id)} aria-label={`Delete ${item.name}`} title="Delete profile"><Trash2 size={14} /></button>
+                                                    <div className="px-admin-top">
+                                                        <span className="px-avatar">{(item.name || '?').replace(/^(Dr|Mr|Mrs|Ms|Prof)\.?\s+/i, '').charAt(0).toUpperCase()}</span>
+                                                        <div>
+                                                            <h5>{item.name}</h5>
+                                                            <p>{item.role}</p>
+                                                        </div>
+                                                    </div>
+                                                    {item.qualification && <span className="px-chip">{item.qualification}</span>}
+                                                    {item.message && <blockquote>{item.message}</blockquote>}
+                                                    <div className="px-contact">
+                                                        {item.email && <a href={`mailto:${item.email}`}><Mail size={13} /> {item.email}</a>}
+                                                        {item.phone && <span><Phone size={13} /> {item.phone}</span>}
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
                     )}
 
                     {/* GALLERY */}
                     {activeTab === 'gallery' && (
-                        <div className="applications-management-card publish-management-card publish-gallery-section gallery-management-modern">
-                            <div className="gallery-manager-head">
-                                <div>
-                                    <div className="gallery-manager-kicker"><Images size={15} /> Media Library</div>
-                                    <h3>Gallery Management</h3>
-                                    <p>Browse folders like on your computer — open a folder, make new ones, and upload photos into wherever you are.</p>
-                                </div>
-                                <div className="gallery-total-count">
-                                    <strong>{galleryItems.length}</strong>
-                                    <span>Total Photos</span>
-                                </div>
-                            </div>
+                        <section className="px-page" style={{ '--tone': '#12a5b8', '--tone-soft': '#dff6f9' }}>
+                            <PxHead icon={Images} title="Photo gallery" desc="Organise photos into folders, just like on your computer. Uploads go into the folder you have open." count={galleryItems.length} countLabel="photos" />
 
-                            <div className="gallery-explorer-bar">
-                                <div className="gallery-breadcrumbs">
-                                    <button
-                                        type="button"
-                                        className={`gallery-crumb ${!galleryCurrentPath ? 'active' : ''}`}
-                                        onClick={() => setGalleryCurrentPath('')}
-                                    >
+                            <div className="px-card px-gal-bar">
+                                <nav className="px-crumbs" aria-label="Gallery folders">
+                                    <button type="button" className={`px-crumb ${!galleryCurrentPath ? 'active' : ''}`} onClick={() => setGalleryCurrentPath('')}>
                                         <Folder size={14} /> Home
                                     </button>
                                     {galleryCurrentPath && galleryCurrentPath.split('/').map((segment, idx, arr) => {
@@ -2194,125 +2449,102 @@ export default function AdminDashboard() {
                                         const isLast = idx === arr.length - 1;
                                         return (
                                             <React.Fragment key={pathUpToHere}>
-                                                <span className="gallery-crumb-sep">/</span>
-                                                <button
-                                                    type="button"
-                                                    className={`gallery-crumb ${isLast ? 'active' : ''}`}
-                                                    onClick={() => setGalleryCurrentPath(pathUpToHere)}
-                                                >
+                                                <ChevronRight size={14} className="px-crumb-sep" />
+                                                <button type="button" className={`px-crumb ${isLast ? 'active' : ''}`} onClick={() => setGalleryCurrentPath(pathUpToHere)}>
                                                     {segment}
                                                 </button>
                                             </React.Fragment>
                                         );
                                     })}
-                                </div>
+                                </nav>
 
                                 {!isCreatingGalleryFolder ? (
-                                    <button type="button" className="gallery-secondary-btn" onClick={() => setIsCreatingGalleryFolder(true)}>
-                                        <FolderPlus size={15} /> New Folder
+                                    <button type="button" className="px-btn ghost" onClick={() => setIsCreatingGalleryFolder(true)}>
+                                        <FolderPlus size={16} /> New folder
                                     </button>
                                 ) : (
-                                    <form
-                                        className="gallery-new-folder-row gallery-new-folder-inline"
-                                        onSubmit={e => { e.preventDefault(); handleCreateGalleryFolder(); }}
-                                    >
+                                    <form className="px-newfolder" onSubmit={e => { e.preventDefault(); handleCreateGalleryFolder(); }}>
                                         <input
                                             autoFocus
                                             type="text"
                                             value={galleryNewFolderName}
                                             onChange={e => setGalleryNewFolderName(e.target.value)}
                                             placeholder="Folder name"
+                                            aria-label="Folder name"
                                         />
-                                        <button type="submit" className="gallery-secondary-btn">Create</button>
-                                        <button
-                                            type="button"
-                                            className="cancel-btn"
-                                            onClick={() => { setIsCreatingGalleryFolder(false); setGalleryNewFolderName(''); }}
-                                        >
-                                            Cancel
-                                        </button>
+                                        <button type="submit" className="px-btn primary small">Create</button>
+                                        <button type="button" className="px-btn ghost small" onClick={() => { setIsCreatingGalleryFolder(false); setGalleryNewFolderName(''); }}>Cancel</button>
                                     </form>
                                 )}
                             </div>
 
                             {galleryChildFolders.length > 0 && (
-                                <div className="gallery-folder-tiles">
+                                <div className="px-folders">
                                     {galleryChildFolders.map(name => {
                                         const fullPath = galleryCurrentPath ? `${galleryCurrentPath}/${name}` : name;
                                         const count = getFolderItemCount(fullPath);
                                         return (
                                             <div
                                                 key={fullPath}
-                                                className="gallery-folder-tile"
+                                                className="px-folder"
+                                                role="button"
+                                                tabIndex={0}
                                                 onClick={() => setGalleryCurrentPath(fullPath)}
+                                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGalleryCurrentPath(fullPath); } }}
                                                 title={`Open ${name}`}
                                             >
                                                 <button
                                                     type="button"
-                                                    className="gallery-folder-tile-delete"
+                                                    className="px-icon-btn danger px-corner"
                                                     onClick={e => { e.stopPropagation(); handleDeleteGalleryFolder(fullPath); }}
-                                                    title="Delete Folder"
+                                                    onKeyDown={e => e.stopPropagation()}
+                                                    aria-label={`Delete folder ${name}`}
+                                                    title="Delete folder"
                                                 >
-                                                    <Trash2 size={12} />
+                                                    <Trash2 size={13} />
                                                 </button>
-                                                <Folder size={30} />
+                                                <span className="px-folder-ico"><Folder size={26} /></span>
                                                 <strong>{name}</strong>
-                                                <span>{count} item{count === 1 ? '' : 's'}</span>
+                                                <small>{count} photo{count === 1 ? '' : 's'}</small>
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
 
-                            <form onSubmit={handleGalleryMultiUpload} className="gallery-upload-form">
-                                <div className="gallery-upload-location">
-                                    Uploading into: <strong>{galleryCurrentPath || 'Home'}</strong>
+                            <form onSubmit={handleGalleryMultiUpload} className="px-card px-upload-card">
+                                <div className="px-upload-top">
+                                    <h3>Upload photos</h3>
+                                    <span className="px-chip"><Folder size={12} /> {galleryCurrentPath || 'Home'}</span>
+                                </div>
+                                <div className="px-row2">
+                                    <label className="px-field">
+                                        <span>Title <small>(optional)</small></span>
+                                        <input type="text" placeholder="Annual Day highlights" value={galleryForm.title} onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })} />
+                                    </label>
+                                    <label className="px-field">
+                                        <span>Description <small>(optional)</small></span>
+                                        <input type="text" placeholder="A line about these photos" value={galleryForm.description} onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })} />
+                                    </label>
                                 </div>
 
-                                <div className="gallery-upload-fields">
-                                    <div>
-                                        <span className="gallery-form-label">Photo Title <small>(optional)</small></span>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Annual Day Highlights"
-                                            value={galleryForm.title}
-                                            onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <span className="gallery-form-label">Description <small>(optional)</small></span>
-                                        <input
-                                            type="text"
-                                            placeholder="Short description for these photos"
-                                            value={galleryForm.description}
-                                            onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <label className="gallery-dropzone">
-                                    <input
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.webp"
-                                        multiple
-                                        onChange={handleGalleryFilesChange}
-                                    />
-                                    <span className="gallery-drop-icon"><Upload size={24} /></span>
-                                    <strong>Select Photos</strong>
-                                    <span>Click to browse or select several JPG, PNG or WEBP files</span>
-                                    <em>Images are automatically resized and compressed before upload</em>
+                                <label className="px-dropzone">
+                                    <input type="file" accept=".jpg,.jpeg,.png,.webp" multiple onChange={handleGalleryFilesChange} />
+                                    <span className="px-dropzone-ico"><Upload size={22} /></span>
+                                    <strong>Choose photos to upload</strong>
+                                    <span>Select several JPG, PNG or WEBP files at once. They are resized and compressed automatically.</span>
                                 </label>
 
                                 {galleryUploadFiles.length > 0 && (
-                                    <div className="gallery-selected-files">
-                                        <div className="gallery-selected-head">
+                                    <div className="px-selected">
+                                        <div className="px-selected-head">
                                             <strong>{galleryUploadFiles.length} photo{galleryUploadFiles.length === 1 ? '' : 's'} selected</strong>
-                                            <button type="button" onClick={() => setGalleryUploadFiles([])}>Clear</button>
+                                            <button type="button" className="px-link-danger" onClick={() => setGalleryUploadFiles([])}>Clear selection</button>
                                         </div>
-                                        <div className="gallery-selected-list">
+                                        <div className="px-selected-list">
                                             {galleryUploadFiles.map((file, index) => (
-                                                <div key={`${file.name}-${index}`} className="gallery-selected-file">
-                                                    <ImageIcon size={15} />
+                                                <div key={`${file.name}-${index}`} className="px-selected-file">
+                                                    <ImageIcon size={14} />
                                                     <span>{file.name}</span>
                                                     <small>{Math.round(file.size / 1024)} KB</small>
                                                 </div>
@@ -2321,237 +2553,234 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                <button type="submit" className="gallery-upload-btn" disabled={galleryUploading || !galleryUploadFiles.length}>
+                                <button type="submit" className="px-btn primary" disabled={galleryUploading || !galleryUploadFiles.length}>
                                     <Upload size={16} />
-                                    {galleryUploading ? 'Uploading Photos...' : `Upload ${galleryUploadFiles.length || ''} Photo${galleryUploadFiles.length === 1 ? '' : 's'} Here`}
+                                    {galleryUploading ? 'Uploading photos...' : `Upload ${galleryUploadFiles.length || ''} photo${galleryUploadFiles.length === 1 ? '' : 's'}`}
                                 </button>
                             </form>
 
-                            <div className="gallery-library-header">
-                                <div>
-                                    <h4>Photos in "{galleryCurrentPath || 'Home'}"</h4>
-                                    <span>{galleryItemsHere.length} photo{galleryItemsHere.length === 1 ? '' : 's'} shown</span>
+                            <div className="px-card px-list-card">
+                                <div className="px-list-head">
+                                    <h3>Photos in {galleryCurrentPath || 'Home'}</h3>
+                                    <span className="px-count">{galleryItemsHere.length}</span>
                                 </div>
+                                {galleryItemsHere.length === 0 ? (
+                                    <PxEmpty icon={Folder} title="No photos directly in this folder" text="Open a subfolder above, or upload photos here." />
+                                ) : (
+                                    <div className="px-photo-grid">
+                                        {galleryItemsHere.map(item => (
+                                            <figure key={item.id} className="px-photo">
+                                                {item.image ? <img src={item.image} alt={item.title} loading="lazy" /> : <div className="px-photo-empty"><ImageIcon size={22} /></div>}
+                                                <figcaption>
+                                                    <div>
+                                                        <strong>{item.title}</strong>
+                                                        <span>{item.fileName || galleryCurrentPath || 'Home'}</span>
+                                                    </div>
+                                                    <div className="px-photo-actions">
+                                                        <button type="button" onClick={() => handleStartEditGallery(item)} aria-label={`Edit ${item.title}`} title="Edit photo"><Edit2 size={14} /></button>
+                                                        <button type="button" className="danger" onClick={() => handleDelete('gallery', item.id)} aria-label={`Delete ${item.title}`} title="Delete photo"><Trash2 size={14} /></button>
+                                                    </div>
+                                                </figcaption>
+                                            </figure>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
-                            {galleryItemsHere.length === 0 ? (
-                                <div className="gallery-empty-modern">
-                                    <Folder size={28} />
-                                    <strong>No photos directly in this folder</strong>
-                                    <span>Open a subfolder above, or upload photos here.</span>
-                                </div>
-                            ) : (
-                                <div className="gallery-grid gallery-grid-modern">
-                                    {galleryItemsHere.map(item => (
-                                        <div key={item.id} className="gallery-tile gallery-tile-modern">
-                                            {item.image ? <img src={item.image} alt={item.title} className="gallery-tile-img" /> : <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>}
-                                            <div className="gallery-tile-overlay">
-                                                <div>
-                                                    <strong>{item.title}</strong>
-                                                    <span className="gallery-tile-category">{item.fileName || galleryCurrentPath || 'Home'}</span>
-                                                </div>
-                                                <div className="gallery-tile-actions">
-                                                    <button type="button" onClick={() => handleStartEditGallery(item)} title="Edit Photo"><Edit2 size={14} /></button>
-                                                    <button type="button" className="gallery-tile-delete" onClick={() => handleDelete('gallery', item.id)} title="Delete Photo"><Trash2 size={14} /></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
                             {editingGalleryId && (
-                                <div className="admin-modal-backdrop" onClick={handleCancelEditGallery}>
-                                    <div className="admin-modal-card gallery-edit-modal-card" onClick={e => e.stopPropagation()}>
-                                        <h3>Edit Photo</h3>
-                                        <form className="gallery-edit-form" onSubmit={handleSaveGalleryEdit}>
-                                            <div className="gallery-edit-preview">
+                                <div className="px-modal-backdrop" onClick={handleCancelEditGallery}>
+                                    <form className="px-modal" role="dialog" aria-modal="true" aria-label="Edit photo" onClick={e => e.stopPropagation()} onSubmit={handleSaveGalleryEdit}>
+                                        <div className="px-modal-head">
+                                            <h3>Edit photo</h3>
+                                            <button type="button" className="px-icon-btn" onClick={handleCancelEditGallery} aria-label="Close"><X size={16} /></button>
+                                        </div>
+                                        <div className="px-modal-body">
+                                            <div className="px-edit-preview">
                                                 {(editGalleryImagePreview || editGalleryForm.image) ? (
                                                     <img src={editGalleryImagePreview || editGalleryForm.image} alt={editGalleryForm.title} />
                                                 ) : (
-                                                    <div className="gallery-tile-img gallery-tile-placeholder"><ImageIcon size={22} /></div>
+                                                    <div className="px-photo-empty"><ImageIcon size={22} /></div>
                                                 )}
-                                                <label className="gallery-secondary-btn gallery-edit-replace-btn">
-                                                    <Upload size={14} /> Replace Photo
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                                                        onChange={handleEditGalleryImageChange}
-                                                        hidden
-                                                    />
+                                                <label className="px-btn ghost small">
+                                                    <Upload size={14} /> Replace photo
+                                                    <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleEditGalleryImageChange} hidden />
                                                 </label>
                                             </div>
-
-                                            <label>
-                                                <span className="gallery-form-label">Photo Title</span>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Photo title"
-                                                    value={editGalleryForm.title}
-                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, title: e.target.value })}
-                                                />
-                                            </label>
-
-                                            <label>
-                                                <span className="gallery-form-label">Description <small>(optional)</small></span>
-                                                <textarea
-                                                    rows={3}
-                                                    placeholder="Short description"
-                                                    value={editGalleryForm.description}
-                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, description: e.target.value })}
-                                                />
-                                            </label>
-
-                                            <label>
-                                                <span className="gallery-form-label">Folder <small>(e.g. Campus/Day 1)</small></span>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Uncategorized"
-                                                    value={editGalleryForm.folderPath}
-                                                    onChange={e => setEditGalleryForm({ ...editGalleryForm, folderPath: e.target.value })}
-                                                />
-                                            </label>
-
-                                            <div className="gallery-edit-actions">
-                                                <button type="submit" className="gallery-upload-btn" disabled={galleryUpdating}>
-                                                    {galleryUpdating ? 'Saving...' : <><Save size={14} /> Save Changes</>}
-                                                </button>
-                                                <button type="button" className="cancel-btn" onClick={handleCancelEditGallery}>
-                                                    <X size={14} /> Cancel
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+                                            <label className="px-field"><span>Title</span><input type="text" placeholder="Photo title" value={editGalleryForm.title} onChange={e => setEditGalleryForm({ ...editGalleryForm, title: e.target.value })} /></label>
+                                            <label className="px-field"><span>Description <small>(optional)</small></span><textarea rows={3} placeholder="Short description" value={editGalleryForm.description} onChange={e => setEditGalleryForm({ ...editGalleryForm, description: e.target.value })} /></label>
+                                            <label className="px-field"><span>Folder <small>(for example Campus/Day 1)</small></span><input type="text" placeholder="Uncategorized" value={editGalleryForm.folderPath} onChange={e => setEditGalleryForm({ ...editGalleryForm, folderPath: e.target.value })} /></label>
+                                        </div>
+                                        <div className="px-modal-foot">
+                                            <button type="button" className="px-btn ghost" onClick={handleCancelEditGallery}>Cancel</button>
+                                            <button type="submit" className="px-btn primary" disabled={galleryUpdating}>
+                                                {galleryUpdating ? 'Saving...' : <><Save size={15} /> Save changes</>}
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             )}
-                        </div>
+                        </section>
                     )}
 
                     {/* HOLIDAYS */}
                     {activeTab === 'holidays' && (
-                        <div className="applications-management-card publish-management-card publish-holiday-section">
-                            <h3>Publish Holiday</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                handlePublish('holidays', holidayForm, () =>
-                                    setHolidayForm({ date: '', day: '', occasion: '', type: 'National Holiday' })
-                                );
-                            }}>
-                                <div><input type="text" placeholder="Date (e.g., 15 Aug 2026)" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Day (e.g., Friday)" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required /></div>
-                                <div><input type="text" placeholder="Occasion / Holiday Name" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required /></div>
-                                <div>
-                                    <select value={holidayForm.type} onChange={e => setHolidayForm({ ...holidayForm, type: e.target.value })}>
-                                        <option value="National Holiday">National Holiday</option>
-                                        <option value="Festival">Festival</option>
-                                    </select>
-                                </div>
-                                <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Holiday</button>
-                            </form>
+                        <section className="px-page" style={{ '--tone': '#f0587a', '--tone-soft': '#ffe9ee' }}>
+                            <PxHead icon={Sun} title="School holidays" desc="National holidays and festivals the school is closed for." count={holidays.length} countLabel="holidays" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handlePublish('holidays', holidayForm, () =>
+                                            setHolidayForm({ date: '', day: '', occasion: '', type: 'National Holiday' })
+                                        );
+                                    }}
+                                >
+                                    <h3>Publish a holiday</h3>
+                                    <label className="px-field"><span>Occasion</span><input type="text" placeholder="Independence Day" value={holidayForm.occasion} onChange={e => setHolidayForm({ ...holidayForm, occasion: e.target.value })} required /></label>
+                                    <div className="px-row2">
+                                        <label className="px-field"><span>Date</span><input type="text" placeholder="15 Aug 2026" value={holidayForm.date} onChange={e => setHolidayForm({ ...holidayForm, date: e.target.value })} required /></label>
+                                        <label className="px-field"><span>Day</span><input type="text" placeholder="Saturday" value={holidayForm.day} onChange={e => setHolidayForm({ ...holidayForm, day: e.target.value })} required /></label>
+                                    </div>
+                                    <label className="px-field">
+                                        <span>Type</span>
+                                        <select value={holidayForm.type} onChange={e => setHolidayForm({ ...holidayForm, type: e.target.value })}>
+                                            <option value="National Holiday">National Holiday</option>
+                                            <option value="Festival">Festival</option>
+                                        </select>
+                                    </label>
+                                    <button type="submit" className="px-btn primary"><PlusCircle size={16} /> Publish holiday</button>
+                                </form>
 
-                            <h4>Published Holidays <span className="count-badge">{holidays.length}</span></h4>
-                            {holidays.length === 0 ? <div className="empty-state">No holidays published yet.</div> : (
-                                <ul>
-                                    {holidays.map(item => (
-                                        <li key={item.id}>
-                                            <span>{item.date} ({item.day}): <strong>{item.occasion}</strong></span>
-                                            <button onClick={() => handleDelete('holidays', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published holidays</h3><span className="px-count">{holidays.length}</span></div>
+                                    {holidays.length === 0 ? (
+                                        <PxEmpty icon={Sun} title="No holidays published yet" text="Add holidays so families can plan ahead." />
+                                    ) : (
+                                        <ul className="px-list">
+                                            {holidays.map(item => {
+                                                const parsed = new Date(item.date);
+                                                const valid = !isNaN(parsed.getTime());
+                                                const isFestival = item.type === 'Festival';
+                                                return (
+                                                    <li className="px-item px-holiday" key={item.id}>
+                                                        <span className={`px-datetile ${isFestival ? 'warm' : ''}`}>
+                                                            {valid
+                                                                ? <><b>{parsed.getDate()}</b><small>{parsed.toLocaleDateString('en-GB', { month: 'short' })}</small></>
+                                                                : <Sun size={20} />}
+                                                        </span>
+                                                        <div className="px-item-body">
+                                                            <h4>{item.occasion}</h4>
+                                                            <p>{item.date}{item.day ? ` · ${item.day}` : ''}</p>
+                                                            <span className={`px-tag ${isFestival ? 'cat-festival' : 'cat-national'}`}>{item.type || 'National Holiday'}</span>
+                                                        </div>
+                                                        <button type="button" className="px-icon-btn danger" onClick={() => handleDelete('holidays', item.id)} aria-label={`Delete ${item.occasion}`} title="Delete holiday"><Trash2 size={15} /></button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
                     )}
 
                     {/* ANNOUNCEMENTS */}
                     {activeTab === 'announcements' && (
-                        <div className="applications-management-card publish-management-card publish-announcement-section">
-                            <h3>Publish Announcement</h3>
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
+                        <section className="px-page" style={{ '--tone': '#6a5cf0', '--tone-soft': '#efecff' }}>
+                            <PxHead icon={Megaphone} title="Announcements" desc="Circulars appear on the school website and on student and staff dashboards." count={announcements.length} countLabel="published" />
+                            <div className="px-split">
+                                <form
+                                    className="px-card px-compose"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
 
-                                const linkText = announcementLinkText.trim();
-                                const linkUrl = announcementLinkUrl.trim();
+                                        const linkText = announcementLinkText.trim();
+                                        const linkUrl = announcementLinkUrl.trim();
 
-                                if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
-                                    alert('Please enter a valid link beginning with http:// or https://');
-                                    return;
-                                }
+                                        if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
+                                            alert('Please enter a valid link beginning with http:// or https://');
+                                            return;
+                                        }
 
-                                handlePublish(
-                                    'announcements',
-                                    {
-                                        content: noticeText.trim(),
-                                        linkText: linkText || '',
-                                        linkUrl: linkUrl || ''
-                                    },
-                                    () => {
-                                        setNoticeText('');
-                                        setAnnouncementLinkText('');
-                                        setAnnouncementLinkUrl('');
-                                    }
-                                );
-                            }}>
-                                <div className="announcement-editor-field full-width">
-                                    <label>Announcement Message</label>
-                                    <textarea rows="3" placeholder="Example: Hall Ticket has been released. Students can download it using the link below." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
-                                </div>
+                                        handlePublish(
+                                            'announcements',
+                                            {
+                                                content: noticeText.trim(),
+                                                linkText: linkText || '',
+                                                linkUrl: linkUrl || ''
+                                            },
+                                            () => {
+                                                setNoticeText('');
+                                                setAnnouncementLinkText('');
+                                                setAnnouncementLinkUrl('');
+                                            }
+                                        );
+                                    }}
+                                >
+                                    <h3>New announcement</h3>
+                                    <label className="px-field">
+                                        <span>Message</span>
+                                        <textarea rows="4" placeholder="Hall tickets have been released. Students can download them using the link below." value={noticeText} onChange={e => setNoticeText(e.target.value)} required />
+                                    </label>
 
-                                <div className="announcement-link-box full-width">
-                                    <div className="announcement-link-heading">
-                                        <span>Attach Link to Words</span>
-                                        <small>Make a word/phrase clickable — perfect for Hall Ticket, Results, Timetable, etc.</small>
-                                    </div>
+                                    <fieldset className="px-linkbox">
+                                        <legend><Link2 size={14} /> Attach a link <small>(optional)</small></legend>
+                                        <p>Turn a phrase into a clickable link, such as Download hall ticket or View results.</p>
+                                        <label className="px-field"><span>Clickable words</span><input type="text" placeholder="Download hall ticket" value={announcementLinkText} onChange={e => setAnnouncementLinkText(e.target.value)} /></label>
+                                        <label className="px-field"><span>Link address</span><input type="url" placeholder="https://your-site.com/hall-ticket" value={announcementLinkUrl} onChange={e => setAnnouncementLinkUrl(e.target.value)} /></label>
+                                    </fieldset>
 
-                                    <div className="announcement-link-grid">
-                                        <div>
-                                            <label>Clickable Words</label>
-                                            <input type="text" placeholder="Example: Download Hall Ticket" value={announcementLinkText} onChange={e => setAnnouncementLinkText(e.target.value)} />
-                                        </div>
-                                        <div>
-                                            <label>Link URL</label>
-                                            <input type="url" placeholder="https://your-site.com/hall-ticket" value={announcementLinkUrl} onChange={e => setAnnouncementLinkUrl(e.target.value)} />
-                                        </div>
-                                    </div>
-
-                                    {(announcementLinkText.trim() || announcementLinkUrl.trim()) && (
-                                        <div className="announcement-link-preview">
-                                            <span>Preview:</span>
-                                            {announcementLinkUrl.trim() ? (
-                                                <a href={announcementLinkUrl.trim()} target="_blank" rel="noopener noreferrer">
-                                                    {announcementLinkText.trim() || announcementLinkUrl.trim()}
-                                                </a>
-                                            ) : (
-                                                <strong>{announcementLinkText.trim() || 'Your clickable words'}</strong>
-                                            )}
+                                    {(noticeText.trim() || announcementLinkText.trim() || announcementLinkUrl.trim()) && (
+                                        <div className="px-preview px-preview-notice" aria-label="Preview">
+                                            <span className="px-preview-label">Preview</span>
+                                            <p>
+                                                {noticeText.trim() || 'Your message appears here.'}
+                                                {(announcementLinkText.trim() || announcementLinkUrl.trim()) && (
+                                                    <>
+                                                        {' '}
+                                                        {announcementLinkUrl.trim() ? (
+                                                            <a href={announcementLinkUrl.trim()} target="_blank" rel="noopener noreferrer">{announcementLinkText.trim() || announcementLinkUrl.trim()}</a>
+                                                        ) : (
+                                                            <strong>{announcementLinkText.trim()}</strong>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </p>
                                         </div>
                                     )}
-                                </div>
 
-                                <div className="announcement-publish-actions full-width">
-                                    <button type="submit" className="add-notice-btn"><PlusCircle size={15} /> Publish Announcement</button>
-                                </div>
-                            </form>
+                                    <button type="submit" className="px-btn primary"><Send size={16} /> Publish announcement</button>
+                                </form>
 
-                            <h4>Published Announcements <span className="count-badge">{announcements.length}</span></h4>
-                            {announcements.length === 0 ? <div className="empty-state">No announcements published yet.</div> : (
-                                <ul>
-                                    {announcements.map(item => (
-                                        <li key={item.id}>
-                                            <div className="announcement-list-content">
-                                                <span>{item.content}</span>
-                                                {item.linkUrl && (
-                                                    <a className="announcement-attached-link" href={item.linkUrl} target="_blank" rel="noopener noreferrer">
-                                                        {item.linkText || 'Open Link'}
-                                                    </a>
-                                                )}
-                                            </div>
-                                            <button onClick={() => handleDelete('announcements', item.id)}><Trash2 size={14} /></button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
+                                <div className="px-card px-list-card">
+                                    <div className="px-list-head"><h3>Published announcements</h3><span className="px-count">{announcements.length}</span></div>
+                                    {announcements.length === 0 ? (
+                                        <PxEmpty icon={Megaphone} title="No announcements yet" text="Published circulars will be listed here." />
+                                    ) : (
+                                        <ul className="px-list">
+                                            {announcements.map(item => {
+                                                const urgent = String(item.content || '').includes('[EMERGENCY/URGENT]');
+                                                return (
+                                                    <li className={`px-item px-notice ${urgent ? 'urgent' : ''}`} key={item.id}>
+                                                        <span className="px-notice-ico">{urgent ? <AlertTriangle size={17} /> : <Bell size={17} />}</span>
+                                                        <div className="px-item-body">
+                                                            <p>{item.content}</p>
+                                                            {item.linkUrl && (
+                                                                <a className="px-notice-link" href={item.linkUrl} target="_blank" rel="noopener noreferrer">
+                                                                    <Link2 size={13} /> {item.linkText || 'Open link'}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                        <button type="button" className="px-icon-btn danger" onClick={() => handleDelete('announcements', item.id)} aria-label="Delete announcement" title="Delete announcement"><Trash2 size={15} /></button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
                     )}
 
                     {/* STAFF DIRECTORY */}
@@ -2734,60 +2963,6 @@ export default function AdminDashboard() {
 
                                         {filteredStaffList.map(member => (
                                             <div className="directory-card" key={member.id}>
-                                                {editingStaffId === member.id ? (
-                                                    <div className="staff-edit-form">
-                                                        <input
-                                                            type="text"
-                                                            value={editStaffForm.name}
-                                                            onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
-                                                            placeholder="Name"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={editStaffForm.staffId}
-                                                            onChange={e => setEditStaffForm({ ...editStaffForm, staffId: e.target.value })}
-                                                            placeholder="Staff ID"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={editStaffForm.password}
-                                                            onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })}
-                                                            placeholder="Password"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={editStaffForm.department}
-                                                            onChange={e => setEditStaffForm({ ...editStaffForm, department: e.target.value })}
-                                                            placeholder="Department"
-                                                        />
-                                                        <input
-                                                            type="email"
-                                                            value={editStaffForm.email}
-                                                            onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
-                                                            placeholder="Email"
-                                                        />
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                                                            {editStaffForm.photo && (
-                                                                <img src={editStaffForm.photo} alt="Preview" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: '50%', border: '1px solid var(--border)' }} />
-                                                            )}
-                                                            <input
-                                                                type="file"
-                                                                accept=".jpg,.jpeg,.png,.webp"
-                                                                style={{ fontSize: '0.7rem' }}
-                                                                onChange={e => handleImageUpload(e.target.files[0], (base64) => setEditStaffForm({ ...editStaffForm, photo: base64 }))}
-                                                            />
-                                                        </div>
-                                                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                                                            <button className="save-btn" onClick={() => handleUpdateStaff(member.id)}>
-                                                                <Check size={12} /> Save
-                                                            </button>
-                                                            <button className="cancel-btn" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => setEditingStaffId(null)}>
-                                                                <X size={12} /> Cancel
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <>
                                                         <button className="directory-delete-corner" onClick={() => handleDelete('staff_members', member.id)} title="Delete Staff">
                                                             <Trash2 size={13} />
                                                         </button>
@@ -2805,17 +2980,16 @@ export default function AdminDashboard() {
                                                             <h5 className="directory-card-name">{member.name}</h5>
                                                             <span className="directory-pill">{member.staffId}</span>
                                                             <span className="directory-pill directory-pill-alt"><Users size={11} /> {member.department || 'General'}</span>
+                                                            {(() => {
+                                                                const mine = sectionsList.filter(s => s.classInchargeId === member.id || (!s.classInchargeId && s.classIncharge && s.classIncharge === member.name));
+                                                                return mine.length > 0 ? (
+                                                                    <span className="directory-pill directory-pill-alt"><UserCheck size={11} /> Incharge: {mine[0].className} {mine[0].name}{mine.length > 1 ? ` +${mine.length - 1}` : ''}</span>
+                                                                ) : null;
+                                                            })()}
                                                         </div>
 
-                                                        {viewStaffId === member.id && (
-                                                            <div className="directory-card-details">
-                                                                <div className="staff-detail-item"><strong>Pass:</strong> <span className="staff-password-code">{member.password}</span></div>
-                                                                <div className="staff-detail-item"><strong>Email:</strong> {member.email || 'N/A'}</div>
-                                                            </div>
-                                                        )}
-
                                                         <div className="directory-card-footer">
-                                                            <button className="directory-action-btn view" onClick={() => setViewStaffId(viewStaffId === member.id ? null : member.id)}>
+                                                            <button className="directory-action-btn view" onClick={() => { setShowStaffPwd(false); setEditingStaffId(null); setStaffViewTab('details'); setStaffViewSectionId(null); setStaffViewSort('name'); setStaffClassView('attendance'); setStaffWinMode('normal'); setViewStaffId(member.id); }}>
                                                                 <Eye size={14} /> View
                                                             </button>
                                                             {member.email ? (
@@ -2827,16 +3001,552 @@ export default function AdminDashboard() {
                                                                     <Mail size={14} /> Message
                                                                 </button>
                                                             )}
-                                                            <button className="directory-action-btn edit" onClick={() => handleStartEditStaff(member)}>
+                                                            <button className="directory-action-btn edit" onClick={() => { setViewStaffId(null); handleStartEditStaff(member); }}>
                                                                 <Edit2 size={14} /> Edit
                                                             </button>
                                                         </div>
-                                                    </>
-                                                )}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* STAFF VIEW POPUP */}
+                                {viewStaffId && (() => {
+                                    const m = staffList.find(x => x.id === viewStaffId);
+                                    if (!m) return null;
+                                    const copy = (label, value) => {
+                                        try { navigator.clipboard.writeText(value || ''); } catch (err) { /* ignore */ }
+                                        setCopiedStaffField(label);
+                                        setTimeout(() => setCopiedStaffField(''), 1400);
+                                    };
+
+                                    // ----- minimized: small floating card that can be dragged anywhere -----
+                                    if (staffWinMode === 'minimized') {
+                                        const pos = staffMiniPos || { x: 20, y: 20 };
+                                        return createPortal(
+                                            <div
+                                                className={`sdm-float ${staffMiniDragging ? 'is-dragging' : ''}`}
+                                                style={{ left: pos.x, top: pos.y }}
+                                                role="dialog"
+                                                aria-label={`${m.name} profile (minimized). Drag or use arrow keys to move, Enter to restore.`}
+                                                tabIndex={0}
+                                                onPointerDown={onStaffMiniPointerDown}
+                                                onPointerMove={onStaffMiniPointerMove}
+                                                onPointerUp={onStaffMiniPointerUp}
+                                                onPointerCancel={onStaffMiniPointerUp}
+                                                onKeyDown={onStaffMiniKeyDown}
+                                                onDoubleClick={(e) => { if (!e.target.closest('button')) setStaffWinMode('normal'); }}
+                                            >
+                                                <GripVertical size={16} className="sdm-float-grip" aria-hidden="true" />
+                                                <span className="sdm-float-avatar">
+                                                    {m.photo ? <img src={m.photo} alt="" draggable={false} /> : (m.name ? m.name.charAt(0).toUpperCase() : 'S')}
+                                                </span>
+                                                <div className="sdm-float-text">
+                                                    <strong>{m.name}</strong>
+                                                    <span>{m.department || 'General'} · {m.staffId}</span>
+                                                </div>
+                                                <button type="button" className="sdm-float-btn" onClick={() => setStaffWinMode('normal')} title="Restore" aria-label="Restore profile"><Maximize2 size={13} /></button>
+                                                <button type="button" className="sdm-float-btn close" onClick={() => setViewStaffId(null)} title="Close" aria-label="Close profile"><X size={15} /></button>
+                                            </div>,
+                                            document.body
+                                        );
+                                    }
+                                    const isMax = staffWinMode === 'maximized';
+
+                                    // ----- class incharge data -----
+                                    const inchargeSections = sectionsList
+                                        .filter(s => s.classInchargeId === m.id || (!s.classInchargeId && s.classIncharge && s.classIncharge === m.name))
+                                        .sort((a, b) => (classList.indexOf(a.className) - classList.indexOf(b.className)) || String(a.name).localeCompare(String(b.name)));
+                                    const hasClass = inchargeSections.length > 0;
+                                    const showClassTab = hasClass && staffViewTab === 'class';
+                                    const showSchedule = staffViewTab === 'schedule';
+                                    const activeSec = inchargeSections.find(s => s.id === staffViewSectionId) || inchargeSections[0];
+                                    const tone = (pct) => pct === null || pct === undefined ? 'none' : pct >= 90 ? 'good' : pct >= 75 ? 'fair' : 'low';
+                                    const scoreTone = (pct) => pct === null || pct === undefined ? 'none' : pct >= 75 ? 'good' : pct >= 50 ? 'fair' : 'low';
+
+                                    let classStudents = [];
+                                    let classSummary = null;
+                                    let progress = null;
+                                    if (showClassTab && activeSec) {
+                                        const roster = studentsList.filter(st => st.sectionId === activeSec.id);
+                                        if (staffClassView === 'attendance') {
+                                            const stats = buildAttendanceStats(roster, attendanceRecords || []);
+                                            classStudents = roster.map(st => {
+                                                const s = stats.get(st.id) || { present: 0, total: 0 };
+                                                return { ...st, present: s.present, total: s.total, pct: s.total ? Math.round((s.present / s.total) * 100) : null };
+                                            });
+                                            if (staffViewSort === 'low') {
+                                                classStudents.sort((a, b) => (a.pct ?? 101) - (b.pct ?? 101) || String(a.name).localeCompare(String(b.name)));
+                                            } else {
+                                                classStudents.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+                                            }
+                                            const totalPresent = classStudents.reduce((n, s) => n + s.present, 0);
+                                            const totalSessions = classStudents.reduce((n, s) => n + s.total, 0);
+                                            classSummary = {
+                                                count: classStudents.length,
+                                                avg: totalSessions ? Math.round((totalPresent / totalSessions) * 100) : null,
+                                                low: classStudents.filter(s => s.pct !== null && s.pct < 75).length
+                                            };
+                                        } else {
+                                            progress = buildProgressStats(roster);
+                                            classStudents = roster.map(st => {
+                                                const p = progress.perStudent.get(st.id) || { avg: null, count: 0 };
+                                                return { ...st, avgScore: p.avg === null ? null : Math.round(p.avg * 10) / 10, scoreCount: p.count };
+                                            });
+                                            if (staffViewSort === 'low') {
+                                                classStudents.sort((a, b) => (a.avgScore ?? 101) - (b.avgScore ?? 101) || String(a.name).localeCompare(String(b.name)));
+                                            } else {
+                                                classStudents.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+                                            }
+                                        }
+                                    }
+
+                                    // ----- schedule data (classes this teacher takes) -----
+                                    const mySlots = staffTimetables.filter(tt => tt.staffId === m.staffId || tt.staffName === m.name);
+                                    const slotOrder = (t) => { const i = timeSlots.indexOf(t.timeSlot); return i < 0 ? 99 : i; };
+                                    const slotsByDay = weekDays.map(day => ({
+                                        day,
+                                        slots: mySlots.filter(t => t.day === day)
+                                            .sort((a, b) => slotOrder(a) - slotOrder(b) || String(a.timeSlot).localeCompare(String(b.timeSlot)))
+                                    }));
+                                    const takenMap = new Map();
+                                    mySlots.forEach(t => {
+                                        const key = `${t.className || '—'}||${t.sectionName || ''}`;
+                                        if (!takenMap.has(key)) takenMap.set(key, { className: t.className || 'General', sectionName: t.sectionName || '', subjects: new Set(), periods: 0, days: new Set() });
+                                        const g = takenMap.get(key);
+                                        if (t.subject) g.subjects.add(t.subject);
+                                        g.periods += 1;
+                                        if (t.day) g.days.add(t.day);
+                                    });
+                                    const classesTaken = [...takenMap.values()].sort((a, b) =>
+                                        (classList.indexOf(a.className) - classList.indexOf(b.className)) || String(a.sectionName).localeCompare(String(b.sectionName)));
+                                    const subjectsTaught = new Set(mySlots.map(t => t.subject).filter(Boolean));
+                                    const todayName = currentTime.toLocaleDateString('en-US', { weekday: 'long' });
+                                    const isIncharge = (g) => inchargeSections.some(s => s.className === g.className && (s.name === g.sectionName || `Section ${s.name}` === g.sectionName || s.name === `Section ${g.sectionName}`));
+
+                                    return createPortal(
+                                        <div className={`sdm-overlay ${isMax ? 'is-max' : ''}`} onMouseDown={(e) => { if (!isMax && e.target === e.currentTarget) setViewStaffId(null); }}>
+                                            <div className={`sdm-modal sdm-wide ${isMax ? 'is-max' : ''}`} role="dialog" aria-modal="true" aria-label="Staff details">
+                                                <div className="sdm-hero" onDoubleClick={(e) => { if (!e.target.closest('button')) setStaffWinMode(isMax ? 'normal' : 'maximized'); }}>
+                                                    <div className="sdm-winctl">
+                                                        <button type="button" className="sdm-wbtn" onClick={minimizeStaffView} title="Minimize" aria-label="Minimize profile"><Minus size={15} /></button>
+                                                        <button
+                                                            type="button"
+                                                            className="sdm-wbtn"
+                                                            onClick={() => setStaffWinMode(isMax ? 'normal' : 'maximized')}
+                                                            title={isMax ? 'Restore size' : 'Maximize'}
+                                                            aria-label={isMax ? 'Restore profile size' : 'Maximize profile'}
+                                                        >
+                                                            {isMax ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                                                        </button>
+                                                        <button type="button" className="sdm-wbtn close" onClick={() => setViewStaffId(null)} title="Close" aria-label="Close profile"><X size={16} /></button>
+                                                    </div>
+                                                    <div className="sdm-avatar">
+                                                        {m.photo ? <img src={m.photo} alt={m.name} /> : <span>{m.name ? m.name.charAt(0).toUpperCase() : 'S'}</span>}
+                                                        <i className="sdm-online" />
+                                                    </div>
+                                                    <h3 className="sdm-name">{m.name}</h3>
+                                                    <div className="sdm-chips">
+                                                        <span className="sdm-chip"><Hash size={12} /> {m.staffId}</span>
+                                                        <span className="sdm-chip alt"><Briefcase size={12} /> {m.department || 'General'}</span>
+                                                        {hasClass && (
+                                                            <span className="sdm-chip"><UserCheck size={12} /> Incharge · {inchargeSections.map(s => `${s.className} ${s.name}`).join(', ')}</span>
+                                                        )}
+                                                        <span className="sdm-chip ok"><i /> Active</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="sdm-tabs" role="tablist">
+                                                    <button type="button" role="tab" aria-selected={staffViewTab === 'details'} className={`sdm-tab ${staffViewTab === 'details' ? 'active' : ''}`} onClick={() => setStaffViewTab('details')}>
+                                                        <User size={14} /> Details
+                                                    </button>
+                                                    {hasClass && (
+                                                        <button type="button" role="tab" aria-selected={showClassTab} className={`sdm-tab ${showClassTab ? 'active' : ''}`} onClick={() => setStaffViewTab('class')}>
+                                                            <GraduationCap size={14} /> My class
+                                                            <b>{inchargeSections.reduce((n, s) => n + studentsList.filter(st => st.sectionId === s.id).length, 0)}</b>
+                                                        </button>
+                                                    )}
+                                                    <button type="button" role="tab" aria-selected={showSchedule} className={`sdm-tab ${showSchedule ? 'active' : ''}`} onClick={() => setStaffViewTab('schedule')}>
+                                                        <Clock size={14} /> Schedule
+                                                        {mySlots.length > 0 && <b>{mySlots.length}</b>}
+                                                    </button>
+                                                </div>
+
+                                                {showSchedule ? (
+                                                    <div className="sdm-body sdm-class-body">
+                                                        {mySlots.length === 0 ? (
+                                                            <div className="sdm-class-empty">
+                                                                <p>{m.name} has no periods in the staff schedule yet.</p>
+                                                                <button type="button" className="sdm-btn ghost sdm-inline-btn" onClick={() => { setViewStaffId(null); goTo('staff_timetable'); }}>
+                                                                    <Clock size={14} /> Open staff schedule
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div className="sdm-kpis">
+                                                                    <div className="sdm-kpi"><small>Periods per week</small><strong>{mySlots.length}</strong></div>
+                                                                    <div className="sdm-kpi"><small>Classes taken</small><strong>{classesTaken.length}</strong></div>
+                                                                    <div className="sdm-kpi"><small>Subjects</small><strong>{subjectsTaught.size}</strong></div>
+                                                                </div>
+
+                                                                <h4 className="sdm-sub">Classes taken</h4>
+                                                                <div className="sdm-taken-grid">
+                                                                    {classesTaken.map(g => (
+                                                                        <div className="sdm-taken" key={`${g.className}-${g.sectionName}`}>
+                                                                            <div className="sdm-taken-top">
+                                                                                <b>{g.className}{g.sectionName ? ` · ${g.sectionName}` : ''}</b>
+                                                                                {isIncharge(g) && <span className="sdm-tag">Class incharge</span>}
+                                                                            </div>
+                                                                            <small>{g.periods} period{g.periods === 1 ? '' : 's'} a week · {g.days.size} day{g.days.size === 1 ? '' : 's'}</small>
+                                                                            <div className="sdm-subj-chips">
+                                                                                {[...g.subjects].map(s => <span key={s}>{s}</span>)}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                <h4 className="sdm-sub">Weekly timetable</h4>
+                                                                <div className="sdm-week">
+                                                                    {slotsByDay.map(({ day, slots }) => (
+                                                                        <div className={`sdm-day ${day === todayName ? 'is-today' : ''}`} key={day}>
+                                                                            <div className="sdm-day-name">
+                                                                                <b>{day}</b>
+                                                                                {day === todayName && <span className="sdm-tag">Today</span>}
+                                                                            </div>
+                                                                            <div className="sdm-day-slots">
+                                                                                {slots.length === 0 ? (
+                                                                                    <span className="sdm-day-empty">No periods</span>
+                                                                                ) : slots.map(t => (
+                                                                                    <div className="sdm-slot" key={t.id}>
+                                                                                        <small>{t.timeSlot}</small>
+                                                                                        <b>{t.subject}</b>
+                                                                                        <span>{t.className || 'General'}{t.sectionName ? ` · ${t.sectionName}` : ''}{t.roomNo ? ` · Room ${t.roomNo}` : ''}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ) : !showClassTab ? (
+                                                    <div className="sdm-body">
+                                                        <div className="sdm-section-label">Staff details</div>
+                                                        <div className="sdm-info-list">
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><Users size={16} /></span>
+                                                                <div><small>Full name</small><b>{m.name || '—'}</b></div>
+                                                            </div>
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><Hash size={16} /></span>
+                                                                <div><small>Staff ID</small><b>{m.staffId || '—'}</b></div>
+                                                                <button type="button" className="sdm-mini" onClick={() => copy('id', m.staffId)} title="Copy ID">
+                                                                    {copiedStaffField === 'id' ? <Check size={14} /> : <Copy size={14} />}
+                                                                </button>
+                                                            </div>
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><Briefcase size={16} /></span>
+                                                                <div><small>Department</small><b>{m.department || 'General'}</b></div>
+                                                            </div>
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><GraduationCap size={16} /></span>
+                                                                <div>
+                                                                    <small>Class incharge</small>
+                                                                    <b>{hasClass ? inchargeSections.map(s => `${s.className} — ${s.name}`).join(', ') : 'Not assigned'}</b>
+                                                                </div>
+                                                            </div>
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><Mail size={16} /></span>
+                                                                <div><small>Email</small><b className="sdm-wrap">{m.email || 'Not provided'}</b></div>
+                                                                {m.email && (
+                                                                    <button type="button" className="sdm-mini" onClick={() => copy('email', m.email)} title="Copy email">
+                                                                        {copiedStaffField === 'email' ? <Check size={14} /> : <Copy size={14} />}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                            <div className="sdm-info">
+                                                                <span className="sdm-info-ico"><Lock size={16} /></span>
+                                                                <div>
+                                                                    <small>Login password</small>
+                                                                    <b className="sdm-pass">{showStaffPwd ? (m.password || '—') : '••••••••'}</b>
+                                                                </div>
+                                                                <button type="button" className="sdm-mini" onClick={() => setShowStaffPwd(v => !v)} title={showStaffPwd ? 'Hide' : 'Show'}>
+                                                                    {showStaffPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="sdm-body sdm-class-body">
+                                                        {inchargeSections.length > 1 && (
+                                                            <div className="sdm-sec-pills" role="tablist" aria-label="Sections">
+                                                                {inchargeSections.map(sec => (
+                                                                    <button
+                                                                        key={sec.id}
+                                                                        type="button"
+                                                                        className={`sdm-sec-pill ${sec.id === activeSec.id ? 'active' : ''}`}
+                                                                        onClick={() => setStaffViewSectionId(sec.id)}
+                                                                    >
+                                                                        {sec.className} · {sec.name}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="sdm-class-head">
+                                                            <div>
+                                                                <h4>{activeSec.className} — {activeSec.name}</h4>
+                                                                <p>{activeSec.roomNo ? `Room ${activeSec.roomNo}` : 'No room assigned'}</p>
+                                                            </div>
+                                                            <div className="sdm-controls">
+                                                                <div className="sdm-sort" role="group" aria-label="Class view">
+                                                                    <button type="button" className={staffClassView === 'attendance' ? 'active' : ''} onClick={() => setStaffClassView('attendance')}>Attendance</button>
+                                                                    <button type="button" className={staffClassView === 'progress' ? 'active' : ''} onClick={() => setStaffClassView('progress')}>Progress</button>
+                                                                </div>
+                                                                <div className="sdm-sort" role="group" aria-label="Sort students">
+                                                                    <button type="button" className={staffViewSort === 'name' ? 'active' : ''} onClick={() => setStaffViewSort('name')}>By name</button>
+                                                                    <button type="button" className={staffViewSort === 'low' ? 'active' : ''} onClick={() => setStaffViewSort('low')}>{staffClassView === 'attendance' ? 'Lowest attendance' : 'Lowest average'}</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {staffClassView === 'attendance' ? (
+                                                            <>
+                                                                <div className="sdm-kpis">
+                                                                    <div className="sdm-kpi">
+                                                                        <small>Students</small>
+                                                                        <strong>{classSummary.count}</strong>
+                                                                    </div>
+                                                                    <div className={`sdm-kpi tone-${attendanceRecords === null ? 'none' : tone(classSummary.avg)}`}>
+                                                                        <small>Class attendance</small>
+                                                                        <strong>{attendanceRecords === null ? '…' : classSummary.avg !== null ? `${classSummary.avg}%` : '—'}</strong>
+                                                                    </div>
+                                                                    <div className={`sdm-kpi ${classSummary.low > 0 ? 'tone-low' : ''}`}>
+                                                                        <small>Below 75%</small>
+                                                                        <strong>{attendanceRecords === null ? '…' : classSummary.low}</strong>
+                                                                    </div>
+                                                                </div>
+
+                                                                {classStudents.length === 0 ? (
+                                                                    <div className="sdm-class-empty">No students are enrolled in {activeSec.className} — {activeSec.name} yet.</div>
+                                                                ) : (
+                                                                    <ul className="sdm-roster">
+                                                                        {classStudents.map(st => {
+                                                                            const t = attendanceRecords === null ? 'none' : tone(st.pct);
+                                                                            return (
+                                                                                <li key={st.id} className="sdm-student">
+                                                                                    <span className="sdm-student-avatar">
+                                                                                        {st.photo ? <img src={st.photo} alt="" /> : (st.name || '?').charAt(0).toUpperCase()}
+                                                                                    </span>
+                                                                                    <div className="sdm-student-id">
+                                                                                        <b>{st.name}</b>
+                                                                                        <small>{st.rollNumber ? `Roll ${st.rollNumber}` : st.admissionNo ? `Adm #${st.admissionNo}` : '—'}</small>
+                                                                                    </div>
+                                                                                    <div className="sdm-att">
+                                                                                        <div className="sdm-att-bar" aria-hidden="true"><span className={`tone-${t}`} style={{ width: `${st.pct ?? 0}%` }} /></div>
+                                                                                        <small>{st.total ? `${st.present}/${st.total} sessions present` : attendanceRecords === null ? 'Loading…' : 'No records yet'}</small>
+                                                                                    </div>
+                                                                                    <span className={`sdm-pct tone-${t}`}>{st.pct !== null ? `${st.pct}%` : '—'}</span>
+                                                                                </li>
+                                                                            );
+                                                                        })}
+                                                                    </ul>
+                                                                )}
+                                                                <p className="sdm-class-note">Attendance is calculated from the sessions staff have marked. Green is 90% or more, amber 75 to 89%, red below 75%.</p>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="sdm-kpis">
+                                                                    <div className={`sdm-kpi tone-${scoreTone(progress.classAvg)}`}>
+                                                                        <small>Class average</small>
+                                                                        <strong>{progress.classAvg !== null ? `${progress.classAvg}%` : '—'}</strong>
+                                                                    </div>
+                                                                    <div className={`sdm-kpi tone-${scoreTone(progress.passRate)}`}>
+                                                                        <small>Pass rate</small>
+                                                                        <strong>{progress.passRate !== null ? `${progress.passRate}%` : '—'}</strong>
+                                                                    </div>
+                                                                    <div className="sdm-kpi">
+                                                                        <small>Scores published</small>
+                                                                        <strong>{progress.publishedCount}</strong>
+                                                                    </div>
+                                                                </div>
+
+                                                                {progress.publishedCount === 0 ? (
+                                                                    <div className="sdm-class-empty">
+                                                                        <p>No published marks for {activeSec.className} — {activeSec.name} yet.{progress.pendingCount > 0 ? ` ${progress.pendingCount} draft score${progress.pendingCount === 1 ? ' is' : 's are'} waiting to be published.` : ''}</p>
+                                                                        <button type="button" className="sdm-btn ghost sdm-inline-btn" onClick={() => { setViewStaffId(null); goTo('results'); }}>
+                                                                            <Award size={14} /> Open results
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <h4 className="sdm-sub">Subject performance</h4>
+                                                                        <ul className="sdm-bars">
+                                                                            {progress.subjects.map(s => (
+                                                                                <li key={s.subject}>
+                                                                                    <span className="sdm-bars-label">{s.subject}</span>
+                                                                                    <div className="sdm-att-bar" aria-hidden="true"><span className={`tone-${scoreTone(s.avg)}`} style={{ width: `${s.avg}%` }} /></div>
+                                                                                    <span className={`sdm-pct tone-${scoreTone(s.avg)}`}>{s.avg}%</span>
+                                                                                </li>
+                                                                            ))}
+                                                                        </ul>
+
+                                                                        {progress.exams.length > 0 && (
+                                                                            <>
+                                                                                <h4 className="sdm-sub">Exam-wise average</h4>
+                                                                                <div className="sdm-exam-chips">
+                                                                                    {progress.exams.map(x => (
+                                                                                        <span key={x.exam} className={`tone-${scoreTone(x.avg)}`}><small>{x.exam.replace(/ exam$/i, '')}</small><b>{x.avg}%</b></span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+
+                                                                        <h4 className="sdm-sub">Student progress</h4>
+                                                                        <ul className="sdm-roster">
+                                                                            {classStudents.map(st => {
+                                                                                const t = scoreTone(st.avgScore);
+                                                                                return (
+                                                                                    <li key={st.id} className="sdm-student">
+                                                                                        <span className="sdm-student-avatar">
+                                                                                            {st.photo ? <img src={st.photo} alt="" /> : (st.name || '?').charAt(0).toUpperCase()}
+                                                                                        </span>
+                                                                                        <div className="sdm-student-id">
+                                                                                            <b>{st.name}</b>
+                                                                                            <small>{st.rollNumber ? `Roll ${st.rollNumber}` : st.admissionNo ? `Adm #${st.admissionNo}` : '—'}</small>
+                                                                                        </div>
+                                                                                        <div className="sdm-att">
+                                                                                            <div className="sdm-att-bar" aria-hidden="true"><span className={`tone-${t}`} style={{ width: `${st.avgScore ?? 0}%` }} /></div>
+                                                                                            <small>{st.scoreCount ? `${st.scoreCount} published score${st.scoreCount === 1 ? '' : 's'}` : 'No published marks'}</small>
+                                                                                        </div>
+                                                                                        <span className={`sdm-pct tone-${t}`}>{st.avgScore !== null ? `${st.avgScore}%` : '—'}</span>
+                                                                                    </li>
+                                                                                );
+                                                                            })}
+                                                                        </ul>
+                                                                        <p className="sdm-class-note">Averages use published marks out of 100. Green is 75% or more, amber 50 to 74%, red below 50%. Pass mark is 35.</p>
+                                                                    </>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="sdm-footer">
+                                                    {m.email ? (
+                                                        <a className="sdm-btn ghost" href={`mailto:${m.email}`}><Mail size={15} /> Message</a>
+                                                    ) : (
+                                                        <button type="button" className="sdm-btn ghost" disabled><Mail size={15} /> Message</button>
+                                                    )}
+                                                    <button type="button" className="sdm-btn primary" onClick={() => { setViewStaffId(null); handleStartEditStaff(m); }}>
+                                                        <Edit2 size={15} /> Edit profile
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>,
+                                        document.body
+                                    );
+                                })()}
+
+                                {/* STAFF EDIT POPUP */}
+                                {editingStaffId && (() => {
+                                    const m = staffList.find(x => x.id === editingStaffId);
+                                    if (!m) return null;
+                                    const canSave = editStaffForm.name.trim() && editStaffForm.staffId.trim();
+                                    return createPortal(
+                                        <div className="sdm-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditingStaffId(null); }}>
+                                            <form
+                                                className="sdm-modal sdm-edit"
+                                                role="dialog"
+                                                aria-modal="true"
+                                                aria-label="Edit staff"
+                                                onSubmit={(e) => { e.preventDefault(); handleUpdateStaff(m.id); }}
+                                            >
+                                                <div className="sdm-edit-head">
+                                                    <div className="sdm-edit-title">
+                                                        <span className="sdm-edit-ico"><Edit2 size={17} /></span>
+                                                        <div>
+                                                            <h3>Edit staff profile</h3>
+                                                            <p>Update credentials, department and contact details.</p>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" className="sdm-close flat" onClick={() => setEditingStaffId(null)} aria-label="Close"><X size={16} /></button>
+                                                </div>
+
+                                                <div className="sdm-body sdm-edit-body">
+                                                    <div className="sdm-photo-row">
+                                                        <label className="sdm-photo" title="Change photo">
+                                                            {editStaffForm.photo
+                                                                ? <img src={editStaffForm.photo} alt="Preview" />
+                                                                : <span>{editStaffForm.name ? editStaffForm.name.charAt(0).toUpperCase() : 'S'}</span>}
+                                                            <em><Camera size={14} /></em>
+                                                            <input
+                                                                type="file"
+                                                                accept=".jpg,.jpeg,.png,.webp"
+                                                                onChange={e => handleImageUpload(e.target.files[0], (base64) => setEditStaffForm(f => ({ ...f, photo: base64 })))}
+                                                            />
+                                                        </label>
+                                                        <div className="sdm-photo-text">
+                                                            <b>Profile photo</b>
+                                                            <small>JPG, PNG or WEBP · auto-compressed</small>
+                                                            {editStaffForm.photo && (
+                                                                <button type="button" className="sdm-link-danger" onClick={() => setEditStaffForm(f => ({ ...f, photo: '' }))}>Remove photo</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="sdm-fields">
+                                                        <label className="sdm-field full">
+                                                            <span>Full name</span>
+                                                            <div className="sdm-input"><Users size={15} />
+                                                                <input type="text" value={editStaffForm.name} placeholder="e.g. Dr. John Doe" required
+                                                                    onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })} />
+                                                            </div>
+                                                        </label>
+                                                        <label className="sdm-field">
+                                                            <span>Staff ID</span>
+                                                            <div className="sdm-input"><Hash size={15} />
+                                                                <input type="text" value={editStaffForm.staffId} placeholder="e.g. HCMS-05" required
+                                                                    onChange={e => setEditStaffForm({ ...editStaffForm, staffId: e.target.value })} />
+                                                            </div>
+                                                        </label>
+                                                        <label className="sdm-field">
+                                                            <span>Department</span>
+                                                            <div className="sdm-input"><Briefcase size={15} />
+                                                                <input type="text" value={editStaffForm.department} placeholder="e.g. Mathematics"
+                                                                    onChange={e => setEditStaffForm({ ...editStaffForm, department: e.target.value })} />
+                                                            </div>
+                                                        </label>
+                                                        <label className="sdm-field full">
+                                                            <span>Email address</span>
+                                                            <div className="sdm-input"><Mail size={15} />
+                                                                <input type="email" value={editStaffForm.email} placeholder="staff@school.edu"
+                                                                    onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })} />
+                                                            </div>
+                                                        </label>
+                                                        <label className="sdm-field full">
+                                                            <span>Login password</span>
+                                                            <div className="sdm-input"><Lock size={15} />
+                                                                <input type={showStaffPwd ? 'text' : 'password'} value={editStaffForm.password} placeholder="Login password"
+                                                                    onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })} />
+                                                                <button type="button" className="sdm-eye" onClick={() => setShowStaffPwd(v => !v)} tabIndex={-1}>
+                                                                    {showStaffPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                                </button>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div className="sdm-footer">
+                                                    <button type="button" className="sdm-btn ghost" onClick={() => setEditingStaffId(null)}><X size={15} /> Cancel</button>
+                                                    <button type="submit" className="sdm-btn primary" disabled={!canSave}><Check size={15} /> Save changes</button>
+                                                </div>
+                                            </form>
+                                        </div>,
+                                        document.body
+                                    );
+                                })()}
                             </div>
                         );
                     })()}
