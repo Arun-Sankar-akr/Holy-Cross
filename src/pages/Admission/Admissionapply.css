@@ -1,6 +1,7 @@
 .adm-apply-landing {
-    max-width: 900px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
 }
 
 .adm-apply-heading {

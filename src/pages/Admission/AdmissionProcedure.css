@@ -22,73 +22,59 @@
     font-size: .95rem;
 }
 
-/* Steps: a real sequence, drawn as a vertical timeline */
+/* Steps: four cards across the full width */
 .proc-steps-grid {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
     margin: 0 0 28px;
     padding: 0;
     list-style: none;
 }
 
-.proc-steps-grid::before {
-    content: "";
-    position: absolute;
-    left: 23px;
-    top: 28px;
-    bottom: 28px;
-    border-left: 2px dashed #B7D3D0;
-}
-
 .proc-card {
-    position: relative;
     display: flex;
-    gap: 18px;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .proc-number {
-    position: relative;
-    z-index: 1;
-    flex: none;
     width: 48px;
     height: 48px;
     display: grid;
     place-items: center;
-    border: 4px solid var(--adm-bg, #F2F7F6);
-    border-radius: 50%;
+    border-radius: 16px;
     color: #fff;
     background: var(--adm-primary, #0B7285);
     font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 800;
 }
 
 .proc-text-content {
     flex: 1;
     min-width: 0;
-    padding: 18px 20px;
+    padding: 20px 22px 22px;
     border: 1.5px solid var(--adm-border, #D6E4E2);
-    border-radius: 20px;
+    border-radius: 24px;
     background: #fff;
 }
 
 .proc-title-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .proc-text-content h4 {
     margin: 0;
     color: var(--adm-ink, #0F2A33);
     font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.1rem;
+    font-size: 1.12rem;
     font-weight: 700;
+    line-height: 1.25;
 }
 
 .proc-icon-wrap {
@@ -176,26 +162,14 @@
     }
 }
 
-@media (max-width: 480px) {
-    .proc-number {
-        width: 40px;
-        height: 40px;
-        font-size: .95rem;
+@media (max-width: 1100px) {
+    .proc-steps-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
-    .proc-steps-grid::before {
-        left: 19px;
-    }
-
-    .proc-card {
-        gap: 12px;
-    }
-
-    .proc-text-content {
-        padding: 14px 16px;
-    }
-
-    .proc-icon-wrap {
-        display: none;
+@media (max-width: 560px) {
+    .proc-steps-grid {
+        grid-template-columns: 1fr;
     }
 }
