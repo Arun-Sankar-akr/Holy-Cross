@@ -1394,9 +1394,8 @@ body {
 }
 
 .staff-cards-container {
-  max-height: 640px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  max-height: none;
+  overflow: visible;
   padding-right: 4px;
 }
 
@@ -3607,9 +3606,8 @@ body {
 }
 
 .staff-cards-container {
-  max-height: 640px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  max-height: none;
+  overflow: visible;
   padding-right: 4px;
 }
 
@@ -5640,7 +5638,8 @@ body {
 }
 
 .staff-directory-premium .staff-cards-container {
-  max-height: fit-content;
+  max-height: none;
+  overflow: visible;
   padding: 3px 4px 3px 1px;
 }
 
@@ -12622,3 +12621,54 @@ body {
     animation: none;
   }
 }
+
+/* ---- Admin: let the main panel grow with its content so long lists (e.g. all staff) are never clipped ---- */
+.od-app.admin-od {
+  overflow: visible;
+  /* the decorative blurred blobs stick out past the screen edge; clip them sideways
+     only, so the page never scrolls horizontally but still grows vertically */
+  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
+  max-width: 100%;
+  height: auto;
+  min-height: 100%;
+}
+
+.od-app.admin-od .od-main {
+  min-height: min-content;
+  overflow: visible;
+}
+
+.od-app.admin-od .od-content {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+.od-app.admin-od .premium-section,
+.od-app.admin-od .staff-directory-premium {
+  overflow: visible;
+}
+
+/* ---- Admin: keep the sidebar full-height and pinned while the page scrolls ---- */
+@media (min-width: 901px) {
+  .od-app.admin-od .od-side {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    height: calc(100vh - 32px);
+    max-height: calc(100vh - 32px);
+  }
+}
+
+@media (min-width: 902px) {
+  .od-app.admin-od .od-side {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    height: fit-content;
+    max-height: fit-content;
+  }
+}
+

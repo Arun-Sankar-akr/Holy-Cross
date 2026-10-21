@@ -21,7 +21,6 @@ import {
     PersonStanding, Printer, RotateCw
 } from 'lucide-react';
 import './StaffDashboard.css';
-import './StaffDashboardLayout.css';
 
 const HALL_TICKET_SCHOOL_NAME = "HOLY CROSS MATRIC. HR. SEC. SCHOOL";
 const HALL_TICKET_SCHOOL_TAGLINE = "Somarasampettai, Tiruchirapalli - 102 (Affiliated to the State Board of School Examinations)";
