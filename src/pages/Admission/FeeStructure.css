@@ -1,36 +1,33 @@
 .fee-container {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--adm-font-body, 'Figtree', sans-serif);
+    color: var(--adm-ink, #0F2A33);
 }
 
 .fee-header-text {
-    text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .fee-header-text h3 {
-    color: #2c0344;
-    font-size: 1.5rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 0 0 6px 0;
+    margin: 0 0 6px;
+    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -.5px;
 }
 
 .fee-header-text p {
-    color: #64748b;
-    font-size: 0.95rem;
     margin: 0;
+    color: var(--adm-muted, #577078);
+    font-size: .95rem;
 }
 
 .fee-card-wrapper {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #f1f5f9;
-    box-shadow: 0 10px 25px -5px rgba(128, 4, 199, 0.04);
     overflow: hidden;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+    border: 1.5px solid var(--adm-border, #D6E4E2);
+    border-radius: 26px;
+    background: #fff;
 }
 
 .fee-table {
@@ -45,36 +42,62 @@
 }
 
 .fee-table th {
-    background: linear-gradient(135deg, #123A70 0%, #155EEF 100%);
-    color: #ffffff;
+    color: #fff;
+    background: var(--adm-navy, #0F2A33);
+    font-size: .88rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-.fee-table tr:not(:last-child) td {
-    border-bottom: 1px solid #f1f5f9;
+.fee-table th:last-child {
+    color: var(--adm-ink, #0F2A33);
+    background: var(--adm-sun, #FFC93C);
+    font-weight: 700;
+}
+
+.fee-table td {
+    font-size: .98rem;
+    color: var(--adm-muted, #577078);
+}
+
+.fee-table tbody tr:not(:last-child) td {
+    border-bottom: 1px solid var(--adm-border, #D6E4E2);
+}
+
+.fee-table tbody tr:hover td {
+    background: var(--adm-bg, #F2F7F6);
+}
+
+.fee-table tbody tr:hover td.annual-cell {
+    background: #FFEDB3;
 }
 
 .grade-cell {
-    font-weight: 600;
-    color: #1e1e2f;
+    color: var(--adm-ink, #0F2A33) !important;
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.05rem !important;
+    font-weight: 700;
 }
 
 .annual-cell {
-    font-weight: 700;
-    color: #123A70;
+    background: var(--adm-sun-soft, #FFF3CC);
+}
+
+.annual-cell span {
+    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.1rem;
+    font-weight: 800;
 }
 
 .fee-notice-box {
-    background: #faf5ff;
-    border: 1px solid #f3e5f5;
-    border-radius: 14px;
-    padding: 18px 22px;
     display: flex;
     align-items: flex-start;
     gap: 14px;
-    color: #6703a1;
+    padding: 18px 22px;
+    border-radius: 20px;
+    color: var(--adm-primary-dark, #084C5A);
+    background: var(--adm-primary-soft, #E3F3F1);
 }
 
 .fee-notice-box svg {
@@ -84,6 +107,80 @@
 
 .fee-notice-box p {
     margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: .9rem;
+    line-height: 1.55;
+}
+
+/* Phones: each row becomes its own card */
+@media (max-width: 640px) {
+    .fee-card-wrapper {
+        border: 0;
+        background: transparent;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    .fee-table,
+    .fee-table tbody,
+    .fee-table tr,
+    .fee-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .fee-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .fee-table tbody tr {
+        margin-bottom: 12px;
+        overflow: hidden;
+        border: 1.5px solid var(--adm-border, #D6E4E2);
+        border-radius: 20px;
+        background: #fff;
+    }
+
+    .fee-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px;
+        text-align: right;
+    }
+
+    .fee-table td::before {
+        content: attr(data-label);
+        color: var(--adm-muted, #577078);
+        font-size: .82rem;
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .fee-table tbody tr:not(:last-child) td {
+        border-bottom: 0;
+    }
+
+    .fee-table tbody tr:hover td {
+        background: transparent;
+    }
+
+    .grade-cell {
+        background: var(--adm-navy, #0F2A33);
+        justify-content: flex-start !important;
+        color: #fff !important;
+    }
+
+    .grade-cell::before {
+        display: none;
+    }
+
+    .annual-cell,
+    .fee-table tbody tr:hover td.annual-cell {
+        background: var(--adm-sun-soft, #FFF3CC);
+    }
 }

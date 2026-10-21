@@ -1,111 +1,201 @@
 .proc-container {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--adm-font-body, 'Figtree', sans-serif);
+    color: var(--adm-ink, #0F2A33);
 }
 
 .proc-header {
-    text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .proc-header h3 {
-    color: #123A70 ;
-    font-size: 1.5rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 0 0 6px 0;
+    margin: 0 0 6px;
+    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -.5px;
 }
 
 .proc-header p {
-    color: #64748b;
-    font-size: 0.95rem;
     margin: 0;
+    color: var(--adm-muted, #577078);
+    font-size: .95rem;
 }
 
+/* Steps: a real sequence, drawn as a vertical timeline */
 .proc-steps-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0 0 28px;
+    padding: 0;
+    list-style: none;
+}
+
+.proc-steps-grid::before {
+    content: "";
+    position: absolute;
+    left: 23px;
+    top: 28px;
+    bottom: 28px;
+    border-left: 2px dashed #B7D3D0;
 }
 
 .proc-card {
-    background: #ffffff;
-    border: 1px solid #f1f5f9;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 10px 25px -5px rgba(128, 4, 199, 0.04);
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    gap: 18px;
+    align-items: flex-start;
 }
 
-.proc-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 30px -5px rgba(128, 4, 199, 0.08);
-    border-color: #f3e5f5;
-}
-
-.proc-icon-wrap {
-    background: #faf5ff;
-    color: #123A70 ;
+.proc-number {
+    position: relative;
+    z-index: 1;
+    flex: none;
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    border: 4px solid var(--adm-bg, #F2F7F6);
+    border-radius: 50%;
+    color: #fff;
+    background: var(--adm-primary, #0B7285);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.proc-text-content {
+    flex: 1;
+    min-width: 0;
+    padding: 18px 20px;
+    border: 1.5px solid var(--adm-border, #D6E4E2);
+    border-radius: 20px;
+    background: #fff;
+}
+
+.proc-title-row {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
 }
 
 .proc-text-content h4 {
-    margin: 0 0 8px 0;
-    color: #155EEF;
-    font-size: 1.05rem;
+    margin: 0;
+    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.1rem;
     font-weight: 700;
+}
+
+.proc-icon-wrap {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: var(--adm-primary-dark, #084C5A);
+    background: var(--adm-sun-soft, #FFF3CC);
 }
 
 .proc-text-content p {
     margin: 0;
-    font-size: 0.9rem;
-    color: #64748b;
-    line-height: 1.5;
+    color: var(--adm-muted, #577078);
+    font-size: .92rem;
+    line-height: 1.6;
 }
 
+/* Eligibility */
 .proc-eligibility-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #f1f5f9;
-    padding: 28px;
-    box-shadow: 0 10px 25px -5px rgba(128, 4, 199, 0.04);
+    padding: 26px;
+    border-radius: 26px;
+    color: #fff;
+    background: var(--adm-navy, #0F2A33);
 }
 
 .proc-eligibility-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
+}
+
+.proc-eligibility-icon {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: var(--adm-ink, #0F2A33);
+    background: var(--adm-sun, #FFC93C);
 }
 
 .proc-eligibility-header h4 {
     margin: 0;
-    color: #2c0344;
-    font-size: 1.16rem;
+    color: #fff;
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.2rem;
     font-weight: 700;
 }
 
-.proc-eligibility-card ul {
-    margin: 0;
-    padding-left: 20px;
-    display: flex;
-    flex-direction: column;
+.proc-eligibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
 
-.proc-eligibility-card li {
-    font-size: 0.92rem;
-    color: #475569;
-    line-height: 1.5;
+.proc-eligibility-item {
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .08);
+}
+
+.proc-eligibility-item strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--adm-sun, #FFC93C);
+    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.proc-eligibility-item p {
+    margin: 0;
+    color: rgba(255, 255, 255, .82);
+    font-size: .88rem;
+    line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+    .proc-eligibility-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .proc-number {
+        width: 40px;
+        height: 40px;
+        font-size: .95rem;
+    }
+
+    .proc-steps-grid::before {
+        left: 19px;
+    }
+
+    .proc-card {
+        gap: 12px;
+    }
+
+    .proc-text-content {
+        padding: 14px 16px;
+    }
+
+    .proc-icon-wrap {
+        display: none;
+    }
 }

@@ -21,18 +21,18 @@ export default function AdmissionContinuePage() {
                     </div>
                     <div>
                         <strong>Holy Cross</strong>
-                        <span>Continue Application</span>
+                        <span>Continue application</span>
                     </div>
                 </div>
                 <div className="adm-standalone-meta">
                     <span>{data.acknowledgementNumber}</span>
-                    <small>Academic Year 2026–2027</small>
+                    <small>Academic year 2026–2027</small>
                 </div>
             </header>
 
             <div className="adm-standalone-body">
                 <Link to="/admissions" className="adm-back-link">
-                    <ArrowLeft size={15} /> Back to Admissions Home
+                    <ArrowLeft size={15} /> Back to admissions home
                 </Link>
 
                 <AdmissionForm mode="edit" docId={docId} initialData={data} />

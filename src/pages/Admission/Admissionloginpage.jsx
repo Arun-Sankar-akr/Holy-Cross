@@ -9,7 +9,8 @@ import {
     ArrowRight,
     AlertCircle,
     X,
-    Ticket
+    Ticket,
+    Check
 } from 'lucide-react';
 import './Admissionstandalone.css';
 
@@ -111,24 +112,36 @@ export default function AdmissionLoginPage() {
     return (
         <div className="adm-standalone-page">
             <div className="adm-login-shell">
-                <div className="adm-ticket">
-                    <div className="adm-ticket-letterhead">
-                        <div className="adm-ticket-seal">
-                            <GraduationCap size={20} strokeWidth={2.2} />
+                <div className="adm-login-card">
+                    <aside className="adm-login-aside">
+                        <div className="adm-login-brand">
+                            <span className="adm-login-seal">
+                                <GraduationCap size={22} strokeWidth={2.2} />
+                            </span>
+                            <div>
+                                <strong>Holy Cross</strong>
+                                <span>Admissions 2026–2027</span>
+                            </div>
                         </div>
-                        <div className="adm-ticket-letterhead-text">
-                            <strong>Holy Cross</strong>
-                            <span>Admissions</span>
-                        </div>
-                        <div className="adm-ticket-serial">2026–27</div>
-                    </div>
 
-                    <div className="adm-ticket-body">
+                        <div className="adm-login-aside-copy">
+                            <h2>Welcome back</h2>
+                            <p>Pick up your application exactly where you stopped. Everything you saved is still here.</p>
+                        </div>
+
+                        <ul className="adm-login-points">
+                            <li><Check size={16} /> Review any step of your form</li>
+                            <li><Check size={16} /> Update details and documents</li>
+                            <li><Check size={16} /> Save your changes when you finish</li>
+                        </ul>
+                    </aside>
+
+                    <div className="adm-login-main">
                         <h1>Continue your application</h1>
-                        <p>Enter your acknowledgement number and registered phone number to pick up where you left off.</p>
+                        <p className="adm-login-lead">Enter your acknowledgement number and the phone number you registered with.</p>
 
                         {error && (
-                            <div className="adm-login-error">
+                            <div className="adm-login-error" role="alert">
                                 <AlertCircle size={16} />
                                 <span>{error}</span>
                             </div>
@@ -136,10 +149,11 @@ export default function AdmissionLoginPage() {
 
                         <form onSubmit={handleLogin}>
                             <div className="adm-login-field">
-                                <label>Acknowledgement Number</label>
+                                <label htmlFor="adm-ack">Acknowledgement number</label>
                                 <div className="adm-login-input">
                                     <Hash size={17} />
                                     <input
+                                        id="adm-ack"
                                         type="text"
                                         placeholder="e.g. HCMS20260001"
                                         value={ackNumber}
@@ -150,10 +164,11 @@ export default function AdmissionLoginPage() {
                             </div>
 
                             <div className="adm-login-field">
-                                <label>Registered Phone Number</label>
+                                <label htmlFor="adm-phone">Registered phone number</label>
                                 <div className="adm-login-input">
                                     <Phone size={17} />
                                     <input
+                                        id="adm-phone"
                                         type="tel"
                                         placeholder="e.g. +91 98765 43210"
                                         value={phone}
@@ -170,18 +185,14 @@ export default function AdmissionLoginPage() {
                             </div>
 
                             <button type="submit" className="adm-login-submit" disabled={loading}>
-                                {loading ? 'Checking...' : 'Access Application'}
-                                {!loading && <ArrowRight size={17} />}
+                                {loading ? 'Checking...' : 'Open my application'}
+                                {!loading && <ArrowRight size={18} />}
                             </button>
                         </form>
-                    </div>
 
-                    <div className="adm-ticket-perforation" />
-
-                    <div className="adm-ticket-stub">
                         <div className="adm-login-footer">
-                            <span>New applicant? <Link to="/admission/register">Register Now</Link></span>
-                            <Link to="/admissions">Back to Home</Link>
+                            <span>New applicant? <Link to="/admission/register">Register now</Link></span>
+                            <Link to="/admissions">Back to home</Link>
                         </div>
                     </div>
                 </div>
@@ -189,7 +200,7 @@ export default function AdmissionLoginPage() {
 
             {showForgotModal && (
                 <div className="adm-modal-overlay" onClick={closeForgotModal}>
-                    <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="adm-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
                         <div className="adm-modal-head">
                             <div>
                                 <h2>Find your acknowledgement number</h2>
@@ -202,7 +213,7 @@ export default function AdmissionLoginPage() {
 
                         <div className="adm-modal-body">
                             {forgotError && (
-                                <div className="adm-login-error">
+                                <div className="adm-login-error" role="alert">
                                     <AlertCircle size={16} />
                                     <span>{forgotError}</span>
                                 </div>
@@ -210,10 +221,11 @@ export default function AdmissionLoginPage() {
 
                             <form onSubmit={handleForgotSubmit}>
                                 <div className="adm-login-field">
-                                    <label>Registered Phone Number</label>
+                                    <label htmlFor="adm-forgot-phone">Registered phone number</label>
                                     <div className="adm-login-input">
                                         <Phone size={17} />
                                         <input
+                                            id="adm-forgot-phone"
                                             type="tel"
                                             placeholder="e.g. +91 98765 43210"
                                             value={forgotPhone}
@@ -224,7 +236,7 @@ export default function AdmissionLoginPage() {
                                 </div>
 
                                 <button type="submit" className="adm-modal-submit" disabled={forgotLoading}>
-                                    {forgotLoading ? 'Searching...' : 'Find My Number'}
+                                    {forgotLoading ? 'Searching...' : 'Find my number'}
                                 </button>
                             </form>
 

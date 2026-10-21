@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, CreditCard } from 'lucide-react';
+import { Info } from 'lucide-react';
 import './FeeStructure.css';
 
 export default function FeeStructure() {
@@ -14,27 +14,27 @@ export default function FeeStructure() {
     return (
         <div className="fee-container">
             <div className="fee-header-text">
-                <h3><CreditCard size={24} /> Annual Tuition & Fee Blueprint</h3>
-                <p>Transparent fee allocations breakdown by tier for the upcoming school cycle.</p>
+                <h3>Annual tuition and fees</h3>
+                <p>A clear breakdown of fees for each class group in the upcoming school year.</p>
             </div>
 
             <div className="fee-card-wrapper">
                 <table className="fee-table">
                     <thead>
                         <tr>
-                            <th>Grade Level</th>
-                            <th>Tuition Fee</th>
-                            <th>Development Fund</th>
-                            <th>Total Annual</th>
+                            <th>Grade level</th>
+                            <th>Tuition fee</th>
+                            <th>Development fund</th>
+                            <th>Total annual</th>
                         </tr>
                     </thead>
                     <tbody>
                         {feeData.map((row, index) => (
                             <tr key={index}>
-                                <td className="grade-cell">{row.grade}</td>
-                                <td>{row.tuition}</td>
-                                <td>{row.development}</td>
-                                <td className="annual-cell">{row.annual}</td>
+                                <td className="grade-cell" data-label="Grade level">{row.grade}</td>
+                                <td data-label="Tuition fee">{row.tuition}</td>
+                                <td data-label="Development fund">{row.development}</td>
+                                <td className="annual-cell" data-label="Total annual"><span>{row.annual}</span></td>
                             </tr>
                         ))}
                     </tbody>
