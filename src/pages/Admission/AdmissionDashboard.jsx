@@ -22,12 +22,14 @@ import {
 import AdmissionProcedure from './AdmissionProcedure';
 import FeeStructure from './FeeStructure';
 import AdmissionApply from './Admissionapply';
+import { useAdmissionConfig } from './admissionSettings.js';
 import { db } from '../../service/firebase';
 import logo from "../../assets/logo.png"
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import './AdmissionDashboard.css';
 
 export default function AdmissionDashboard() {
+    const { academicYear, rangeLabel, closedInRange } = useAdmissionConfig();
     const [activeTab, setActiveTab] = useState('procedure');
 
     // Tracking states — existing logic preserved
@@ -44,8 +46,8 @@ export default function AdmissionDashboard() {
     ];
 
     const stats = [
-        { value: 'LKG – XII', label: 'Classes offered' },
-        { value: '2026–27', label: 'Academic year' },
+        { value: rangeLabel, label: 'Classes offered' },
+        { value: academicYear, label: 'Academic year' },
         { value: 'Online', label: 'Application form' },
         { value: 'Instant', label: 'Acknowledgement number' }
     ];
@@ -128,7 +130,7 @@ export default function AdmissionDashboard() {
                     </div>
                     <div className="adm-brand-text">
                         <strong>Holy Cross Matric. Hr. Sec. School</strong>
-                        <span>Admissions 2026–2027</span>
+                        <span>Admissions {academicYear}</span>
                     </div>
                 </div>
 
@@ -151,8 +153,13 @@ export default function AdmissionDashboard() {
                     <div className="adm-bento-main">
                         <span className="adm-badge">
                             <span className="adm-badge-dot" />
-                            Admissions open for 2026–2027
+                            Admissions open for {academicYear}
                         </span>
+                        {closedInRange.length > 0 && (
+                            <p style={{ margin: '10px 0 0', fontSize: 14, opacity: .8 }}>
+                                Currently closed for: {closedInRange.join(', ')}
+                            </p>
+                        )}
 
                         <h1>
                             Start your child's <span>bright future</span> with one simple step.
@@ -402,7 +409,7 @@ export default function AdmissionDashboard() {
                 {/* ---------- Closing call to action ---------- */}
                 <section className="adm-cta-band">
                     <div className="adm-cta-copy">
-                        <h2>Ready to apply for 2026–2027?</h2>
+                        <h2>Ready to apply for {academicYear}?</h2>
                         <p>The form takes a few minutes. You get an acknowledgement number as soon as you submit.</p>
                     </div>
                     <div className="adm-cta-actions">

@@ -22,6 +22,12 @@ import logo from "../assets/logo.png";
 
 import Previewmodal from "./Previewmodal"
 import AdminAdmissionPanel from './AdminAdmissionPanel';
+import {
+    ADMISSION_CLASSES,
+    DEFAULT_ADMISSION_SETTINGS,
+    classLabel,
+    normalizeAdmissionSettings,
+} from '../pages/Admission/admissionSettings';
 
 // Shared building blocks for the website-content pages (announcements, events,
 // toppers, calendar, administrators, gallery, holidays).
@@ -160,6 +166,21 @@ export default function AdminDashboard() {
     const [staffList, setStaffList] = useState([]);
     const [feeRecords, setFeeRecords] = useState([]);
     const [idCards, setIdCards] = useState([]);
+
+    // Admission access switch (public admission pages open only while this is ON)
+    const [admissionOpen, setAdmissionOpen] = useState(false);
+    const [admissionAccessMeta, setAdmissionAccessMeta] = useState(null);
+    const [admissionAccessLoading, setAdmissionAccessLoading] = useState(true);
+    const [admissionAccessSaving, setAdmissionAccessSaving] = useState(false);
+    const [admissionDraft, setAdmissionDraft] = useState({
+        academicYear: DEFAULT_ADMISSION_SETTINGS.academicYear,
+        classFrom: DEFAULT_ADMISSION_SETTINGS.classFrom,
+        classTo: DEFAULT_ADMISSION_SETTINGS.classTo,
+        closedClasses: [],
+    });
+    const [admissionDirty, setAdmissionDirty] = useState(false);
+    const [admissionDetailsSaved, setAdmissionDetailsSaved] = useState(false);
+    const admissionDirtyRef = useRef(false);
 
     // Admissions Administration Panel States
     const [admissionApplications, setAdmissionApplications] = useState([]);
@@ -347,6 +368,103 @@ export default function AdminDashboard() {
         );
         return () => unsub();
     }, [user, viewStaffId]);
+
+    // Live admission access flag: site_settings/admission -> { open: boolean }
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsub = onSnapshot(
+            doc(db, 'site_settings', 'admission'),
+            snap => {
+                const data = snap.exists() ? snap.data() : {};
+                setAdmissionOpen(data.open === true);
+                setAdmissionAccessMeta(data);
+                if (!admissionDirtyRef.current) {
+                    const s = normalizeAdmissionSettings(data);
+                    setAdmissionDraft({
+                        academicYear: s.academicYear,
+                        classFrom: s.classFrom,
+                        classTo: s.classTo,
+                        closedClasses: s.closedClasses,
+                    });
+                }
+                setAdmissionAccessLoading(false);
+            },
+            err => { console.error('Admission access load failed:', err); setAdmissionAccessLoading(false); }
+        );
+        return () => unsub();
+    }, [user]);
+
+    const toggleAdmissionAccess = async () => {
+        const next = !admissionOpen;
+        const msg = next
+            ? 'Open admissions? The public admission pages will become available to everyone.'
+            : 'Close admissions? The public admission pages will be blocked immediately.';
+        if (!window.confirm(msg)) return;
+        setAdmissionAccessSaving(true);
+        try {
+            // Opening also stores the details shown in the form (defaults on first use).
+            const details = next ? {
+                academicYear: admissionDraft.academicYear.trim() || DEFAULT_ADMISSION_SETTINGS.academicYear,
+                classFrom: admissionDraft.classFrom,
+                classTo: admissionDraft.classTo,
+                closedClasses: admissionDraft.closedClasses,
+            } : {};
+            await setDoc(doc(db, 'site_settings', 'admission'), {
+                open: next,
+                ...details,
+                updatedAt: serverTimestamp(),
+                updatedBy: user?.email || null,
+            }, { merge: true });
+        } catch (err) {
+            console.error('Could not update admission access:', err);
+            alert('Could not update admission access. Please try again.');
+        } finally {
+            setAdmissionAccessSaving(false);
+        }
+    };
+
+    const admissionFromIdx = ADMISSION_CLASSES.indexOf(admissionDraft.classFrom);
+    const admissionToIdx = ADMISSION_CLASSES.indexOf(admissionDraft.classTo);
+    const admissionRangeInvalid = admissionFromIdx > admissionToIdx;
+
+    const updateAdmissionDraft = (patch) => {
+        admissionDirtyRef.current = true;
+        setAdmissionDirty(true);
+        setAdmissionDetailsSaved(false);
+        setAdmissionDraft((d) => ({ ...d, ...patch }));
+    };
+
+    const toggleAdmissionClass = (c) => {
+        const closed = admissionDraft.closedClasses;
+        updateAdmissionDraft({
+            closedClasses: closed.includes(c) ? closed.filter((x) => x !== c) : [...closed, c],
+        });
+    };
+
+    const saveAdmissionDetails = async () => {
+        if (admissionRangeInvalid) return;
+        setAdmissionAccessSaving(true);
+        try {
+            const inRange = ADMISSION_CLASSES.slice(admissionFromIdx, admissionToIdx + 1);
+            await setDoc(doc(db, 'site_settings', 'admission'), {
+                academicYear: admissionDraft.academicYear.trim() || DEFAULT_ADMISSION_SETTINGS.academicYear,
+                classFrom: admissionDraft.classFrom,
+                classTo: admissionDraft.classTo,
+                closedClasses: admissionDraft.closedClasses.filter((c) => inRange.includes(c)),
+                updatedAt: serverTimestamp(),
+                updatedBy: user?.email || null,
+            }, { merge: true });
+            admissionDirtyRef.current = false;
+            setAdmissionDirty(false);
+            setAdmissionDetailsSaved(true);
+            setTimeout(() => setAdmissionDetailsSaved(false), 2500);
+        } catch (err) {
+            console.error('Could not save admission details:', err);
+            alert('Could not save admission details. Please try again.');
+        } finally {
+            setAdmissionAccessSaving(false);
+        }
+    };
 
     // Section CRUD States
     const [sectionForm, setSectionForm] = useState({ name: '', roomNo: '' });
@@ -1708,7 +1826,118 @@ export default function AdminDashboard() {
                     )}
 
                     {/* ADMISSIONS ADMINISTRATION PANEL */}
-                    {activeTab === 'admission_panel' && <AdminAdmissionPanel />}
+                    {activeTab === 'admission_panel' && (
+                        <>
+                            <section className={`adm-access ${admissionOpen ? 'is-open' : 'is-closed'}`}>
+                                <div className="adm-access-icon">
+                                    {admissionOpen ? <CheckCircle size={22} /> : <Lock size={22} />}
+                                </div>
+                                <div className="adm-access-text">
+                                    <h3>Public admissions are {admissionAccessLoading ? '…' : admissionOpen ? 'open' : 'closed'}</h3>
+                                    <p>
+                                        {admissionOpen
+                                            ? 'Parents can view, register and log in on the admission pages.'
+                                            : 'The admission pages (apply, register, login, continue) are blocked for visitors.'}
+                                        {admissionAccessMeta?.updatedBy && (
+                                            <small> Last changed by {admissionAccessMeta.updatedBy}.</small>
+                                        )}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={admissionOpen}
+                                    aria-label="Allow public admissions"
+                                    className="adm-access-switch"
+                                    disabled={admissionAccessLoading || admissionAccessSaving}
+                                    onClick={toggleAdmissionAccess}
+                                >
+                                    <span />
+                                </button>
+                            </section>
+                            {admissionOpen && (
+                                <section className="adm-details">
+                                    <div className="adm-details-head">
+                                        <h3>Admission details</h3>
+                                        <p>Shown to parents on the admission pages. Changes go live when you save.</p>
+                                    </div>
+
+                                    <div className="adm-details-grid">
+                                        <label>
+                                            <span>Academic year</span>
+                                            <input
+                                                type="text"
+                                                value={admissionDraft.academicYear}
+                                                placeholder="2026–27"
+                                                onChange={(e) => updateAdmissionDraft({ academicYear: e.target.value })}
+                                            />
+                                        </label>
+                                        <label>
+                                            <span>Classes from</span>
+                                            <select
+                                                value={admissionDraft.classFrom}
+                                                onChange={(e) => updateAdmissionDraft({ classFrom: e.target.value })}
+                                            >
+                                                {ADMISSION_CLASSES.map((c) => <option key={c} value={c}>{classLabel(c)}</option>)}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Classes to</span>
+                                            <select
+                                                value={admissionDraft.classTo}
+                                                onChange={(e) => updateAdmissionDraft({ classTo: e.target.value })}
+                                            >
+                                                {ADMISSION_CLASSES.map((c) => <option key={c} value={c}>{classLabel(c)}</option>)}
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    {admissionRangeInvalid && (
+                                        <p className="adm-details-error">“Classes from” must come before “Classes to”.</p>
+                                    )}
+
+                                    <div className="adm-class-block">
+                                        <strong>Accepting applications</strong>
+                                        <p>Tap a class to close it, for example when seats are full. Tap again to reopen.</p>
+                                        <div className="adm-class-chips">
+                                            {ADMISSION_CLASSES.map((c, i) => {
+                                                const inRange = !admissionRangeInvalid && i >= admissionFromIdx && i <= admissionToIdx;
+                                                const closed = admissionDraft.closedClasses.includes(c);
+                                                const state = !inRange ? 'is-out' : closed ? 'is-closed' : 'is-open';
+                                                return (
+                                                    <button
+                                                        key={c}
+                                                        type="button"
+                                                        className={`adm-chip ${state}`}
+                                                        disabled={!inRange}
+                                                        aria-pressed={inRange && !closed}
+                                                        onClick={() => toggleAdmissionClass(c)}
+                                                    >
+                                                        <b>{classLabel(c)}</b>
+                                                        <span>{!inRange ? 'Not offered' : closed ? 'Closed' : 'Open'}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="adm-details-actions">
+                                        <button
+                                            type="button"
+                                            className="adm-save"
+                                            disabled={admissionAccessSaving || admissionRangeInvalid || !admissionDirty}
+                                            onClick={saveAdmissionDetails}
+                                        >
+                                            <Save size={16} /> Save details
+                                        </button>
+                                        {admissionDirty && <span className="adm-unsaved">Unsaved changes</span>}
+                                        {admissionDetailsSaved && <span className="adm-saved">Saved</span>}
+                                    </div>
+                                </section>
+                            )}
+                            <AdminAdmissionPanel />
+                        </>
+                    )}
 
                     {/* DASHBOARD — OVERVIEW, QUICK ACTIONS & DIRECTORY SEARCH */}
                     {activeTab === 'analytics' && (() => {

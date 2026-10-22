@@ -27,11 +27,12 @@ import {
     Pencil,
     AlertCircle
 } from 'lucide-react';
+import { useAdmissionConfig, ADMISSION_CLASSES } from './admissionSettings';
 import './AdmissionForm.css';
 
 /*
  * FORM STRUCTURE
- * 1. Personal Details  (1.1 Student, 1.2 Class, 1.3 Parent / Guardian)
+ * 1. Personal Details  (1.1 Student, 1.2 Parent / Guardian; class is picked from the cards above the form)
  * 2. Background        (2.1 Document numbers, 2.2 Physical ability)
  * 3. Documents         (file uploads)
  * 4. Preview           (read-only review with Edit links)
@@ -47,10 +48,8 @@ const STEP_META = [
 
 const TOTAL_STEPS = STEP_META.length;
 
-const GRADES = [
-    'LKG', 'UKG', '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std', '6th Std',
-    '7th Std', '8th Std', '9th Std', '10th Std', '11th Std', '12th Std'
-];
+// Same list the admin uses in Admission details, so class names always match.
+const GRADES = ADMISSION_CLASSES;
 
 /* Previous school + Transfer Certificate are needed for every class except LKG */
 const requiresPreviousSchool = (grade) => !!grade && grade !== 'LKG';
@@ -197,6 +196,23 @@ export default function AdmissionForm({
 
     const setField = (name, value) =>
         setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // New applications start on the class cards page; edits go straight to the form.
+    const [classChosen, setClassChosen] = useState(mode !== 'create');
+
+    // Classes the admin has opened (range from/to, minus manually closed classes).
+    const { academicYear, rangeLabel, openClasses, classesInRange } = useAdmissionConfig();
+    // When editing an existing application, its current class stays valid even if admissions closed since.
+    const keepGrade = mode === 'edit' ? initialData?.grade : null;
+    const isGradeAllowed = (g) => openClasses.includes(g) || (!!keepGrade && g === keepGrade);
+
+    // New applications must start on a class that is actually open.
+    useEffect(() => {
+        if (mode === 'create' && openClasses.length > 0 && !openClasses.includes(formData.grade)) {
+            setField('grade', openClasses[0]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode, openClasses, formData.grade]);
 
     /*
      * When editing an existing application, load Base64 documents from the
@@ -617,6 +633,10 @@ export default function AdmissionForm({
             if (f.aadharNumber.length !== 12) return 'Aadhaar number must be exactly 12 digits.';
             if (!f.religion.trim() || !f.caste.trim()) return 'Please enter religion and caste.';
 
+            if (!isGradeAllowed(f.grade)) {
+                return `Admission for ${f.grade} is not open. Please choose one of the open classes.`;
+            }
+
             if (requiresPreviousSchool(f.grade) && !f.previousSchool.trim()) {
                 return `Previous school name is required for ${f.grade}.`;
             }
@@ -965,7 +985,7 @@ export default function AdmissionForm({
                         <span className="adm-reg-side-kicker">
                             {mode === 'edit' ? 'Update application' : 'New application'}
                         </span>
-                        <strong>Admissions 2026–2027</strong>
+                        <strong>Admissions {academicYear}</strong>
                         <div className="adm-reg-side-bar">
                             <span style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
                         </div>
@@ -1020,6 +1040,7 @@ export default function AdmissionForm({
                         </span>
                     </div>
 
+                    {classChosen && (
                     <div className="adm-reg-stepper">
                         {STEP_META.map((s, idx) => {
                             const isActive = step === s.key;
@@ -1040,12 +1061,66 @@ export default function AdmissionForm({
                             );
                         })}
                     </div>
+                    )}
 
+                    {!classChosen && (
+                        <section className="adm-class-pick" aria-labelledby="adm-class-pick-title">
+                            <div className="adm-class-pick-head">
+                                <div>
+                                    <h4 id="adm-class-pick-title">Class applying for</h4>
+                                    <p>
+                                        Admissions {academicYear}: {rangeLabel}. Choose a green class to start your application.
+                                    </p>
+                                </div>
+                                <div className="adm-class-legend" aria-hidden="true">
+                                    <span className="is-open">Open</span>
+                                    <span className="is-closed">Closed</span>
+                                </div>
+                            </div>
+
+                            <div className="adm-class-cards" role="group" aria-label="Classes">
+                                {GRADES.filter((g) => classesInRange.includes(g) || g === keepGrade).map((g) => {
+                                    const allowed = isGradeAllowed(g);
+                                    return (
+                                        <button
+                                            key={g}
+                                            type="button"
+                                            className={`adm-class-card ${allowed ? 'is-open' : 'is-closed'}`}
+                                            disabled={!allowed}
+                                            title={allowed ? `Apply for ${g}` : `Admissions closed for ${g}`}
+                                            onClick={() => {
+                                                setField('grade', g);
+                                                setStep(1);
+                                                setStepError('');
+                                                setClassChosen(true);
+                                            }}
+                                        >
+                                            <span className="adm-class-card-name">{g}</span>
+                                            <span className="adm-class-card-state">
+                                                {allowed ? <>Open <ArrowRight size={14} /></> : 'Closed'}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
+                    {classChosen && (
                     <form
                         onSubmit={step === TOTAL_STEPS ? handleSubmit : handleNext}
                         className="adm-real-form"
                         noValidate={false}
                     >
+                        {mode === 'create' && step === 1 && (
+                            <div className="adm-chosen-class">
+                                <span>Applying for <strong>{formData.grade}</strong></span>
+                                <button type="button" onClick={() => setClassChosen(false)}>
+                                    <ArrowLeft size={14} /> Change class
+                                </button>
+                            </div>
+                        )}
+
                         <div className="adm-reg-step-heading">
                             <div>
                                 <h4>{currentMeta.label}</h4>
@@ -1135,23 +1210,6 @@ export default function AdmissionForm({
                                         onChange={(e) => setField('subCaste', e.target.value)} />
                                 </div>
 
-                                {/* 1.2 Class applying for */}
-                                <div className="form-section-label parent-section-heading full-width">
-                                    <span className="form-section-kicker">1.2 Class</span>
-                                    <h5>Class Applying For</h5>
-                                    <p>Previous school details are needed for every class from UKG onwards.</p>
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Select Class *</label>
-                                    <select required value={formData.grade}
-                                        onChange={(e) => setField('grade', e.target.value)}>
-                                        {GRADES.map((g) => (
-                                            <option key={g} value={g}>{g}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
                                 {requiresPreviousSchool(formData.grade) && (
                                     <div className="form-group full-width conditional-box">
                                         <label>Previous School Name *</label>
@@ -1161,9 +1219,9 @@ export default function AdmissionForm({
                                     </div>
                                 )}
 
-                                {/* 1.3 Parent / guardian */}
+                                {/* 1.2 Parent / guardian */}
                                 <div className="form-section-label full-width">
-                                    <span className="form-section-kicker">1.3 Parent details</span>
+                                    <span className="form-section-kicker">1.2 Parent details</span>
                                     <h5>Parent / Guardian</h5>
                                     <p>Give a mobile number for at least one parent. This number is used to log in and continue the application.</p>
                                 </div>
@@ -1520,6 +1578,7 @@ export default function AdmissionForm({
                             </div>
                         </div>
                     </form>
+                    )}
                 </div>
             </div>
         </div>

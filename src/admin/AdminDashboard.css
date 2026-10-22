@@ -12672,3 +12672,251 @@ body {
   }
 }
 
+
+
+/* ---------- Admission access switch ---------- */
+.adm-access {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    border-radius: 16px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+}
+
+.adm-access.is-open {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.adm-access-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #fff;
+    color: #dc2626;
+    flex: none;
+}
+
+.adm-access.is-open .adm-access-icon {
+    color: #16a34a;
+}
+
+.adm-access-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.adm-access-text h3 {
+    margin: 0;
+    font-size: 17px;
+}
+
+.adm-access-text p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    opacity: .8;
+}
+
+.adm-access-text small {
+    opacity: .8;
+}
+
+.adm-access-switch {
+    position: relative;
+    width: 56px;
+    height: 32px;
+    flex: none;
+    border: 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.adm-access-switch span {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+    transition: transform .2s;
+}
+
+.adm-access-switch[aria-checked="true"] {
+    background: #16a34a;
+}
+
+.adm-access-switch[aria-checked="true"] span {
+    transform: translateX(24px);
+}
+
+.adm-access-switch:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .adm-access {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* ---------- Admission details (year, class range, per-class close) ---------- */
+.adm-details {
+    margin-bottom: 18px;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #e2e9f2;
+    background: #fff;
+}
+
+.adm-details-head h3 {
+    margin: 0;
+    font-size: 17px;
+}
+
+.adm-details-head p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    opacity: .75;
+}
+
+.adm-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.adm-details-grid label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.adm-details-grid input,
+.adm-details-grid select {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font: inherit;
+    font-weight: 500;
+}
+
+.adm-details-error {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: #dc2626;
+}
+
+.adm-class-block {
+    margin-top: 20px;
+}
+
+.adm-class-block p {
+    margin: 4px 0 12px;
+    font-size: 13px;
+    opacity: .75;
+}
+
+.adm-class-chips {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 10px;
+}
+
+.adm-chip {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1.5px solid transparent;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.adm-chip b {
+    font-size: 14px;
+}
+
+.adm-chip span {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.adm-chip.is-open {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.adm-chip.is-closed {
+    background: #fff1f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.adm-chip.is-closed b {
+    text-decoration: line-through;
+}
+
+.adm-chip.is-out {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.adm-details-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.adm-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: #2f7cf6;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.adm-save:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.adm-unsaved {
+    font-size: 13px;
+    color: #b45309;
+}
+
+.adm-saved {
+    font-size: 13px;
+    font-weight: 700;
+    color: #16a34a;
+}
+
+@media (max-width: 700px) {
+    .adm-details-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -53,6 +53,7 @@ import AdmissionDashboard from './pages/Admission/AdmissionDashboard';
 import Admissionregisterpage from './pages/Admission/Admissionregisterpage';  
 import Admissionloginpage from './pages/Admission/Admissionloginpage';  
 import AdmissionContinuePage from './pages/Admission/Admissioncontinuepage';
+import AdmissionGate from './pages/Admission/AdmissionGate';
 
 // ERP & Dashboards
 import StaffErp from './Erp/StaffErp/StaffErp';
@@ -168,10 +169,10 @@ function AppContent({ loading, fadeOut }) {
             <Route path="/staffs/committees" element={<StaffCommittees />} />
 
             {/* Admissions */}
-            <Route path="/admissions" element={<AdmissionDashboard />} />
-            <Route path="/admission/register" element={<Admissionregisterpage />} />
-            <Route path="/admission/login" element={<Admissionloginpage />} />
-            <Route path="/admission/continue" element={<AdmissionContinuePage />} />
+            <Route path="/admissions" element={<AdmissionGate><AdmissionDashboard /></AdmissionGate>} />
+            <Route path="/admission/register" element={<AdmissionGate><Admissionregisterpage /></AdmissionGate>} />
+            <Route path="/admission/login" element={<AdmissionGate><Admissionloginpage /></AdmissionGate>} />
+            <Route path="/admission/continue" element={<AdmissionGate><AdmissionContinuePage /></AdmissionGate>} />
 
             {/* ERP Login Routes - Correctly mapped */}
             <Route path="/erp/staff" element={<StaffErp />} />
