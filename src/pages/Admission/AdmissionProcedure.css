@@ -1,63 +1,90 @@
+/* =========================================================
+   ADMISSION PROCEDURE — 2×2 pastel steps + light eligibility
+========================================================= */
 .proc-container {
-    font-family: var(--adm-font-body, 'Figtree', sans-serif);
-    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-body, 'Plus Jakarta Sans', sans-serif);
+    color: var(--adm-ink, #1B2559);
 }
 
 .proc-header {
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
 
 .proc-header h3 {
-    margin: 0 0 6px;
-    color: var(--adm-ink, #0F2A33);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.7rem;
+    margin: 0 0 8px;
+    color: var(--adm-ink, #1B2559);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
     font-weight: 800;
-    letter-spacing: -.5px;
+    letter-spacing: -.6px;
 }
 
 .proc-header p {
     margin: 0;
-    color: var(--adm-muted, #577078);
-    font-size: .95rem;
+    color: var(--adm-muted, #66719A);
+    font-size: .97rem;
+    line-height: 1.6;
 }
 
-/* Steps: four cards across the full width */
 .proc-steps-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
-    margin: 0 0 28px;
+    margin: 0 0 24px;
     padding: 0;
     list-style: none;
 }
 
 .proc-card {
+    --tone-bg: var(--adm-sky-soft, #E3F2FF);
+    --tone-fg: var(--adm-sky, #2F9BFF);
     display: flex;
-    flex-direction: column;
-    gap: 14px;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 30px;
+    background: var(--tone-bg);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.proc-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(47, 107, 255, .14);
+}
+
+.proc-card:nth-child(2) {
+    --tone-bg: var(--adm-leaf-soft, #DDF8EE);
+    --tone-fg: #0E8F68;
+}
+
+.proc-card:nth-child(3) {
+    --tone-bg: var(--adm-peach-soft, #FFEFE2);
+    --tone-fg: var(--adm-accent, #FF8A3D);
+}
+
+.proc-card:nth-child(4) {
+    --tone-bg: var(--adm-plum-soft, #EFE8FF);
+    --tone-fg: var(--adm-plum, #8B5CF6);
 }
 
 .proc-number {
-    width: 48px;
-    height: 48px;
+    flex: none;
+    width: 52px;
+    height: 52px;
     display: grid;
     place-items: center;
-    border-radius: 16px;
+    border-radius: 50%;
     color: #fff;
-    background: var(--adm-primary, #0B7285);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.15rem;
+    background: var(--tone-fg);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: 1.25rem;
     font-weight: 800;
+    box-shadow: 0 8px 18px rgba(27, 37, 89, .14);
 }
 
 .proc-text-content {
     flex: 1;
     min-width: 0;
-    padding: 20px 22px 22px;
-    border: 1.5px solid var(--adm-border, #D6E4E2);
-    border-radius: 24px;
-    background: #fff;
 }
 
 .proc-title-row {
@@ -70,106 +97,109 @@
 
 .proc-text-content h4 {
     margin: 0;
-    color: var(--adm-ink, #0F2A33);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.12rem;
+    color: var(--adm-ink, #1B2559);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: 1.18rem;
     font-weight: 700;
     line-height: 1.25;
 }
 
 .proc-icon-wrap {
     flex: none;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     display: grid;
     place-items: center;
-    border-radius: 12px;
-    color: var(--adm-primary-dark, #084C5A);
-    background: var(--adm-sun-soft, #FFF3CC);
+    border-radius: 14px;
+    color: var(--tone-fg);
+    background: #fff;
 }
 
 .proc-text-content p {
     margin: 0;
-    color: var(--adm-muted, #577078);
-    font-size: .92rem;
-    line-height: 1.6;
+    color: var(--adm-muted, #66719A);
+    font-size: .93rem;
+    line-height: 1.7;
 }
 
 /* Eligibility */
 .proc-eligibility-card {
-    padding: 26px;
-    border-radius: 26px;
-    color: #fff;
-    background: var(--adm-navy, #0F2A33);
+    padding: clamp(22px, 3vw, 32px);
+    border: 1px solid var(--adm-border, #E3EAF8);
+    border-radius: 32px;
+    background: linear-gradient(160deg, #F1F6FF 0%, #FFF7EC 100%);
 }
 
 .proc-eligibility-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 18px;
+    gap: 14px;
+    margin-bottom: 20px;
 }
 
 .proc-eligibility-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     display: grid;
     place-items: center;
-    border-radius: 14px;
-    color: var(--adm-ink, #0F2A33);
-    background: var(--adm-sun, #FFC93C);
+    border-radius: 16px;
+    color: #fff;
+    background: var(--adm-grad, linear-gradient(135deg, #2F6BFF, #5B8CFF));
+    box-shadow: 0 8px 18px rgba(47, 107, 255, .3);
 }
 
 .proc-eligibility-header h4 {
     margin: 0;
-    color: #fff;
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.2rem;
+    color: var(--adm-ink, #1B2559);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: 1.25rem;
     font-weight: 700;
 }
 
 .proc-eligibility-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
 }
 
 .proc-eligibility-item {
-    padding: 18px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, .08);
+    padding: 20px;
+    border: 1px solid var(--adm-border, #E3EAF8);
+    border-radius: 22px;
+    background: #fff;
 }
 
 .proc-eligibility-item strong {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--adm-sun, #FFC93C);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.05rem;
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    color: var(--adm-primary, #2F6BFF);
+    background: var(--adm-primary-soft, #EAF1FF);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: .95rem;
     font-weight: 700;
 }
 
 .proc-eligibility-item p {
     margin: 0;
-    color: rgba(255, 255, 255, .82);
-    font-size: .88rem;
-    line-height: 1.55;
+    color: var(--adm-muted, #66719A);
+    font-size: .9rem;
+    line-height: 1.65;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
     .proc-eligibility-grid {
         grid-template-columns: 1fr;
     }
 }
 
-@media (max-width: 1100px) {
-    .proc-steps-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 560px) {
+@media (max-width: 700px) {
     .proc-steps-grid {
         grid-template-columns: 1fr;
+    }
+
+    .proc-card {
+        padding: 20px;
     }
 }

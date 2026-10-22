@@ -423,7 +423,7 @@ body {
 }
 
 .home-hero {
-    min-height: 100px;
+    min-height: clamp(420px, 91vh, 760px);
     position: relative;
     overflow: hidden;
     isolation: isolate;
@@ -435,31 +435,6 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 
-.home-hero::before {
-    content: "HOLY CROSS";
-    position: absolute;
-    left: -.04em;
-    top: 25%;
-    color: rgba(255, 255, 255, .05);
-    font: 800 clamp(130px, 22vw, 350px)/.72 var(--display);
-    letter-spacing: -.09em;
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-.home-hero::after {
-    content: "";
-    position: absolute;
-    width: 620px;
-    height: 620px;
-    right: -300px;
-    top: 90px;
-    border: 1px solid var(--hc-accent-soft-2);
-    border-radius: 50%;
-    box-shadow: 0 0 0 80px var(--hc-accent-soft), 0 0 0 160px rgba(109, 74, 255, .03);
-    animation: orbitPulse 10s ease-in-out infinite;
-}
-
 .hero-background {
     position: absolute;
     inset: 0;
@@ -468,7 +443,7 @@ body {
     transform: translate3d(var(--hero-mouse-x, 0px), calc(var(--hero-scroll-y, 0px) * -1), 0) scale(1.08);
     transition: transform .9s var(--ease);
     opacity: 1;
-    filter: saturate(0.95) contrast(1.05) brightness(0.85);
+    filter: saturate(1.1) contrast(1.04) brightness(1.12);
 }
 
 .hero-image {
@@ -490,7 +465,7 @@ body {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(105deg, #0d10186a 0%, #0d10186a 35%, #0d10186a 55%, #0d10186a 66%, #0d10186a 90%, #0d1018e8 100%);
+    background: linear-gradient(to top, rgba(13, 16, 24, .28) 0%, rgba(13, 16, 24, 0) 30%);
 }
 
 .hero-mesh-overlay {
@@ -2813,4 +2788,47 @@ body {
     .cursor-tracer-canvas {
         display: none
     }
+}
+/* SCROLL CUE (replaces slider controls bar) — bottom fade with label */
+.hero-scroll-cue {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 110px 0 22px;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(to top,
+        rgba(13, 16, 24, .88) 0%,
+        rgba(13, 16, 24, .55) 40%,
+        rgba(13, 16, 24, 0) 100%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, .45);
+    cursor: pointer;
+    opacity: 0;
+    animation: heroUp .8s var(--ease) forwards .5s;
+}
+
+.hero-scroll-cue:hover .hero-scroll-icon {
+    color: var(--hc-orange, #fff);
+}
+
+.hero-scroll-icon {
+    animation: scrollCueBounce 1.6s ease-in-out infinite;
+}
+
+@keyframes scrollCueBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
 }

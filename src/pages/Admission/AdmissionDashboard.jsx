@@ -120,7 +120,7 @@ export default function AdmissionDashboard() {
 
     return (
         <div className="adm-page">
-            {/* ---------- Top bar ---------- */}
+            {/* ---------- Floating top bar ---------- */}
             <header className="adm-navbar">
                 <div className="adm-brand">
                     <div className="adm-brand-mark">
@@ -141,71 +141,74 @@ export default function AdmissionDashboard() {
 
                 <button type="button" className="adm-nav-cta" onClick={() => goToTab('apply')}>
                     Apply online
+                    <ArrowUpRight size={16} />
                 </button>
             </header>
 
-            {/* ---------- Hero (full width) ---------- */}
+            {/* ---------- Hero: bento grid ---------- */}
             <section className="adm-hero-section">
-                <div className="adm-hero-copy">
-                    <span className="adm-badge">
-                        <span className="adm-badge-dot" />
-                        Admissions are open for 2026–2027
-                    </span>
+                <div className="adm-bento">
+                    <div className="adm-bento-main">
+                        <span className="adm-badge">
+                            <span className="adm-badge-dot" />
+                            Admissions open for 2026–2027
+                        </span>
 
-                    <h1>A good school year begins with a simple first step.</h1>
+                        <h1>
+                            Start your child's <span>bright future</span> with one simple step.
+                        </h1>
 
-                    <p>
-                        Read how admissions work, apply online in a few minutes, and follow
-                        your application from one place. No queues, no guesswork.
-                    </p>
+                        <p>
+                            Read how admissions work, apply online in a few minutes and follow
+                            your application from one friendly place. No queues, no guesswork.
+                        </p>
 
-                    <div className="adm-hero-actions">
-                        <button className="adm-primary-action" onClick={() => goToTab('apply')}>
-                            Start your application
-                            <ArrowRight size={18} />
-                        </button>
+                        <div className="adm-hero-actions">
+                            <button className="adm-primary-action" onClick={() => goToTab('apply')}>
+                                Start application
+                                <ArrowRight size={18} />
+                            </button>
 
-                        <button className="adm-secondary-action" onClick={() => goToTab('track')}>
-                            Track an application
-                        </button>
+                            <button className="adm-secondary-action" onClick={() => goToTab('track')}>
+                                Track an application
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div className="adm-hero-tiles">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
-                            className={`adm-hero-tile ${tab.id === 'apply' ? 'is-highlight' : ''}`}
+                            className={`adm-bento-tile tile-${tab.id}`}
                             onClick={() => goToTab(tab.id)}
                         >
-                            <span className="adm-hero-tile-icon">{tab.icon}</span>
-                            <span className="adm-hero-tile-text">
-                                <strong>{tab.shortLabel}</strong>
+                            <span className="adm-bento-tile-icon">{tab.icon}</span>
+                            <ArrowUpRight size={20} className="adm-bento-tile-arrow" />
+                            <span className="adm-bento-tile-text">
+                                <strong>{tab.label}</strong>
                                 <small>{tab.hint}</small>
                             </span>
-                            <ArrowUpRight size={18} className="adm-hero-tile-arrow" />
                         </button>
+                    ))}
+
+                    {stats.map((s) => (
+                        <div key={s.label} className="adm-stat">
+                            <strong>{s.value}</strong>
+                            <span>{s.label}</span>
+                        </div>
                     ))}
                 </div>
             </section>
 
-            {/* ---------- Facts strip ---------- */}
-            <section className="adm-stats-strip" aria-label="Admission at a glance">
-                {stats.map((s) => (
-                    <div key={s.label} className="adm-stat">
-                        <strong>{s.value}</strong>
-                        <span>{s.label}</span>
-                    </div>
-                ))}
-            </section>
-
             <div className="adm-dashboard-wrapper">
 
-                {/* ---------- Portal: tab bar + full-width content ---------- */}
+                {/* ---------- Portal ---------- */}
                 <main className="adm-main-portal">
                     <div className="adm-portal-head">
-                        <h2>Admission desk</h2>
+                        <div>
+                            <span className="adm-eyebrow">Admission desk</span>
+                            <h2>Everything you need, in one place</h2>
+                        </div>
                         <p><Phone size={15} /> Keep your acknowledgement number safe. You will need it to track your application.</p>
                     </div>
 
@@ -352,17 +355,23 @@ export default function AdmissionDashboard() {
                 {/* ---------- How it works ---------- */}
                 <section className="adm-process-section">
                     <div className="adm-section-heading">
-                        <h2>Four steps from enquiry to enrolment</h2>
-                        <p>Follow them in order, or jump to any step using the menu above.</p>
+                        <span className="adm-eyebrow">How it works</span>
+                        <h2>Four easy steps from enquiry to enrolment</h2>
+                        <p>Follow them in order, or jump to any step from the admission desk.</p>
+                        <button type="button" className="adm-why-cta" onClick={() => goToTab('apply')}>
+                            Apply online <ArrowRight size={17} />
+                        </button>
                     </div>
 
                     <ol className="adm-process-grid">
                         {steps.map((step, idx) => (
                             <li key={step.title} className="adm-process-card">
-                                <span className="adm-process-number">{idx + 1}</span>
+                                <span className="adm-process-number">{String(idx + 1).padStart(2, '0')}</span>
+                                <div className="adm-process-text">
+                                    <h3>{step.title}</h3>
+                                    <p>{step.desc}</p>
+                                </div>
                                 <span className="adm-process-icon">{step.icon}</span>
-                                <h3>{step.title}</h3>
-                                <p>{step.desc}</p>
                             </li>
                         ))}
                     </ol>
@@ -371,17 +380,15 @@ export default function AdmissionDashboard() {
                 {/* ---------- Why Holy Cross ---------- */}
                 <section className="adm-why-section">
                     <div className="adm-why-intro">
+                        <span className="adm-eyebrow">Why Holy Cross</span>
                         <h2>Why families choose Holy Cross</h2>
                         <p>A learning environment built on trust, care and steady academic quality.</p>
-                        <button type="button" className="adm-why-cta" onClick={() => goToTab('apply')}>
-                            Apply online <ArrowRight size={17} />
-                        </button>
                     </div>
 
                     <div className="adm-why-grid">
                         {whyItems.map((item, idx) => (
-                            <article key={idx} className="adm-why-card">
-                                <div className={`adm-why-icon tone-${item.tone}`}>{item.icon}</div>
+                            <article key={idx} className={`adm-why-card tone-${item.tone}`}>
+                                <div className="adm-why-icon">{item.icon}</div>
                                 <div className="adm-why-body">
                                     <h3>{item.title}</h3>
                                     <p>{item.desc}</p>
@@ -394,7 +401,7 @@ export default function AdmissionDashboard() {
 
                 {/* ---------- Closing call to action ---------- */}
                 <section className="adm-cta-band">
-                    <div>
+                    <div className="adm-cta-copy">
                         <h2>Ready to apply for 2026–2027?</h2>
                         <p>The form takes a few minutes. You get an acknowledgement number as soon as you submit.</p>
                     </div>

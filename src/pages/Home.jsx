@@ -10,6 +10,7 @@ import {
     Calendar,
     Check,
     CheckCircle2,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Clock,
@@ -44,6 +45,8 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+import campusMBg1 from '../assets/mbg1.png';
+import campusMBg2 from '../assets/mbg2.png';
 import campusBg1 from '../assets/bg2.png';
 import campusBg2 from '../assets/bg3.png';
 import campusBg3 from '../assets/bg4.png';
@@ -73,12 +76,11 @@ const routeToSchool = [
 ];
 
 const heroImages = [
-    { src: campusBg1, caption: 'Main Academic Quadrangle', subtitle: 'Where character meets knowledge every morning' },
-    { src: campusBg2, caption: 'Senior Secondary Wing', subtitle: 'Nurturing future doctors, engineers & leaders' },
-    { src: campusBg3, caption: 'Lush Serene Campus', subtitle: '2.7+ acres of peaceful learning environment' },
-    { src: campusBg10, caption: 'High-Tech Science Laboratories', subtitle: 'Hands-on inquiry and scientific discovery' },
-    { src: campusBg4, caption: 'Sports Ground & Pavilion', subtitle: 'Building agility, teamwork and sportsmanship' },
     { src: campusBg5, caption: 'Smart Digital Classrooms', subtitle: 'Technology-enabled modern pedagogy' },
+    { src: campusMBg1, caption: 'Main Academic Quadrangle', subtitle: 'Where character meets knowledge every morning' },
+    { src: campusBg1, caption: 'Main Academic Quadrangle', subtitle: 'Where character meets knowledge every morning' },
+    { src: campusMBg2, caption: 'Main Academic Quadrangle', subtitle: 'Where character meets knowledge every morning' },
+    { src: campusBg3, caption: 'Lush Serene Campus', subtitle: '2.7+ acres of peaceful learning environment' },
     { src: campusBg6, caption: 'Library & Reading Hall', subtitle: 'Cultivating curiosity and lifelong learning' },
     { src: campusBg7, caption: 'Cultural & Assembly Arena', subtitle: 'Celebrating student expression & talents' },
     { src: campusBg8, caption: 'Eco Green Pathways', subtitle: 'Clean, green eco-conscious campus lifestyle' },
@@ -86,12 +88,13 @@ const heroImages = [
 ];
 
 const campusGalleries = [
-    { img: campusBg1, title: 'Academic Complex', tag: 'Academics', col: 'wide' },
-    { img: campusBg2, title: 'Science Labs', tag: 'Innovation', col: 'normal' },
+    { img: campusMBg1, title: 'Academic Main Block', tag: 'Academics', col: 'wide' },
+    { img: campusBg2, title: 'Moreau Block', tag: 'Moreau', col: 'normal' },
     { img: campusBg3, title: 'Campus Greenery', tag: 'Environment', col: 'normal' },
     { img: campusBg10, title: 'Digital Classrooms', tag: 'Technology', col: 'wide' },
-    { img: campusBg4, title: 'Sports Ground', tag: 'Athletics', col: 'normal' },
-    { img: campusBg5, title: 'Student Assembly', tag: 'Community', col: 'normal' },
+    { img: campusBg4, title: 'Main Gate', tag: 'Gate1', col: 'normal' },
+    { img: campusBg5, title: 'The Giving Hands', tag: 'Giving Hands', col: 'normal' },
+    { img: campusBg1, title: 'Andre Block', tag: 'Andre', col: 'normal' },
 ];
 
 function SectionHeading({ eyebrow, title, description, action, badge }) {
@@ -619,124 +622,20 @@ export default function Home({ setActivePage }) {
                         />
                     ))}
                 </div>
-                <div className="hero-wash" />
-                <div className="hero-mesh-overlay" />
 
-                <div className="hero-layout hero-layout-centered">
-                    <div className="hero-copy">
-                        <div className="hero-badge-row">
-                            <span className="hero-institution-tag">
-                                <Sparkles size={13} className="sparkle-spin" />
-                                Holy Cross Congregation · Est. 2002
-                            </span>
-                            <span className="hero-counter-tag">
-                                {String(currentSlide + 1).padStart(2, '0')} / {String(heroImages.length).padStart(2, '0')}
-                            </span>
-                        </div>
-
-                        <p className="hero-eyebrow">Education of mind and heart.</p>
-
-                        <h1 className="hero-headlines">
-                            Holy Cross Matriculation
-                            <span className="hero-headlines-accent">Higher Secondary School</span>
-                        </h1>
-
-                        <div className="hero-location-wrap">
-                            <MapPin size={18} className="loc-pin-icon" />
-                            <span id="locs">Somarasampettai, Trichy</span>
-                            <span className="loc-badge">Tamil Nadu · PIN 620102</span>
-                        </div>
-
-                        <p className="hero-description">
-                            Empowering young minds with holistic academic brilliance, moral fortitude,
-                            and compassionate leadership rooted in the enduring legacy of Blessed Basil Antony Moreau.
-                        </p>
-
-                        <div className="hero-actions">
-                            <button className="hero-primary btn-shine" onClick={goToGallery}>
-                                <span>Explore Campus</span>
-                                <ArrowRight size={17} className="btn-arrow" />
-                            </button>
-                            <button
-                                className="hero-secondary"
-                                onClick={() => setActivePage ? setActivePage('contact') : navigate('/contact')}
-                            >
-                                <GraduationCap size={17} />
-                                <span>Admissions 2026–27</span>
-                            </button>
-                        </div>
-
-                        {/* STATS PROOF TILES */}
-                        <div className="hero-mini-proof">
-                            <div className="proof-tile">
-                                <strong>2002</strong>
-                                <span>Founded · 24+ Yrs</span>
-                            </div>
-                            <div className="proof-tile">
-                                <strong>2.7+</strong>
-                                <span>Acres Serene Campus</span>
-                            </div>
-                            <div className="proof-tile">
-                                <strong>100%</strong>
-                                <span>Board Exam Success</span>
-                            </div>
-                            <div className="proof-tile">
-                                <strong>X–XII</strong>
-                                <span>Senior Specialization</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-                {/* HERO SLIDE CONTROLS WITH LIVE PROGRESS BAR */}
-                <div className="hero-slide-controls">
-                    <div className="hero-ctrl-actions">
-                        <button
-                            type="button"
-                            className="hero-arrow-btn"
-                            onClick={prevSlide}
-                            aria-label="Previous Slide"
-                        >
-                            <ChevronLeft size={16} />
-                        </button>
-                        <button
-                            type="button"
-                            className="hero-pause-btn"
-                            onClick={() => setIsHeroPlaying(!isHeroPlaying)}
-                            aria-label={isHeroPlaying ? 'Pause Slideshow' : 'Play Slideshow'}
-                        >
-                            {isHeroPlaying ? <Pause size={14} /> : <Play size={14} />}
-                        </button>
-                        <button
-                            type="button"
-                            className="hero-arrow-btn"
-                            onClick={nextSlide}
-                            aria-label="Next Slide"
-                        >
-                            <ChevronRight size={16} />
-                        </button>
-                    </div>
-
-                    <div className="hero-progress-track">
-                        {heroImages.map((_, index) => (
-                            <button
-                                key={index}
-                                className={`hero-progress-seg ${index === currentSlide ? 'active' : ''} ${index < currentSlide ? 'passed' : ''
-                                    }`}
-                                onClick={() => selectSlide(index)}
-                                aria-label={`Go to slide ${index + 1}`}
-                            >
-                                <span className="progress-seg-fill" />
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="hero-slide-num">
-                        <strong>{String(currentSlide + 1).padStart(2, '0')}</strong>
-                        <span>/{String(heroImages.length).padStart(2, '0')}</span>
-                    </div>
-                </div>
+                {/* SCROLL TO VIEW MORE */}
+                <button
+                    type="button"
+                    className="hero-scroll-cue"
+                    onClick={(e) => {
+                        const next = e.currentTarget.closest('section')?.nextElementSibling;
+                        if (next) next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    aria-label="Scroll to view more"
+                >
+                    <span>Scroll to view more</span>
+                    <ChevronDown size={18} className="hero-scroll-icon" />
+                </button>
             </section>
 
             {/* KINETIC STATEMENT: Giant Scroll Headline */}

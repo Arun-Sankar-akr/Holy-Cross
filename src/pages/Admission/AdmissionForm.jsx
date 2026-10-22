@@ -841,7 +841,7 @@ export default function AdmissionForm({
             return (
                 <div className="adm-premium-card success-card-view">
                     <div className="success-icon-badge">
-                        <CheckCircle2 size={48} color="#123A70" />
+                        <CheckCircle2 size={48} color="#0E8F68" />
                     </div>
                     <h3>Application Updated Successfully!</h3>
                     <p>Your changes have been saved against acknowledgement number:</p>
@@ -856,7 +856,7 @@ export default function AdmissionForm({
         return (
             <div className="adm-premium-card success-card-view">
                 <div className="success-icon-badge">
-                    <CheckCircle2 size={48} color="#123A70" />
+                    <CheckCircle2 size={48} color="#0E8F68" />
                 </div>
                 <h3>Application Submitted Successfully!</h3>
                 <p>Welcome. Your unique tracking acknowledgement number is:</p>
@@ -961,6 +961,17 @@ export default function AdmissionForm({
             <div className="adm-reg-grid">
 
                 <aside className="adm-reg-sidenav">
+                    <div className="adm-reg-side-head">
+                        <span className="adm-reg-side-kicker">
+                            {mode === 'edit' ? 'Update application' : 'New application'}
+                        </span>
+                        <strong>Admissions 2026–2027</strong>
+                        <div className="adm-reg-side-bar">
+                            <span style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+                        </div>
+                        <small>Step {step} of {TOTAL_STEPS} · {currentMeta.label}</small>
+                    </div>
+
                     {STEP_META.map((s) => {
                         const isActive = step === s.key;
                         const isDone = step > s.key;

@@ -1,33 +1,38 @@
+/* =========================================================
+   FEE STRUCTURE — light table with a highlighted total column
+========================================================= */
 .fee-container {
-    font-family: var(--adm-font-body, 'Figtree', sans-serif);
-    color: var(--adm-ink, #0F2A33);
+    font-family: var(--adm-font-body, 'Plus Jakarta Sans', sans-serif);
+    color: var(--adm-ink, #1B2559);
 }
 
 .fee-header-text {
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
 
 .fee-header-text h3 {
-    margin: 0 0 6px;
-    color: var(--adm-ink, #0F2A33);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.7rem;
+    margin: 0 0 8px;
+    color: var(--adm-ink, #1B2559);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
     font-weight: 800;
-    letter-spacing: -.5px;
+    letter-spacing: -.6px;
 }
 
 .fee-header-text p {
     margin: 0;
-    color: var(--adm-muted, #577078);
-    font-size: .95rem;
+    color: var(--adm-muted, #66719A);
+    font-size: .97rem;
+    line-height: 1.6;
 }
 
 .fee-card-wrapper {
     overflow: hidden;
     margin-bottom: 18px;
-    border: 1.5px solid var(--adm-border, #D6E4E2);
-    border-radius: 26px;
+    border: 1px solid var(--adm-border, #E3EAF8);
+    border-radius: 30px;
     background: #fff;
+    box-shadow: 0 16px 38px rgba(47, 107, 255, .1);
 }
 
 .fee-table {
@@ -38,55 +43,57 @@
 
 .fee-table th,
 .fee-table td {
-    padding: 18px 24px;
+    padding: 20px 26px;
 }
 
 .fee-table th {
-    color: #fff;
-    background: var(--adm-navy, #0F2A33);
-    font-size: .88rem;
-    font-weight: 600;
+    color: var(--adm-primary, #2F6BFF);
+    background: var(--adm-primary-soft, #EAF1FF);
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
 .fee-table th:last-child {
-    color: var(--adm-ink, #0F2A33);
-    background: var(--adm-sun, #FFC93C);
-    font-weight: 700;
+    color: #fff;
+    background: var(--adm-grad, linear-gradient(135deg, #2F6BFF, #5B8CFF));
 }
 
 .fee-table td {
+    color: var(--adm-muted, #66719A);
     font-size: .98rem;
-    color: var(--adm-muted, #577078);
+    font-weight: 500;
 }
 
 .fee-table tbody tr:not(:last-child) td {
-    border-bottom: 1px solid var(--adm-border, #D6E4E2);
+    border-bottom: 1px solid var(--adm-border, #E3EAF8);
 }
 
 .fee-table tbody tr:hover td {
-    background: var(--adm-bg, #F2F7F6);
+    background: #F7FAFF;
 }
 
 .fee-table tbody tr:hover td.annual-cell {
-    background: #FFEDB3;
+    background: #E1ECFF;
 }
 
 .grade-cell {
-    color: var(--adm-ink, #0F2A33) !important;
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.05rem !important;
-    font-weight: 700;
+    color: var(--adm-ink, #1B2559) !important;
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: 1.08rem !important;
+    font-weight: 700 !important;
 }
 
 .annual-cell {
-    background: var(--adm-sun-soft, #FFF3CC);
+    background: #EEF4FF;
 }
 
 .annual-cell span {
-    color: var(--adm-ink, #0F2A33);
-    font-family: var(--adm-font-display, 'Bricolage Grotesque', sans-serif);
-    font-size: 1.1rem;
+    color: var(--adm-primary, #2F6BFF);
+    font-family: var(--adm-font-display, 'Outfit', sans-serif);
+    font-size: 1.15rem;
     font-weight: 800;
 }
 
@@ -94,21 +101,22 @@
     display: flex;
     align-items: flex-start;
     gap: 14px;
-    padding: 18px 22px;
-    border-radius: 20px;
-    color: var(--adm-primary-dark, #084C5A);
-    background: var(--adm-primary-soft, #E3F3F1);
+    padding: 20px 24px;
+    border-radius: 24px;
+    color: #8A5A00;
+    background: var(--adm-sun-soft, #FFF4D6);
 }
 
 .fee-notice-box svg {
     flex-shrink: 0;
     margin-top: 2px;
+    color: #D98E00;
 }
 
 .fee-notice-box p {
     margin: 0;
-    font-size: .9rem;
-    line-height: 1.55;
+    font-size: .92rem;
+    line-height: 1.65;
 }
 
 /* Phones: each row becomes its own card */
@@ -117,6 +125,7 @@
         border: 0;
         background: transparent;
         border-radius: 0;
+        box-shadow: none;
         overflow: visible;
     }
 
@@ -137,11 +146,12 @@
     }
 
     .fee-table tbody tr {
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         overflow: hidden;
-        border: 1.5px solid var(--adm-border, #D6E4E2);
-        border-radius: 20px;
+        border: 1px solid var(--adm-border, #E3EAF8);
+        border-radius: 24px;
         background: #fff;
+        box-shadow: 0 10px 24px rgba(47, 107, 255, .08);
     }
 
     .fee-table td {
@@ -149,13 +159,13 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding: 12px 18px;
+        padding: 13px 20px;
         text-align: right;
     }
 
     .fee-table td::before {
         content: attr(data-label);
-        color: var(--adm-muted, #577078);
+        color: var(--adm-muted, #66719A);
         font-size: .82rem;
         font-weight: 600;
         text-align: left;
@@ -170,9 +180,9 @@
     }
 
     .grade-cell {
-        background: var(--adm-navy, #0F2A33);
         justify-content: flex-start !important;
         color: #fff !important;
+        background: var(--adm-grad, linear-gradient(135deg, #2F6BFF, #5B8CFF)) !important;
     }
 
     .grade-cell::before {
@@ -181,6 +191,6 @@
 
     .annual-cell,
     .fee-table tbody tr:hover td.annual-cell {
-        background: var(--adm-sun-soft, #FFF3CC);
+        background: #EEF4FF;
     }
 }
