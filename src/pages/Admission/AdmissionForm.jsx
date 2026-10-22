@@ -1111,9 +1111,12 @@ export default function AdmissionForm({
                                                 setClassChosen(true);
                                             }}
                                         >
-                                            <span className="adm-class-card-name">{g}</span>
+                                            <span className="adm-class-card-badge">{g}</span>
+                                            <span className="adm-class-card-name">
+                                                {g === 'LKG' ? 'Lower Kindergarten' : g === 'UKG' ? 'Upper Kindergarten' : /class/i.test(String(g)) ? 'Admission' : 'Class'}
+                                            </span>
                                             <span className="adm-class-card-state">
-                                                {allowed ? <>Open <ArrowRight size={14} /></> : 'Closed'}
+                                                {allowed ? <>Apply now <ArrowRight size={14} /></> : 'Closed'}
                                             </span>
                                         </button>
                                     );
