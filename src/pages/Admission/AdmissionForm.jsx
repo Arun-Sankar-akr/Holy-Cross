@@ -1097,11 +1097,20 @@ export default function AdmissionForm({
                             <div className="adm-class-cards" role="group" aria-label="Classes">
                                 {GRADES.filter((g) => classesInRange.includes(g) || g === keepGrade).map((g) => {
                                     const allowed = isGradeAllowed(g);
+                                    // "1st Std" -> big "1" + small "st"; "LKG"/"UKG"/"V" stay as they are
+                                    const numMatch = String(g).match(/^\s*(\d+)\s*(st|nd|rd|th)?\b/i);
+                                    const bigNum = numMatch ? numMatch[1] : g;
+                                    const numSuffix = numMatch ? (numMatch[2] || '').toLowerCase() : '';
+                                    const folderTitle =
+                                        g === 'LKG' ? 'Lower KG'
+                                        : g === 'UKG' ? 'Upper KG'
+                                        : numMatch || /class|std|standard/i.test(String(g)) ? String(g)
+                                        : `Class ${g}`;
                                     return (
                                         <button
                                             key={g}
                                             type="button"
-                                            className={`adm-class-card ${allowed ? 'is-open' : 'is-closed'}`}
+                                            className={`adm-folder-card ${allowed ? 'is-open' : 'is-closed'}`}
                                             disabled={!allowed}
                                             title={allowed ? `Apply for ${g}` : `Admissions closed for ${g}`}
                                             onClick={() => {
@@ -1111,12 +1120,29 @@ export default function AdmissionForm({
                                                 setClassChosen(true);
                                             }}
                                         >
-                                            <span className="adm-class-card-badge">{g}</span>
-                                            <span className="adm-class-card-name">
-                                                {g === 'LKG' ? 'Lower Kindergarten' : g === 'UKG' ? 'Upper Kindergarten' : /class/i.test(String(g)) ? 'Admission' : 'Class'}
+                                            <span className="adm-folder-art" aria-hidden="true">
+                                                <span className="adm-folder-art-text">
+                                                    Admissions<br />{academicYear}
+                                                </span>
                                             </span>
-                                            <span className="adm-class-card-state">
-                                                {allowed ? <>Apply now <ArrowRight size={14} /></> : 'Closed'}
+
+                                            <span className="adm-folder-panel">
+                                                <span className="adm-folder-tab">
+                                                    <span className="adm-folder-title">{folderTitle}</span>
+                                                </span>
+                                                <span className="adm-folder-sub">
+                                                    {allowed ? 'Admissions open' : 'Admissions closed'}
+                                                </span>
+
+                                                <span className="adm-folder-foot">
+                                                    <span className="adm-folder-num">
+                                                        {bigNum}
+                                                        {numSuffix && <sup>{numSuffix}</sup>}
+                                                    </span>
+                                                    <span className="adm-folder-cta">
+                                                        {allowed ? <>Apply now <ArrowRight size={15} /></> : 'Closed'}
+                                                    </span>
+                                                </span>
                                             </span>
                                         </button>
                                     );

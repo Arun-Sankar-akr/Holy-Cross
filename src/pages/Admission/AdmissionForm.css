@@ -1988,3 +1988,500 @@
         transition: none;
     }
 }
+
+
+/* ============================================================================
+   OPEN = GREEN GLASS  |  CLOSED = RED GLASS
+   ============================================================================ */
+.adm-class-cards .adm-class-card.is-open {
+    background: linear-gradient(145deg, rgba(52, 211, 153, .55), rgba(16, 185, 129, .28));
+    border-color: rgba(167, 243, 208, .95);
+    opacity: 1;
+    box-shadow:
+        0 12px 30px -12px rgba(5, 150, 105, .5),
+        inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.adm-class-cards .adm-class-card.is-open .adm-class-card-badge {
+    background: linear-gradient(135deg, #10b981, #047857);
+    color: #fff;
+}
+
+.adm-class-cards .adm-class-card.is-open .adm-class-card-name {
+    color: #065f46;
+    font-weight: 700;
+}
+
+.adm-class-cards .adm-class-card.is-open .adm-class-card-state {
+    background: rgba(255, 255, 255, .75);
+    border-color: rgba(255, 255, 255, .95);
+    color: #047857;
+}
+
+.adm-class-cards .adm-class-card.is-open:hover {
+    background: linear-gradient(145deg, rgba(52, 211, 153, .7), rgba(16, 185, 129, .4));
+    border-color: #6ee7b7;
+    box-shadow:
+        0 22px 44px -14px rgba(5, 150, 105, .6),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.adm-class-cards .adm-class-card.is-closed {
+    background: linear-gradient(145deg, rgba(248, 113, 113, .5), rgba(239, 68, 68, .24));
+    border-color: rgba(254, 202, 202, .95);
+    opacity: 1;
+    cursor: not-allowed;
+    box-shadow:
+        0 12px 30px -12px rgba(220, 38, 38, .45),
+        inset 0 1px 0 rgba(255, 255, 255, .75);
+}
+
+.adm-class-cards .adm-class-card.is-closed .adm-class-card-badge {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    box-shadow:
+        0 12px 24px -10px rgba(185, 28, 28, .55),
+        inset 0 1px 0 rgba(255, 255, 255, .45);
+    color: #fff;
+}
+
+.adm-class-cards .adm-class-card.is-closed .adm-class-card-name {
+    color: #991b1b;
+    font-weight: 700;
+}
+
+.adm-class-cards .adm-class-card.is-closed .adm-class-card-state {
+    background: rgba(255, 255, 255, .75);
+    border-color: rgba(255, 255, 255, .95);
+    color: #b91c1c;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .adm-class-cards .adm-class-card.is-open { background: #d1fae5; }
+    .adm-class-cards .adm-class-card.is-closed { background: #fee2e2; }
+}
+
+
+/* ============================================================================
+   FOLDER-STYLE CLASS CARDS
+   Blurred gradient art on top, a cut-out "folder tab" panel below.
+   Open = green, Closed = red.
+   ============================================================================ */
+.adm-class-cards {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.adm-folder-card {
+    --fc-outer: #cfeedd;      /* card background */
+    --fc-panel: #f0faf4;      /* folder panel */
+    --fc-ink: #052e1b;
+    --fc-muted: #4b7a63;
+    --fc-art: linear-gradient(135deg, #052e16 0%, #15803d 38%, #22c55e 68%, #bbf7d0 100%);
+    --fc-blob-a: rgba(255, 255, 255, .75);
+    --fc-blob-b: #34d399;
+    --fc-blob-c: #064e3b;
+    --fc-glow: rgba(5, 150, 105, .45);
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 270px;
+    padding: 9px;
+    border: 0;
+    border-radius: 30px;
+    background: var(--fc-outer);
+    color: var(--fc-ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(20, 24, 60, .06), 0 16px 34px -18px var(--fc-glow);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.adm-folder-card.is-closed {
+    --fc-outer: #f8d3d3;
+    --fc-panel: #fdf1f1;
+    --fc-ink: #3b0a0a;
+    --fc-muted: #9a5a5a;
+    --fc-art: linear-gradient(135deg, #1f0505 0%, #b91c1c 36%, #ef4444 64%, #fb923c 100%);
+    --fc-blob-a: rgba(255, 255, 255, .7);
+    --fc-blob-b: #f97316;
+    --fc-blob-c: #450a0a;
+    --fc-glow: rgba(220, 38, 38, .45);
+    cursor: not-allowed;
+}
+
+.adm-folder-card.is-open:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 2px 4px rgba(20, 24, 60, .06), 0 26px 44px -18px var(--fc-glow);
+}
+
+.adm-folder-card:focus-visible {
+    outline: 3px solid #0f9d72;
+    outline-offset: 3px;
+}
+
+/* ---- blurred gradient art ---- */
+.adm-folder-art {
+    position: relative;
+    display: block;
+    height: 150px;
+    flex-shrink: 0;
+    border-radius: 24px 24px 8px 8px;
+    background: var(--fc-art);
+    background-size: 160% 160%;
+    background-position: 0% 50%;
+    overflow: hidden;
+    transition: background-position .8s ease;
+}
+
+.adm-folder-art::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background:
+        radial-gradient(circle at 18% 30%, var(--fc-blob-a) 0 9%, transparent 28%),
+        radial-gradient(circle at 70% 70%, var(--fc-blob-b) 0 14%, transparent 38%),
+        radial-gradient(circle at 92% 18%, var(--fc-blob-c) 0 12%, transparent 34%),
+        radial-gradient(circle at 45% 85%, var(--fc-blob-a) 0 6%, transparent 22%);
+    filter: blur(14px);
+    opacity: .9;
+    transition: transform .8s ease;
+}
+
+.adm-folder-card.is-open:hover .adm-folder-art {
+    background-position: 100% 50%;
+}
+
+.adm-folder-card.is-open:hover .adm-folder-art::before {
+    transform: scale(1.12) rotate(4deg);
+}
+
+.adm-folder-art-text {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    z-index: 1;
+    font-family: var(--reg-font-display, inherit);
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -.005em;
+    text-align: right;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .35);
+}
+
+/* ---- folder panel with tab cut-out ---- */
+.adm-folder-panel {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    margin-top: -32px;
+    padding: 16px 20px 18px;
+    border-radius: 0 22px 24px 24px;
+    background: var(--fc-panel);
+}
+
+.adm-folder-tab {
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    display: flex;
+    align-items: flex-end;
+    width: 54%;
+    height: 50px;
+    padding: 0 0 4px 20px;
+    border-radius: 22px 22px 0 0;
+    background: var(--fc-panel);
+}
+
+/* concave fillet that sweeps the tab down into the panel */
+.adm-folder-tab::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle at 100% 0, transparent 23.5px, var(--fc-panel) 24px);
+}
+
+/* convex slope on the right of the tab */
+.adm-folder-tab::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 0 22px 0 0;
+    background: var(--fc-panel);
+}
+
+.adm-folder-title {
+    position: relative;
+    z-index: 1;
+    font-family: var(--reg-font-display, inherit);
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--fc-ink);
+    white-space: nowrap;
+}
+
+.adm-folder-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: .98rem;
+    font-weight: 500;
+    color: var(--fc-muted);
+}
+
+.adm-folder-foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 18px;
+}
+
+.adm-folder-num {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    font-family: var(--reg-font-display, inherit);
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    color: var(--fc-ink);
+}
+
+.adm-folder-num small {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--fc-muted);
+}
+
+.adm-folder-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fc-ink);
+    white-space: nowrap;
+}
+
+.adm-folder-cta svg {
+    transition: transform .25s ease;
+}
+
+.adm-folder-card.is-open:hover .adm-folder-cta svg {
+    transform: translateX(5px);
+}
+
+.adm-folder-card.is-closed .adm-folder-cta {
+    color: #b91c1c;
+}
+
+.adm-folder-card.is-closed .adm-folder-art {
+    filter: saturate(.95);
+}
+
+@media (max-width: 600px) {
+    .adm-class-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .adm-folder-card {
+        min-height: 215px;
+        padding: 7px;
+        border-radius: 24px;
+    }
+
+    .adm-folder-art {
+        height: 112px;
+        border-radius: 19px 19px 6px 6px;
+    }
+
+    .adm-folder-art-text {
+        top: 11px;
+        right: 12px;
+        font-size: .74rem;
+    }
+
+    .adm-folder-panel {
+        margin-top: -26px;
+        padding: 12px 13px 13px;
+        border-radius: 0 18px 19px 19px;
+    }
+
+    .adm-folder-tab {
+        width: 58%;
+        height: 40px;
+        padding-left: 13px;
+        border-radius: 18px 18px 0 0;
+    }
+
+    .adm-folder-title { font-size: .86rem; }
+    .adm-folder-sub { font-size: .76rem; }
+    .adm-folder-num { font-size: 1.7rem; }
+    .adm-folder-num small { font-size: .74rem; }
+    .adm-folder-cta { font-size: .74rem; }
+    .adm-folder-foot { padding-top: 10px; }
+}
+
+@media (max-width: 340px) {
+    .adm-class-cards { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .adm-folder-card,
+    .adm-folder-art,
+    .adm-folder-art::before,
+    .adm-folder-cta svg {
+        transition: none;
+    }
+}
+
+
+/* ============================================================================
+   FOLDER CARDS — COMPACT, ALIGNED
+   Tab grows to fit its title, one-line footer, tighter spacing.
+   ============================================================================ */
+.adm-class-cards {
+    grid-template-columns: repeat(auto-fill, minmax(206px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+
+.adm-folder-card {
+    min-height: 0;
+    height: 100%;
+    padding: 8px;
+    border-radius: 26px;
+}
+
+.adm-folder-art {
+    height: 112px;
+    border-radius: 20px 20px 6px 6px;
+}
+
+.adm-folder-art-text {
+    top: 14px;
+    right: 16px;
+    font-size: .92rem;
+}
+
+.adm-folder-panel {
+    margin-top: -26px;
+    padding: 14px 16px 14px;
+    border-radius: 0 20px 20px 20px;
+}
+
+/* tab hugs its text instead of a fixed width */
+.adm-folder-tab {
+    width: auto;
+    max-width: calc(100% - 28px);
+    height: 42px;
+    padding: 0 22px 3px 16px;
+    border-radius: 20px 20px 0 0;
+}
+
+.adm-folder-tab::before { display: none; }
+
+.adm-folder-tab::after {
+    width: 20px;
+    height: 20px;
+    background: radial-gradient(circle at 100% 0, transparent 19.5px, var(--fc-panel) 20px);
+}
+
+/* soft convex shoulder on the tab's right side */
+.adm-folder-tab {
+    border-top-right-radius: 20px;
+}
+
+.adm-folder-title {
+    font-size: .98rem;
+    line-height: 1.15;
+}
+
+.adm-folder-sub {
+    margin-top: 0;
+    font-size: .86rem;
+    line-height: 1.3;
+}
+
+.adm-folder-foot {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 14px;
+}
+
+.adm-folder-num {
+    align-items: flex-start;
+    gap: 2px;
+    font-size: 2.1rem;
+    flex-shrink: 0;
+}
+
+.adm-folder-num sup {
+    margin-top: .2em;
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--fc-muted);
+}
+
+.adm-folder-cta {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .85);
+    font-size: .82rem;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+    transition: background .2s ease, color .2s ease;
+}
+
+.adm-folder-card.is-open:hover .adm-folder-cta {
+    background: #0f9d72;
+    color: #fff;
+    box-shadow: none;
+}
+
+.adm-folder-card.is-closed .adm-folder-cta {
+    background: rgba(255, 255, 255, .85);
+    color: #b91c1c;
+}
+
+@media (max-width: 600px) {
+    .adm-class-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .adm-folder-card { padding: 6px; border-radius: 22px; }
+    .adm-folder-art { height: 92px; border-radius: 17px 17px 5px 5px; }
+    .adm-folder-art-text { top: 10px; right: 11px; font-size: .68rem; }
+    .adm-folder-panel { margin-top: -22px; padding: 11px 11px 11px; border-radius: 0 16px 16px 16px; }
+    .adm-folder-tab { height: 36px; padding: 0 16px 2px 11px; border-radius: 16px 16px 0 0; }
+    .adm-folder-tab::after { width: 16px; height: 16px; background: radial-gradient(circle at 100% 0, transparent 15.5px, var(--fc-panel) 16px); }
+    .adm-folder-title { font-size: .8rem; }
+    .adm-folder-sub { font-size: .7rem; }
+    .adm-folder-num { font-size: 1.6rem; }
+    .adm-folder-num sup { font-size: .7rem; }
+    .adm-folder-cta { padding: 6px 9px; font-size: .68rem; gap: 3px; }
+    .adm-folder-cta svg { width: 12px; height: 12px; }
+    .adm-folder-foot { padding-top: 10px; }
+}

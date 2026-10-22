@@ -37,7 +37,11 @@ import {
   MapPin,
   Image as ImageIcon,
   FileWarning,
-  ArrowLeft
+  ArrowLeft,
+  Clock,
+  CalendarDays,
+  ArrowRight,
+  ArrowUpRight
 } from 'lucide-react';
 import './AdminAdmissionPanel.css';
 
@@ -132,6 +136,29 @@ const fmtDate = (ts) => {
   });
 };
 
+const fmtShort = (ts) => {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+};
+
+// Colourful "mesh" banners for the profile-style cards. One is picked per
+// applicant from a hash of their id so a card keeps the same look every render.
+const CARD_BANNERS = [
+  'radial-gradient(70% 90% at 88% 12%, #ffb54a 0%, transparent 60%), radial-gradient(80% 90% at 8% 95%, #1b2a6b 0%, transparent 62%), linear-gradient(135deg, #5b3df0, #ec4899)',
+  'radial-gradient(70% 90% at 12% 10%, #fde68a 0%, transparent 58%), radial-gradient(80% 90% at 92% 90%, #be123c 0%, transparent 60%), linear-gradient(135deg, #f97316, #7c3aed)',
+  'radial-gradient(70% 90% at 90% 15%, #5eead4 0%, transparent 58%), radial-gradient(80% 90% at 8% 90%, #1e3a8a 0%, transparent 62%), linear-gradient(135deg, #0ea5e9, #6366f1)',
+  'radial-gradient(70% 90% at 15% 15%, #f0abfc 0%, transparent 58%), radial-gradient(80% 90% at 90% 92%, #312e81 0%, transparent 62%), linear-gradient(135deg, #ec4899, #f59e0b)',
+  'radial-gradient(70% 90% at 88% 10%, #bef264 0%, transparent 56%), radial-gradient(80% 90% at 10% 92%, #064e3b 0%, transparent 62%), linear-gradient(135deg, #10b981, #3b82f6)'
+];
+
+const bannerFor = (seed = '') => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return CARD_BANNERS[h % CARD_BANNERS.length];
+};
+
 const docState = (app, key) => {
   if (app[DOC_META[key].flag]) return 'ok';
   const required = key === 'tc' ? !!app.grade && app.grade !== 'LKG' : true;
@@ -175,6 +202,66 @@ const classShort = (key) => (key === 'Other' ? '?' : key);
 
 // A "new" application is one still waiting for action that the admin has not opened yet
 const isNewApp = (app) => (app.status || 'Pending') === 'Pending' && !app.adminSeen;
+
+/* Pastel colour themes for the class cards (one per card, cycling) */
+const CLASS_THEMES = [
+  { glow: '125,224,240', mid: '#e4e8ea', bottom: '#d3eaef', a: '#9ad8f5', b: '#6cc3ee', c1: '#d7f5fa', c2: '#b0e8f2' }, // sky
+  { glow: '176,160,255', mid: '#e8e6f0', bottom: '#e0dbf8', a: '#c4b5fd', b: '#8b7cf6', c1: '#ece8ff', c2: '#cfc6fb' }, // lavender
+  { glow: '110,231,183', mid: '#e3eae7', bottom: '#d4efe3', a: '#7fe3b4', b: '#34c98a', c1: '#dcf7ea', c2: '#b2ecd0' }, // mint
+  { glow: '253,186,116', mid: '#ece6e2', bottom: '#f6e2d1', a: '#fdc08a', b: '#f98f4d', c1: '#ffecd9', c2: '#fdd2ad' }, // peach
+  { glow: '251,146,180', mid: '#ece5e8', bottom: '#f5d9e2', a: '#f9a8c4', b: '#ee6c9c', c1: '#ffe4ee', c2: '#facbdd' }, // rose
+  { glow: '250,224,100', mid: '#eceae0', bottom: '#f3eccb', a: '#f7d96b', b: '#eab72e', c1: '#fff6d0', c2: '#f9e599' }, // lemon
+  { glow: '147,180,255', mid: '#e5e8ee', bottom: '#d9e2f8', a: '#a5bfff', b: '#6f93f2', c1: '#e3ebff', c2: '#c3d4fb' }  // periwinkle
+];
+
+const themeStyle = (index = 0) => {
+  const t = CLASS_THEMES[index % CLASS_THEMES.length];
+  return {
+    '--cc-glow': t.glow,
+    '--cc-mid': t.mid,
+    '--cc-bottom': t.bottom,
+    '--cc-a': t.a,
+    '--cc-b': t.b,
+    '--cc-c1': t.c1,
+    '--cc-c2': t.c2
+  };
+};
+
+/* Glass-style class card (soft frosted surface, cyan glow, stat row, pill CTA) */
+function ClassCard({ short, title, sub, total, pending, fresh, onOpen, isAll, themeIndex = 0 }) {
+  return (
+    <button
+      type="button"
+      className={`glass-card ${isAll ? 'all' : ''} ${total === 0 ? 'empty' : ''}`}
+      onClick={onOpen}
+      style={themeStyle(themeIndex)}
+      title={`${title} — ${total} application${total === 1 ? '' : 's'}${fresh ? `, ${fresh} new` : ''}`}
+    >
+      <span className="glass-top">
+        <span className="glass-avatar">{short}</span>
+        <span className="glass-corner">
+          {fresh > 0 && <span className="glass-dot" title={`${fresh} new`} />}
+          <ArrowUpRight size={22} strokeWidth={1.8} />
+        </span>
+      </span>
+      <span className="glass-name">{title}</span>
+      <span className="glass-sub">{sub}</span>
+      <span className="glass-tags">
+        <span className="glass-tag">Admissions</span>
+        {fresh > 0 && <span className="glass-tag new">{fresh} new</span>}
+      </span>
+      <span className="glass-stats">
+        <span className="glass-stat"><strong>{total}</strong><em>Total</em></span>
+        <span className="glass-stat"><strong>{pending}</strong><em>Pending</em></span>
+        <span className="glass-stat"><strong>{fresh}</strong><em>New</em></span>
+      </span>
+      <span className="glass-actions">
+        <span className="glass-cta">View applications</span>
+        <span className="glass-go"><ArrowRight size={22} strokeWidth={1.8} /></span>
+      </span>
+    </button>
+  );
+}
 
 const DOC_STATE_LABEL = { ok: 'Uploaded', missing: 'Missing', na: 'Not required' };
 
@@ -629,111 +716,120 @@ export default function AdmissionPanel() {
   );
 
   const renderCard = (app) => {
-      const statusClass = (app.status || 'Pending').toLowerCase();
-      const isApproved = app.status === 'Approved';
-      const isRejected = app.status === 'Rejected';
-      const displayName = getFullName(app);
-      const docCount = attachedCount(app);
-      const isFresh = isNewApp(app);
+    const statusClass = (app.status || 'Pending').toLowerCase();
+    const isApproved = app.status === 'Approved';
+    const isRejected = app.status === 'Rejected';
+    const displayName = getFullName(app);
+    const docCount = attachedCount(app);
+    const isFresh = isNewApp(app);
+    const StatusIcon = isApproved ? ShieldCheck : isRejected ? XCircle : Clock;
+    const subtitle = [app.parentName, app.phone].filter(Boolean).join(' · ') || 'No contact provided';
 
-      return (
-        <div className={`admission-card ${statusClass} ${isFresh ? 'is-new' : ''}`} key={app.id}>
-          <div className="admission-card-accent" />
+    return (
+      <div className={`pcard ${statusClass} ${isFresh ? 'is-new' : ''}`} key={app.id}>
+        <div className="pcard-banner">
+          <div className="pcard-banner-art" style={{ background: bannerFor(app.id) }} />
           {isFresh && (
-            <span className="new-dot-badge" title="New application">
+            <span className="pcard-glass new" title="New application">
               <span className="green-dot" /> New
             </span>
           )}
-
-          <div className="admission-card-top">
-            <div className="admission-avatar">{getInitials(displayName)}</div>
-            <div className="admission-card-titles">
-              <h4 title={displayName}>{displayName}</h4>
-              <span className="ap-grade">
-                <GraduationCap size={12} /> {app.grade || '—'}
-              </span>
-            </div>
-            <span className={`ap-status ${statusClass}`}>
-              {isApproved && <ShieldCheck size={11} />}
-              {app.status || 'Pending'}
+          {app.acknowledgementNumber && (
+            <span className="pcard-glass ack" title={app.acknowledgementNumber}>
+              <Hash size={11} /> {app.acknowledgementNumber}
             </span>
+          )}
+          <div className="pcard-avatar">{getInitials(displayName)}</div>
+          <span className={`pcard-status ${statusClass}`}>
+            <StatusIcon size={14} />
+            {app.status || 'Pending'}
+          </span>
+        </div>
+
+        <div className="pcard-head">
+          <div className="pcard-titles">
+            <h4 title={displayName}>{displayName}</h4>
+            <span title={subtitle}>{subtitle}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => handleDeleteAdmission(app.id)}
+            className="pcard-round-btn"
+            title="Delete Record"
+            aria-label="Delete record"
+          >
+            <Trash2 size={17} />
+          </button>
+        </div>
 
-          <div className="admission-card-details">
-            {app.acknowledgementNumber && (
-              <div className="admission-detail-row">
-                <Hash size={13} />
-                <span>{app.acknowledgementNumber}</span>
-              </div>
-            )}
-            <div className="admission-detail-row">
-              <User size={13} />
-              <span>{app.parentName || 'No parent name provided'}</span>
-            </div>
-            <div className="admission-detail-row">
-              <Phone size={13} />
-              <span>{app.phone || 'No phone provided'}</span>
-            </div>
-            <div className={`admission-detail-row docs ${docCount ? 'has-docs' : ''}`}>
-              <Paperclip size={13} />
-              <span>
-                {docCount
-                  ? `${docCount} document${docCount > 1 ? 's' : ''} uploaded`
-                  : 'No documents uploaded'}
-              </span>
+        <div className="pcard-stats">
+          <div className="pcard-stat">
+            <GraduationCap size={20} className="ico green" />
+            <div>
+              <strong>{app.grade || '—'}</strong>
+              <span>Class</span>
             </div>
           </div>
-
-          <div className="admission-card-section">
-            <label>Assign Section</label>
-            {renderSectionSelect(app, isApproved)}
+          <div className="pcard-stat">
+            <Paperclip size={20} className="ico blue" />
+            <div>
+              <strong>{docCount}/{DOC_ORDER.length}</strong>
+              <span>Documents</span>
+            </div>
           </div>
-
-          <div className="admission-card-footer">
-            <button
-              className="ap-icon-btn view-btn"
-              title="View details and documents"
-              onClick={() => openReview(app)}
-            >
-              <Eye size={15} /> Review
-            </button>
-
-            <div className="admission-footer-right">
-              {!isApproved && (
-                <button
-                  onClick={() => handleApproveAdmission(app)}
-                  className="ap-icon-btn approve-sync-btn"
-                  title="Approve & Send to ERP"
-                >
-                  <CheckCircle2 size={14} /> Approve
-                </button>
-              )}
-              {!isRejected && !isApproved && (
-                <button
-                  onClick={() => handleRejectAdmission(app.id)}
-                  className="ap-icon-btn reject-btn"
-                  title="Reject Application"
-                >
-                  <XCircle size={14} /> Reject
-                </button>
-              )}
-              {isApproved && (
-                <span className="synced-label">
-                  <CheckCircle2 size={13} /> Synced to ERP
-                </span>
-              )}
-              <button
-                onClick={() => handleDeleteAdmission(app.id)}
-                className="ap-icon-btn delete-btn"
-                title="Delete Record"
-                aria-label="Delete record"
-              >
-                <Trash2 size={14} />
-              </button>
+          <div className="pcard-stat">
+            <CalendarDays size={20} className="ico purple" />
+            <div>
+              <strong>{fmtShort(app.createdAt)}</strong>
+              <span>Applied</span>
             </div>
           </div>
         </div>
-      );
+
+        <div className="pcard-section">
+          <label>Section</label>
+          {renderSectionSelect(app, isApproved)}
+        </div>
+
+        <div className="pcard-actions">
+          <button
+            type="button"
+            className="pcard-cta"
+            title="View details and documents"
+            onClick={() => openReview(app)}
+          >
+            <Eye size={17} /> Review Application
+          </button>
+
+          {isApproved ? (
+            <span className="pcard-synced">
+              <CheckCircle2 size={14} /> Synced to ERP
+            </span>
+          ) : (
+            <div className="pcard-secondary">
+              <button
+                type="button"
+                onClick={() => handleApproveAdmission(app)}
+                className="pcard-soft approve"
+                title="Approve & Send to ERP"
+              >
+                <CheckCircle2 size={15} /> Approve
+              </button>
+              {!isRejected && (
+                <button
+                  type="button"
+                  onClick={() => handleRejectAdmission(app.id)}
+                  className="pcard-soft reject"
+                  title="Reject Application"
+                >
+                  <XCircle size={15} /> Reject
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -781,34 +877,33 @@ export default function AdmissionPanel() {
         </span>
       </div>
 
-      <div className="class-cards-grid">
-        <button
-          type="button"
-          className="class-card all"
-          onClick={() => openClass('All')}
-        >
-          {totalNew > 0 && <span className="green-dot class-dot" title={`${totalNew} new`} />}
-          <span className="class-card-name">All</span>
-          <span className="class-card-sub">All classes</span>
-          <span className="class-card-count">{totalCount}</span>
-        </button>
+      <div className="glass-grid">
+        <ClassCard
+          isAll
+          themeIndex={0}
+          short="All"
+          title="All classes"
+          sub="Every application"
+          total={totalCount}
+          pending={pendingCount}
+          fresh={totalNew}
+          onOpen={() => openClass('All')}
+        />
 
-        {[...CLASS_LIST, ...(classStats.Other.total > 0 ? ['Other'] : [])].map((key) => {
+        {[...CLASS_LIST, ...(classStats.Other.total > 0 ? ['Other'] : [])].map((key, idx) => {
           const st = classStats[key];
           return (
-            <button
+            <ClassCard
               key={key}
-              type="button"
-              className={`class-card ${st.total === 0 ? 'empty' : ''}`}
-              onClick={() => openClass(key)}
-              title={`${classLabel(key)} — ${st.total} application${st.total === 1 ? '' : 's'}${st.fresh ? `, ${st.fresh} new` : ''}`}
-            >
-              {st.fresh > 0 && <span className="green-dot class-dot" />}
-              <span className="class-card-name">{classShort(key)}</span>
-              <span className="class-card-sub">{classLabel(key)}</span>
-              <span className="class-card-count">{st.total}</span>
-              {st.fresh > 0 && <span className="class-card-new">{st.fresh} new</span>}
-            </button>
+              themeIndex={idx + 1}
+              short={classShort(key)}
+              title={classLabel(key)}
+              sub={st.total === 0 ? 'No applications yet' : 'Tap to review'}
+              total={st.total}
+              pending={st.pending}
+              fresh={st.fresh}
+              onOpen={() => openClass(key)}
+            />
           );
         })}
       </div>
