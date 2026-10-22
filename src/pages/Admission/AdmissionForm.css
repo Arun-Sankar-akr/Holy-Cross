@@ -1513,3 +1513,210 @@
     font-weight: 700;
     cursor: pointer;
 }
+
+
+/* =========================================================
+   GENERAL INSTRUCTIONS (page 2)
+========================================================= */
+.adm-instr {
+    margin: 0 0 22px;
+    padding: 22px;
+    border: 1px solid var(--reg-border);
+    border-radius: 18px;
+    background: #fff;
+}
+
+.adm-instr-head h4 {
+    margin: 0;
+    font-family: var(--reg-font-display);
+    font-size: 22px;
+    color: var(--reg-ink);
+}
+
+.adm-instr-head p {
+    margin: 4px 0 0;
+    font-weight: 700;
+    color: var(--reg-primary-dark);
+}
+
+.adm-instr-body {
+    margin-top: 16px;
+    padding: 18px;
+    max-height: 460px;
+    overflow-y: auto;
+    border-radius: 14px;
+    background: var(--reg-bg);
+    border: 1px solid var(--reg-border);
+    color: var(--reg-ink);
+    line-height: 1.65;
+    font-size: 15px;
+}
+
+.adm-instr-body p {
+    margin: 0 0 10px;
+}
+
+.adm-instr-body h5 {
+    margin: 18px 0 8px;
+    font-family: var(--reg-font-display);
+    font-size: 17px;
+    color: var(--reg-primary-dark);
+}
+
+.adm-instr-body ul {
+    margin: 0 0 8px;
+    padding-left: 22px;
+    display: grid;
+    gap: 6px;
+}
+
+.adm-instr-body ul ul {
+    margin-top: 6px;
+    list-style: circle;
+}
+
+.adm-instr-warning {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fff1f1;
+    border: 1px solid #ffc9c9;
+    color: #9b2c2c;
+}
+
+.adm-instr-warning svg {
+    flex: none;
+    margin-top: 2px;
+}
+
+.adm-instr-warning p {
+    margin: 4px 0 0;
+}
+
+.adm-instr-address {
+    display: grid;
+    gap: 2px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--reg-border);
+    font-size: 14px;
+    color: var(--reg-muted);
+}
+
+.adm-instr-address strong {
+    color: var(--reg-ink);
+}
+
+.adm-instr-declare {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #effcf6;
+    border: 1px solid #b6ecd4;
+    color: #0b5f47;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.adm-instr-declare input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex: none;
+    accent-color: #0f9d72;
+}
+
+.adm-instr-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.adm-instr-back,
+.adm-instr-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.adm-instr-back {
+    background: var(--reg-primary-soft);
+    color: var(--reg-primary-dark);
+}
+
+.adm-instr-next {
+    background: var(--reg-grad);
+    color: #fff;
+}
+
+.adm-instr-next:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .adm-instr {
+        padding: 16px;
+    }
+
+    .adm-instr-body {
+        max-height: 380px;
+    }
+}
+
+/* ============================================================================
+   FULL-PAGE CLASS CARDS + INSTRUCTIONS (before the form opens)
+   The step-details sidebar is hidden on these two pages and shown only once
+   the form starts, so the cards and instructions get the whole page.
+   ============================================================================ */
+.adm-reg-grid.is-full {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.adm-reg-panel.is-wide .adm-class-pick,
+.adm-reg-panel.is-wide .adm-instr {
+    width: 100%;
+    max-width: none;
+}
+
+.adm-reg-panel.is-wide .adm-class-pick {
+    padding: clamp(20px, 3vw, 34px);
+}
+
+.adm-reg-panel.is-wide .adm-class-cards {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.adm-reg-panel.is-wide .adm-class-card {
+    min-height: 120px;
+}
+
+.adm-reg-panel.is-wide .adm-class-card-name {
+    font-size: 1.5rem;
+}
+
+.adm-reg-panel.is-wide .adm-instr {
+    padding: clamp(20px, 3vw, 34px);
+}
+
+@media (max-width: 600px) {
+    .adm-reg-panel.is-wide .adm-class-cards {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+}

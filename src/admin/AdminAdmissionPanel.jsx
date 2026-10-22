@@ -36,7 +36,8 @@ import {
   Users,
   MapPin,
   Image as ImageIcon,
-  FileWarning
+  FileWarning,
+  ArrowLeft
 } from 'lucide-react';
 import './AdminAdmissionPanel.css';
 
@@ -136,6 +137,44 @@ const docState = (app, key) => {
   const required = key === 'tc' ? !!app.grade && app.grade !== 'LKG' : true;
   return required ? 'missing' : 'na';
 };
+
+/* ============================================================================
+   CLASS HELPERS (LKG -> XII)
+   Grade values coming from the admission form can be written many ways
+   ("LKG", "Class 5", "5th", "V", "Grade 10", "XII"...). normalizeGrade maps
+   all of them onto one canonical class key so applications land in the right card.
+   ============================================================================ */
+
+const CLASS_LIST = [
+  'LKG', 'UKG', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'
+];
+
+const ROMAN_BY_NUMBER = {
+  1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI',
+  7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII'
+};
+
+const normalizeGrade = (grade) => {
+  if (!grade) return 'Other';
+  const raw = String(grade).toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim();
+  const cleaned = raw
+    .replace(/\b(CLASS|GRADE|STD|STANDARD)\b/g, ' ')
+    .replace(/(\d+)(ST|ND|RD|TH)\b/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const compact = cleaned.replace(/\s/g, '');
+  if (compact === 'LKG') return 'LKG';
+  if (compact === 'UKG') return 'UKG';
+  if (/^\d+$/.test(compact) && ROMAN_BY_NUMBER[Number(compact)]) return ROMAN_BY_NUMBER[Number(compact)];
+  if (CLASS_LIST.includes(compact)) return compact;
+  return 'Other';
+};
+
+const classLabel = (key) => (key === 'LKG' || key === 'UKG' || key === 'Other' ? key : `Class ${key}`);
+const classShort = (key) => (key === 'Other' ? '?' : key);
+
+// A "new" application is one still waiting for action that the admin has not opened yet
+const isNewApp = (app) => (app.status || 'Pending') === 'Pending' && !app.adminSeen;
 
 const DOC_STATE_LABEL = { ok: 'Uploaded', missing: 'Missing', na: 'Not required' };
 
@@ -308,6 +347,7 @@ export default function AdmissionPanel() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [modalMode, setModalMode] = useState('normal'); // normal | maximized | minimized
+  const [classFilter, setClassFilter] = useState(null); // null = first page (class cards) | All | LKG | UKG | I ... XII | Other
 
   // Uploaded files for the application open in the modal
   const [files, setFiles] = useState({});
@@ -485,6 +525,36 @@ export default function AdmissionPanel() {
     }
   };
 
+  // Opening an application clears its green "new" dot (and remembers it in Firestore)
+  const markSeen = async (app) => {
+    if (!isNewApp(app)) return;
+    setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, adminSeen: true } : a)));
+    try {
+      await updateDoc(doc(db, 'admissions', app.id), { adminSeen: true });
+    } catch (error) {
+      console.error('Could not mark application as seen:', error);
+    }
+  };
+
+  const openReview = (app) => {
+    setSelectedApp(app);
+    markSeen(app);
+  };
+
+  // First page -> tap a class card -> that class's applications
+  const openClass = (key) => {
+    setSearch('');
+    setStatusFilter('All');
+    setClassFilter(key);
+    window.scrollTo?.({ top: 0 });
+  };
+
+  const backToClasses = () => {
+    setSearch('');
+    setStatusFilter('All');
+    setClassFilter(null);
+  };
+
   const totalCount = applications.length;
   const countBy = (s) => applications.filter((a) => (a.status || 'Pending') === s).length;
   const pendingCount = countBy('Pending');
@@ -494,13 +564,45 @@ export default function AdmissionPanel() {
   const visibleApps = useMemo(() => {
     const q = search.trim().toLowerCase();
     return applications.filter((a) => {
+      if (classFilter && classFilter !== 'All' && normalizeGrade(a.grade) !== classFilter) return false;
       if (statusFilter !== 'All' && (a.status || 'Pending') !== statusFilter) return false;
       if (!q) return true;
       return [getFullName(a), a.acknowledgementNumber, a.email, a.phone, a.parentName, a.grade]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [applications, statusFilter, search]);
+  }, [applications, statusFilter, search, classFilter]);
+
+  // Per-class totals for the class cards (always from ALL applications)
+  const classStats = useMemo(() => {
+    const stats = {};
+    [...CLASS_LIST, 'Other'].forEach((k) => {
+      stats[k] = { total: 0, pending: 0, fresh: 0 };
+    });
+    applications.forEach((a) => {
+      const k = normalizeGrade(a.grade);
+      stats[k].total += 1;
+      if ((a.status || 'Pending') === 'Pending') stats[k].pending += 1;
+      if (isNewApp(a)) stats[k].fresh += 1;
+    });
+    return stats;
+  }, [applications]);
+
+  const totalNew = useMemo(() => applications.filter(isNewApp).length, [applications]);
+
+  // Applications organised per class (after search + status filter)
+  const groupedApps = useMemo(() => {
+    const groups = {};
+    visibleApps.forEach((a) => {
+      const k = normalizeGrade(a.grade);
+      (groups[k] = groups[k] || []).push(a);
+    });
+    return groups;
+  }, [visibleApps]);
+
+  const classesToShow = (classFilter === 'All' ? [...CLASS_LIST, 'Other'] : [classFilter]).filter(
+    (k) => classFilter !== 'All' || (groupedApps[k] || []).length > 0
+  );
 
   if (loading) {
     return (
@@ -526,6 +628,114 @@ export default function AdmissionPanel() {
     </select>
   );
 
+  const renderCard = (app) => {
+      const statusClass = (app.status || 'Pending').toLowerCase();
+      const isApproved = app.status === 'Approved';
+      const isRejected = app.status === 'Rejected';
+      const displayName = getFullName(app);
+      const docCount = attachedCount(app);
+      const isFresh = isNewApp(app);
+
+      return (
+        <div className={`admission-card ${statusClass} ${isFresh ? 'is-new' : ''}`} key={app.id}>
+          <div className="admission-card-accent" />
+          {isFresh && (
+            <span className="new-dot-badge" title="New application">
+              <span className="green-dot" /> New
+            </span>
+          )}
+
+          <div className="admission-card-top">
+            <div className="admission-avatar">{getInitials(displayName)}</div>
+            <div className="admission-card-titles">
+              <h4 title={displayName}>{displayName}</h4>
+              <span className="ap-grade">
+                <GraduationCap size={12} /> {app.grade || '—'}
+              </span>
+            </div>
+            <span className={`ap-status ${statusClass}`}>
+              {isApproved && <ShieldCheck size={11} />}
+              {app.status || 'Pending'}
+            </span>
+          </div>
+
+          <div className="admission-card-details">
+            {app.acknowledgementNumber && (
+              <div className="admission-detail-row">
+                <Hash size={13} />
+                <span>{app.acknowledgementNumber}</span>
+              </div>
+            )}
+            <div className="admission-detail-row">
+              <User size={13} />
+              <span>{app.parentName || 'No parent name provided'}</span>
+            </div>
+            <div className="admission-detail-row">
+              <Phone size={13} />
+              <span>{app.phone || 'No phone provided'}</span>
+            </div>
+            <div className={`admission-detail-row docs ${docCount ? 'has-docs' : ''}`}>
+              <Paperclip size={13} />
+              <span>
+                {docCount
+                  ? `${docCount} document${docCount > 1 ? 's' : ''} uploaded`
+                  : 'No documents uploaded'}
+              </span>
+            </div>
+          </div>
+
+          <div className="admission-card-section">
+            <label>Assign Section</label>
+            {renderSectionSelect(app, isApproved)}
+          </div>
+
+          <div className="admission-card-footer">
+            <button
+              className="ap-icon-btn view-btn"
+              title="View details and documents"
+              onClick={() => openReview(app)}
+            >
+              <Eye size={15} /> Review
+            </button>
+
+            <div className="admission-footer-right">
+              {!isApproved && (
+                <button
+                  onClick={() => handleApproveAdmission(app)}
+                  className="ap-icon-btn approve-sync-btn"
+                  title="Approve & Send to ERP"
+                >
+                  <CheckCircle2 size={14} /> Approve
+                </button>
+              )}
+              {!isRejected && !isApproved && (
+                <button
+                  onClick={() => handleRejectAdmission(app.id)}
+                  className="ap-icon-btn reject-btn"
+                  title="Reject Application"
+                >
+                  <XCircle size={14} /> Reject
+                </button>
+              )}
+              {isApproved && (
+                <span className="synced-label">
+                  <CheckCircle2 size={13} /> Synced to ERP
+                </span>
+              )}
+              <button
+                onClick={() => handleDeleteAdmission(app.id)}
+                className="ap-icon-btn delete-btn"
+                title="Delete Record"
+                aria-label="Delete record"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+  };
+
   return (
     <div className="ap-root">
       <div className="ap-header">
@@ -542,6 +752,13 @@ export default function AdmissionPanel() {
             <span className="ap-stat-value">{pendingCount}</span>
             <span className="ap-stat-label">Pending</span>
           </div>
+          <div className="ap-stat-chip fresh">
+            <span className="ap-stat-value">
+              {totalNew > 0 && <span className="green-dot" />}
+              {totalNew}
+            </span>
+            <span className="ap-stat-label">New</span>
+          </div>
           <div className="ap-stat-chip approved">
             <span className="ap-stat-value">{approvedCount}</span>
             <span className="ap-stat-label">Approved</span>
@@ -551,6 +768,66 @@ export default function AdmissionPanel() {
             <span className="ap-stat-label">Rejected</span>
           </div>
         </div>
+      </div>
+
+      {classFilter === null ? (
+        <>
+      {/* ---------------- Class cards (LKG to XII) ---------------- */}
+      <div className="class-cards-head">
+        <h4>Select a class to view its applications</h4>
+        <span className="class-cards-legend">
+          <span className="green-dot" /> New application{totalNew === 1 ? '' : 's'} waiting
+          {totalNew > 0 && <strong>{totalNew}</strong>}
+        </span>
+      </div>
+
+      <div className="class-cards-grid">
+        <button
+          type="button"
+          className="class-card all"
+          onClick={() => openClass('All')}
+        >
+          {totalNew > 0 && <span className="green-dot class-dot" title={`${totalNew} new`} />}
+          <span className="class-card-name">All</span>
+          <span className="class-card-sub">All classes</span>
+          <span className="class-card-count">{totalCount}</span>
+        </button>
+
+        {[...CLASS_LIST, ...(classStats.Other.total > 0 ? ['Other'] : [])].map((key) => {
+          const st = classStats[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`class-card ${st.total === 0 ? 'empty' : ''}`}
+              onClick={() => openClass(key)}
+              title={`${classLabel(key)} — ${st.total} application${st.total === 1 ? '' : 's'}${st.fresh ? `, ${st.fresh} new` : ''}`}
+            >
+              {st.fresh > 0 && <span className="green-dot class-dot" />}
+              <span className="class-card-name">{classShort(key)}</span>
+              <span className="class-card-sub">{classLabel(key)}</span>
+              <span className="class-card-count">{st.total}</span>
+              {st.fresh > 0 && <span className="class-card-new">{st.fresh} new</span>}
+            </button>
+          );
+        })}
+      </div>
+
+        </>
+      ) : (
+        <>
+      <div className="class-detail-bar">
+        <button type="button" className="class-back-btn" onClick={backToClasses}>
+          <ArrowLeft size={15} /> All classes
+        </button>
+        <h4 className="class-detail-title">
+          {classFilter === 'All' ? 'All classes' : classLabel(classFilter)}
+          {classFilter !== 'All' && classStats[classFilter]?.fresh > 0 && <span className="green-dot" />}
+        </h4>
+        <span className="class-detail-count">
+          {classFilter === 'All' ? totalCount : classStats[classFilter]?.total || 0} application
+          {(classFilter === 'All' ? totalCount : classStats[classFilter]?.total || 0) === 1 ? '' : 's'}
+        </span>
       </div>
 
       <div className="ap-toolbar">
@@ -582,6 +859,7 @@ export default function AdmissionPanel() {
         </div>
       </div>
 
+      {/* ---------------- Applications, organised by class ---------------- */}
       {visibleApps.length === 0 ? (
         <div className="no-data-state">
           <GraduationCap size={30} strokeWidth={1.5} />
@@ -592,109 +870,32 @@ export default function AdmissionPanel() {
           </p>
         </div>
       ) : (
-        <div className="admissions-grid">
-          {visibleApps.map((app) => {
-            const statusClass = (app.status || 'Pending').toLowerCase();
-            const isApproved = app.status === 'Approved';
-            const isRejected = app.status === 'Rejected';
-            const displayName = getFullName(app);
-            const docCount = attachedCount(app);
-
-            return (
-              <div className={`admission-card ${statusClass}`} key={app.id}>
-                <div className="admission-card-accent" />
-
-                <div className="admission-card-top">
-                  <div className="admission-avatar">{getInitials(displayName)}</div>
-                  <div className="admission-card-titles">
-                    <h4 title={displayName}>{displayName}</h4>
-                    <span className="ap-grade">
-                      <GraduationCap size={12} /> {app.grade || '—'}
-                    </span>
-                  </div>
-                  <span className={`ap-status ${statusClass}`}>
-                    {isApproved && <ShieldCheck size={11} />}
-                    {app.status || 'Pending'}
-                  </span>
-                </div>
-
-                <div className="admission-card-details">
-                  {app.acknowledgementNumber && (
-                    <div className="admission-detail-row">
-                      <Hash size={13} />
-                      <span>{app.acknowledgementNumber}</span>
-                    </div>
-                  )}
-                  <div className="admission-detail-row">
-                    <User size={13} />
-                    <span>{app.parentName || 'No parent name provided'}</span>
-                  </div>
-                  <div className="admission-detail-row">
-                    <Phone size={13} />
-                    <span>{app.phone || 'No phone provided'}</span>
-                  </div>
-                  <div className={`admission-detail-row docs ${docCount ? 'has-docs' : ''}`}>
-                    <Paperclip size={13} />
-                    <span>
-                      {docCount
-                        ? `${docCount} document${docCount > 1 ? 's' : ''} uploaded`
-                        : 'No documents uploaded'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="admission-card-section">
-                  <label>Assign Section</label>
-                  {renderSectionSelect(app, isApproved)}
-                </div>
-
-                <div className="admission-card-footer">
-                  <button
-                    className="ap-icon-btn view-btn"
-                    title="View details and documents"
-                    onClick={() => setSelectedApp(app)}
-                  >
-                    <Eye size={15} /> Review
-                  </button>
-
-                  <div className="admission-footer-right">
-                    {!isApproved && (
-                      <button
-                        onClick={() => handleApproveAdmission(app)}
-                        className="ap-icon-btn approve-sync-btn"
-                        title="Approve & Send to ERP"
-                      >
-                        <CheckCircle2 size={14} /> Approve
-                      </button>
-                    )}
-                    {!isRejected && !isApproved && (
-                      <button
-                        onClick={() => handleRejectAdmission(app.id)}
-                        className="ap-icon-btn reject-btn"
-                        title="Reject Application"
-                      >
-                        <XCircle size={14} /> Reject
-                      </button>
-                    )}
-                    {isApproved && (
-                      <span className="synced-label">
-                        <CheckCircle2 size={13} /> Synced to ERP
-                      </span>
-                    )}
-                    <button
-                      onClick={() => handleDeleteAdmission(app.id)}
-                      className="ap-icon-btn delete-btn"
-                      title="Delete Record"
-                      aria-label="Delete record"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+        classesToShow.map((key) => {
+          const list = groupedApps[key] || [];
+          const freshInGroup = list.filter(isNewApp).length;
+          return (
+            <section className="class-group" key={key}>
+              <div className="class-group-head">
+                <h4>
+                  {classLabel(key)}
+                  {freshInGroup > 0 && <span className="green-dot" />}
+                </h4>
+                <span className="class-group-count">
+                  {list.length} application{list.length === 1 ? '' : 's'}
+                  {freshInGroup > 0 && <em>{freshInGroup} new</em>}
+                </span>
               </div>
-            );
-          })}
-        </div>
+              {list.length === 0 ? (
+                <div className="class-group-empty">No applications for {classLabel(key)} yet.</div>
+              ) : (
+                <div className="admissions-grid">{list.map(renderCard)}</div>
+              )}
+            </section>
+          );
+        })
+      )}
+
+        </>
       )}
 
       {/* ---------------- Review modal ---------------- */}

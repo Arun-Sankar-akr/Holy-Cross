@@ -48,6 +48,9 @@ const STEP_META = [
 
 const TOTAL_STEPS = STEP_META.length;
 
+// Class name as printed in the instructions heading (UKG -> U.K.G)
+const instructionClassName = (g) => (g === 'LKG' ? 'L.K.G' : g === 'UKG' ? 'U.K.G' : g);
+
 // Same list the admin uses in Admission details, so class names always match.
 const GRADES = ADMISSION_CLASSES;
 
@@ -199,6 +202,16 @@ export default function AdmissionForm({
 
     // New applications start on the class cards page; edits go straight to the form.
     const [classChosen, setClassChosen] = useState(mode !== 'create');
+    // Page 2: General Instructions must be read and declared before the form opens.
+    const [instructionsAccepted, setInstructionsAccepted] = useState(mode !== 'create');
+    const [instrDeclared, setInstrDeclared] = useState(false);
+    const formReady = classChosen && instructionsAccepted;
+    const backToClassCards = () => {
+        setInstructionsAccepted(false);
+        setInstrDeclared(false);
+        setClassChosen(false);
+        scrollToPanel();
+    };
 
     // Classes the admin has opened (range from/to, minus manually closed classes).
     const { academicYear, rangeLabel, openClasses, classesInRange } = useAdmissionConfig();
@@ -978,8 +991,10 @@ export default function AdmissionForm({
 
     return (
         <div className="adm-reg-shell">
-            <div className="adm-reg-grid">
+            <div className={`adm-reg-grid ${formReady ? '' : 'is-full'}`}>
 
+                {/* Step details sidebar only appears once the form itself is open */}
+                {formReady && (
                 <aside className="adm-reg-sidenav">
                     <div className="adm-reg-side-head">
                         <span className="adm-reg-side-kicker">
@@ -1017,8 +1032,9 @@ export default function AdmissionForm({
                         );
                     })}
                 </aside>
+                )}
 
-                <div className="adm-reg-panel">
+                <div className={`adm-reg-panel ${formReady ? '' : 'is-wide'}`}>
 
                     <div className="adm-reg-panel-head">
                         <div className="adm-reg-panel-title">
@@ -1040,7 +1056,7 @@ export default function AdmissionForm({
                         </span>
                     </div>
 
-                    {classChosen && (
+                    {formReady && (
                     <div className="adm-reg-stepper">
                         {STEP_META.map((s, idx) => {
                             const isActive = step === s.key;
@@ -1106,7 +1122,121 @@ export default function AdmissionForm({
                         </section>
                     )}
 
-                    {classChosen && (
+                    {classChosen && !instructionsAccepted && (
+                        <section className="adm-instr" aria-labelledby="adm-instr-title">
+                            <div className="adm-instr-head">
+                                <h4 id="adm-instr-title">General Instructions</h4>
+                                <p>Guidelines for Admission – {instructionClassName(formData.grade)} {academicYear}</p>
+                            </div>
+
+                            <div className="adm-instr-body" tabIndex={0}>
+                                <p>Dear Parents,</p>
+                                <p>
+                                    We understand your keen interest in seeking admission for your child in our
+                                    institution. It is our privilege to assist you in this process. Kindly read and
+                                    adhere to the following instructions carefully to ensure a smooth and transparent
+                                    admission procedure.
+                                </p>
+
+                                <h5>Eligibility Criteria</h5>
+                                <ul>
+                                    <li>
+                                        Applications for underage or overage children will not be considered under any
+                                        circumstances. Parents are requested to strictly comply with this requirement.
+                                    </li>
+                                    <li>The application form must be completed accurately and submitted with correct information.</li>
+                                    <li>
+                                        Parents are requested to keep the following documents ready. The school will
+                                        notify you when to submit the physical copies:
+                                        <ul>
+                                            <li>Xerox copy of Municipal Birth Certificate</li>
+                                            <li>Recent passport-size photograph of the child</li>
+                                            <li>Copy of Ration Card</li>
+                                            <li>Copy of Child Community Certificate</li>
+                                            <li>Copy of Child Aadhaar Card</li>
+                                            {requiresTC(formData.grade) && (
+                                                <li>
+                                                    Transfer certificate, EMIS No. &amp; Udise No. (required for{' '}
+                                                    {instructionClassName(formData.grade)})
+                                                </li>
+                                            )}
+                                        </ul>
+                                    </li>
+                                    <li>All communication regarding your child’s admission will be displayed on the school notice board.</li>
+                                    <li>The application form and admission process are non-transferable.</li>
+                                    <li>All information provided in the submitted documents must be genuine and truthful.</li>
+                                </ul>
+
+                                <h5>Important Instructions</h5>
+                                <ul>
+                                    <li>Both parents must be present along with the child on the day of the interaction.</li>
+                                    <li>Parents must bring all original documents, including educational certificates, on the day of the interaction.</li>
+                                    <li>The final decision regarding admission will be made by the Selection Panel, and their decision will be binding.</li>
+                                    <li>
+                                        The school follows a strict policy of No Donation, No Middleman, and No
+                                        Recommendation. Parents are urged to cooperate in preventing corruption.
+                                    </li>
+                                    <li>Admission will be granted based on the availability of seats.</li>
+                                    <li>
+                                        Admission to {instructionClassName(formData.grade)} does not guarantee admission to Holy Cross School in
+                                        subsequent years. The Selection Panel will communicate the results through the
+                                        school notice board.
+                                    </li>
+                                </ul>
+
+                                <div className="adm-instr-warning" role="note">
+                                    <AlertCircle size={20} />
+                                    <div>
+                                        <strong>Warning</strong>
+                                        <p>
+                                            Parents are cautioned against individuals who demand money in exchange for
+                                            securing admission. Admissions are granted solely by the School Selection
+                                            Panel and not by any external person associated with the institution.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="adm-instr-address">
+                                    <strong>Address</strong>
+                                    <span>Holy Cross Matriculation Higher Secondary School</span>
+                                    <span>Somarasampettai, Tiruchirappalli, Tamil Nadu 620102</span>
+                                </div>
+                            </div>
+
+                            <label className="adm-instr-declare">
+                                <input
+                                    type="checkbox"
+                                    checked={instrDeclared}
+                                    onChange={(e) => setInstrDeclared(e.target.checked)}
+                                />
+                                <span>
+                                    I have read and understood the general instructions, and I declare that I will
+                                    follow them and give only true information.
+                                </span>
+                            </label>
+
+                            <div className="adm-instr-actions">
+                                <button type="button" className="adm-instr-back" onClick={backToClassCards}>
+                                    <ArrowLeft size={16} /> Change class
+                                </button>
+                                <button
+                                    type="button"
+                                    className="adm-instr-next"
+                                    disabled={!instrDeclared}
+                                    onClick={() => {
+                                        setInstructionsAccepted(true);
+                                        setStep(1);
+                                        setStepError('');
+                                        scrollToPanel();
+                                    }}
+                                >
+                                    Agree and continue <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
+                    {formReady && (
                     <form
                         onSubmit={step === TOTAL_STEPS ? handleSubmit : handleNext}
                         className="adm-real-form"
@@ -1115,7 +1245,7 @@ export default function AdmissionForm({
                         {mode === 'create' && step === 1 && (
                             <div className="adm-chosen-class">
                                 <span>Applying for <strong>{formData.grade}</strong></span>
-                                <button type="button" onClick={() => setClassChosen(false)}>
+                                <button type="button" onClick={backToClassCards}>
                                     <ArrowLeft size={14} /> Change class
                                 </button>
                             </div>
