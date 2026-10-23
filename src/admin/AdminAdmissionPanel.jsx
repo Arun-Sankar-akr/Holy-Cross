@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../service/firebase';
 import {
@@ -11,7 +11,12 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp
+  limit,
+  getDoc,
+  deleteField,
+  onSnapshot,
+  serverTimestamp,
+  arrayUnion
 } from 'firebase/firestore';
 import {
   Eye,
@@ -40,7 +45,13 @@ import {
   ArrowLeft,
   Clock,
   CalendarDays,
-  ArrowRight
+  ArrowRight,
+  ClipboardCheck,
+  RefreshCw,
+  Send,
+  Award,
+  Building2,
+  UserCheck
 } from 'lucide-react';
 import './AdminAdmissionPanel.css';
 
@@ -89,6 +100,18 @@ const fetchAdmissionFiles = async (admissionId) => {
     }
   });
   return files;
+};
+
+// Only the student photo (not the other four documents) - used for the avatars in the list
+const fetchStudentPhoto = async (admissionId) => {
+  const docsRef = collection(db, 'admissions', admissionId, 'documents');
+  const snap = await getDocs(query(docsRef, where('fieldName', '==', 'studentPhoto'), limit(1)));
+  let data = snap.empty ? null : snap.docs[0].data();
+  if (!data?.base64) {
+    const byId = await getDoc(doc(db, 'admissions', admissionId, 'documents', 'studentPhoto'));
+    data = byId.exists() ? byId.data() : null;
+  }
+  return data?.base64 || '';
 };
 
 const dataUrlToBlobUrl = (dataUrl) => {
@@ -183,8 +206,100 @@ const normalizeGrade = (grade) => {
 const classLabel = (key) => (key === 'LKG' || key === 'UKG' || key === 'Other' ? key : `Class ${key}`);
 const classShort = (key) => (key === 'Other' ? '?' : key);
 
-// A "new" application is one still waiting for action that the admin has not opened yet
-const isNewApp = (app) => (app.status || 'Pending') === 'Pending' && !app.adminSeen;
+/* ============================================================================
+   ADMISSION FLOW
+   Pending -> In Review -> Entrance Exam -> Eligible -> Accepted -> Synced
+   The office only marks an applicant Eligible or Not Eligible after the entrance exam.
+   Only the admin accepts or rejects: Eligible -> Accept / Reject, Not Eligible -> Reject / Re-exam.
+
+   Office dashboard (role="office") : receives, reviews, runs the entrance exam,
+                                      marks eligible, and syncs accepted students to ERP
+   Admin dashboard  (role="admin")  : accepts / rejects the eligible applications
+   Legacy status "Approved" (old flow, already in ERP) is shown as "Synced".
+   ============================================================================ */
+
+const FLOW = [
+  { key: 'Pending', label: 'Received' },
+  { key: 'In Review', label: 'Review' },
+  { key: 'Entrance Exam', label: 'Entrance exam' },
+  { key: 'Eligible', label: 'Eligible' },
+  { key: 'Accepted', label: 'Admin accepted' },
+  { key: 'Synced', label: 'Synced to ERP' }
+];
+
+const STAMP = {
+  'In Review': 'reviewStartedAt',
+  'Entrance Exam': 'examSentAt',
+  Eligible: 'eligibleAt',
+  'Not Eligible': 'notEligibleAt',
+  Accepted: 'acceptedAt',
+  Synced: 'syncedAt',
+  Rejected: 'rejectedAt'
+};
+
+const OFFICE_FILTERS = ['All', 'Pending', 'In Review', 'Entrance Exam', 'Eligible', 'Not Eligible', 'Accepted', 'Synced', 'Rejected'];
+const ADMIN_FILTERS = OFFICE_FILTERS;
+
+const STATUS_ICON = {
+  Pending: Clock,
+  'In Review': Eye,
+  'Entrance Exam': ClipboardCheck,
+  Eligible: Award,
+  'Not Eligible': FileWarning,
+  Accepted: CheckCircle2,
+  Synced: ShieldCheck,
+  Rejected: XCircle
+};
+
+const STAGE_HINT = {
+  office: {
+    Pending: 'New application. Start the review to begin processing it.',
+    'In Review': 'Check the documents and details, then send the applicant to the entrance exam.',
+    'Entrance Exam': 'The assigned staff member enters the subject-wise marks. Once they are submitted, mark the applicant eligible or not eligible.',
+    Eligible: 'Passed to the admin. Waiting for the admin to accept or reject.',
+    'Not Eligible': 'Marked not eligible. The admin decides whether to reject the application or order a re-exam.',
+    Accepted: 'Accepted by the admin. Choose a section and sync this student to ERP.',
+    Synced: 'This student has been synced to ERP.',
+    Rejected: 'This application was rejected.'
+  },
+  admin: {
+    Pending: 'Received. The office has not started the review yet.',
+    'In Review': 'The office is reviewing this application.',
+    'Entrance Exam': 'In the entrance exam stage. Subject-wise marks appear here once the assigned staff member submits them.',
+    Eligible: 'The office found this applicant eligible. Accept or reject the application.',
+    'Not Eligible': 'The office marked this applicant not eligible. Reject the application, or order a re-exam with the same staff member.',
+    Accepted: 'Accepted. The office will sync this student to ERP.',
+    Synced: 'This student has been synced to ERP.',
+    Rejected: 'This application was rejected.'
+  }
+};
+
+const getStatus = (app) => {
+  const s = app.status || 'Pending';
+  return s === 'Approved' ? 'Synced' : s;
+};
+
+const statusSlug = (s) => String(s).toLowerCase().replace(/\s+/g, '-');
+
+// Both roles see every application and its status (the admin uses this for analysis).
+// What differs is which actions each role gets, see needsAction / renderActions.
+const isVisibleTo = () => true;
+
+const STATUS_ORDER = ['Pending', 'In Review', 'Entrance Exam', 'Eligible', 'Not Eligible', 'Accepted', 'Synced', 'Rejected'];
+
+// Applications waiting for THIS role to do something
+const needsAction = (app, role) => {
+  const s = getStatus(app);
+  return role === 'office'
+    ? ['Pending', 'In Review', 'Entrance Exam', 'Accepted'].includes(s)
+    : ['Eligible', 'Not Eligible'].includes(s);
+};
+
+// A "new" application is one waiting for this role that nobody has opened yet
+const isNewApp = (app, role) =>
+  role === 'office'
+    ? getStatus(app) === 'Pending' && !(app.officeSeen || app.adminSeen)
+    : ['Eligible', 'Not Eligible'].includes(getStatus(app)) && !app.adminSeen;
 
 /* Compact class tile: badge, name, counts, arrow */
 function ClassCard({ short, title, sub, total, pending, fresh, onOpen, isAll }) {
@@ -206,7 +321,7 @@ function ClassCard({ short, title, sub, total, pending, fresh, onOpen, isAll }) 
       <ArrowRight size={18} className="cls-go" />
       <span className="cls-nums">
         <span><strong>{total}</strong> total</span>
-        <span><strong>{pending}</strong> pending</span>
+        <span><strong>{pending}</strong> to do</span>
         {fresh > 0 && <span className="new"><strong>{fresh}</strong> new</span>}
       </span>
     </button>
@@ -375,7 +490,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-export default function AdmissionPanel() {
+export default function AdmissionPanel({ role = 'admin' }) {
   const [applications, setApplications] = useState([]);
   const [sectionsList, setSectionsList] = useState([]);
   const [approvalSections, setApprovalSections] = useState({});
@@ -386,7 +501,23 @@ export default function AdmissionPanel() {
   const [modalMode, setModalMode] = useState('normal'); // normal | maximized | minimized
   const [classFilter, setClassFilter] = useState(null); // null = first page (class cards) | All | LKG | UKG | I ... XII | Other
 
-  const [reviewTab, setReviewTab] = useState('docs'); // docs | details
+  const [reviewTab, setReviewTab] = useState('docs'); // docs | details | process
+
+  const isOffice = role === 'office';
+  const isNew = (app) => isNewApp(app, role);
+  const [busy, setBusy] = useState(false);
+
+  // Student photos for the list avatars, loaded lazily for the applications on screen
+  const [photos, setPhotos] = useState({});
+  const photoRequested = useRef(new Set());
+
+  // "Send to exam" form: hall details come from Hall Management, invigilator from the staff records
+  const [halls, setHalls] = useState([]);
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [assignFor, setAssignFor] = useState(null);
+  const [reexamFor, setReexamFor] = useState(null);   // admin: re-exam for an office-rejected applicant
+  const [reexamDate, setReexamDate] = useState('');
+  const [assignForm, setAssignForm] = useState({ date: '', hallId: '', staffDocId: '' });
 
   // Uploaded files for the application open in the modal
   const [files, setFiles] = useState({});
@@ -394,11 +525,21 @@ export default function AdmissionPanel() {
   const [filesError, setFilesError] = useState('');
 
   useEffect(() => {
-    fetchApplications();
     getDocs(collection(db, 'class_sections'))
       .then((snap) => setSectionsList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
       .catch((err) => console.error('Error loading class sections: ', err));
   }, []);
+
+  // Hall Management + staff records (only the office assigns exams)
+  useEffect(() => {
+    if (role !== 'office') return;
+    getDocs(collection(db, 'exam_hall_master'))
+      .then((snap) => setHalls(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch((err) => console.error('Error loading halls: ', err));
+    getDocs(collection(db, 'staff_members'))
+      .then((snap) => setStaffMembers(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch((err) => console.error('Error loading staff: ', err));
+  }, [role]);
 
   // Load uploaded documents only when an application is opened
   useEffect(() => {
@@ -409,7 +550,6 @@ export default function AdmissionPanel() {
     }
     let cancelled = false;
     setModalMode('normal');
-    setReviewTab('docs');
     setFiles({});
     setFilesError('');
     setFilesLoading(true);
@@ -433,7 +573,7 @@ export default function AdmissionPanel() {
     return () => {
       cancelled = true;
     };
-  }, [selectedApp]);
+  }, [selectedApp?.id]);
 
   // Esc closes the modal
   useEffect(() => {
@@ -446,27 +586,32 @@ export default function AdmissionPanel() {
   // Lock page scroll behind the open drawer
   useEffect(() => {
     if (!selectedApp || modalMode === 'minimized') return undefined;
-    const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previous;
+      // always release the lock (never restore a stale 'hidden' value)
+      document.body.style.overflow = '';
     };
-  }, [selectedApp, modalMode]);
+  }, [!!selectedApp, modalMode]);
 
-  const fetchApplications = async () => {
-    try {
-      setLoading(true);
-      const querySnapshot = await getDocs(collection(db, 'admissions'));
-      const appsList = querySnapshot.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      setApplications(appsList);
-    } catch (error) {
-      console.error('Error fetching admissions: ', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Live feed: every status change (office, staff or admin) shows up here immediately
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'admissions'),
+      (snap) => {
+        const appsList = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setApplications(appsList);
+        setSelectedApp((prev) => (prev ? appsList.find((a) => a.id === prev.id) || prev : prev));
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching admissions: ', error);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, []);
 
   // Sections that exist for the applicant's grade (falls back to Section A)
   const sectionNamesFor = (grade) => {
@@ -484,80 +629,300 @@ export default function AdmissionPanel() {
     setApprovalSections((prev) => ({ ...prev, [appId]: sectionName }));
   };
 
-  const handleApproveAdmission = async (app) => {
+  /* -------------------- flow actions -------------------- */
+
+  // Moves an application to a new status (and logs it in the application's history)
+  const changeStatus = async (app, status, fields = {}) => {
+    const keepOpen = selectedApp?.id === app.id && !['Eligible', 'Not Eligible', 'Accepted', 'Rejected', 'Synced'].includes(status);
+    setBusy(true);
     try {
-      const assignedSectionName = getSection(app);
-
+      const stamp = STAMP[status];
+      const entry = { status, by: role, at: Date.now() };
       await updateDoc(doc(db, 'admissions', app.id), {
-        status: 'Approved',
-        assignedSection: assignedSectionName,
-        approvedAt: serverTimestamp()
+        ...fields,
+        status,
+        ...(stamp ? { [stamp]: serverTimestamp() } : {}),
+        updatedAt: serverTimestamp(),
+        history: arrayUnion(entry)
       });
-
-      const targetGrade = app.grade;
-      const sectionSnap = await getDocs(
-        query(
-          collection(db, 'class_sections'),
-          where('className', '==', targetGrade),
-          where('name', '==', assignedSectionName)
-        )
-      );
-
-      let resolvedSectionId = '';
-      if (!sectionSnap.empty) {
-        resolvedSectionId = sectionSnap.docs[0].id;
-      } else {
-        const newSectionRef = await addDoc(collection(db, 'class_sections'), {
-          className: targetGrade,
-          name: assignedSectionName,
-          roomNo: '101',
-          createdAt: serverTimestamp()
-        });
-        resolvedSectionId = newSectionRef.id;
-      }
-
-      // Student photo lives in the documents sub-collection
-      const uploaded = await fetchAdmissionFiles(app.id);
-
-      const studentErpData = {
-        admissionId: app.id,
-        admissionNo: app.acknowledgementNumber || 'HCMS20260000',
-        name: getFullName(app),
-        className: targetGrade,
-        grade: targetGrade,
-        sectionName: assignedSectionName,
-        sectionId: resolvedSectionId,
-        guardianName: app.parentName || '',
-        phone: app.phone || '',
-        address: app.address || '',
-        dob: app.dob || '',
-        bloodGroup: app.bloodGroup || '',
-        photo: uploaded.studentPhoto?.base64 || '',
-        status: 'Active',
-        enrolledAt: serverTimestamp()
+      const now = new Date();
+      const merged = {
+        ...app,
+        ...fields,
+        status,
+        ...(stamp ? { [stamp]: now } : {}),
+        updatedAt: now,
+        history: [...(app.history || []), entry]
       };
-
-      await setDoc(doc(db, 'students_erp', app.id), studentErpData);
-      await addDoc(collection(db, 'students_records'), studentErpData);
-
-      alert('Application approved! Student registered into Student ERP.');
-      setSelectedApp(null);
-      fetchApplications();
+      setApplications((prev) => prev.map((a) => (a.id === app.id ? merged : a)));
+      setSelectedApp(keepOpen ? merged : null);
+      return true;
     } catch (error) {
-      console.error('Error approving application:', error);
-      alert('Failed to approve application.');
+      console.error('Error updating application:', error);
+      alert('Could not update the application. Please try again.');
+      return false;
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleRejectAdmission = async (appId) => {
-    if (!window.confirm('Are you sure you want to reject this application?')) return;
-    try {
-      await updateDoc(doc(db, 'admissions', appId), { status: 'Rejected' });
-      setSelectedApp(null);
-      fetchApplications();
-    } catch (error) {
-      console.error('Error rejecting application:', error);
+  // Step 2 - office starts reviewing a received application
+  const handleStartReview = (app) => changeStatus(app, 'In Review', { reviewedBy: 'office' });
+
+  // Step 3 - office sends the reviewed application to the entrance exam:
+  // exam date + hall (block / room) + invigilator, which also assigns the application to that staff member
+  const openAssign = (app) => {
+    const x = app.examAssignment || {};
+    setAssignForm({ date: x.date || '', hallId: x.hallId || '', staffDocId: x.staffDocId || '' });
+    setAssignFor(app);
+  };
+
+  const handleSendToExam = (app) => {
+    const missing = DOC_ORDER.filter((k) => docState(app, k) === 'missing');
+    if (
+      missing.length &&
+      !window.confirm(
+        `These documents are missing: ${missing.map((k) => DOC_META[k].short).join(', ')}.\n\nSend to entrance exam anyway?`
+      )
+    ) {
+      return;
     }
+    openAssign(app);
+  };
+
+  const handleConfirmAssign = async () => {
+    const app = assignFor;
+    const hall = halls.find((h) => h.id === assignForm.hallId);
+    const staff = staffMembers.find((m) => m.id === assignForm.staffDocId);
+    if (!assignForm.date) return alert('Choose the exam date.');
+    if (!hall) return alert('Choose the exam hall.');
+    if (!staff) return alert('Choose the invigilator.');
+    if (!staff.staffId) return alert('This staff record has no Staff ID, so the application cannot be assigned to them.');
+
+    const ok = await changeStatus(app, 'Entrance Exam', {
+      examAssignment: {
+        date: assignForm.date,
+        hallId: hall.id,
+        blockName: hall.blockName || '',
+        roomNo: hall.hallNo || '',
+        location: hall.location || '',
+        staffDocId: staff.id,
+        staffId: staff.staffId,
+        staffName: staff.name || staff.staffName || '',
+        assignedAt: Date.now()
+      },
+      marksSubmitted: app.marksSubmitted && getStatus(app) === 'Entrance Exam' ? app.marksSubmitted : false
+    });
+    if (ok) setAssignFor(null);
+  };
+
+  // Let the staff member enter the marks again (e.g. after a mistake)
+  const handleReopenMarks = async (app) => {
+    if (!window.confirm('Allow the assigned staff member to edit and re-submit the marks?')) return;
+    await changeStatus(app, 'Entrance Exam', { marksSubmitted: false });
+  };
+
+  // Step 4 - office decides using the marks the assigned staff member submitted:
+  // eligible (goes to admin) or rejected
+  const handleExamResult = async (app, eligible) => {
+    const marks = app.examMarks;
+    if (!app.marksSubmitted || !marks) {
+      alert('The assigned staff member has not submitted the marks yet.');
+      return;
+    }
+    if (
+      !eligible &&
+      !window.confirm('Mark this applicant as not eligible? The admin will then decide whether to reject or order a re-exam.')
+    ) {
+      return;
+    }
+
+    const entranceExam = {
+      date: app.examAssignment?.date || '',
+      score: marks.total,
+      maxScore: marks.maxTotal,
+      percentage: marks.percentage ?? null,
+      remarks: '',
+      result: eligible ? 'Eligible' : 'Not eligible',
+      recordedBy: 'office'
+    };
+    await changeStatus(app, eligible ? 'Eligible' : 'Not Eligible', { entranceExam });
+  };
+
+  // Admin: an applicant the office marked Not Eligible after the entrance exam can be given a re-exam.
+  // It goes back to the Entrance Exam stage with the same staff member (and hall); only the date is new.
+  const canReexam = (app) =>
+    !isOffice &&
+    !!app.examAssignment?.staffId &&
+    (getStatus(app) === 'Not Eligible' || (getStatus(app) === 'Rejected' && app.rejectedBy === 'office'));
+
+  const handleConfirmReexam = async () => {
+    const app = reexamFor;
+    if (!reexamDate) return alert('Choose the re-exam date.');
+    const attempt = (app.reexamCount || 0) + 1;
+    setBusy(true);
+    try {
+      await updateDoc(doc(db, 'admissions', app.id), {
+        status: 'Entrance Exam',
+        marksSubmitted: false,
+        reexamCount: attempt,
+        examAssignment: { ...app.examAssignment, date: reexamDate, assignedAt: Date.now() },
+        previousAttempts: arrayUnion({
+          date: app.examAssignment?.date || '',
+          marks: app.examMarks || null,
+          result: app.entranceExam?.result || 'Not eligible',
+          rejectedBy: app.rejectedBy || 'office',
+          at: Date.now()
+        }),
+        examMarks: deleteField(),
+        entranceExam: deleteField(),
+        rejectedBy: deleteField(),
+        rejectedReason: deleteField(),
+        rejectedAt: deleteField(),
+        examSentAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        history: arrayUnion({
+          status: 'Entrance Exam',
+          by: 'admin',
+          at: Date.now(),
+          note: `Re-exam ordered (attempt ${attempt + 1}) with ${app.examAssignment.staffName || 'the same staff'}`
+        })
+      });
+      setReexamFor(null);
+      setSelectedApp(null);
+    } catch (error) {
+      console.error('Error ordering re-exam:', error);
+      alert('Could not order the re-exam. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Step 5 - admin accepts an eligible application
+  const handleAdminAccept = (app) => changeStatus(app, 'Accepted', { acceptedBy: 'admin' });
+
+  // Reject (office: before the exam result; admin: an eligible application)
+  const handleReject = async (app) => {
+    if (!window.confirm('Are you sure you want to reject this application?')) return;
+    await changeStatus(app, 'Rejected', {
+      rejectedBy: role,
+      ...(getStatus(app) === 'Not Eligible' ? { rejectedReason: 'Not eligible after the entrance exam' } : {})
+    });
+  };
+
+  // Step 6 - office syncs an accepted application into the ERP.
+  // ERP records are written first and the application is marked "Synced" last,
+  // so a failed sync stays "Accepted" and can simply be retried.
+  const syncToErp = async (app) => {
+    const assignedSectionName = getSection(app);
+    const targetGrade = app.grade;
+
+    const sectionSnap = await getDocs(
+      query(
+        collection(db, 'class_sections'),
+        where('className', '==', targetGrade),
+        where('name', '==', assignedSectionName)
+      )
+    );
+
+    let resolvedSectionId = '';
+    if (!sectionSnap.empty) {
+      resolvedSectionId = sectionSnap.docs[0].id;
+    } else {
+      const newSectionRef = await addDoc(collection(db, 'class_sections'), {
+        className: targetGrade,
+        name: assignedSectionName,
+        roomNo: '101',
+        createdAt: serverTimestamp()
+      });
+      resolvedSectionId = newSectionRef.id;
+    }
+
+    // Student photo lives in the documents sub-collection
+    const uploaded = await fetchAdmissionFiles(app.id);
+
+    const studentErpData = {
+      admissionId: app.id,
+      admissionNo: app.acknowledgementNumber || 'HCMS20260000',
+      name: getFullName(app),
+      className: targetGrade,
+      grade: targetGrade,
+      sectionName: assignedSectionName,
+      sectionId: resolvedSectionId,
+      guardianName: app.parentName || '',
+      phone: app.phone || '',
+      address: app.address || '',
+      dob: app.dob || '',
+      bloodGroup: app.bloodGroup || '',
+      photo: uploaded.studentPhoto?.base64 || '',
+      status: 'Active',
+      enrolledAt: serverTimestamp()
+    };
+
+    // Same document id in both collections, so syncing twice can never create duplicates
+    await setDoc(doc(db, 'students_erp', app.id), studentErpData);
+    await setDoc(doc(db, 'students_records', app.id), studentErpData);
+
+    await updateDoc(doc(db, 'admissions', app.id), {
+      status: 'Synced',
+      assignedSection: assignedSectionName,
+      syncedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      history: arrayUnion({ status: 'Synced', by: role, at: Date.now() })
+    });
+
+    const now = new Date();
+    setApplications((prev) =>
+      prev.map((a) =>
+        a.id === app.id
+          ? { ...a, status: 'Synced', assignedSection: assignedSectionName, syncedAt: now, updatedAt: now }
+          : a
+      )
+    );
+    return assignedSectionName;
+  };
+
+  const handleSyncToErp = async (app) => {
+    if (getStatus(app) !== 'Accepted') return;
+    setBusy(true);
+    try {
+      await syncToErp(app);
+      alert('Student synced to ERP.');
+      setSelectedApp(null);
+    } catch (error) {
+      console.error('Error syncing to ERP:', error);
+      alert('Failed to sync to ERP. The application is still Accepted, so you can try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    const list = applications.filter((a) => getStatus(a) === 'Accepted');
+    if (!list.length) return;
+    if (
+      !window.confirm(
+        `Sync ${list.length} accepted application${list.length === 1 ? '' : 's'} to ERP?\n\nEach student goes into the section chosen on its row.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    let ok = 0;
+    for (const app of list) {
+      try {
+        await syncToErp(app);
+        ok += 1;
+      } catch (error) {
+        console.error('Error syncing', app.id, error);
+      }
+    }
+    setBusy(false);
+    alert(
+      ok === list.length
+        ? `${ok} student${ok === 1 ? '' : 's'} synced to ERP.`
+        : `${ok} of ${list.length} synced. The rest are still Accepted - try again.`
+    );
   };
 
   const handleDeleteAdmission = async (appId) => {
@@ -577,16 +942,18 @@ export default function AdmissionPanel() {
 
   // Opening an application clears its green "new" dot (and remembers it in Firestore)
   const markSeen = async (app) => {
-    if (!isNewApp(app)) return;
-    setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, adminSeen: true } : a)));
+    if (!isNew(app)) return;
+    const field = isOffice ? 'officeSeen' : 'adminSeen';
+    setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, [field]: true } : a)));
     try {
-      await updateDoc(doc(db, 'admissions', app.id), { adminSeen: true });
+      await updateDoc(doc(db, 'admissions', app.id), { [field]: true });
     } catch (error) {
       console.error('Could not mark application as seen:', error);
     }
   };
 
-  const openReview = (app) => {
+  const openReview = (app, tab = 'docs') => {
+    setReviewTab(tab);
     setSelectedApp(app);
     markSeen(app);
   };
@@ -605,40 +972,54 @@ export default function AdmissionPanel() {
     setClassFilter(null);
   };
 
-  const totalCount = applications.length;
-  const countBy = (s) => applications.filter((a) => (a.status || 'Pending') === s).length;
-  const pendingCount = countBy('Pending');
-  const approvedCount = countBy('Approved');
-  const rejectedCount = countBy('Rejected');
+  // Each role only works with the applications that belong to its stage of the flow
+  const roleApps = useMemo(() => applications.filter((a) => isVisibleTo(a, role)), [applications, role]);
+
+  const totalCount = roleApps.length;
+  const countOf = (st) => roleApps.filter((a) => getStatus(a) === st).length;
+  const todoCount = roleApps.filter((a) => needsAction(a, role)).length;
+  const acceptedCount = countOf('Accepted');
 
   const visibleApps = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return applications.filter((a) => {
+    return roleApps.filter((a) => {
       if (classFilter && classFilter !== 'All' && normalizeGrade(a.grade) !== classFilter) return false;
-      if (statusFilter !== 'All' && (a.status || 'Pending') !== statusFilter) return false;
+      if (statusFilter !== 'All' && getStatus(a) !== statusFilter) return false;
       if (!q) return true;
       return [getFullName(a), a.acknowledgementNumber, a.email, a.phone, a.parentName, a.grade]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [applications, statusFilter, search, classFilter]);
+  }, [roleApps, statusFilter, search, classFilter]);
 
-  // Per-class totals for the class cards (always from ALL applications)
+  useEffect(() => {
+    if (!classFilter) return;
+    visibleApps.forEach((a) => {
+      if (!a[DOC_META.studentPhoto.flag] || photoRequested.current.has(a.id)) return;
+      photoRequested.current.add(a.id);
+      fetchStudentPhoto(a.id)
+        .then((src) => src && setPhotos((prev) => ({ ...prev, [a.id]: src })))
+        .catch((err) => console.error('Could not load student photo:', err));
+    });
+  }, [visibleApps, classFilter]);
+
+  // Per-class totals for the class cards (always from all applications this role can see)
+  // "pending" = applications waiting for this role to act
   const classStats = useMemo(() => {
     const stats = {};
     [...CLASS_LIST, 'Other'].forEach((k) => {
       stats[k] = { total: 0, pending: 0, fresh: 0 };
     });
-    applications.forEach((a) => {
+    roleApps.forEach((a) => {
       const k = normalizeGrade(a.grade);
       stats[k].total += 1;
-      if ((a.status || 'Pending') === 'Pending') stats[k].pending += 1;
-      if (isNewApp(a)) stats[k].fresh += 1;
+      if (needsAction(a, role)) stats[k].pending += 1;
+      if (isNewApp(a, role)) stats[k].fresh += 1;
     });
     return stats;
-  }, [applications]);
+  }, [roleApps, role]);
 
-  const totalNew = useMemo(() => applications.filter(isNewApp).length, [applications]);
+  const totalNew = useMemo(() => roleApps.filter((a) => isNewApp(a, role)).length, [roleApps, role]);
 
   // Applications organised per class (after search + status filter)
   const groupedApps = useMemo(() => {
@@ -653,6 +1034,30 @@ export default function AdmissionPanel() {
   const classesToShow = (classFilter === 'All' ? [...CLASS_LIST, 'Other'] : [classFilter]).filter(
     (k) => classFilter !== 'All' || (groupedApps[k] || []).length > 0
   );
+
+  const statChips = isOffice
+    ? [
+        { label: 'Total', value: totalCount, cls: '' },
+        { label: 'Pending', value: countOf('Pending'), cls: 'pending' },
+        { label: 'New', value: totalNew, cls: 'fresh', dot: true },
+        { label: 'In process', value: countOf('In Review') + countOf('Entrance Exam'), cls: 'in-process' },
+        { label: 'Eligible', value: countOf('Eligible'), cls: 'eligible' },
+        { label: 'Not eligible', value: countOf('Not Eligible'), cls: 'not-eligible' },
+        { label: 'To sync', value: acceptedCount, cls: 'accepted' },
+        { label: 'Synced', value: countOf('Synced'), cls: 'approved' },
+        { label: 'Rejected', value: countOf('Rejected'), cls: 'rejected' }
+      ]
+    : [
+        { label: 'Total', value: totalCount, cls: '' },
+        { label: 'New', value: totalNew, cls: 'fresh', dot: true },
+        { label: 'Pending', value: countOf('Pending'), cls: 'pending' },
+        { label: 'In review', value: countOf('In Review'), cls: 'in-process' },
+        { label: 'Entrance exam', value: countOf('Entrance Exam'), cls: 'in-process' },
+        { label: 'To decide', value: countOf('Eligible') + countOf('Not Eligible'), cls: 'eligible' },
+        { label: 'Accepted', value: acceptedCount, cls: 'accepted' },
+        { label: 'Synced', value: countOf('Synced'), cls: 'approved' },
+        { label: 'Rejected', value: countOf('Rejected'), cls: 'rejected' }
+      ];
 
   if (loading) {
     return (
@@ -678,14 +1083,197 @@ export default function AdmissionPanel() {
     </select>
   );
 
+  // Buttons for the next step of the flow, depending on role and status
+  const renderActions = (app, variant) => {
+    const st = getStatus(app);
+    const isRow = variant === 'row';
+
+    const btn = (kind, Icon, label, onClick) => (
+      <button
+        key={label}
+        type="button"
+        className={isRow ? `row-btn ${kind}` : `modal-${kind}-btn`}
+        title={label}
+        disabled={busy}
+        onClick={onClick}
+      >
+        <Icon size={15} /> <span>{label}</span>
+      </button>
+    );
+    const note = (Icon, text) => (
+      <span key={text} className={isRow ? 'row-synced' : 'synced-label'}>
+        <Icon size={14} /> {text}
+      </span>
+    );
+
+    const out = [];
+
+    if (isOffice) {
+      if (st === 'Pending') out.push(btn('approve', Eye, 'Start review', () => handleStartReview(app)));
+      if (st === 'In Review') out.push(btn('approve', Send, 'Send to exam', () => handleSendToExam(app)));
+      if (st === 'Entrance Exam' && (isRow || reviewTab !== 'process')) {
+        out.push(
+          btn('approve', ClipboardCheck, app.marksSubmitted ? 'Decide result' : 'View exam', () => openReview(app, 'process'))
+        );
+      }
+      if (st === 'Eligible') out.push(note(Clock, 'Waiting for admin'));
+      if (st === 'Accepted') {
+        out.push(<React.Fragment key="section">{renderSectionSelect(app, busy)}</React.Fragment>);
+        out.push(btn('approve', RefreshCw, 'Sync to ERP', () => handleSyncToErp(app)));
+      }
+      if (st === 'Synced') {
+        out.push(note(CheckCircle2, `Synced to ERP${app.assignedSection ? ` · ${app.assignedSection}` : ''}`));
+      }
+      if (st === 'Not Eligible') out.push(note(Clock, 'Not eligible · waiting for admin'));
+    } else {
+      if (st === 'Eligible') {
+        out.push(btn('approve', CheckCircle2, 'Accept', () => handleAdminAccept(app)));
+        out.push(btn('reject', XCircle, 'Reject', () => handleReject(app)));
+      }
+      if (st === 'Pending') out.push(note(Clock, 'With office · not reviewed'));
+      if (st === 'In Review') out.push(note(Clock, 'With office · in review'));
+      if (canReexam(app)) {
+        out.push(btn('approve', RefreshCw, 'Re-exam', () => { setReexamDate(''); setReexamFor(app); }));
+      }
+      if (st === 'Not Eligible') out.push(btn('reject', XCircle, 'Reject', () => handleReject(app)));
+      if (st === 'Entrance Exam') {
+        out.push(note(Clock, app.marksSubmitted ? 'Marks received · office deciding' : 'Exam marks pending'));
+      }
+      if (st === 'Accepted') out.push(note(Clock, 'Accepted · awaiting ERP sync'));
+      if (st === 'Synced') {
+        out.push(note(CheckCircle2, `Synced to ERP${app.assignedSection ? ` · ${app.assignedSection}` : ''}`));
+      }
+    }
+    return out;
+  };
+
+  // Progress strip: Received -> Review -> Entrance exam -> Eligible -> Admin accepted -> Synced
+  const renderStepper = (app) => {
+    const st = getStatus(app);
+    const rejected = st === 'Rejected' || st === 'Not Eligible';
+    const idx = FLOW.findIndex((f) => f.key === st);
+    return (
+      <div className={`flow-stepper ${rejected ? 'is-rejected' : ''}`}>
+        <div className="flow-steps">
+          {FLOW.map((f, i) => {
+            const state = rejected
+              ? 'todo'
+              : i < idx || (i === idx && st === 'Synced')
+                ? 'done'
+                : i === idx
+                  ? 'current'
+                  : 'todo';
+            return (
+              <div key={f.key} className={`flow-step ${state}`}>
+                <span className="flow-dot">{state === 'done' ? <CheckCircle2 size={14} /> : i + 1}</span>
+                <span className="flow-label">{f.label}</span>
+              </div>
+            );
+          })}
+        </div>
+        {rejected && (
+          <div className="flow-rejected">
+            <XCircle size={14} />
+            {st === 'Not Eligible' ? (
+              ' Marked not eligible by the office — waiting for the admin'
+            ) : (
+              <>
+                {' '}Rejected
+                {app.rejectedBy ? ` by ${app.rejectedBy === 'admin' ? 'admin' : 'office'}` : ''}
+                {app.rejectedReason ? ` — ${app.rejectedReason}` : ''}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Admin analysis: where every application currently stands, plus a per-class breakdown
+  const renderAnalysis = () => {
+    if (totalCount === 0) return null;
+    const pct = (n) => (totalCount ? Math.round((n / totalCount) * 1000) / 10 : 0);
+    const scored = roleApps.filter((a) => a.examMarks && typeof a.examMarks.percentage === 'number');
+    const avgScore = scored.length
+      ? Math.round((scored.reduce((sum, a) => sum + a.examMarks.percentage, 0) / scored.length) * 10) / 10
+      : null;
+    const decided = countOf('Accepted') + countOf('Synced') + countOf('Rejected');
+    const through = countOf('Accepted') + countOf('Synced');
+    const marksWaiting = roleApps.filter((a) => getStatus(a) === 'Entrance Exam' && !a.marksSubmitted).length;
+    const classRows = [...CLASS_LIST, 'Other'].filter((k) => classStats[k].total > 0);
+    const countIn = (k, st) =>
+      roleApps.filter((a) => normalizeGrade(a.grade) === k && getStatus(a) === st).length;
+
+    return (
+      <section className="an-wrap">
+        <div className="an-head">
+          <h4>Admission analysis</h4>
+          <span>{totalCount} application{totalCount === 1 ? '' : 's'} in total</span>
+        </div>
+
+        <div className="an-kpis">
+          <div><strong>{pct(through)}%</strong><span>Accepted or synced</span></div>
+          <div><strong>{pct(countOf('Rejected'))}%</strong><span>Rejected</span></div>
+          <div><strong>{decided ? Math.round((through / decided) * 100) : 0}%</strong><span>Acceptance rate of decided</span></div>
+          <div><strong>{avgScore === null ? '—' : `${avgScore}%`}</strong><span>Avg entrance score ({scored.length})</span></div>
+          <div><strong>{marksWaiting}</strong><span>Exam marks awaited</span></div>
+        </div>
+
+        <div className="an-bars">
+          {STATUS_ORDER.map((st) => {
+            const n = countOf(st);
+            return (
+              <button
+                type="button"
+                key={st}
+                className="an-bar-row"
+                title={`Show ${st} applications`}
+                onClick={() => { setStatusFilter(st); setClassFilter('All'); }}
+              >
+                <span className="an-bar-label">{st}</span>
+                <span className="an-bar-track">
+                  <span className={`an-bar-fill bar-${statusSlug(st)}`} style={{ width: `${pct(n)}%` }} />
+                </span>
+                <span className="an-bar-num">{n} <em>{pct(n)}%</em></span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="an-table-wrap">
+          <table className="an-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Total</th>
+                {STATUS_ORDER.map((st) => <th key={st}>{st}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {classRows.map((k) => (
+                <tr key={k}>
+                  <td><button type="button" onClick={() => openClass(k)}>{classLabel(k)}</button></td>
+                  <td><strong>{classStats[k].total}</strong></td>
+                  {STATUS_ORDER.map((st) => {
+                    const n = countIn(k, st);
+                    return <td key={st} className={n ? '' : 'zero'}>{n}</td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  };
+
   const renderRow = (app) => {
-    const statusClass = (app.status || 'Pending').toLowerCase();
-    const isApproved = app.status === 'Approved';
-    const isRejected = app.status === 'Rejected';
+    const st = getStatus(app);
+    const statusClass = statusSlug(st);
     const displayName = getFullName(app);
     const docCount = attachedCount(app);
-    const isFresh = isNewApp(app);
-    const StatusIcon = isApproved ? ShieldCheck : isRejected ? XCircle : Clock;
+    const isFresh = isNew(app);
+    const StatusIcon = STATUS_ICON[st] || Clock;
 
     return (
       <tr key={app.id} className={`ap-row ${statusClass} ${isFresh ? 'is-new' : ''}`}>
@@ -696,7 +1284,9 @@ export default function AdmissionPanel() {
             onClick={() => openReview(app)}
             title="Open application"
           >
-            <span className="ap-avatar">{getInitials(displayName)}</span>
+            <span className="ap-avatar">
+              {photos[app.id] ? <img src={photos[app.id]} alt={displayName} /> : getInitials(displayName)}
+            </span>
             <span className="ap-person-text">
               <strong title={displayName}>
                 {displayName}
@@ -729,12 +1319,21 @@ export default function AdmissionPanel() {
         <td data-label="Status" className="cell-status">
           <span className={`ap-status ${statusClass}`}>
             <StatusIcon size={13} />
-            {app.status || 'Pending'}
+            {st}
           </span>
+          {st === 'Entrance Exam' && (app.marksSubmitted || app.examAssignment) && (
+            <span className="cell-sub">
+              {app.marksSubmitted ? 'Marks submitted' : `Exam ${app.examAssignment.date || ''} · Room ${app.examAssignment.roomNo || '—'}`}
+            </span>
+          )}
         </td>
 
         <td data-label="Section" className="cell-section">
-          {renderSectionSelect(app, isApproved)}
+          {isOffice && st === 'Accepted' ? (
+            renderSectionSelect(app, busy)
+          ) : (
+            <span className="cell-main">{app.assignedSection || '—'}</span>
+          )}
         </td>
 
         <td data-label="Actions" className="cell-actions">
@@ -748,42 +1347,20 @@ export default function AdmissionPanel() {
               <Eye size={15} /> <span>Review</span>
             </button>
 
-            {isApproved ? (
-              <span className="row-synced">
-                <CheckCircle2 size={14} /> Synced to ERP
-              </span>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="row-btn approve"
-                  title="Approve & Send to ERP"
-                  onClick={() => handleApproveAdmission(app)}
-                >
-                  <CheckCircle2 size={15} /> <span>Approve</span>
-                </button>
-                {!isRejected && (
-                  <button
-                    type="button"
-                    className="row-btn reject"
-                    title="Reject Application"
-                    onClick={() => handleRejectAdmission(app.id)}
-                  >
-                    <XCircle size={15} /> <span>Reject</span>
-                  </button>
-                )}
-              </>
-            )}
+            {/* Accepted rows keep the section picker beside the Sync button; skip the duplicate */}
+            {renderActions(app, 'row').filter((el) => !(isOffice && st === 'Accepted' && el.key === 'section'))}
 
-            <button
-              type="button"
-              className="row-btn icon delete"
-              title="Delete Record"
-              aria-label="Delete record"
-              onClick={() => handleDeleteAdmission(app.id)}
-            >
-              <Trash2 size={15} />
-            </button>
+            {isOffice && (
+              <button
+                type="button"
+                className="row-btn icon delete"
+                title="Delete Record"
+                aria-label="Delete record"
+                onClick={() => handleDeleteAdmission(app.id)}
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
           </div>
         </td>
       </tr>
@@ -794,38 +1371,44 @@ export default function AdmissionPanel() {
     <div className="ap-root">
       <div className="ap-header">
         <div className="ap-header-text">
-          <h3>Admissions Administration Panel</h3>
-          <p>Review applications and documents, then sync approved students with ERP</p>
+          <h3>{isOffice ? 'Admissions' : 'Admissions — Overview & Approval'}</h3>
+          <p>
+            {isOffice
+              ? 'Review applications, run entrance exams, pass eligible applicants to the admin, then sync accepted students to ERP'
+              : 'Track every application through the flow, and accept or reject the ones the office found eligible'}
+          </p>
         </div>
         <div className="ap-stats-row">
-          <div className="ap-stat-chip">
-            <span className="ap-stat-value">{totalCount}</span>
-            <span className="ap-stat-label">Total</span>
-          </div>
-          <div className="ap-stat-chip pending">
-            <span className="ap-stat-value">{pendingCount}</span>
-            <span className="ap-stat-label">Pending</span>
-          </div>
-          <div className="ap-stat-chip fresh">
-            <span className="ap-stat-value">
-              {totalNew > 0 && <span className="green-dot" />}
-              {totalNew}
-            </span>
-            <span className="ap-stat-label">New</span>
-          </div>
-          <div className="ap-stat-chip approved">
-            <span className="ap-stat-value">{approvedCount}</span>
-            <span className="ap-stat-label">Approved</span>
-          </div>
-          <div className="ap-stat-chip rejected">
-            <span className="ap-stat-value">{rejectedCount}</span>
-            <span className="ap-stat-label">Rejected</span>
-          </div>
+          {statChips.map((c) => (
+            <div key={c.label} className={`ap-stat-chip ${c.cls}`}>
+              <span className="ap-stat-value">
+                {c.dot && c.value > 0 && <span className="green-dot" />}
+                {c.value}
+              </span>
+              <span className="ap-stat-label">{c.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
+      {isOffice && acceptedCount > 0 && (
+        <div className="sync-banner">
+          <div>
+            <strong>
+              {acceptedCount} accepted application{acceptedCount === 1 ? '' : 's'}
+            </strong>{' '}
+            approved by the admin and ready to sync to ERP.
+          </div>
+          <button type="button" className="sync-banner-btn" disabled={busy} onClick={handleSyncAll}>
+            <RefreshCw size={15} /> Sync all to ERP
+          </button>
+        </div>
+      )}
+
       {classFilter === null ? (
         <>
+      {!isOffice && renderAnalysis()}
+
       {/* ---------------- Class cards (LKG to XII) ---------------- */}
       <div className="class-cards-head">
         <h4>Select a class to view its applications</h4>
@@ -842,7 +1425,7 @@ export default function AdmissionPanel() {
           title="All classes"
           sub="Every application"
           total={totalCount}
-          pending={pendingCount}
+          pending={todoCount}
           fresh={totalNew}
           onOpen={() => openClass('All')}
         />
@@ -897,7 +1480,7 @@ export default function AdmissionPanel() {
           )}
         </div>
         <div className="ap-filter-tabs">
-          {['All', 'Pending', 'Approved', 'Rejected'].map((f) => (
+          {(isOffice ? OFFICE_FILTERS : ADMIN_FILTERS).map((f) => (
             <button
               key={f}
               type="button"
@@ -915,7 +1498,7 @@ export default function AdmissionPanel() {
         <div className="no-data-state">
           <GraduationCap size={30} strokeWidth={1.5} />
           <p>
-            {applications.length === 0
+            {roleApps.length === 0
               ? 'No admission applications found.'
               : 'No applications match your search or filter.'}
           </p>
@@ -966,12 +1549,12 @@ export default function AdmissionPanel() {
       )}
 
       {/* ---------------- Review modal ---------------- */}
-      {selectedApp && createPortal(<div className="ap-portal">{(() => {
+      {selectedApp && createPortal(<div className="ap-portal" data-lenis-prevent>{(() => {
         const app = selectedApp;
         const name = getFullName(app);
-        const statusClass = (app.status || 'Pending').toLowerCase();
-        const isApproved = app.status === 'Approved';
-        const isRejected = app.status === 'Rejected';
+        const st = getStatus(app);
+        const statusClass = statusSlug(st);
+        const isApproved = st === 'Synced';
 
         if (modalMode === 'minimized') {
           return (
@@ -984,7 +1567,7 @@ export default function AdmissionPanel() {
               <div className="ap-dock-text">
                 <strong title={name}>{name}</strong>
                 <span>
-                  <span className={`ap-status ${statusClass}`}>{app.status || 'Pending'}</span>
+                  <span className={`ap-status ${statusClass}`}>{st}</span>
                   {app.grade ? ` · ${app.grade}` : ''}
                 </span>
               </div>
@@ -1033,7 +1616,7 @@ export default function AdmissionPanel() {
                     <div className="review-meta">
                       <span className={`ap-status ${statusClass}`}>
                         {isApproved && <ShieldCheck size={11} />}
-                        {app.status || 'Pending'}
+                        {st}
                       </span>
                       <span className="ap-grade">
                         <GraduationCap size={12} /> {app.grade || '—'}
@@ -1106,6 +1689,8 @@ export default function AdmissionPanel() {
                 </div>
               </div>
 
+              {renderStepper(app)}
+
               <div className="review-tabs" role="tablist">
                 <button
                   type="button"
@@ -1125,6 +1710,15 @@ export default function AdmissionPanel() {
                   onClick={() => setReviewTab('details')}
                 >
                   <FileText size={15} /> Details
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={reviewTab === 'process'}
+                  className={`review-tab ${reviewTab === 'process' ? 'active' : ''}`}
+                  onClick={() => setReviewTab('process')}
+                >
+                  <ClipboardCheck size={15} /> Process
                 </button>
               </div>
 
@@ -1159,7 +1753,7 @@ export default function AdmissionPanel() {
                     </h4>
                     <div className="info-grid">
                       <InfoRow label="Acknowledgement No." value={app.acknowledgementNumber} />
-                      <InfoRow label="Status" value={app.status || 'Pending'} />
+                      <InfoRow label="Status" value={st} />
                       <InfoRow label="Class Applied For" value={app.grade} />
                       <InfoRow label="Assigned Section" value={app.assignedSection} />
                       <InfoRow label="Submitted On" value={fmtDate(app.createdAt)} />
@@ -1247,27 +1841,191 @@ export default function AdmissionPanel() {
                     </div>
                   </div>
                 </section>
+
+                <section className="review-process" hidden={reviewTab !== 'process'}>
+                  <p className="process-hint">
+                    {canReexam(app)
+                      ? `The office marked this applicant not eligible. You can reject the application, or order a re-exam with the same staff member (${app.examAssignment.staffName || 'assigned staff'}).`
+                      : (STAGE_HINT[role] || {})[st] || ''}
+                  </p>
+
+                  {(app.previousAttempts || []).length > 0 && (
+                    <div className="info-block">
+                      <h4 className="review-section-title">
+                        <Clock size={14} /> Previous exam attempts
+                      </h4>
+                      <ul className="flow-history">
+                        {app.previousAttempts.map((p, i) => (
+                          <li key={`${p.at}-${i}`}>
+                            <strong>
+                              Attempt {i + 1}{p.date ? ` · ${p.date}` : ''}
+                            </strong>
+                            <span>
+                              {p.marks ? `${p.marks.total} / ${p.marks.maxTotal}` : 'No marks'} · {p.result}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {app.examAssignment && (
+                    <div className="info-block">
+                      <h4 className="review-section-title">
+                        <Building2 size={14} /> Exam assignment
+                      </h4>
+                      <div className="info-grid">
+                        <InfoRow label="Exam Date" value={app.examAssignment.date} />
+                        <InfoRow label="Block Name" value={app.examAssignment.blockName} />
+                        <InfoRow label="Room No" value={app.examAssignment.roomNo} />
+                        <InfoRow label="Invigilator" value={app.examAssignment.staffName} />
+                      </div>
+                      {isOffice && st === 'Entrance Exam' && (
+                        <button type="button" className="process-link" disabled={busy} onClick={() => openAssign(app)}>
+                          <UserCheck size={14} /> Change date, room or staff
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {app.examMarks && app.marksSubmitted && (
+                    <div className="info-block">
+                      <h4 className="review-section-title">
+                        <ClipboardCheck size={14} /> Marks entered by staff
+                      </h4>
+                      <table className="marks-table">
+                        <thead>
+                          <tr>
+                            <th>Subject</th>
+                            <th>Marks</th>
+                            <th>Out of</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(app.examMarks.subjects || []).map((m, i) => (
+                            <tr key={`${m.subject}-${i}`}>
+                              <td>{m.subject}</td>
+                              <td>{m.marks}</td>
+                              <td>{m.maxMarks}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <td>Total</td>
+                            <td>{app.examMarks.total}</td>
+                            <td>
+                              {app.examMarks.maxTotal}
+                              {app.examMarks.percentage !== undefined ? ` (${app.examMarks.percentage}%)` : ''}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                      <p className="process-empty">
+                        Submitted by {app.examMarks.submittedBy || 'staff'}
+                        {app.examMarks.submittedAt ? ` · ${fmtDate(app.examMarks.submittedAt)}` : ''}
+                      </p>
+                      {isOffice && st === 'Entrance Exam' && (
+                        <button type="button" className="process-link" disabled={busy} onClick={() => handleReopenMarks(app)}>
+                          <RefreshCw size={14} /> Allow staff to re-enter marks
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="info-block">
+                    <h4 className="review-section-title">
+                      <ClipboardCheck size={14} /> Entrance exam
+                    </h4>
+                    {isOffice && st === 'Entrance Exam' ? (
+                      !app.examAssignment ? (
+                        <>
+                          <p className="process-empty">No exam date, room or staff has been assigned yet.</p>
+                          <button type="button" className="process-link" disabled={busy} onClick={() => openAssign(app)}>
+                            <UserCheck size={14} /> Assign exam
+                          </button>
+                        </>
+                      ) : app.marksSubmitted && app.examMarks ? (
+                        <div className="exam-decision">
+                          <p className="process-empty">
+                            Total from staff: <strong>{app.examMarks.total} / {app.examMarks.maxTotal}</strong>
+                            {typeof app.examMarks.percentage === 'number' ? ` (${app.examMarks.percentage}%)` : ''}.
+                            Check the marks above, then decide.
+                          </p>
+                          <div className="exam-form-actions">
+                            <button
+                              type="button"
+                              className="modal-reject-btn"
+                              disabled={busy}
+                              onClick={() => handleExamResult(app, false)}
+                            >
+                              <XCircle size={15} /> Not eligible
+                            </button>
+                            <button
+                              type="button"
+                              className="modal-approve-btn"
+                              disabled={busy}
+                              onClick={() => handleExamResult(app, true)}
+                            >
+                              <Award size={15} /> Mark eligible
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="process-empty">
+                          Waiting for {app.examAssignment.staffName || 'the assigned staff member'} to submit the marks.
+                          This page updates automatically.
+                        </p>
+                      )
+                    ) : app.entranceExam ? (
+                      <div className="info-grid">
+                        <InfoRow label="Result" value={app.entranceExam.result} />
+                        <InfoRow label="Exam Date" value={app.entranceExam.date} />
+                        <InfoRow
+                          label="Score"
+                          value={
+                            app.entranceExam.score === null || app.entranceExam.score === undefined
+                              ? ''
+                              : `${app.entranceExam.score}${app.entranceExam.maxScore ? ` / ${app.entranceExam.maxScore}` : ''}`
+                          }
+                        />
+                        {app.entranceExam.remarks && (
+                          <div className="info-row wide">
+                            <span>Remarks</span>
+                            <strong>{app.entranceExam.remarks}</strong>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="process-empty">No entrance exam result recorded yet.</p>
+                    )}
+                  </div>
+
+                  <div className="info-block">
+                    <h4 className="review-section-title">
+                      <Clock size={14} /> History
+                    </h4>
+                    {(app.history || []).length === 0 ? (
+                      <p className="process-empty">No history recorded yet.</p>
+                    ) : (
+                      <ul className="flow-history">
+                        {[...(app.history || [])].reverse().map((h, i) => (
+                          <li key={`${h.at}-${i}`}>
+                            <strong>{h.status}</strong>
+                            <span>
+                              {h.by === 'admin' ? 'Admin' : h.by === 'staff' ? 'Staff' : 'Office'} · {fmtDate(h.at)}
+                              {h.note ? ` · ${h.note}` : ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </section>
               </div>
 
               <div className="review-footer">
-                {!isApproved ? (
-                  <>
-                    {renderSectionSelect(app, false)}
-                    {!isRejected && (
-                      <button className="modal-reject-btn" onClick={() => handleRejectAdmission(app.id)}>
-                        <XCircle size={15} /> Reject
-                      </button>
-                    )}
-                    <button className="modal-approve-btn" onClick={() => handleApproveAdmission(app)}>
-                      <CheckCircle2 size={15} /> Approve &amp; Sync
-                    </button>
-                  </>
-                ) : (
-                  <span className="synced-label">
-                    <CheckCircle2 size={14} /> Synced to ERP
-                    {app.assignedSection ? ` · ${app.assignedSection}` : ''}
-                  </span>
-                )}
+                {renderActions(app, 'modal')}
                 <button className="ap-close-btn" onClick={() => setSelectedApp(null)}>
                   Close
                 </button>
@@ -1276,6 +2034,147 @@ export default function AdmissionPanel() {
           </div>
         );
       })()}</div>, document.body)}
+
+      {/* ---------------- Send to exam: date, hall, invigilator ---------------- */}
+      {assignFor &&
+        createPortal(
+          <div className="ap-portal" data-lenis-prevent>
+            <div className="assign-backdrop" onClick={() => setAssignFor(null)}>
+              <div className="assign-card" onClick={(e) => e.stopPropagation()}>
+                <div className="assign-head">
+                  <div>
+                    <h3>Send to entrance exam</h3>
+                    <p>{getFullName(assignFor)} · {assignFor.grade || '—'}</p>
+                  </div>
+                  <button type="button" className="ap-win-btn" onClick={() => setAssignFor(null)} aria-label="Close">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="assign-body">
+                  <label>
+                    Exam date
+                    <input
+                      type="date"
+                      value={assignForm.date}
+                      onChange={(e) => setAssignForm((f) => ({ ...f, date: e.target.value }))}
+                    />
+                  </label>
+
+                  <label>
+                    Exam hall (from Hall Management)
+                    <select
+                      value={assignForm.hallId}
+                      onChange={(e) => setAssignForm((f) => ({ ...f, hallId: e.target.value }))}
+                    >
+                      <option value="">Select hall…</option>
+                      {halls.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.hallNo}{h.blockName ? ` — ${h.blockName}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {halls.length === 0 && <small>No halls found. Add halls in Hall Management first.</small>}
+                  </label>
+
+                  {(() => {
+                    const hall = halls.find((h) => h.id === assignForm.hallId);
+                    return (
+                      <div className="assign-pair">
+                        <div>
+                          <span>Block Name</span>
+                          <strong>{hall?.blockName || '—'}</strong>
+                        </div>
+                        <div>
+                          <span>Room No</span>
+                          <strong>{hall?.hallNo || '—'}</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <label>
+                    Invigilator / assign to staff (from staff records)
+                    <select
+                      value={assignForm.staffDocId}
+                      onChange={(e) => setAssignForm((f) => ({ ...f, staffDocId: e.target.value }))}
+                    >
+                      <option value="">Select staff…</option>
+                      {staffMembers
+                        .filter((m) => m.name || m.staffName)
+                        .sort((a, b) => String(a.name || a.staffName).localeCompare(String(b.name || b.staffName)))
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name || m.staffName}{m.staffId ? ` (${m.staffId})` : ''}
+                          </option>
+                        ))}
+                    </select>
+                    <small>The selected staff member sees this applicant on their dashboard and enters the marks.</small>
+                  </label>
+                </div>
+
+                <div className="assign-foot">
+                  <button type="button" className="ap-close-btn" onClick={() => setAssignFor(null)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="modal-approve-btn" disabled={busy} onClick={handleConfirmAssign}>
+                    <UserCheck size={15} /> Assign to staff &amp; send to exam
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ---------------- Admin: re-exam for an office-rejected applicant ---------------- */}
+      {reexamFor &&
+        createPortal(
+          <div className="ap-portal" data-lenis-prevent>
+            <div className="assign-backdrop" onClick={() => setReexamFor(null)}>
+              <div className="assign-card" onClick={(e) => e.stopPropagation()}>
+                <div className="assign-head">
+                  <div>
+                    <h3>Order a re-exam</h3>
+                    <p>{getFullName(reexamFor)} · {reexamFor.grade || '—'}</p>
+                  </div>
+                  <button type="button" className="ap-win-btn" onClick={() => setReexamFor(null)} aria-label="Close">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="assign-body">
+                  <div className="assign-pair">
+                    <div>
+                      <span>Invigilator (same staff)</span>
+                      <strong>{reexamFor.examAssignment?.staffName || '—'}</strong>
+                    </div>
+                    <div>
+                      <span>Block · Room</span>
+                      <strong>{reexamFor.examAssignment?.blockName || '—'} · {reexamFor.examAssignment?.roomNo || '—'}</strong>
+                    </div>
+                  </div>
+                  <label>
+                    New exam date
+                    <input type="date" value={reexamDate} onChange={(e) => setReexamDate(e.target.value)} />
+                    <small>
+                      The application goes back to the Entrance Exam stage. The staff member enters fresh marks and the
+                      office decides again. The earlier attempt is kept in the history.
+                    </small>
+                  </label>
+                </div>
+                <div className="assign-foot">
+                  <button type="button" className="ap-close-btn" onClick={() => setReexamFor(null)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="modal-approve-btn" disabled={busy} onClick={handleConfirmReexam}>
+                    <RefreshCw size={15} /> Order re-exam
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

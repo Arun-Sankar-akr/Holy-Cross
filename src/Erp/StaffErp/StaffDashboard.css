@@ -4112,3 +4112,226 @@ html[data-theme="dark"] .dashboard-containers .ov-hero .ov-hero-stats span {
 html[data-theme="dark"] .dashboard-containers .ov-hero .ov-hero-stats strong {
     color: var(--text);
 }
+
+/* ============================================================================
+   Entrance exam marks (assigned from Office -> Admissions)
+   ============================================================================ */
+.ent-count {
+    margin-left: auto;
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--yellow);
+    color: var(--ink);
+    font-size: .68rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ent-app {
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+
+.ent-app:hover {
+    border-color: var(--yellow-deep);
+}
+
+.ent-pill {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.ent-pill.todo {
+    background: var(--yellow-soft);
+    color: #7a5b00;
+}
+
+.ent-pill.done {
+    background: #e8f5d0;
+    color: #3f6212;
+}
+
+.ent-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.ent-back:hover {
+    color: var(--text);
+}
+
+.ent-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin: 6px 0 18px;
+}
+
+.ent-details div {
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background: var(--card-2);
+    border: 1px solid var(--line);
+}
+
+.ent-details span {
+    display: block;
+    font-size: .7rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+
+.ent-details strong {
+    font-size: .88rem;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.ent-title {
+    margin: 0 0 10px;
+    color: var(--text);
+}
+
+.ent-add {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.ent-add input {
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--line-strong);
+    background: var(--field);
+    color: var(--text);
+    font: inherit;
+    min-width: 0;
+}
+
+.ent-add input:focus {
+    outline: 2px solid var(--yellow-deep);
+    border-color: transparent;
+}
+
+.ent-add-btn,
+.ent-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: var(--yellow);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ent-add-btn:hover,
+.ent-submit:hover:not(:disabled) {
+    background: var(--yellow-deep);
+}
+
+.ent-submit:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.ent-table-wrap {
+    overflow-x: auto;
+}
+
+.ent-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    color: var(--text);
+}
+
+.ent-table th,
+.ent-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+.ent-table th {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+}
+
+.ent-table tfoot td {
+    font-weight: 700;
+    background: var(--card-2);
+    border-bottom: 0;
+}
+
+.ent-remove {
+    border: 0;
+    background: none;
+    color: #c0392b;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.ent-empty,
+.ent-status {
+    margin: 6px 0 12px;
+    font-size: .86rem;
+    color: var(--muted);
+}
+
+.ent-status {
+    color: var(--text);
+}
+
+.ent-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.ent-locked {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background: #e8f5d0;
+    color: #3f6212;
+    font-size: .86rem;
+}
+
+@media (max-width: 640px) {
+    .ent-add {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ent-add input:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .ent-add-btn {
+        grid-column: 1 / -1;
+    }
+}

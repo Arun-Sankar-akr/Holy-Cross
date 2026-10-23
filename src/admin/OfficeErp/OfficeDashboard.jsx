@@ -8,9 +8,10 @@ import {
 } from 'firebase/firestore';
 import {
     Users, DollarSign, Calendar, ClipboardList, UserPlus, Download,
-    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, ChevronRight, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2, MapPin
+    Ticket, CheckCircle, XCircle, LogOut, PlusCircle, Check, X, Menu, LayoutGrid, ChevronDown, ChevronUp, UserCheck, ArrowLeft, GraduationCap, CheckSquare, CalendarDays, Trash2, Bell, Search, ChevronRight, TrendingUp, Activity, Clock, Plus, MoreHorizontal, Pencil, Building2, MapPin, FileText
 } from 'lucide-react';
 import HallManagement from './Hallmanagement';
+import AdminAdmissionPanel from '../AdminAdmissionPanel'; // adjust the path if the panel lives elsewhere
 import './OfficeDashboard.css';
 
 export default function OfficeDashboard() {
@@ -64,6 +65,7 @@ export default function OfficeDashboard() {
     const [officeTasks, setOfficeTasks] = useState([]);
     const [staffList, setStaffList] = useState([]);
     const [studentsList, setStudentsList] = useState([]);
+    const [admissionsList, setAdmissionsList] = useState([]);   // live count for the Admissions nav badge
     const [examHalls, setExamHalls] = useState([]);
     const [staffExamHalls, setStaffExamHalls] = useState([]);
 
@@ -152,6 +154,9 @@ export default function OfficeDashboard() {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), snap =>
             setStudentsList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
+        const unsubAdmissions = onSnapshot(collection(db, 'admissions'), snap =>
+            setAdmissionsList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        );
         const unsubHalls = onSnapshot(collection(db, 'exam_hall_allocations'), snap =>
             setExamHalls(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         );
@@ -175,6 +180,7 @@ export default function OfficeDashboard() {
             unsubTasks();
             unsubStaff();
             unsubStudents();
+            unsubAdmissions();
             unsubHalls();
             unsubHallMaster();
             unsubStaffHalls();
@@ -872,6 +878,8 @@ export default function OfficeDashboard() {
     const dashboardFeeTotal = feesList.reduce((sum, item) => sum + Number(item.totalFee || 0), 0);
     const dashboardFeePaid = feesList.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
     const dashboardFeeBalance = feesList.reduce((sum, item) => sum + Number(item.balance || 0), 0);
+    // Admissions the office still has to act on: new applications + admin-accepted ones waiting for ERP sync
+    const dashboardAdmissionTodo = admissionsList.filter(a => ['Pending', 'Accepted'].includes(a.status || 'Pending')).length;
     const dashboardPendingLeaves = leaveRequests.filter(item => String(item.status || 'Pending').toLowerCase() === 'pending').length;
     const isTaskDone = (t) => ['completed', 'done'].includes(String(t.status || '').toLowerCase());
     // One row per created task: a task sent to many staff is stored as one doc per staff, joined by groupId
@@ -1337,6 +1345,7 @@ export default function OfficeDashboard() {
     const pageTitles = {
         'overview': 'Dashboard',
         'enquiries': 'Enquiries & visitors',
+        'admission_panel': 'Admissions',
         'fees': 'Fee dues & receipts',
         'exam-timetable': 'Exam timetable',
         'hall-ticket-allocation': 'Hall ticket allocation',
@@ -1419,6 +1428,7 @@ export default function OfficeDashboard() {
 
                     <div className="od-nav-label">Front desk</div>
                     {navItem('enquiries', UserPlus, 'Enquiries & visitors')}
+                    {navItem('admission_panel', FileText, 'Admissions', dashboardAdmissionTodo)}
                     {navItem('fees', DollarSign, 'Fee dues & receipts')}
 
                     <div className="od-nav-label">Examinations</div>
@@ -1612,6 +1622,10 @@ export default function OfficeDashboard() {
                     )}
 
                     {/* ENQUIRIES MODULE */}
+                    {activeTab === 'admission_panel' && (
+                        <AdminAdmissionPanel role="office" />
+                    )}
+
                     {activeTab === 'enquiries' && (
                         <div className="dash-card full-width">
                             <div className="card-header">

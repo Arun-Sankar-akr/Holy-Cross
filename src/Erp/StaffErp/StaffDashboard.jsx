@@ -29,7 +29,7 @@ const SIDEBAR_TAB_GROUP = {
     profile: 'workspace', schedule: 'workspace', departments: 'workspace', assignments: 'workspace',
     syllabus: 'workspace', marks: 'workspace', attendance: 'workspace', submissions: 'workspace',
     students: 'workspace', analytics: 'workspace',
-    'exam-halls': 'exams',
+    'exam-halls': 'exams', 'entrance-exams': 'exams',
     chats: 'comms', staffroom: 'comms', schoolnews: 'comms',
     mytasks: 'alerts', leaves: 'alerts',
     downloads: 'others', library: 'others', events: 'others'
@@ -50,7 +50,7 @@ export default function StaffDashboard() {
         const g = SIDEBAR_TAB_GROUP[activeTab];
         if (g) setOpenGroup(g);
         if (['students', 'analytics'].includes(activeTab)) setAcademicMenuOpen(true);
-        if (activeTab === 'exam-halls') setExamHallMenuOpen(true);
+        if (activeTab === 'exam-halls' || activeTab === 'entrance-exams') setExamHallMenuOpen(true);
     }, [activeTab]);
     const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('holy-cross-theme') === 'dark');
     const [showAiHint, setShowAiHint] = useState(false);
@@ -61,6 +61,14 @@ export default function StaffDashboard() {
     const [newEventForm, setNewEventForm] = useState({ title: '', time: '' });
 
     const [staffData, setStaffData] = useState({ staffId: '', name: 'Dr. R. Sharma', department: 'Senior Math Faculty' });
+
+    // Entrance exam applicants assigned to this staff member (Office -> Admissions -> Send to exam)
+    const [entranceApps, setEntranceApps] = useState([]);
+    const [selectedEntranceId, setSelectedEntranceId] = useState(null);
+    const [entranceDraft, setEntranceDraft] = useState({});   // { [applicationId]: [{ subject, marks, maxMarks }] }
+    const [entranceInput, setEntranceInput] = useState({ subject: '', marks: '', maxMarks: '100' });
+    const [entranceStatus, setEntranceStatus] = useState('');
+    const [entranceSaving, setEntranceSaving] = useState(false);
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isProfileSaving, setIsProfileSaving] = useState(false);
@@ -282,6 +290,24 @@ export default function StaffDashboard() {
         }
     }, []);
 
+    // Only the applications assigned to this staff member are read
+    useEffect(() => {
+        if (!staffData.staffId) return undefined;
+        const unsub = onSnapshot(
+            query(collection(db, 'admissions'), where('examAssignment.staffId', '==', staffData.staffId)),
+            (snap) => {
+                setEntranceApps(
+                    snap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .filter(a => a.status === 'Entrance Exam' || a.marksSubmitted)
+                        .sort((x, y) => String(x.examAssignment?.date || '').localeCompare(String(y.examAssignment?.date || '')))
+                );
+            },
+            (err) => console.error('Entrance exam assignments failed to load:', err)
+        );
+        return () => unsub();
+    }, [staffData.staffId]);
+
     useEffect(() => {
         const unsubStudents = onSnapshot(collection(db, 'students_records'), (snap) => {
             const fetchedStudents = snap.docs.map(d => ({
@@ -424,6 +450,72 @@ export default function StaffDashboard() {
         if (!periodLabel) return '';
         const match = periodLabel.match(/\(([^)]+)\)/);
         return match ? match[1].trim() : periodLabel.trim();
+    };
+
+    // ---- entrance exam marks entry ----
+    const entranceName = (a) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').trim() || a.fullName || a.name || 'Applicant';
+    const selectedEntranceApp = entranceApps.find(a => a.id === selectedEntranceId) || null;
+    const entranceRows = selectedEntranceApp
+        ? (selectedEntranceApp.marksSubmitted ? (selectedEntranceApp.examMarks?.subjects || []) : (entranceDraft[selectedEntranceApp.id] || []))
+        : [];
+    const entranceTotal = entranceRows.reduce((sum, r) => sum + Number(r.marks || 0), 0);
+    const entranceMax = entranceRows.reduce((sum, r) => sum + Number(r.maxMarks || 0), 0);
+    const entrancePending = entranceApps.filter(a => !a.marksSubmitted).length;
+
+    const openEntranceApp = (a) => {
+        setSelectedEntranceId(a.id);
+        setEntranceStatus('');
+        setEntranceInput({ subject: '', marks: '', maxMarks: '100' });
+        // If the office re-opened the marks, start from what was submitted before
+        setEntranceDraft(d => (d[a.id] ? d : { ...d, [a.id]: a.examMarks?.subjects || [] }));
+    };
+
+    const addEntranceSubject = () => {
+        const subject = entranceInput.subject.trim();
+        const marks = Number(entranceInput.marks);
+        const maxMarks = Number(entranceInput.maxMarks);
+        if (!subject) return setEntranceStatus('Enter the subject name.');
+        if (entranceInput.marks === '' || Number.isNaN(marks) || marks < 0) return setEntranceStatus('Enter valid marks.');
+        if (!maxMarks || maxMarks <= 0) return setEntranceStatus('Enter the maximum marks for the subject.');
+        if (marks > maxMarks) return setEntranceStatus('Marks cannot be more than the maximum marks.');
+        if (entranceRows.some(r => r.subject.toLowerCase() === subject.toLowerCase())) return setEntranceStatus(`${subject} is already added.`);
+        setEntranceDraft(d => ({ ...d, [selectedEntranceApp.id]: [...(d[selectedEntranceApp.id] || []), { subject, marks, maxMarks }] }));
+        setEntranceInput(i => ({ ...i, subject: '', marks: '' }));
+        setEntranceStatus('');
+    };
+
+    const removeEntranceSubject = (index) => {
+        setEntranceDraft(d => ({ ...d, [selectedEntranceApp.id]: (d[selectedEntranceApp.id] || []).filter((_, i) => i !== index) }));
+    };
+
+    const submitEntranceMarks = async () => {
+        if (!selectedEntranceApp || selectedEntranceApp.marksSubmitted) return;
+        if (entranceRows.length === 0) return setEntranceStatus('Add at least one subject with marks.');
+        if (!window.confirm(`Submit the marks for ${entranceName(selectedEntranceApp)}? They will be visible to the office and admin.`)) return;
+        setEntranceSaving(true);
+        try {
+            await updateDoc(doc(db, 'admissions', selectedEntranceApp.id), {
+                examMarks: {
+                    subjects: entranceRows,
+                    total: entranceTotal,
+                    maxTotal: entranceMax,
+                    percentage: entranceMax ? Math.round((entranceTotal / entranceMax) * 1000) / 10 : 0,
+                    submittedBy: staffData.name,
+                    staffId: staffData.staffId,
+                    submittedAt: serverTimestamp()
+                },
+                marksSubmitted: true,
+                updatedAt: serverTimestamp(),
+                history: arrayUnion({ status: 'Entrance Exam', by: 'staff', at: Date.now(), note: `Marks submitted by ${staffData.name}` })
+            });
+            setEntranceDraft(d => { const next = { ...d }; delete next[selectedEntranceApp.id]; return next; });
+            setEntranceStatus('Marks submitted. The office and admin can now see them.');
+        } catch (err) {
+            console.error('Error submitting entrance marks:', err);
+            setEntranceStatus('Could not submit the marks. Please try again.');
+        } finally {
+            setEntranceSaving(false);
+        }
     };
 
     const mySchedule = staffTimetableList.filter(item =>
@@ -2222,6 +2314,14 @@ tr { height: 54px; }
                                                 onClick={() => { setActiveTab('exam-halls'); setIsMobileMenuOpen(false); }}
                                             >
                                                 <CheckCircle size={13} /> My Invigilation Duty
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`sub-link ${activeTab === 'entrance-exams' ? 'active' : ''}`}
+                                                onClick={() => { setActiveTab('entrance-exams'); setSelectedEntranceId(null); setIsMobileMenuOpen(false); }}
+                                            >
+                                                <ClipboardList size={13} /> Entrance Exam Marks
+                                                {entrancePending > 0 && <span className="ent-count">{entrancePending}</span>}
                                             </button>
                                         </div>
                                     )}
@@ -5255,6 +5355,160 @@ tr { height: 54px; }
                                     </div>
                                 </form>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'entrance-exams' && (
+                        <div className="dash-card full-width ent-card">
+                            {!selectedEntranceApp ? (
+                                <>
+                                    <div className="card-header">
+                                        <div>
+                                            <h3>Entrance Exam — Assigned Applicants</h3>
+                                            <p className="subtitle">Applicants the office has assigned to you. Open one to enter the subject-wise marks.</p>
+                                        </div>
+                                        <span className="exam-sync-pill"><CheckCircle size={13} /> Live Synced</span>
+                                    </div>
+
+                                    {entranceApps.length === 0 ? (
+                                        <div className="empty-sub-card">
+                                            <ClipboardList size={30} />
+                                            <h4>No Applicants Assigned</h4>
+                                            <p>The office has not assigned any entrance exam applicants to you yet.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="exam-hall-grid">
+                                            {entranceApps.map(a => (
+                                                <button type="button" className="exam-hall-card ent-app" key={a.id} onClick={() => openEntranceApp(a)}>
+                                                    <div className="exam-hall-card-top">
+                                                        <span className="exam-hall-room">{a.examAssignment?.roomNo ? `Room ${a.examAssignment.roomNo}` : 'Room —'}</span>
+                                                        <span className={`ent-pill ${a.marksSubmitted ? 'done' : 'todo'}`}>{a.marksSubmitted ? 'Marks submitted' : a.reexamCount ? 'Re-exam · marks pending' : 'Marks pending'}</span>
+                                                    </div>
+                                                    <h4>{entranceName(a)}</h4>
+                                                    <div className="exam-hall-meta">
+                                                        <span><GraduationCap size={14} /> Class {a.grade || '—'}</span>
+                                                        <span><Calendar size={14} /> {a.examAssignment?.date || 'Date not set'}</span>
+                                                        <span><Building2 size={14} /> {a.examAssignment?.blockName || 'Block —'}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="card-header">
+                                        <div>
+                                            <button type="button" className="ent-back" onClick={() => { setSelectedEntranceId(null); setEntranceStatus(''); }}>
+                                                <ArrowLeft size={14} /> All applicants
+                                            </button>
+                                            <h3>{entranceName(selectedEntranceApp)}</h3>
+                                            <p className="subtitle">Application {selectedEntranceApp.acknowledgementNumber || '—'}</p>
+                                        </div>
+                                        <span className={`ent-pill ${selectedEntranceApp.marksSubmitted ? 'done' : 'todo'}`}>
+                                            {selectedEntranceApp.marksSubmitted ? 'Marks submitted' : selectedEntranceApp.reexamCount ? 'Re-exam · marks pending' : 'Marks pending'}
+                                        </span>
+                                    </div>
+
+                                    <div className="ent-details">
+                                        {[
+                                            ['Class Applied For', selectedEntranceApp.grade],
+                                            ['Date of Birth', selectedEntranceApp.dob],
+                                            ['Gender', selectedEntranceApp.gender],
+                                            ['Parent / Guardian', selectedEntranceApp.hasGuardian ? selectedEntranceApp.guardianName : (selectedEntranceApp.parentName || selectedEntranceApp.fatherName)],
+                                            ['Previous School', selectedEntranceApp.grade && selectedEntranceApp.grade !== 'LKG' ? selectedEntranceApp.previousSchool : ''],
+                                            ['Exam Date', selectedEntranceApp.examAssignment?.date],
+                                            ['Block Name', selectedEntranceApp.examAssignment?.blockName],
+                                            ['Room No', selectedEntranceApp.examAssignment?.roomNo]
+                                        ].map(([label, value]) => (
+                                            <div key={label}><span>{label}</span><strong>{value || '—'}</strong></div>
+                                        ))}
+                                    </div>
+
+                                    <h4 className="ent-title">Subject-wise Marks</h4>
+
+                                    {!selectedEntranceApp.marksSubmitted && (
+                                        <div className="ent-add">
+                                            <input
+                                                type="text"
+                                                list="ent-subjects"
+                                                placeholder="Subject"
+                                                value={entranceInput.subject}
+                                                onChange={e => setEntranceInput(i => ({ ...i, subject: e.target.value }))}
+                                                onKeyDown={e => e.key === 'Enter' && addEntranceSubject()}
+                                            />
+                                            <datalist id="ent-subjects">
+                                                {subjectList.map(sub => <option key={sub} value={sub} />)}
+                                            </datalist>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                placeholder="Marks"
+                                                value={entranceInput.marks}
+                                                onChange={e => setEntranceInput(i => ({ ...i, marks: e.target.value }))}
+                                                onKeyDown={e => e.key === 'Enter' && addEntranceSubject()}
+                                            />
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                placeholder="Out of"
+                                                value={entranceInput.maxMarks}
+                                                onChange={e => setEntranceInput(i => ({ ...i, maxMarks: e.target.value }))}
+                                            />
+                                            <button type="button" className="ent-add-btn" onClick={addEntranceSubject}>
+                                                <PlusCircle size={16} /> Add
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {entranceRows.length === 0 ? (
+                                        <p className="ent-empty">No subjects added yet. Add each subject with its marks.</p>
+                                    ) : (
+                                        <div className="ent-table-wrap">
+                                            <table className="ent-table">
+                                                <thead>
+                                                    <tr><th>Subject</th><th>Marks</th><th>Out of</th>{!selectedEntranceApp.marksSubmitted && <th />}</tr>
+                                                </thead>
+                                                <tbody>
+                                                    {entranceRows.map((r, i) => (
+                                                        <tr key={`${r.subject}-${i}`}>
+                                                            <td>{r.subject}</td>
+                                                            <td>{r.marks}</td>
+                                                            <td>{r.maxMarks}</td>
+                                                            {!selectedEntranceApp.marksSubmitted && (
+                                                                <td>
+                                                                    <button type="button" className="ent-remove" aria-label={`Remove ${r.subject}`} onClick={() => removeEntranceSubject(i)}>
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td>Total</td>
+                                                        <td>{entranceTotal}</td>
+                                                        <td colSpan={selectedEntranceApp.marksSubmitted ? 1 : 2}>{entranceMax}{entranceMax ? ` (${Math.round((entranceTotal / entranceMax) * 1000) / 10}%)` : ''}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                    {entranceStatus && <p className="ent-status">{entranceStatus}</p>}
+
+                                    {selectedEntranceApp.marksSubmitted ? (
+                                        <p className="ent-locked"><CheckCircle size={14} /> Marks submitted and shared with the office and admin. Contact the office if a correction is needed.</p>
+                                    ) : (
+                                        <div className="ent-actions">
+                                            <button type="button" className="ent-submit" disabled={entranceSaving || entranceRows.length === 0} onClick={submitEntranceMarks}>
+                                                <Send size={15} /> {entranceSaving ? 'Submitting…' : 'Submit marks'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
 

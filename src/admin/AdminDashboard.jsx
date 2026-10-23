@@ -536,7 +536,7 @@ export default function AdminDashboard() {
     // Topbar title/subtitle per tab (mirrors the section headers in the reference design)
     const tabMeta = {
         analytics: { title: 'Dashboard', subtitle: "Welcome back! Here's what's happening today." },
-        admission_panel: { title: 'Admission Panel', subtitle: 'Review and manage incoming admission applications.' },
+        admission_panel: { title: 'Admission Panel', subtitle: 'Track every application and its status, and approve the eligible ones.' },
         upcoming_events: { title: 'Upcoming Events', subtitle: 'Manage school events and activities.' },
         toppers: { title: 'Toppers & Achievers', subtitle: 'Manage board exam toppers and achievers.' },
         calendar: { title: 'Academic Calendar', subtitle: 'Manage holidays and important dates.' },
@@ -944,81 +944,8 @@ export default function AdminDashboard() {
         }
     };
 
-    const [approvalSections, setApprovalSections] = useState({});
-
-    const handleApproveAdmission = async (app) => {
-        try {
-            const assignedSectionName = approvalSections[app.id] || 'Section A';
-            const appRef = doc(db, "admissions", app.id);
-            await updateDoc(appRef, { status: 'Approved' });
-
-            const targetGrade = app.grade;
-            const sectionsQuery = query(
-                collection(db, "class_sections"),
-                where("className", "==", targetGrade),
-                where("name", "==", assignedSectionName)
-            );
-            const sectionSnap = await getDocs(sectionsQuery);
-
-            let resolvedSectionId = '';
-            if (!sectionSnap.empty) {
-                resolvedSectionId = sectionSnap.docs[0].id;
-            } else {
-                const newSectionRef = await addDoc(collection(db, "class_sections"), {
-                    className: targetGrade,
-                    name: assignedSectionName,
-                    roomNo: '101',
-                    createdAt: serverTimestamp()
-                });
-                resolvedSectionId = newSectionRef.id;
-            }
-
-            const studentErpData = {
-                admissionId: app.id,
-                admissionNo: app.acknowledgementNumber || 'HCMS20260000',
-                name: `${app.firstName} ${app.middleName ? app.middleName + ' ' : ''}${app.lastName}`,
-                className: targetGrade,
-                grade: targetGrade,
-                sectionName: assignedSectionName,
-                sectionId: resolvedSectionId,
-                guardianName: app.parentName,
-                phone: app.phone,
-                address: app.address,
-                status: 'Active',
-                enrolledAt: serverTimestamp()
-            };
-
-            await setDoc(doc(db, "students_erp", app.id), studentErpData);
-            await addDoc(collection(db, "students_records"), studentErpData);
-
-            alert(`Application approved! Student registered into Student ERP.`);
-            fetchAdmissionApplications();
-        } catch (error) {
-            console.error("Error approving application:", error);
-        }
-    };
-
-    const handleRejectAdmission = async (appId) => {
-        if (!window.confirm("Are you sure you want to reject this application?")) return;
-        try {
-            const appRef = doc(db, "admissions", appId);
-            await updateDoc(appRef, { status: 'Rejected' });
-            alert("Application marked as Rejected.");
-            fetchAdmissionApplications();
-        } catch (error) {
-            console.error("Error rejecting application:", error);
-        }
-    };
-
-    const handleDeleteAdmission = async (appId) => {
-        if (!window.confirm("Are you sure you want to permanently delete this application?")) return;
-        try {
-            await deleteDoc(doc(db, "admissions", appId));
-            setAdmissionApplications(admissionApplications.filter(item => item.id !== appId));
-        } catch (error) {
-            console.error("Error deleting record:", error);
-        }
-    };
+    // Admission approve / reject / delete now live in AdminAdmissionPanel (role="admin").
+    // The admin only accepts or rejects eligible applications; the office syncs accepted ones to ERP.
 
     const getAdmissionInitials = (app) => {
         const first = (app.firstName || '')[0] || '';
@@ -1935,14 +1862,14 @@ export default function AdminDashboard() {
                                     </div>
                                 </section>
                             )}
-                            <AdminAdmissionPanel />
+                            <AdminAdmissionPanel role="admin" />
                         </>
                     )}
 
                     {/* DASHBOARD — OVERVIEW, QUICK ACTIONS & DIRECTORY SEARCH */}
                     {activeTab === 'analytics' && (() => {
-                        const pendingApps = admissionApplications.filter(a => (a.status || 'Pending') === 'Pending').length;
-                        const approvedApps = admissionApplications.filter(a => a.status === 'Approved').length;
+                        const pendingApps = admissionApplications.filter(a => ['Eligible', 'Not Eligible'].includes(a.status)).length;   // waiting for the admin to accept
+                        const approvedApps = admissionApplications.filter(a => ['Accepted', 'Synced', 'Approved'].includes(a.status)).length;
                         const approvedPct = admissionApplications.length ? Math.round((approvedApps / admissionApplications.length) * 100) : 0;
                         const recentEvents = upcomingEvents.slice(0, 4);
                         const recentNotices = announcements.slice(0, 4);
@@ -1968,7 +1895,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="dx-hero-stats">
                                         <button type="button" onClick={() => goTo('admission_panel')}>
-                                            <strong>{pendingApps}</strong><span>Pending admissions</span>
+                                            <strong>{pendingApps}</strong><span>Admissions to approve</span>
                                         </button>
                                         <button type="button" onClick={() => goTo('upcoming_events')}>
                                             <strong>{upcomingEvents.length}</strong><span>Upcoming events</span>
@@ -2120,13 +2047,13 @@ export default function AdminDashboard() {
                                             </div>
                                             <div className="dx-adm">
                                                 <div><strong>{admissionApplications.length}</strong><span>Total</span></div>
-                                                <div><strong>{pendingApps}</strong><span>Pending</span></div>
-                                                <div><strong>{approvedApps}</strong><span>Approved</span></div>
+                                                <div><strong>{pendingApps}</strong><span>To approve</span></div>
+                                                <div><strong>{approvedApps}</strong><span>Accepted</span></div>
                                             </div>
                                             <div className="dx-bar" role="progressbar" aria-valuenow={approvedPct} aria-valuemin="0" aria-valuemax="100">
                                                 <span style={{ width: `${approvedPct}%` }} />
                                             </div>
-                                            <p className="dx-bar-note">{approvedPct}% of applications approved</p>
+                                            <p className="dx-bar-note">{approvedPct}% of applications accepted</p>
                                         </div>
 
                                         {/* UPCOMING EVENTS */}
