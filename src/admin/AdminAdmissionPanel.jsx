@@ -386,6 +386,8 @@ export default function AdmissionPanel() {
   const [modalMode, setModalMode] = useState('normal'); // normal | maximized | minimized
   const [classFilter, setClassFilter] = useState(null); // null = first page (class cards) | All | LKG | UKG | I ... XII | Other
 
+  const [reviewTab, setReviewTab] = useState('docs'); // docs | details
+
   // Uploaded files for the application open in the modal
   const [files, setFiles] = useState({});
   const [filesLoading, setFilesLoading] = useState(false);
@@ -407,6 +409,7 @@ export default function AdmissionPanel() {
     }
     let cancelled = false;
     setModalMode('normal');
+    setReviewTab('docs');
     setFiles({});
     setFilesError('');
     setFilesLoading(true);
@@ -439,6 +442,16 @@ export default function AdmissionPanel() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedApp]);
+
+  // Lock page scroll behind the open drawer
+  useEffect(() => {
+    if (!selectedApp || modalMode === 'minimized') return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [selectedApp, modalMode]);
 
   const fetchApplications = async () => {
     try {
@@ -1064,8 +1077,59 @@ export default function AdmissionPanel() {
                 </div>
               </div>
 
+              <div className="review-summary">
+                <div>
+                  <span>Class</span>
+                  <strong>{app.grade || '—'}</strong>
+                </div>
+                <div>
+                  <span>Submitted</span>
+                  <strong>{fmtShort(app.createdAt)}</strong>
+                </div>
+                <div>
+                  <span>{app.hasGuardian ? 'Guardian' : 'Parent'}</span>
+                  <strong title={app.parentName || app.fatherName || app.guardianName || ''}>
+                    {app.parentName || app.fatherName || app.guardianName || '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span>Mobile</span>
+                  {(() => {
+                    const mobile =
+                      app.parentPhone || app.phone || app.fatherMobile || app.guardianMobile;
+                    return mobile ? (
+                      <a className="review-tel" href={`tel:${mobile}`}>{mobile}</a>
+                    ) : (
+                      <strong>—</strong>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="review-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={reviewTab === 'docs'}
+                  className={`review-tab ${reviewTab === 'docs' ? 'active' : ''}`}
+                  onClick={() => setReviewTab('docs')}
+                >
+                  <Paperclip size={15} /> Documents
+                  <span className="review-tab-count">{attachedCount(app)}/{DOC_ORDER.length}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={reviewTab === 'details'}
+                  className={`review-tab ${reviewTab === 'details' ? 'active' : ''}`}
+                  onClick={() => setReviewTab('details')}
+                >
+                  <FileText size={15} /> Details
+                </button>
+              </div>
+
               <div className="review-body">
-                <section className="review-docs">
+                <section className="review-docs" hidden={reviewTab !== 'docs'}>
                   <h4 className="review-section-title">
                     <Paperclip size={14} /> Uploaded Documents
                   </h4>
@@ -1088,7 +1152,7 @@ export default function AdmissionPanel() {
                   </div>
                 </section>
 
-                <section className="review-info">
+                <section className="review-info" hidden={reviewTab !== 'details'}>
                   <div className="info-block">
                     <h4 className="review-section-title">
                       <Hash size={14} /> Application

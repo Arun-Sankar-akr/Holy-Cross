@@ -41,7 +41,6 @@
     --font-display: 'Outfit', 'Segoe UI', sans-serif;
     --font-body: 'Inter', 'Segoe UI', sans-serif;
 
-    --ap-top-offset: 112px;
     font-family: var(--font-body);
     color: var(--ink);
 }
@@ -796,39 +795,46 @@
     color: var(--ok);
 }
 
-/* ---------------------------------------------------- review modal */
+/* ------------------------------------------------ review drawer (slide-in) */
 .ap-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 99999;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: var(--ap-top-offset) 20px 20px;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(3px);
+    align-items: stretch;
+    justify-content: flex-end;
+    padding: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    animation: ap-fade .18s ease-out;
 }
-
-.ap-modal-backdrop.is-max { padding: var(--ap-top-offset) 12px 12px; }
 
 .ap-modal-card {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    max-width: 1040px;
-    max-height: calc(100vh - var(--ap-top-offset) - 20px);
+    width: min(920px, 100%);
+    height: 100vh;
     overflow: hidden;
     background: var(--surface);
-    border-radius: var(--r-lg);
+    border-radius: 18px 0 0 18px;
     box-shadow: var(--shadow-pop);
-    animation: ap-pop .2s ease-out;
+    animation: ap-slide .26s cubic-bezier(.2, .8, .2, 1);
 }
 
 .ap-modal-card.is-max {
-    max-width: none;
-    height: calc(100vh - var(--ap-top-offset) - 12px);
-    max-height: none;
+    width: 100%;
+    border-radius: 0;
+}
+
+@keyframes ap-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes ap-slide {
+    from { opacity: 0; transform: translateX(48px); }
+    to { opacity: 1; transform: none; }
 }
 
 @keyframes ap-pop {
@@ -836,27 +842,13 @@
     to { opacity: 1; transform: none; }
 }
 
-.ap-portal .ap-modal-backdrop.is-max {
-    z-index: 99999;
-    padding: 0;
-    align-items: stretch;
-}
-
-.ap-portal .ap-modal-card.is-max {
-    width: 100vw;
-    max-width: none;
-    height: 100vh;
-    border-radius: 0;
-}
-
 .review-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 22px;
+    padding: 18px 24px;
     background: var(--surface);
-    border-bottom: 1px solid var(--line);
 }
 
 .review-identity {
@@ -881,7 +873,7 @@
     background: var(--brand-soft);
 }
 
-.admission-avatar.large { width: 52px; height: 52px; }
+.admission-avatar.large { width: 60px; height: 60px; border-radius: 14px; }
 
 .admission-avatar.photo {
     padding: 0;
@@ -894,7 +886,7 @@
 .review-titles h3 {
     margin: 0 0 6px;
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--ink);
     overflow-wrap: anywhere;
@@ -918,8 +910,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     color: var(--ink-soft);
     background: var(--surface);
     border: 1px solid var(--line-strong);
@@ -939,28 +931,134 @@
     border-color: var(--bad-line);
 }
 
+/* quick facts under the header */
+.review-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.review-summary > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 16px;
+    background: var(--surface-alt);
+}
+
+.review-summary > div:first-child { padding-left: 24px; }
+
+.review-summary span {
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.review-summary strong,
+.review-tel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.review-tel { text-decoration: none; }
+.review-tel:hover { color: var(--brand-dark); text-decoration: underline; }
+
+/* Documents | Details */
+.review-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.review-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -1px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: .86rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+.review-tab:hover { color: var(--ink); }
+
+.review-tab.active {
+    color: var(--brand-dark);
+    border-bottom-color: var(--brand);
+}
+
+.review-tab:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+}
+
+.review-tab-count {
+    padding: 1px 8px;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border-radius: 999px;
+}
+
+.review-tab.active .review-tab-count {
+    color: var(--brand-dark);
+    background: var(--brand-soft);
+}
+
+/* one scrolling area, so every screen size works the same way */
 .review-body {
     flex: 1;
     min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    overflow: hidden;
-}
-
-.ap-modal-card.is-max .review-body {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    overflow-y: auto;
+    background: var(--paper);
 }
 
 .review-docs,
 .review-info {
-    padding: 18px 22px;
-    overflow-y: auto;
+    padding: 20px 24px;
+    background: none;
+    border: none;
 }
 
-.review-docs {
-    background: var(--surface-alt);
-    border-right: 1px solid var(--line);
+.review-docs[hidden],
+.review-info[hidden] { display: none; }
+
+.review-docs > .review-section-title { display: none; }
+
+.review-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
+    align-items: start;
 }
+
+.info-block {
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
+.info-block + .info-block { margin-top: 0; }
 
 .review-section-title {
     display: flex;
@@ -976,8 +1074,6 @@
     color: var(--ink-soft);
     border-bottom: 1px solid var(--line);
 }
-
-.info-block + .info-block { margin-top: 22px; }
 
 .info-grid {
     display: grid;
@@ -1064,7 +1160,7 @@
     overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--r-md);
+    border-radius: 12px;
 }
 
 .doc-stage-bar {
@@ -1116,8 +1212,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: min(340px, 50vh);
-    max-height: 56vh;
+    min-height: min(360px, 50vh);
+    max-height: 62vh;
     padding: 12px;
     overflow: auto;
     background: repeating-conic-gradient(#eef2f7 0% 25%, #f8fafc 0% 50%) 50% / 18px 18px;
@@ -1125,7 +1221,7 @@
 
 .doc-image {
     max-width: 100%;
-    max-height: calc(56vh - 24px);
+    max-height: calc(62vh - 24px);
     object-fit: contain;
     background: #fff;
     border-radius: 6px;
@@ -1135,7 +1231,7 @@
 
 .doc-frame {
     width: 100%;
-    height: 52vh;
+    height: 60vh;
     min-height: 300px;
     background: #fff;
     border: none;
@@ -1159,8 +1255,8 @@
 .doc-state.error { color: var(--bad); }
 
 .ap-modal-card.is-max .doc-canvas { min-height: 60vh; max-height: none; }
-.ap-modal-card.is-max .doc-image { max-height: 68vh; }
-.ap-modal-card.is-max .doc-frame { height: 66vh; }
+.ap-modal-card.is-max .doc-image { max-height: 70vh; }
+.ap-modal-card.is-max .doc-frame { height: 72vh; }
 
 .doc-checklist {
     display: grid;
@@ -1234,15 +1330,15 @@
     color: rgba(255, 255, 255, .85);
 }
 
-/* footer actions */
+/* sticky footer actions */
 .review-footer {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 10px;
-    padding: 12px 22px;
-    background: var(--surface-alt);
+    padding: 12px 24px;
+    background: var(--surface);
     border-top: 1px solid var(--line);
 }
 
@@ -1293,7 +1389,7 @@
     position: fixed;
     right: 20px;
     bottom: 20px;
-    z-index: 1000;
+    z-index: 99999;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1350,15 +1446,14 @@
 
 /* dynamic viewport height keeps footer buttons above mobile browser bars */
 @supports (height: 100dvh) {
-    .ap-modal-card { max-height: calc(100dvh - var(--ap-top-offset) - 20px); }
-    .ap-modal-card.is-max { height: calc(100dvh - var(--ap-top-offset) - 12px); max-height: none; }
-    .ap-portal .ap-modal-card.is-max { height: 100dvh; }
+    .ap-modal-card { height: 100dvh; }
     .doc-lightbox img { max-height: calc(100dvh - 100px); }
 }
 
 /* large screens */
 @media (min-width: 1400px) {
-    .ap-modal-card { max-width: 1200px; }
+    .ap-modal-card { width: min(1040px, 100%); }
+    .ap-modal-card.is-max { width: 100%; }
     .cls-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 }
 
@@ -1394,22 +1489,22 @@
     .ap-filter-tabs { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
     .ap-filter-tabs button { padding: 8px 4px; }
 
-    .review-body,
-    .ap-modal-card.is-max .review-body {
-        grid-template-columns: 1fr;
-        overflow-y: auto;
-    }
+    .ap-modal-card { width: 100%; border-radius: 0; }
 
+    .review-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .review-summary > div:first-child { padding-left: 16px; }
+
+    .review-head,
+    .review-tabs,
     .review-docs,
-    .review-info { overflow: visible; }
-
-    .review-docs { border-right: none; border-bottom: 1px solid var(--line); }
+    .review-info,
+    .review-footer { padding-left: 18px; padding-right: 18px; }
 
     .doc-canvas,
     .ap-modal-card.is-max .doc-canvas { min-height: 260px; max-height: 60vh; }
     .ap-modal-card.is-max .doc-image { max-height: 56vh; }
-    .ap-modal-card.is-max .doc-frame,
-    .doc-frame { height: 56vh; min-height: 260px; }
+    .doc-frame,
+    .ap-modal-card.is-max .doc-frame { height: 56vh; min-height: 260px; }
 }
 
 /* table -> stacked cards */
@@ -1495,8 +1590,7 @@
 
 /* phones */
 @media (max-width: 640px) {
-    .ap-root { --ap-top-offset: 72px; padding: 14px; border-radius: 12px; }
-    .ap-portal { --ap-top-offset: 72px; }
+    .ap-root { padding: 14px; border-radius: 12px; }
 
     .ap-header-text h3 { font-size: 1.15rem; }
 
@@ -1510,40 +1604,28 @@
     .section-select { font-size: 16px; }
     .section-select { min-height: 44px; }
 
-    .ap-modal-backdrop,
-    .ap-modal-backdrop.is-max,
-    .ap-portal .ap-modal-backdrop.is-max { padding: var(--ap-top-offset) 0 0; }
-
-    .ap-portal .ap-modal-backdrop.is-max { padding: 0; }
-
-    .ap-modal-card,
-    .ap-modal-card.is-max {
-        height: calc(100vh - var(--ap-top-offset));
-        max-height: none;
-        border-radius: 16px 16px 0 0;
-    }
-
-    .ap-portal .ap-modal-card.is-max { height: 100vh; border-radius: 0; }
-
-    .review-head { gap: 10px; padding: 14px 16px; }
+    .review-head { gap: 10px; padding-top: 14px; padding-bottom: 14px; }
     .review-identity { gap: 10px; }
-    .admission-avatar.large { width: 44px; height: 44px; }
-    .review-titles h3 { margin-bottom: 6px; font-size: 1.05rem; }
+    .admission-avatar.large { width: 48px; height: 48px; }
+    .review-titles h3 { font-size: 1.05rem; }
 
-    /* minimize / maximize have no meaning on a full-width sheet */
+    /* minimize / maximize have no meaning on a full-width drawer */
     .review-window-controls .ap-win-btn:not(.close) { display: none; }
     .review-window-controls .ap-win-btn.close { width: 40px; height: 40px; }
 
+    .review-tab { flex: 1; justify-content: center; padding: 12px 8px; }
+
     .review-docs,
-    .review-info,
-    .review-footer { padding-left: 16px; padding-right: 16px; }
+    .review-info { padding-top: 14px; padding-bottom: 14px; }
+
+    .info-block { padding: 14px; }
 
     .doc-stage-bar { padding: 10px; }
     .doc-stage-actions { width: 100%; }
     .doc-action { flex: 1; justify-content: center; height: 36px; }
     .doc-tab { padding: 8px 12px; }
 
-    .review-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    .review-footer { padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
     .review-footer .section-select { flex-basis: 100%; width: 100%; margin-right: 0; }
 
     .review-footer .modal-approve-btn,
@@ -1579,17 +1661,19 @@
     .ap-root { padding: 10px; }
     .ap-filter-tabs button { font-size: .74rem; }
     .ap-table tbody tr.ap-row { grid-template-columns: 1fr; padding: 12px; }
+    .review-summary { grid-template-columns: 1fr 1fr; }
     .review-head,
+    .review-tabs,
     .review-docs,
     .review-info,
     .review-footer { padding-left: 12px; padding-right: 12px; }
 }
 
-/* landscape phones: no room to spare, so the modal uses the whole screen */
+/* landscape phones: little height, so drop the facts strip */
 @media (max-height: 500px) and (orientation: landscape) {
-    .ap-portal .ap-modal-backdrop { padding: 0; align-items: stretch; z-index: 99999; }
-    .ap-portal .ap-modal-card { max-width: none; height: 100vh; max-height: none; border-radius: 0; }
+    .review-summary { display: none; }
     .review-head { padding-top: 8px; padding-bottom: 8px; }
+    .admission-avatar.large { width: 40px; height: 40px; }
     .review-footer { padding-top: 8px; padding-bottom: 8px; }
     .doc-canvas,
     .ap-modal-card.is-max .doc-canvas { min-height: 200px; max-height: none; }
@@ -1597,12 +1681,6 @@
     .ap-modal-card.is-max .doc-frame { height: 70vh; }
     .doc-image,
     .ap-modal-card.is-max .doc-image { max-height: 70vh; }
-}
-
-@supports (height: 100dvh) {
-    @media (max-height: 500px) and (orientation: landscape) {
-        .ap-portal .ap-modal-card { height: 100dvh; }
-    }
 }
 
 /* touch screens: larger tap targets */
@@ -1619,6 +1697,7 @@
 @media (prefers-reduced-motion: reduce) {
     .green-dot,
     .ap-spinner { animation: none; }
+    .ap-modal-backdrop,
     .ap-modal-card,
     .ap-dock { animation: none; }
     .cls-tile,
