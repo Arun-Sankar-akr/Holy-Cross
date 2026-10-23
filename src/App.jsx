@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 
 // Auth Protection Wrapper
@@ -67,6 +67,8 @@ import './App.css';
 import HallTicket from './components/HallTicket';
 import ExamTimetableViewer from './components/Examtimetableviewer';
 import CustomCursor from './components/Customcursor';
+import ErrorBoundary from './components/ErrorBoundary';
+import { NotFound, ErrorRoute } from './components/ErrorPage';
 
 import Cookies from "./components/Foot/CookiesSettings"
 import Terms from "./components/Foot/TermsOfService"
@@ -129,6 +131,7 @@ function AppContent({ loading, fadeOut }) {
         <Navbar />
 
         <main className="main-content">
+          <ErrorBoundary resetKey={location.pathname}>
           <Routes>
             {/* Public Pages */}
             <Route path="/" element={<Home />} />
@@ -212,9 +215,13 @@ function AppContent({ loading, fadeOut }) {
               }
             />
 
-            {/* Fallback Catch-All Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Error pages: /error/401, /error/403, /error/500 ... */}
+            <Route path="/error/:code" element={<ErrorRoute />} />
+
+            {/* Unknown address -> 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </main>
 
         {/* Render Footer only on non-admin routes */}

@@ -1941,3 +1941,662 @@
         gap: 20px;
     }
 }
+
+
+/* ============================================================================
+   RESPONSIVE LAYER — phones, tablets, laptops, large screens
+   Added after the original rules so it overrides them where needed.
+   Breakpoints: 1400+ (large) · 1024 · 860 · 640 · 480 · 360 · short landscape
+   ============================================================================ */
+
+/* ---- Safe sizing for every viewport ---- */
+.ap-root {
+    max-width: 100%;
+}
+
+.admissions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.glass-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+}
+
+/* Document checklist under the viewer (had no styles before) */
+.doc-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.check-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: .74rem;
+    color: var(--ink-soft);
+}
+
+.check-chip span {
+    overflow-wrap: anywhere;
+}
+
+.check-chip strong {
+    flex-shrink: 0;
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+.check-chip.ok strong {
+    color: var(--success);
+}
+
+.check-chip.missing strong {
+    color: var(--danger);
+}
+
+.check-chip.na strong {
+    color: var(--ink-faint);
+}
+
+.doc-stage-actions {
+    flex-wrap: wrap;
+}
+
+/* Use dynamic viewport height so mobile browser bars do not hide buttons */
+@supports (height: 100dvh) {
+    .ap-modal-card {
+        max-height: calc(100dvh - var(--ap-top-offset) - 20px);
+    }
+
+    .ap-modal-card.is-max {
+        height: calc(100dvh - var(--ap-top-offset) - 12px);
+    }
+
+    .ap-portal .ap-modal-card.is-max {
+        height: 100dvh;
+    }
+
+    .doc-lightbox img {
+        max-height: calc(100dvh - 100px);
+    }
+}
+
+/* ---- Large screens (1400px and up) ---- */
+@media (min-width: 1400px) {
+    .ap-modal-card {
+        max-width: 1200px;
+    }
+
+    .admissions-grid {
+        grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    }
+
+    .glass-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+/* ---- Laptops / small desktops (up to 1024px) ---- */
+@media (max-width: 1024px) {
+    .ap-root {
+        padding: 22px;
+    }
+
+    .glass-grid {
+        gap: 22px;
+    }
+
+    .glass-name {
+        font-size: 1.55rem;
+    }
+
+    .glass-sub {
+        font-size: 1.1rem;
+    }
+
+    .glass-cta,
+    .glass-go {
+        height: 54px;
+    }
+
+    .glass-go {
+        width: 54px;
+    }
+}
+
+/* ---- Tablets, portrait (up to 860px) ---- */
+@media (max-width: 860px) {
+    .ap-root .ap-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ap-stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 10px;
+        width: 100%;
+    }
+
+    .ap-stat-chip {
+        min-width: 0;
+        padding: 8px 6px;
+    }
+
+    .ap-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ap-search {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ap-filter-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        width: 100%;
+    }
+
+    .ap-filter-tabs button {
+        padding: 8px 4px;
+    }
+
+    /* Stacked review layout also has to win when the window is maximized */
+    .ap-modal-card.is-max .review-body {
+        grid-template-columns: 1fr;
+    }
+
+    .ap-modal-card .doc-canvas,
+    .ap-modal-card.is-max .doc-canvas {
+        min-height: 280px;
+        max-height: 60vh;
+    }
+
+    .ap-modal-card.is-max .doc-image {
+        max-height: 56vh;
+    }
+
+    .ap-modal-card.is-max .doc-frame,
+    .doc-frame {
+        height: 56vh;
+        min-height: 280px;
+    }
+}
+
+/* ---- Phones (up to 640px) ---- */
+@media (max-width: 640px) {
+    .ap-root {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .ap-root .ap-header {
+        padding-bottom: 16px;
+        margin-bottom: 18px;
+    }
+
+    .ap-header-text h3 {
+        font-size: 1.2rem;
+    }
+
+    .ap-header-text p {
+        font-size: .8rem;
+    }
+
+    /* Class cards: compact, 1-2 columns */
+    .glass-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+        gap: 16px;
+    }
+
+    .glass-card {
+        padding: 18px 18px 18px;
+        border-radius: 30px;
+        border-width: 2px;
+    }
+
+    .glass-avatar {
+        min-width: 56px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    .glass-name {
+        margin-top: 14px;
+        font-size: 1.35rem;
+    }
+
+    .glass-sub {
+        font-size: .95rem;
+    }
+
+    .glass-tags {
+        margin-top: 10px;
+    }
+
+    .glass-stats {
+        margin-top: 18px;
+    }
+
+    .glass-stat strong {
+        font-size: 1.05rem;
+    }
+
+    .glass-stat em {
+        font-size: .82rem;
+    }
+
+    .glass-actions {
+        margin-top: 18px;
+        gap: 10px;
+    }
+
+    .glass-cta {
+        height: 48px;
+        font-size: 1rem;
+    }
+
+    .glass-go {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Class detail bar */
+    .class-detail-bar {
+        gap: 10px;
+    }
+
+    .class-detail-title {
+        font-size: 1.1rem;
+    }
+
+    .class-detail-count {
+        margin-left: 0;
+        flex-basis: 100%;
+    }
+
+    /* Application cards */
+    .pcard-round-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .pcard-titles h4 {
+        font-size: 1.1rem;
+    }
+
+    .pcard-titles span {
+        font-size: .86rem;
+    }
+
+    /* 16px inputs stop iOS from zooming the page on focus */
+    .ap-search input,
+    .section-select {
+        font-size: 16px;
+    }
+
+    .ap-search {
+        height: 44px;
+    }
+
+    .section-select {
+        min-height: 44px;
+    }
+
+    /* Review modal: full-width sheet, simpler window controls */
+    .review-head {
+        gap: 10px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .review-identity {
+        gap: 10px;
+    }
+
+    .admission-avatar.large {
+        width: 44px;
+        height: 44px;
+        font-size: .95rem;
+    }
+
+    .review-titles h3 {
+        margin-bottom: 6px;
+        font-size: 1.05rem;
+        overflow-wrap: anywhere;
+    }
+
+    /* Minimize and maximize make no sense on a full-width sheet */
+    .review-window-controls .ap-win-btn:not(.close) {
+        display: none;
+    }
+
+    .review-window-controls .ap-win-btn.close {
+        width: 40px;
+        height: 40px;
+    }
+
+    .doc-stage-bar {
+        padding: 10px;
+    }
+
+    .doc-stage-actions {
+        width: 100%;
+    }
+
+    .doc-action {
+        flex: 1;
+        justify-content: center;
+        height: 36px;
+    }
+
+    .doc-tab {
+        padding: 8px 12px;
+    }
+
+    .review-footer {
+        padding-top: 12px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .review-footer .section-select {
+        flex-basis: 100%;
+    }
+
+    .review-footer .modal-approve-btn,
+    .review-footer .modal-reject-btn,
+    .review-footer .ap-close-btn {
+        flex: 1 1 120px;
+        justify-content: center;
+        min-height: 44px;
+    }
+
+    .review-footer .synced-label {
+        flex-basis: 100%;
+        margin-right: 0;
+    }
+
+    .ap-dock {
+        width: auto;
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        max-width: none;
+    }
+
+    .doc-lightbox {
+        padding: 56px 12px 20px;
+    }
+
+    .doc-lightbox-close {
+        top: calc(12px + env(safe-area-inset-top, 0px));
+        right: 12px;
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* ---- Small phones (up to 480px) ---- */
+@media (max-width: 480px) {
+    .ap-stats-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .class-cards-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Application card: stat row becomes three small stacked columns */
+    .pcard {
+        padding: 12px 12px 14px;
+        border-radius: 26px;
+    }
+
+    .pcard-banner {
+        height: 104px;
+        margin-bottom: 42px;
+    }
+
+    .pcard-avatar {
+        left: 10px;
+        width: 68px;
+        height: 68px;
+        font-size: 1.3rem;
+    }
+
+    .pcard-status {
+        right: 8px;
+        height: 34px;
+        padding: 0 12px 0 10px;
+        font-size: .8rem;
+    }
+
+    .pcard-head {
+        padding: 0 4px;
+    }
+
+    .pcard-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin: 16px 4px 14px;
+    }
+
+    .pcard-stat {
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+    }
+
+    .pcard-stat div {
+        align-items: center;
+        width: 100%;
+    }
+
+    .pcard-stat strong {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pcard-section {
+        margin: 0 4px 12px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .review-docs,
+    .review-info {
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+
+    .doc-checklist {
+        grid-template-columns: 1fr;
+    }
+
+    .doc-canvas {
+        min-height: 220px;
+        padding: 8px;
+    }
+
+    .doc-frame {
+        min-height: 240px;
+    }
+
+    .doc-state {
+        min-height: 200px;
+    }
+}
+
+/* ---- Very small phones (up to 360px) ---- */
+@media (max-width: 360px) {
+    .ap-root {
+        padding: 10px;
+    }
+
+    .ap-stats-row {
+        gap: 6px;
+    }
+
+    .ap-filter-tabs button {
+        font-size: .72rem;
+    }
+
+    .glass-name {
+        font-size: 1.2rem;
+    }
+
+    .glass-cta {
+        font-size: .92rem;
+    }
+
+    .pcard-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .pcard-secondary {
+        flex-direction: column;
+    }
+
+    .pcard-soft {
+        height: 44px;
+    }
+
+    .review-head,
+    .review-docs,
+    .review-info,
+    .review-footer {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+}
+
+/* ---- Landscape phones and other very short screens ----
+   The modal uses the whole screen, since there is no room to spare. */
+@media (max-height: 500px) and (orientation: landscape) {
+    .ap-portal .ap-modal-backdrop {
+        padding: 0;
+        align-items: stretch;
+        z-index: 99999;
+    }
+
+    .ap-portal .ap-modal-card {
+        max-width: none;
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+    }
+
+    .review-head {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .review-footer {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .doc-canvas,
+    .ap-modal-card.is-max .doc-canvas {
+        min-height: 200px;
+        max-height: none;
+    }
+
+    .doc-frame,
+    .ap-modal-card.is-max .doc-frame {
+        height: 70vh;
+    }
+
+    .doc-image,
+    .ap-modal-card.is-max .doc-image {
+        max-height: 70vh;
+    }
+
+    .ap-dock {
+        bottom: 8px;
+    }
+}
+
+@supports (height: 100dvh) {
+    @media (max-height: 500px) and (orientation: landscape) {
+        .ap-portal .ap-modal-card {
+            height: 100dvh;
+        }
+    }
+}
+
+/* ---- Touch screens: bigger tap targets, no sticky hover lift ---- */
+@media (pointer: coarse) {
+    .ap-win-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .ap-filter-tabs button {
+        min-height: 40px;
+    }
+
+    .doc-action {
+        height: 36px;
+    }
+
+    .doc-tab {
+        min-height: 36px;
+    }
+
+    .class-back-btn {
+        min-height: 40px;
+    }
+}
+
+@media (hover: none) {
+
+    .pcard:hover,
+    .glass-card:hover,
+    .ap-icon-btn:hover,
+    .pcard-cta:hover,
+    .pcard-round-btn:hover,
+    .modal-approve-btn:hover {
+        transform: none;
+    }
+
+    .glass-card:hover .glass-go {
+        transform: none;
+    }
+}
+
+/* ---- Respect reduced-motion settings ---- */
+@media (prefers-reduced-motion: reduce) {
+
+    .ap-modal-card,
+    .ap-dock,
+    .ap-spinner {
+        animation-duration: .01ms;
+    }
+
+    .pcard,
+    .glass-card,
+    .pcard-cta,
+    .doc-tab,
+    .doc-action {
+        transition: none;
+    }
+}
