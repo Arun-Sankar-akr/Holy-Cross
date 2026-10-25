@@ -187,7 +187,7 @@ export default function Footer() {
                             <span>Designed & Developed by</span>
 
                             <a
-                                href="https://arunakr.netlify.app"
+                                href="https://arunakr.vercel.app"
                                 target="_blank"
                                 rel="noreferrer"
                             >

@@ -3789,6 +3789,7 @@ html[data-theme="dark"] .pf-complete-bar i {
 
     .notification-dropdown {
         width: min(320px, calc(100vw - 48px));
+        left: 0;
     }
 }
 
