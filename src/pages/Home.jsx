@@ -5,6 +5,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import {
     ArrowRight,
     ArrowUp,
+    ArrowUpRight,
     Award,
     BookOpen,
     Calendar,
@@ -95,6 +96,38 @@ const campusGalleries = [
     { img: campusBg4, title: 'Main Gate', tag: 'Gate1', col: 'normal' },
     { img: campusBg5, title: 'The Giving Hands', tag: 'Giving Hands', col: 'normal' },
     { img: campusBg1, title: 'Andre Block', tag: 'Andre', col: 'normal' },
+];
+
+const learningStages = [
+    { tag: 'Stage 1', title: 'Foundation Years', text: 'Activity-led learning that builds curiosity, language and confidence in the youngest learners.' },
+    { tag: 'Stage 2', title: 'Primary & Middle School', text: 'Strong basics in languages, mathematics and science, with regular mentoring and enrichment.' },
+    { tag: 'Stage 3', title: 'Secondary & Board Prep', text: 'Diagnostic tests, remedial mentoring and model examinations that build board-exam confidence.' },
+    { tag: 'Stage 4', title: 'Higher Secondary', text: 'Focused subject streams and career guidance that prepare students for college and beyond.' },
+];
+
+const campusFacilities = [
+    { icon: Sparkles, title: 'Smart Digital Classrooms', text: 'Technology-enabled modern pedagogy in every learning space.', img: campusBg10 },
+    { icon: BookOpen, title: 'Library & Reading Hall', text: 'Cultivating curiosity and lifelong learning.', img: campusBg6, path: '/school/service-library' },
+    { icon: Navigation, title: 'School Transport', text: 'Safe, dependable travel for students to and from campus.', path: '/school/service-transport', tone: 'cyan' },
+    { icon: Users, title: 'Hostel', text: 'A caring, supervised home away from home for boarders.', path: '/school/service-hostel', tone: 'violet' },
+    { icon: Award, title: 'Cultural & Assembly Arena', text: 'Celebrating student expression and talents.', img: campusBg7 },
+    { icon: HeartHandshake, title: 'Spiritual Sanctuary & Chapel', text: 'Grounded in moral values and quiet reflection.', img: campusBg9 },
+];
+
+const quickLinks = [
+    { icon: Calendar, title: 'Academic Calendar', text: 'Term dates, exams and key events.', path: '/school/calendar' },
+    { icon: Clock, title: 'Holidays List', text: 'Plan ahead with the full holiday list.', path: '/school/holiday' },
+    { icon: Trophy, title: 'Exam Toppers', text: 'Meet our board and class achievers.', path: '/school/toppers' },
+    { icon: Globe2, title: 'Photo Gallery', text: 'Moments from campus life.', path: '/gallery' },
+    { icon: GraduationCap, title: 'Alumni Network', text: 'Stay connected with former students.', path: '/alumni/notable' },
+    { icon: Compass, title: 'ERP Login', text: 'Student and staff portal access.', path: '/erp/student' },
+];
+
+const admissionSteps = [
+    { icon: Phone, title: 'Enquire', text: 'Reach the school office or drop in to collect admission details and fee information.' },
+    { icon: MapPin, title: 'Visit the campus', text: 'Tour the classrooms and grounds and meet the faculty before you decide.' },
+    { icon: BookOpen, title: 'Apply', text: 'Fill in the application through our admission portal with the required documents.' },
+    { icon: CheckCircle2, title: 'Confirm the seat', text: 'Complete the formalities and welcome your child to the Holy Cross family.' },
 ];
 
 function SectionHeading({ eyebrow, title, description, action, badge }) {
@@ -603,7 +636,7 @@ export default function Home({ setActivePage }) {
 
 
             {/* HERO SECTION: Prestige Collegiate Showcase */}
-            <section className="home-hero video-hero" onMouseMove={handleHeroPointerMove} onMouseLeave={() => setHeroPointer({ x: 0, y: 0 })}>
+            <section className="home-hero video-hero hx-hero" onMouseMove={handleHeroPointerMove} onMouseLeave={() => setHeroPointer({ x: 0, y: 0 })}>
                 <div
                     className="hero-background"
                     style={{
@@ -621,6 +654,53 @@ export default function Home({ setActivePage }) {
                             aria-label={image.caption}
                         />
                     ))}
+                </div>
+
+                <div className="hero-wash hx-wash" aria-hidden="true" />
+
+                {/* HERO CONTENT: centered headline + CTA */}
+                <div className="hx-center">
+                    <h1 className="hx-title">
+                        Holy Cross Matriculation
+                        <br />
+                        Higher Secondary School.
+                    </h1>
+                    <p className="hx-subtitle">
+                         Somarasampettai, Tiruchirappalli <br />
+                        where discipline, character and excellence grow together.
+                    </p>
+                    {/* <button
+                        type="button"
+                        className="hx-cta"
+                        onClick={() => navigate('/admissions')}
+                    >
+                        <span>Apply for Admissions 2026</span>
+                        <span className="hx-cta-arrow">
+                            <ArrowUpRight size={16} />
+                        </span>
+                    </button> */}
+                </div>
+
+                {/* HERO GLASS CARDS */}
+                <div className="hx-cards">
+                    <article className="hx-card hx-card-left">
+                        <span className="hx-card-icon">
+                            <GraduationCap size={18} />
+                        </span>
+                        <h3>A campus built for learning</h3>
+                        <p>
+                            Spread across 2.7+ acres of green, peaceful surroundings, our campus
+                            pairs smart digital classrooms with an environment where every child can focus and flourish.
+                        </p>
+                    </article>
+
+                    <article className="hx-card hx-card-right">
+                        <h3>Our values</h3>
+                        <p>
+                            Every classroom, playing field and quiet corridor is built around one idea —
+                            that young minds rise fastest when knowledge and values grow together.
+                        </p>
+                    </article>
                 </div>
 
                 {/* SCROLL TO VIEW MORE */}
@@ -1037,6 +1117,27 @@ export default function Home({ setActivePage }) {
                     </div>
                 </section>
 
+                {/* LEARNING STAGES: journey through school */}
+                <section className="ls-section scroll-animate">
+                    <SectionHeading
+                        eyebrow="Learning Journey"
+                        title={<>A clear path from <em>first day</em> to graduation.</>}
+                        description="Every stage at Holy Cross is designed to build on the last, so each child grows in knowledge, character and confidence."
+                    />
+                    <ol className="ls-track">
+                        {learningStages.map((stage, index) => (
+                            <li key={stage.title} className="ls-item">
+                                <span className="ls-dot">{index + 1}</span>
+                                <div className="ls-card">
+                                    <span className="ls-tag">{stage.tag}</span>
+                                    <h3>{stage.title}</h3>
+                                    <p>{stage.text}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+
                 {/* ACHIEVERS & BOARD TOPPERS */}
                 <section className="achievers-section section-block scroll-animate" ref={achieversSectionRef}>
                     <SectionHeading
@@ -1223,6 +1324,80 @@ export default function Home({ setActivePage }) {
                                 <span>Recycling</span>
                             </div>
                         </article>
+                    </div>
+                </section>
+
+                {/* ADMISSIONS JOURNEY: how to join */}
+                <section className="admit-section scroll-animate">
+                    <div className="admit-card">
+                        <div className="admit-head">
+                            <span className="admit-kicker">Admissions 2026</span>
+                            <h2>Four simple steps to join the Holy Cross family.</h2>
+                            <p>
+                                From the first enquiry to the first day of school, our office guides every
+                                family through a clear, friendly process.
+                            </p>
+                            <div className="admit-actions">
+                                <button
+                                    type="button"
+                                    className="admit-primary"
+                                    onClick={() => navigate('/admissions')}
+                                >
+                                    <span>Start application</span>
+                                    <ArrowRight size={16} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="admit-secondary"
+                                    onClick={() =>
+                                        document.querySelector('.visit-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                    }
+                                >
+                                    Plan a visit
+                                </button>
+                            </div>
+                        </div>
+
+                        <ol className="admit-steps">
+                            {admissionSteps.map((step, index) => (
+                                <li key={step.title} className="admit-step">
+                                    <span className="admit-step-num">0{index + 1}</span>
+                                    <span className="admit-step-icon">
+                                        <step.icon size={18} />
+                                    </span>
+                                    <h3>{step.title}</h3>
+                                    <p>{step.text}</p>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                </section>
+
+                {/* PARENTS & STUDENTS CORNER: quick links */}
+                <section className="ql-section scroll-animate">
+                    <SectionHeading
+                        eyebrow="Parents & Students Corner"
+                        title={<>Everything you need, <em>one tap</em> away.</>}
+                        description="Jump straight to the pages families and students use most."
+                    />
+                    <div className="ql-grid">
+                        {quickLinks.map((link) => (
+                            <button
+                                key={link.title}
+                                type="button"
+                                className="ql-card"
+                                onClick={() => navigate(link.path)}
+                            >
+                                <span className="ql-icon">
+                                    <link.icon size={20} />
+                                </span>
+                                <span className="ql-text">
+                                    <strong>{link.title}</strong>
+                                    <span>{link.text}</span>
+                                </span>
+                                <ArrowRight size={18} className="ql-arrow" />
+                            </button>
+                        ))}
                     </div>
                 </section>
 
