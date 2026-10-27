@@ -162,6 +162,7 @@ export default function StaffDashboard() {
     const [selectedSubject, setSelectedSubject] = useState('Mathematics');
     const [marksActionStatus, setMarksActionStatus] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showAttendanceConfirm, setShowAttendanceConfirm] = useState(false);
 
     const initialAssignmentForm = {
         title: '',
@@ -758,6 +759,7 @@ tr { height: 54px; }
 
     useEffect(() => {
         setAttendanceSubmitted(false);
+        setShowAttendanceConfirm(false);
     }, [attendanceSectionId, attendanceSession, attendanceDate]);
     const myExamHallDuties = staffExamHallAllocations.filter(item => {
         const assigned = cleanString(item.staffName);
@@ -2842,7 +2844,7 @@ tr { height: 54px; }
                                 </div>
 
                                 <div className="tt-section-head">
-                                    <h3>Classrooms</h3>
+                                    <h3>Today Schedule</h3>
                                     <span className="tt-count">{mySchedule.length}</span>
                                     <button className="tt-viewall" onClick={() => setActiveTab('schedule')}>View All <i><ChevronRight size={14} /></i></button>
                                 </div>
@@ -3155,53 +3157,166 @@ tr { height: 54px; }
                         return (
                             <div className="pf-wrap">
                                 <div className="pf-layout pfx">
-                                    {/* ---------- Header ---------- */}
-                                    <header className="pfx-hero">
-                                        <div className="pfx-photo">
-                                            {profilePhoto ? (
-                                                <img src={profilePhoto} alt={displayName} />
-                                            ) : (
-                                                <span aria-hidden="true">{displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || <User size={40} />}</span>
-                                            )}
-                                        </div>
+                                    {/* ---------- Identity rail ---------- */}
+                                    <aside className="pfx-rail">
+                                        <section className="pfx-me">
+                                            <div className="pfx-avatar">
+                                                <svg viewBox="0 0 120 120" aria-hidden="true">
+                                                    <circle className="trk" cx="60" cy="60" r="56" pathLength="100" />
+                                                    <circle className="bar" cx="60" cy="60" r="56" pathLength="100" strokeDasharray={`${profileCompleteness} 100`} />
+                                                </svg>
+                                                <div className="pfx-photo">
+                                                    {profilePhoto ? (
+                                                        <img src={profilePhoto} alt={displayName} />
+                                                    ) : (
+                                                        <span aria-hidden="true">{displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || <User size={40} />}</span>
+                                                    )}
+                                                </div>
+                                                <b className="pfx-pct" title="Profile completeness">{profileCompleteness}%</b>
+                                            </div>
 
-                                        <div className="pfx-who">
                                             <h2>{displayName}</h2>
-                                            <p>{designation}{departmentLabel ? `, ${departmentLabel}` : ''}</p>
+                                            <p>{designation}{departmentLabel ? ` · ${departmentLabel}` : ''}</p>
                                             <div className="pfx-chips">
                                                 <span className="pfx-chip is-id"><Sparkles size={11} /> {profileIdLabel}</span>
                                                 {isClassIncharge && (
                                                     <span className="pfx-chip"><CheckCircle size={11} /> Class incharge</span>
                                                 )}
                                             </div>
-                                        </div>
+                                            <small className="pfx-fill">
+                                                {filledProfileFields} of {allProfileFields.length} details filled
+                                                {profileCompleteness < 100 && !isEditingProfile && (
+                                                    <> · <button type="button" onClick={() => setIsEditingProfile(true)}>Complete profile</button></>
+                                                )}
+                                            </small>
 
-                                        <div className="pfx-actions">
-                                            <button type="button" className="pfx-btn is-solid" onClick={printProfile}>
-                                                <Printer size={14} /> Print profile
-                                            </button>
-                                            {!isEditingProfile && (
-                                                <button type="button" className="pfx-btn" onClick={() => setIsEditingProfile(true)}>
-                                                    <Edit3 size={14} /> Edit profile
-                                                </button>
+                                            {((idEmail && idEmail !== '—') || (idCell && idCell !== '—')) && (
+                                                <ul className="pfx-contact">
+                                                    {idEmail && idEmail !== '—' && <li><span><Mail size={14} /></span>{idEmail}</li>}
+                                                    {idCell && idCell !== '—' && <li><span><PhoneCall size={14} /></span>{idCell}</li>}
+                                                </ul>
                                             )}
-                                            <button type="button" className="pfx-btn" onClick={() => setActiveTab('leaves')}>
-                                                <SendHorizonal size={14} /> My leaves
-                                            </button>
-                                        </div>
 
-                                        <dl className="pfx-stats">
-                                            {quickStats.map((stat) => (
-                                                <div key={stat.label} title={stat.hint}>
-                                                    <dd>{stat.value}</dd>
-                                                    <dt>{stat.label}</dt>
+                                            <div className="pfx-actions">
+                                                <button type="button" className="pfx-btn is-solid" onClick={printProfile}>
+                                                    <Printer size={14} /> Print profile
+                                                </button>
+                                                {!isEditingProfile && (
+                                                    <button type="button" className="pfx-btn" onClick={() => setIsEditingProfile(true)}>
+                                                        <Edit3 size={14} /> Edit profile
+                                                    </button>
+                                                )}
+                                                <button type="button" className="pfx-btn" onClick={() => setActiveTab('leaves')}>
+                                                    <SendHorizonal size={14} /> My leaves
+                                                </button>
+                                            </div>
+                                        </section>
+
+                                        <div className="pfx-idcard">
+                                                <div className="pfx-rail-head">
+                                                    <h3>Staff ID card</h3>
+                                                    <span>Tap the card to flip</span>
                                                 </div>
-                                            ))}
-                                        </dl>
-                                    </header>
+                                                <div className="pf-idflip-wrap">
+                                                    <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
+                                                <div
+                                                    className="pf-idflip-inner"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={idCardFlipped ? 'ID card back side. Click to flip to the front' : 'ID card front side. Click to flip to the back'}
+                                                    onClick={() => setIdCardFlipped((v) => !v)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            setIdCardFlipped((v) => !v);
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* ---------- FRONT ---------- */}
+                                                    <div className="pf-idface idc-front" aria-hidden={idCardFlipped}>
+                                                        <div className="idc-head">
+                                                            <img src={logo} alt="" className="idc-logo" />
+                                                            <div className="idc-head-text">
+                                                                <h4>HOLY CROSS MATRIC HR. SEC. SCHOOL</h4>
+                                                                <p>SOMARASAMPETTAI, TRICHY - 620 102.</p>
+                                                                <p>Phone : 0431 - 2607175, 9597172383</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="idc-band"><span>STAFF IDENTITY CARD</span></div>
+                                                        <div className="idc-year">{idYear}</div>
 
-                                    <div className="pfx-body">
-                                        <div className="pfx-main">
+                                                        <div className="idc-photo-row">
+                                                            <div className="idc-photo">
+                                                                {profilePhoto ? (
+                                                                    <img src={profilePhoto} alt={displayName} />
+                                                                ) : (
+                                                                    <User size={46} />
+                                                                )}
+                                                            </div>
+                                                            <div className="idc-blood">
+                                                                <svg viewBox="0 0 24 32" width="20" height="26" aria-hidden="true">
+                                                                    <path d="M12 2C12 2 3 13 3 20a9 9 0 0 0 18 0C21 13 12 2 12 2z" fill="#c1121f" />
+                                                                </svg>
+                                                                <b>{idBlood !== '—' ? idBlood : ''}</b>
+                                                            </div>
+                                                        </div>
+
+                                                        <h3 className="idc-name">{displayName}</h3>
+                                                        <div className="idc-lines">
+                                                            <p><span>Post</span><span>:</span><b>{designation}</b></p>
+                                                            <p><span>Staff ID</span><span>:</span><b>{staffIdLabel}</b></p>
+                                                        </div>
+
+                                                        <img src={idBuilding} alt="" />
+                                                        <div className="idc-sign">
+                                                            <img src={principalSignature} alt="" />
+                                                        </div>
+                                                        <div className="idc-principal">Principal</div>
+                                                    </div>
+
+                                                    {/* ---------- BACK ---------- */}
+                                                    <div className="pf-idface idc-back" aria-hidden={!idCardFlipped}>
+                                                        <div className="idc-back-slot" />
+                                                        <dl className="idc-back-list">
+                                                            <div><dt>Date of Birth</dt><dd>: {idDob}</dd></div>
+                                                            <div><dt>Blood Group</dt><dd>: {idBlood}</dd></div>
+                                                            <div className="stack"><dt>Department :</dt><dd>{departmentLabel || '—'}</dd></div>
+                                                            <div className="stack"><dt>Address :</dt>
+                                                                <dd>
+                                                                    <strong>{displayName}</strong>
+                                                                    <br />
+                                                                    {idAddress}
+                                                                </dd>
+                                                            </div>
+                                                            <div><dt>Cell</dt><dd>: {idCell}</dd></div>
+                                                        </dl>
+                                                        <p className="idc-back-foot">{HALL_TICKET_SCHOOL_NAME}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                                    <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
+                                                        <RotateCw size={13} /> {idCardFlipped ? 'Show front' : 'Show back'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                    </aside>
+
+                                    {/* ---------- Content ---------- */}
+                                    <div className="pfx-main">
+                                        <section className="pfx-stats" aria-label="Workload summary">
+                                        {quickStats.map((stat) => {
+                                            const StatIcon = stat.icon;
+                                            return (
+                                                <div className={`pfx-stat tone-${stat.tone}`} key={stat.label} title={stat.hint}>
+                                                    <span className="pfx-stat-icon"><StatIcon size={18} /></span>
+                                                    <div className="pfx-stat-copy">
+                                                        <strong>{stat.value}</strong>
+                                                        <span>{stat.label}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </section>
                                             {!myStaffRecord && (
                                                 <div className="profile-sync-note">
                                                     <AlertTriangle size={15} />
@@ -3296,8 +3411,8 @@ tr { height: 54px; }
                                                 </form>
                                                 </section>
                                             ) : (
-                                                <section className="pfx-panel pfx-details">
-                                                    <div className="pfx-nav" role="tablist" aria-label="Profile sections">
+                                                <>
+                                                    <div className="pfx-tabs" role="tablist" aria-label="Profile sections">
                                                         <button
                                                             type="button"
                                                             role="tab"
@@ -3326,25 +3441,33 @@ tr { height: 54px; }
                                                         })}
                                                     </div>
 
-                                                    <div className="pfx-content">
-                                                        {visibleGroups.map((group) => (
-                                                            <div className="pfx-group" key={group.id}>
-                                                                <h3>{group.title}</h3>
-                                                                <dl className="pfx-fields">
-                                                                    {group.fields.map(([label, value]) => {
-                                                                        const empty = !value || value === '—';
-                                                                        return (
-                                                                            <div className={`pfx-field ${label === 'Address' || label === 'Short Bio' ? 'is-wide' : ''}`} key={label}>
-                                                                                <dt>{label}</dt>
-                                                                                <dd className={empty ? 'is-empty' : ''}>{empty ? 'Not added' : value}</dd>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </dl>
-                                                            </div>
-                                                        ))}
+                                                    <div className="pfx-groups">
+                                                        {visibleGroups.map((group) => {
+                                                            const GroupIcon = group.icon;
+                                                            const groupFilled = group.fields.filter(([, v]) => v && v !== '—').length;
+                                                            return (
+                                                                <section className={`pfx-panel pfx-group tone-${group.tone}`} key={group.id}>
+                                                                    <div className="pfx-group-head">
+                                                                        <span className="pfx-group-icon"><GroupIcon size={17} /></span>
+                                                                        <h3>{group.title}</h3>
+                                                                        <small>{groupFilled}/{group.fields.length}</small>
+                                                                    </div>
+                                                                    <dl className="pfx-fields">
+                                                                        {group.fields.map(([label, value]) => {
+                                                                            const empty = !value || value === '—';
+                                                                            return (
+                                                                                <div className={`pfx-field ${label === 'Address' || label === 'Short Bio' ? 'is-wide' : ''}`} key={label}>
+                                                                                    <dt>{label}</dt>
+                                                                                    <dd className={empty ? 'is-empty' : ''}>{empty ? 'Not added' : value}</dd>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </dl>
+                                                                </section>
+                                                            );
+                                                        })}
                                                     </div>
-                                                </section>
+                                                </>
                                             )}
 
                                             {myTaughtClasses.length > 0 && (
@@ -3375,103 +3498,7 @@ tr { height: 54px; }
                                                     here is incorrect, please contact the school office to have the record updated.
                                                 </span>
                                             </div>
-                                        </div>
-
-                                        {/* ---------- ID card rail ---------- */}
-                                        <aside className="pfx-rail">
-                                            <div className="pfx-idcard">
-                                                <div className="pf-idflip-wrap">
-                                                    <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
-                                                <div
-                                                    className="pf-idflip-inner"
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    aria-label={idCardFlipped ? 'ID card back side. Click to flip to the front' : 'ID card front side. Click to flip to the back'}
-                                                    onClick={() => setIdCardFlipped((v) => !v)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            e.preventDefault();
-                                                            setIdCardFlipped((v) => !v);
-                                                        }
-                                                    }}
-                                                >
-                                                    {/* ---------- FRONT ---------- */}
-                                                    <div className="pf-idface idc-front" aria-hidden={idCardFlipped}>
-                                                        <div className="idc-head">
-                                                            <img src={logo} alt="" className="idc-logo" />
-                                                            <div className="idc-head-text">
-                                                                <h4>HOLY CROSS MATRIC HR. SEC. SCHOOL</h4>
-                                                                <p>SOMARASAMPETTAI, TRICHY - 620 102.</p>
-                                                                <p>Phone : 0431 - 2607175, 9597172383</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="idc-band"><span>STAFF IDENTITY CARD</span></div>
-                                                        <div className="idc-year">{idYear}</div>
-
-                                                        <div className="idc-photo-row">
-                                                            <div className="idc-photo">
-                                                                {profilePhoto ? (
-                                                                    <img src={profilePhoto} alt={displayName} />
-                                                                ) : (
-                                                                    <User size={46} />
-                                                                )}
-                                                            </div>
-                                                            <div className="idc-blood">
-                                                                <svg viewBox="0 0 24 32" width="20" height="26" aria-hidden="true">
-                                                                    <path d="M12 2C12 2 3 13 3 20a9 9 0 0 0 18 0C21 13 12 2 12 2z" fill="#c1121f" />
-                                                                </svg>
-                                                                <b>{idBlood !== '—' ? idBlood : ''}</b>
-                                                            </div>
-                                                        </div>
-
-                                                        <h3 className="idc-name">{displayName}</h3>
-                                                        <div className="idc-lines">
-                                                            <p><span>Post</span><span>:</span><b>{designation}</b></p>
-                                                            <p><span>Staff ID</span><span>:</span><b>{staffIdLabel}</b></p>
-                                                        </div>
-
-                                                        <img src={idBuilding} alt="" />
-                                                        <div className="idc-sign">
-                                                            <img src={principalSignature} alt="" />
-                                                        </div>
-                                                        <div className="idc-principal">Principal</div>
-                                                    </div>
-
-                                                    {/* ---------- BACK ---------- */}
-                                                    <div className="pf-idface idc-back" aria-hidden={!idCardFlipped}>
-                                                        <div className="idc-back-slot" />
-                                                        <dl className="idc-back-list">
-                                                            <div><dt>Date of Birth</dt><dd>: {idDob}</dd></div>
-                                                            <div><dt>Blood Group</dt><dd>: {idBlood}</dd></div>
-                                                            <div className="stack"><dt>Department :</dt><dd>{departmentLabel || '—'}</dd></div>
-                                                            <div className="stack"><dt>Address :</dt>
-                                                                <dd>
-                                                                    <strong>{displayName}</strong>
-                                                                    <br />
-                                                                    {idAddress}
-                                                                </dd>
-                                                            </div>
-                                                            <div><dt>Cell</dt><dd>: {idCell}</dd></div>
-                                                        </dl>
-                                                        <p className="idc-back-foot">{HALL_TICKET_SCHOOL_NAME}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                                    <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
-                                                        <RotateCw size={13} /> {idCardFlipped ? 'Show front' : 'Show back'}
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="pf-complete">
-                                                <div className="pf-complete-head">
-                                                    <span>Profile completeness</span>
-                                                    <strong>{profileCompleteness}%</strong>
-                                                </div>
-                                                <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
-                                                <small>{filledProfileFields} of {allProfileFields.length} details filled</small>
-                                            </div>
-                                        </aside>
+                                        
                                     </div>
                                 </div>
 
@@ -3717,7 +3744,11 @@ tr { height: 54px; }
                                     <span>Start of month: <b>1 {attDate.toLocaleDateString('en-GB', { month: 'short' })}</b></span>
                                     <span>End of month: <b>{attDaysInMonth} {attDate.toLocaleDateString('en-GB', { month: 'short' })}</b></span>
                                 </div>
-                                <div className="ta-strip" role="group" aria-label={`Days of ${attMonthLabel}`}>
+                                <div className="ta-month" aria-hidden="true">{attMonthLabel}</div>
+                                <div className="ta-dow" aria-hidden="true">
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <span key={i}>{d}</span>)}
+                                </div>
+                                <div className="ta-strip" role="group" aria-label={`Days of ${attMonthLabel}`} style={{ '--ta-first': new Date(attYear, attMonth, 1).getDay() + 1 }}>
                                     {Array.from({ length: attDaysInMonth }, (_, i) => i + 1).map((d) => {
                                         const iso = attDayISO(d);
                                         const isSunday = new Date(attYear, attMonth, d).getDay() === 0;
@@ -3739,10 +3770,10 @@ tr { height: 54px; }
                                     })}
                                 </div>
                                 <div className="ta-strip-tags">
-                                    <span className="ta-tag">{attMonthLabel}</span>
-                                    <span className="ta-tag">Present: <b>{attPresentCount}</b></span>
-                                    <span className="ta-tag">Absent: <b>{attAbsentCount}</b></span>
-                                    <span className="ta-tag">Total: <b>{attendanceStudents.length}</b></span>
+                                    <span className="ta-tag ta-hide-m">{attMonthLabel}</span>
+                                    <span className="ta-tag ta-hide-m">Present: <b>{attPresentCount}</b></span>
+                                    <span className="ta-tag ta-hide-m">Absent: <b>{attAbsentCount}</b></span>
+                                    <span className="ta-tag ta-hide-m">Total: <b>{attendanceStudents.length}</b></span>
                                     <span className="ta-legend"><i className="done" />Marked</span>
                                     <span className="ta-legend"><i className="missed" />Not marked</span>
                                     <span className="ta-legend"><i className="off" />Sunday</span>
@@ -3756,6 +3787,11 @@ tr { height: 54px; }
 
                             {isClassIncharge && selectedInchargeSection ? (
                                 <>
+                                    <div className="ta-summary">
+                                        <div className="present"><b>{attPresentCount}</b><span>Present</span></div>
+                                        <div className="absent"><b>{attAbsentCount}</b><span>Absent</span></div>
+                                        <div><b>{attendanceStudents.length}</b><span>Total</span></div>
+                                    </div>
                                     <div className="ta-toolbar">
                                         <label className="ta-search">
                                             <Search size={16} />
@@ -3771,7 +3807,7 @@ tr { height: 54px; }
                                         <button
                                             type="button"
                                             className="ta-submit"
-                                            onClick={handleSubmitAttendance}
+                                            onClick={() => setShowAttendanceConfirm(true)}
                                             disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedInchargeSection || attendanceDate > todayISO}
                                         >
                                             {isSubmitting ? 'Submitting...' : `Submit ${attendanceSession} Attendance`}
@@ -3827,6 +3863,50 @@ tr { height: 54px; }
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <div className="ta-cards">
+                                        {attRows.length === 0 ? (
+                                            <div className="ta-empty">No student records found in this section.</div>
+                                        ) : attRows.map((student) => {
+                                            const status = student.status || 'present';
+                                            return (
+                                                <div className={`ta-card ${status}`} key={student.id}>
+                                                    <div className="sh-avatar sm" style={{ background: avatarTone(student.name) }}>{initialOf(student.name)}</div>
+                                                    <div className="ta-card-info">
+                                                        <strong>{student.name}</strong>
+                                                        <span>#{student.admissionNo || String(student.id).slice(0, 6)} · {student.className || ''} {formatSectionTitle(student.sectionName)}</span>
+                                                    </div>
+                                                    <span className="ta-card-rate" title="Attendance rate">{student.attendanceRate ? `${student.attendanceRate}%` : '—'}</span>
+                                                    <div className="ta-seg" role="group" aria-label={`Attendance for ${student.name}`}>
+                                                        <button
+                                                            type="button"
+                                                            className={status === 'present' ? 'on present' : ''}
+                                                            aria-pressed={status === 'present'}
+                                                            onClick={() => status !== 'present' && toggleAttendance(student.id, status)}
+                                                        >
+                                                            <Check size={14} /> Present
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={status === 'absent' ? 'on absent' : ''}
+                                                            aria-pressed={status === 'absent'}
+                                                            onClick={() => status !== 'absent' && toggleAttendance(student.id, status)}
+                                                        >
+                                                            <X size={14} /> Absent
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="ta-submit ta-submit-end"
+                                        onClick={() => setShowAttendanceConfirm(true)}
+                                        disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedInchargeSection || attendanceDate > todayISO}
+                                    >
+                                        {isSubmitting ? 'Submitting...' : `Submit ${attendanceSession} Attendance`}
+                                    </button>
                                 </>
                             ) : (
                                 <div className="ta-locked">
@@ -3837,6 +3917,77 @@ tr { height: 54px; }
                                     </p>
                                 </div>
                             )}
+
+                            {showAttendanceConfirm && (() => {
+                                const absentList = attendanceStudents.filter((st) => (st.status || 'present') === 'absent');
+                                const sectionLabel = selectedInchargeSection
+                                    ? `${selectedInchargeSection.className || 'Class'} ${selectedInchargeSection.name ? `(${formatSectionTitle(selectedInchargeSection.name)})` : ''}`
+                                    : '';
+                                return (
+                                    <div className="ta-modal-backdrop" onClick={() => { if (!isSubmitting) setShowAttendanceConfirm(false); }}>
+                                        <div className="ta-modal" role="dialog" aria-modal="true" aria-labelledby="ta-confirm-title" onClick={(e) => e.stopPropagation()}>
+                                            <div className="ta-modal-head">
+                                                <h3 id="ta-confirm-title">Review before submitting</h3>
+                                                <p>{attendanceDate} · {attendanceSession} session{sectionLabel ? ` · ${sectionLabel}` : ''}</p>
+                                            </div>
+
+                                            <div className="ta-modal-stats">
+                                                <div className="present"><b>{attPresentCount}</b><span>Present</span></div>
+                                                <div className="absent"><b>{absentList.length}</b><span>Absent</span></div>
+                                                <div><b>{attendanceStudents.length}</b><span>Total</span></div>
+                                            </div>
+
+                                            <div className="ta-modal-body">
+                                                <h4>Absent students ({absentList.length})</h4>
+                                                {absentList.length === 0 ? (
+                                                    <div className="ta-modal-empty">
+                                                        <CheckCircle size={22} />
+                                                        <span>No absentees. All {attendanceStudents.length} students are marked present.</span>
+                                                    </div>
+                                                ) : (
+                                                    <ul className="ta-modal-list">
+                                                        {absentList.map((student) => (
+                                                            <li key={student.id}>
+                                                                <div className="sh-avatar sm" style={{ background: avatarTone(student.name) }}>{initialOf(student.name)}</div>
+                                                                <div className="ta-modal-who">
+                                                                    <strong>{student.name}</strong>
+                                                                    <span>#{student.admissionNo || String(student.id).slice(0, 6)} · {student.className || ''} {formatSectionTitle(student.sectionName)}</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ta-modal-fix"
+                                                                    disabled={isSubmitting}
+                                                                    onClick={() => toggleAttendance(student.id, 'absent')}
+                                                                    title={`Mark ${student.name} present`}
+                                                                >
+                                                                    <Check size={13} /> Mark present
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+
+                                            <div className="ta-modal-foot">
+                                                <button type="button" className="ta-modal-back" onClick={() => setShowAttendanceConfirm(false)} disabled={isSubmitting}>
+                                                    <ArrowLeft size={15} /> Go back &amp; edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="ta-modal-ok"
+                                                    disabled={isSubmitting}
+                                                    onClick={async () => {
+                                                        await handleSubmitAttendance();
+                                                        setShowAttendanceConfirm(false);
+                                                    }}
+                                                >
+                                                    {isSubmitting ? 'Submitting...' : 'Confirm & submit'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 

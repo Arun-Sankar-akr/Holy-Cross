@@ -3719,11 +3719,11 @@ html[data-theme="dark"] .pf-complete-bar i {
     .dashboard-sidebar {
         position: fixed;
         z-index: 150;
-        top: 340px;
+        top: 67px;
         left: 1px;
         bottom: 10px;
-        height: 578px;
-        width: min(310px, 88vw);
+        height: 93vh;
+        width: min(320px, 88vw);
         padding: 18px 12px 12px;
         border-radius: 0px 20px 20px 0px;
         backdrop-filter: blur(5px);
@@ -5760,6 +5760,7 @@ html[data-theme="dark"] .nav-links.active {
 }
 
 @media (max-width: 1100px) {
+
     .tt-top-row,
     .tt-stack {
         grid-template-columns: 1fr;
@@ -6237,7 +6238,7 @@ html[data-theme="dark"] .ta-status.absent {
     font-size: .72rem;
 }
 
-.ta-tag + .ta-legend {
+.ta-tag+.ta-legend {
     margin-left: auto;
 }
 
@@ -6268,6 +6269,543 @@ html[data-theme="dark"] .ta-status.absent {
 
 .ta-day:disabled:hover {
     filter: none;
+}
+
+/* ---- Attendance: mobile-only layout (<=760px). Desktop keeps the table + day strip as before. ---- */
+.ta-month,
+.ta-dow,
+.ta-summary,
+.ta-cards,
+.ta-submit-end {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .ta-page {
+        padding: 18px 14px 20px;
+        border-top-width: 0;
+        border-radius: var(--r-md);
+    }
+
+    .ta-title {
+        font-size: 1.6rem;
+    }
+
+    .ta-sub {
+        margin: 2px 0 14px;
+        font-size: .8rem;
+    }
+
+    /* register controls: date full width, section + session side by side */
+    .ta-head {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding-top: 14px;
+    }
+
+    .ta-head h3 {
+        grid-column: 1 / -1;
+        font-size: 1.2rem;
+    }
+
+    .ta-period {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--field);
+    }
+
+    .ta-period input {
+        min-width: 0;
+        font: inherit;
+        font-weight: 600;
+    }
+
+    .ta-links {
+        display: contents;
+    }
+
+    .ta-select {
+        width: 100%;
+        min-width: 0;
+        padding: 12px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--field);
+    }
+
+    .ta-select:only-child {
+        grid-column: 1 / -1;
+    }
+
+    /* month day-strip becomes a 7-column calendar */
+    .ta-strip-card {
+        margin-top: 14px;
+        padding: 14px 12px;
+        border-radius: 16px;
+    }
+
+    .ta-strip-top {
+        display: none;
+    }
+
+    .ta-month {
+        display: block;
+        margin-bottom: 10px;
+        text-align: center;
+        font: 700 1rem var(--font-head);
+    }
+
+    .ta-dow {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 6px;
+        text-align: center;
+        color: var(--muted);
+        font-size: .68rem;
+        font-weight: 600;
+    }
+
+    .ta-strip {
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+        overflow: visible;
+    }
+
+    .ta-strip .ta-day:first-child {
+        grid-column-start: var(--ta-first, 1);
+    }
+
+    .ta-day {
+        height: 40px;
+        border-radius: 12px;
+        font-size: .82rem;
+        font-weight: 600;
+    }
+
+    .ta-day.sel {
+        outline-offset: 2px;
+    }
+
+    .ta-strip-tags {
+        justify-content: center;
+        gap: 6px 14px;
+        margin-top: 12px;
+    }
+
+    .ta-hide-m {
+        display: none;
+    }
+
+    .ta-tag+.ta-legend {
+        margin-left: 0;
+    }
+
+    /* present / absent / total tiles */
+    .ta-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .ta-summary div {
+        padding: 12px 8px;
+        border-radius: 14px;
+        background: var(--field);
+        text-align: center;
+    }
+
+    .ta-summary b {
+        display: block;
+        font: 700 1.3rem var(--font-head);
+    }
+
+    .ta-summary span {
+        color: var(--muted);
+        font-size: .72rem;
+    }
+
+    .ta-summary .present {
+        background: var(--green-soft);
+    }
+
+    .ta-summary .present b {
+        color: var(--green);
+    }
+
+    .ta-summary .absent {
+        background: var(--red-soft);
+    }
+
+    .ta-summary .absent b {
+        color: var(--red);
+    }
+
+    /* toolbar: search, segmented filter, sticky submit bar */
+    .ta-toolbar {
+        display: contents;
+    }
+
+    .ta-search {
+        flex: none;
+        height: 46px;
+        margin-top: 14px;
+        border: 0;
+        border-radius: 14px;
+        background: var(--field);
+    }
+
+    .ta-filter {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 10px;
+        padding: 4px;
+        border: 0;
+        border-radius: 14px;
+        background: var(--field);
+    }
+
+    .ta-filter button {
+        height: 38px;
+        padding: 0;
+        border-radius: 10px;
+    }
+
+    .ta-filter button.on {
+        background: var(--navy);
+        color: #fff;
+    }
+
+    .ta-toolbar .ta-submit {
+        display: none;
+    }
+
+    .ta-submit.ta-submit-end {
+        display: block;
+        width: 100%;
+        height: 50px;
+        margin: 16px 0 0;
+        border-radius: 14px;
+        background: var(--navy);
+        color: #fff;
+    }
+
+    /* table -> student cards */
+    .ta-table-wrap {
+        display: none;
+    }
+
+    .ta-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .ta-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 4px 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--ta-green);
+        border-radius: 16px;
+        background: var(--card);
+    }
+
+    .ta-card.absent {
+        border-left-color: #e5574b;
+    }
+
+    .ta-card-info {
+        min-width: 0;
+    }
+
+    .ta-card-info strong {
+        display: block;
+        overflow: hidden;
+        font-size: .9rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ta-card-info span {
+        display: block;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: .72rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ta-card-rate {
+        padding: 3px 10px;
+        border-radius: 99px;
+        background: var(--field);
+        color: var(--muted);
+        font-size: .72rem;
+        font-weight: 600;
+    }
+
+    .ta-seg {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 4px;
+        border-radius: 12px;
+        background: var(--field);
+    }
+
+    .ta-seg button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 38px;
+        border-radius: 9px;
+        color: var(--muted);
+        font-size: .82rem;
+        font-weight: 600;
+    }
+
+    .ta-seg button.on.present {
+        background: var(--ta-green);
+        color: #fff;
+    }
+
+    .ta-seg button.on.absent {
+        background: #e5574b;
+        color: #fff;
+    }
+}
+
+
+/* ---- Attendance: review-before-submit dialog ---- */
+.ta-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(8, 28, 25, .55);
+    backdrop-filter: blur(2px);
+}
+
+.ta-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(520px, 100%);
+    max-height: min(86vh, 720px);
+    overflow: hidden;
+    border-radius: var(--r-lg);
+    background: var(--card);
+    color: var(--text);
+    box-shadow: var(--shadow-lg);
+}
+
+.ta-modal-head {
+    padding: 22px 24px 6px;
+}
+
+.ta-modal-head h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.ta-modal-head p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.ta-modal-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 24px 4px;
+}
+
+.ta-modal-stats div {
+    padding: 10px 8px;
+    border-radius: 14px;
+    background: var(--field);
+    text-align: center;
+}
+
+.ta-modal-stats b {
+    display: block;
+    font: 700 1.25rem var(--font-head);
+}
+
+.ta-modal-stats span {
+    color: var(--muted);
+    font-size: .72rem;
+}
+
+.ta-modal-stats .present {
+    background: var(--green-soft);
+}
+
+.ta-modal-stats .present b {
+    color: var(--green);
+}
+
+.ta-modal-stats .absent {
+    background: var(--red-soft);
+}
+
+.ta-modal-stats .absent b {
+    color: var(--red);
+}
+
+.ta-modal-body {
+    flex: 1;
+    min-height: 0;
+    padding: 14px 24px 8px;
+    overflow-y: auto;
+}
+
+.ta-modal-body h4 {
+    margin: 0 0 8px;
+    font-size: .9rem;
+}
+
+.ta-modal-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ta-modal-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+}
+
+.ta-modal-who {
+    flex: 1;
+    min-width: 0;
+}
+
+.ta-modal-who strong {
+    display: block;
+    overflow: hidden;
+    font-size: .88rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ta-modal-who span {
+    display: block;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: .72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ta-modal-fix {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.ta-modal-fix:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.ta-modal-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.ta-modal-foot {
+    display: flex;
+    gap: 10px;
+    padding: 14px 24px 20px;
+    border-top: 1px solid var(--line);
+}
+
+.ta-modal-back,
+.ta-modal-ok {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 46px;
+    border-radius: 12px;
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.ta-modal-back {
+    border: 1px solid var(--line-strong);
+    background: var(--card);
+    color: var(--text);
+}
+
+.ta-modal-ok {
+    background: var(--navy);
+    color: #fff;
+}
+
+.ta-modal-back:disabled,
+.ta-modal-ok:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+    .ta-modal-backdrop {
+        align-items: end;
+        padding: 0;
+    }
+
+    .ta-modal {
+        width: 100%;
+        max-height: 88vh;
+        border-radius: 22px 22px 0 0;
+    }
+
+    .ta-modal-head,
+    .ta-modal-stats,
+    .ta-modal-body {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .ta-modal-foot {
+        padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 
@@ -7230,36 +7768,87 @@ html[data-theme="dark"] .asm-sec-icon {
 
 /* =====================================================================
    My Profile (activeTab === 'profile')
-   Header band with workload strip, details panel with section nav on the left,
-   ID card + completeness in a sticky rail. Print rules still key off .pf-layout.
+   Split layout: identity rail on the left (ring avatar, contact, actions, ID card),
+   content on the right (stat strip, underline tabs, key-value rows).
+   Print rules still key off .pf-layout / .profile-print-area.
    ===================================================================== */
 .pf-layout.pfx {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 330px minmax(0, 1fr);
     gap: 20px;
+    align-items: start;
 }
 
-.pfx-hero {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 14px 24px;
-    padding: 26px 28px 22px;
+/* ---- left rail ---- */
+.pfx-rail {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.pfx-me {
+    position: relative;
+    overflow: hidden;
+    padding: 26px 22px 22px;
     border-radius: var(--r-lg);
-    background: var(--navy);
-    color: #fff;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.pfx-me::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 96px;
+    background: linear-gradient(180deg, var(--yellow-soft), transparent);
+    pointer-events: none;
+}
+
+.pfx-avatar {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 14px;
+}
+
+.pfx-avatar svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.pfx-avatar circle {
+    fill: none;
+    stroke-width: 4;
+}
+
+.pfx-avatar .trk {
+    stroke: var(--line-strong);
+}
+
+.pfx-avatar .bar {
+    stroke: var(--yellow-deep);
+    stroke-linecap: round;
+    transition: stroke-dasharray .6s ease;
 }
 
 .pfx-photo {
+    position: absolute;
+    inset: 11px;
     display: grid;
     place-items: center;
-    width: 96px;
-    height: 96px;
     overflow: hidden;
-    border-radius: 28px;
-    background: rgba(255, 255, 255, .14);
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--yellow), var(--yellow-deep));
+    color: var(--ink);
     font-family: var(--font-head);
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 700;
 }
 
@@ -7269,25 +7858,39 @@ html[data-theme="dark"] .asm-sec-icon {
     object-fit: cover;
 }
 
-.pfx-who {
-    min-width: 0;
-}
-
-.pfx-who h2 {
-    margin: 0;
-    font-size: 1.8rem;
+.pfx-pct {
+    position: absolute;
+    right: -4px;
+    bottom: 6px;
+    padding: 3px 9px;
+    border: 3px solid var(--card);
+    border-radius: 99px;
+    background: var(--navy);
     color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
 }
 
-.pfx-who p {
-    margin: 4px 0 10px;
-    font-size: .9rem;
-    color: rgba(255, 255, 255, .78);
+.pfx-me h2 {
+    position: relative;
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.2;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.pfx-me>p {
+    position: relative;
+    margin: 4px 0 12px;
+    color: var(--muted);
+    font-size: .86rem;
 }
 
 .pfx-chips {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 6px;
 }
 
@@ -7296,106 +7899,149 @@ html[data-theme="dark"] .asm-sec-icon {
     align-items: center;
     gap: 5px;
     padding: 4px 12px;
+    border: 1px solid var(--line);
     border-radius: 99px;
-    background: rgba(255, 255, 255, .14);
-    color: #fff;
+    background: var(--field);
+    color: var(--text);
     font-size: .72rem;
     font-weight: 600;
 }
 
 .pfx-chip.is-id {
+    border-color: transparent;
     background: var(--yellow);
     color: var(--ink);
 }
 
+.pfx-fill {
+    display: block;
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: .74rem;
+}
+
+.pfx-fill button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--navy);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+html[data-theme="dark"] .pfx-fill button {
+    color: var(--yellow);
+}
+
+.pfx-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px dashed var(--line-strong);
+    list-style: none;
+    text-align: left;
+    font-size: .82rem;
+}
+
+.pfx-contact li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.pfx-contact li span {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: var(--green-soft);
+    color: var(--green);
+}
+
 .pfx-actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-direction: column;
     gap: 8px;
+    margin-top: 18px;
 }
 
 .pfx-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 7px;
-    padding: 10px 16px;
-    border: 0;
+    padding: 11px 16px;
+    border: 1px solid var(--line-strong);
     border-radius: 12px;
-    background: rgba(255, 255, 255, .13);
-    color: #fff;
+    background: var(--card);
+    color: var(--text);
     font: inherit;
     font-size: .82rem;
     font-weight: 600;
     cursor: pointer;
+    transition: background .15s;
 }
 
 .pfx-btn:hover {
-    background: rgba(255, 255, 255, .22);
+    background: var(--field);
 }
 
 .pfx-btn.is-solid {
-    background: var(--yellow);
-    color: var(--ink);
+    border-color: transparent;
+    background: var(--navy);
+    color: #fff;
 }
 
 .pfx-btn.is-solid:hover {
-    background: var(--yellow-deep);
+    background: var(--navy-2);
 }
 
-.pfx-hero :focus-visible,
-.pfx-panel :focus-visible {
+.pfx-me :focus-visible,
+.pfx-panel :focus-visible,
+.pfx-tabs :focus-visible {
     outline: 2px solid var(--blue);
     outline-offset: 2px;
 }
 
-.pfx-stats {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin: 4px 0 0;
-    padding-top: 18px;
-    border-top: 1px solid rgba(255, 255, 255, .16);
+.pfx-idcard {
+    padding: 20px;
+    border-radius: var(--r-lg);
+    background: var(--card);
+    box-shadow: var(--shadow);
 }
 
-.pfx-stats>div {
+.pfx-rail-head {
     display: flex;
-    flex-direction: column-reverse;
-    gap: 2px;
-    padding: 0 16px;
-    border-left: 1px solid rgba(255, 255, 255, .12);
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
-.pfx-stats>div:first-child {
-    padding-left: 0;
-    border-left: 0;
-}
-
-.pfx-stats dd {
+.pfx-rail-head h3 {
     margin: 0;
-    font-family: var(--font-head);
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.1;
+    font-size: 1rem;
 }
 
-.pfx-stats dt {
-    font-size: .76rem;
-    color: rgba(255, 255, 255, .72);
+.pfx-rail-head span {
+    color: var(--muted);
+    font-size: .72rem;
 }
 
-/* body */
-.pfx-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 20px;
-    align-items: start;
-}
-
+/* ---- right column ---- */
 .pfx-main {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -7410,93 +8056,192 @@ html[data-theme="dark"] .asm-sec-icon {
     font-size: 1.05rem;
 }
 
-.pfx-details {
+/* stat strip: one card, four cells */
+.pfx-stats {
     display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
-    overflow: hidden;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 6px;
+    border-radius: var(--r-lg);
+    background: var(--card);
+    box-shadow: var(--shadow);
 }
 
-.pfx-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 18px;
-    border-right: 1px solid var(--line);
-    background: var(--card-2);
-}
-
-.pfx-nav button {
+.pfx-stat {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 11px 14px;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px 16px;
+    border-left: 1px solid var(--line);
+}
+
+.pfx-stat:first-child {
+    border-left: 0;
+}
+
+.pfx-stat-icon,
+.pfx-group-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: var(--green-soft);
+    color: var(--green);
+}
+
+.pfx-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.pfx-stat.tone-primary .pfx-stat-icon,
+.pfx-group.tone-primary .pfx-group-icon {
+    background: var(--blue-soft);
+    color: var(--blue);
+}
+
+.pfx-stat.tone-purple .pfx-stat-icon,
+.pfx-group.tone-cyan .pfx-group-icon {
+    background: var(--purple-soft);
+    color: var(--purple);
+}
+
+.pfx-stat.tone-amber .pfx-stat-icon,
+.pfx-group.tone-amber .pfx-group-icon {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.pfx-stat-copy {
+    min-width: 0;
+}
+
+.pfx-stat-copy strong {
+    display: block;
+    font-family: var(--font-head);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.pfx-stat-copy span {
+    display: block;
+    color: var(--muted);
+    font-size: .72rem;
+}
+
+/* underline tabs */
+.pfx-tabs {
+    display: flex;
+    gap: 24px;
+    padding: 0 6px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line-strong);
+    scrollbar-width: none;
+}
+
+.pfx-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.pfx-tabs button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: -1px;
+    padding: 12px 2px;
     border: 0;
-    border-radius: 12px;
+    border-bottom: 3px solid transparent;
     background: transparent;
     color: var(--muted);
     font: inherit;
     font-size: .86rem;
-    font-weight: 500;
-    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
 }
 
-.pfx-nav button:hover {
-    background: var(--field);
+.pfx-tabs button:hover {
     color: var(--text);
 }
 
-.pfx-nav button.is-on {
-    background: var(--yellow);
-    color: var(--ink);
+.pfx-tabs button.is-on {
+    border-bottom-color: var(--yellow-deep);
+    color: var(--text);
+}
+
+.pfx-tabs small {
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 500;
+}
+
+/* group cards with key-value rows */
+.pfx-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pfx-group {
+    padding: 4px 24px 8px;
+}
+
+.pfx-group-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 0 12px;
+}
+
+.pfx-group-head h3 {
+    flex: 1;
+    min-width: 0;
+}
+
+.pfx-group-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+}
+
+.pfx-group-head small {
+    color: var(--muted);
+    font-size: .72rem;
     font-weight: 600;
 }
 
-.pfx-nav small {
-    font-size: .72rem;
-    opacity: .8;
-}
-
-.pfx-content {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    padding: 24px 26px;
-    min-width: 0;
-}
-
 .pfx-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 28px;
-    margin: 6px 0 0;
+    display: block;
+    margin: 0;
 }
 
 .pfx-field {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
     min-width: 0;
 }
 
-.pfx-field.is-wide {
-    grid-column: 1 / -1;
-}
-
 .pfx-field dt {
-    font-size: .74rem;
     color: var(--muted);
+    font-size: .84rem;
 }
 
 .pfx-field dd {
-    margin: 4px 0 0;
+    margin: 0;
     font-size: .92rem;
-    font-weight: 500;
+    font-weight: 600;
     overflow-wrap: anywhere;
 }
 
 .pfx-field dd.is-empty {
     color: var(--muted);
+    font-style: italic;
     font-weight: 400;
 }
 
@@ -7534,101 +8279,129 @@ html[data-theme="dark"] .asm-sec-icon {
 }
 
 .pfx-subjects em {
-    font-size: .8rem;
     color: var(--muted);
-}
-
-/* rail */
-.pfx-rail {
-    position: sticky;
-    top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.pfx-idcard {
-    padding: 20px;
-    border-radius: var(--r-lg);
-    background: var(--card);
-    box-shadow: var(--shadow);
+    font-size: .8rem;
 }
 
 @media (max-width: 1100px) {
-    .pfx-body {
+    .pf-layout.pfx {
         grid-template-columns: 1fr;
     }
 
+    /* flatten the rail so the order is: identity, content, ID card */
     .pfx-rail {
-        position: static;
-    }
-}
-
-@media (max-width: 860px) {
-    .pfx-hero {
-        grid-template-columns: auto minmax(0, 1fr);
+        display: contents;
     }
 
-    .pfx-actions {
-        grid-column: 1 / -1;
-        justify-content: flex-start;
+    .pfx-me {
+        order: 0;
+    }
+
+    .pfx-main {
+        order: 1;
+    }
+
+    .pfx-idcard {
+        order: 2;
     }
 }
 
 @media (max-width: 760px) {
-    .pfx-details {
-        grid-template-columns: 1fr;
+    .pfx-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .pfx-nav {
-        flex-direction: row;
-        overflow-x: auto;
-        padding: 12px;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
+    .pfx-stat:nth-child(3) {
+        border-left: 0;
     }
 
-    .pfx-nav button {
-        flex: none;
-    }
-
-    .pfx-content {
-        padding: 20px 18px;
+    .pfx-stat:nth-child(n+3) {
+        border-top: 1px solid var(--line);
     }
 }
 
 @media (max-width: 560px) {
-    .pfx-hero {
-        padding: 20px 18px;
+    .pf-layout.pfx {
+        gap: 14px;
+    }
+
+    .pfx-me {
+        padding: 22px 16px 18px;
+    }
+
+    .pfx-avatar {
+        width: 116px;
+        height: 116px;
     }
 
     .pfx-photo {
-        width: 72px;
-        height: 72px;
-        border-radius: 22px;
+        font-size: 1.9rem;
     }
 
-    .pfx-who h2 {
-        font-size: 1.4rem;
-    }
-
-    .pfx-stats {
+    .pfx-actions {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px 0;
     }
 
-    .pfx-stats>div:nth-child(3) {
-        padding-left: 0;
-        border-left: 0;
+    .pfx-actions .is-solid {
+        grid-column: 1 / -1;
     }
 
-    .pfx-fields {
-        grid-template-columns: 1fr;
+    .pfx-btn {
+        padding: 12px 10px;
+    }
+
+    .pfx-stat {
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .pfx-stat-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .pfx-stat-copy strong {
+        font-size: 1.15rem;
+    }
+
+    .pfx-tabs {
+        gap: 18px;
+    }
+
+    .pfx-group {
+        padding: 2px 16px 6px;
+    }
+
+    .pfx-field {
+        grid-template-columns: 108px minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px 0;
+    }
+
+    .pfx-field dt {
+        font-size: .78rem;
+    }
+
+    .pfx-field dd {
+        font-size: .88rem;
+    }
+
+    .pfx-edit {
+        padding: 20px 16px;
+    }
+
+    .pfx-classes {
+        padding: 18px 16px 6px;
     }
 
     .pfx-classes li {
         grid-template-columns: 1fr;
         gap: 8px;
+    }
+
+    .pfx-idcard {
+        padding: 16px;
     }
 }
 
