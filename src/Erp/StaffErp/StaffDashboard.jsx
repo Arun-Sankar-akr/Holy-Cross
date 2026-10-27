@@ -6245,13 +6245,7 @@ tr { height: 54px; }
                 </div>
             </main>
 
-            <nav className="bottom-nav" aria-label="Quick navigation">
-                <button className={activeTab === 'overview' ? 'on' : ''} onClick={() => setActiveTab('overview')} aria-label="Home"><LayoutGrid size={20} /><span>Home</span></button>
-                <button className={activeTab === 'students' ? 'on' : ''} onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label="Students"><Users size={20} /><span>Students</span></button>
-                <button className="bottom-fab" onClick={() => setActiveTab('schedule')} aria-label="Timetable"><CalendarClock size={22} /></button>
-                <button className={activeTab === 'mytasks' ? 'on' : ''} onClick={() => setActiveTab('mytasks')} aria-label="Tasks"><ClipboardList size={20} /><span>Tasks</span></button>
-                <button className={activeTab === 'profile' ? 'on' : ''} onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); }} aria-label="Profile"><User size={20} /><span>Profile</span></button>
-            </nav>
+            
         </div>
     );
 }

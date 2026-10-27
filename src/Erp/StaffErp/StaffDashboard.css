@@ -3594,7 +3594,7 @@ html[data-theme="dark"] .pf-complete-bar i {
 }
 
 .bottom-nav button:not(.bottom-fab) {
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 2px;
@@ -3738,7 +3738,7 @@ html[data-theme="dark"] .pf-complete-bar i {
     }
 
     .bottom-nav {
-        display: flex;
+        display: none;
     }
 
     .search-bar {
