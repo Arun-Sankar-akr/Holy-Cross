@@ -2554,7 +2554,7 @@ body {
 
     .section-block,
     .campus-section,
-    .achievers-section, 
+    .achievers-section,
     .principal-section,
     .mission-section,
     .visit-section {
@@ -2785,6 +2785,7 @@ body {
         display: none
     }
 }
+
 /* SCROLL CUE (replaces slider controls bar) — bottom fade with label */
 .hero-scroll-cue {
     position: absolute;
@@ -2802,9 +2803,9 @@ body {
     border: 0;
     border-radius: 0;
     background: linear-gradient(to top,
-        rgba(13, 16, 24, .88) 0%,
-        rgba(13, 16, 24, .55) 40%,
-        rgba(13, 16, 24, 0) 100%);
+            rgba(13, 16, 24, .88) 0%,
+            rgba(13, 16, 24, .55) 40%,
+            rgba(13, 16, 24, 0) 100%);
     color: #fff;
     font-size: 13px;
     font-weight: 600;
@@ -2825,8 +2826,15 @@ body {
 }
 
 @keyframes scrollCueBounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(6px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(6px);
+    }
 }
 
 /* =========================================================
@@ -3083,8 +3091,8 @@ body {
 
     /* horizontal swipe row with a peek of the next card */
     .hx-cards {
-        flex-direction: row;
-        align-items: stretch;
+        flex-direction: column;
+        align-items: center;
         gap: 12px;
         padding: 0 16px 20px;
         overflow-x: auto;
@@ -3364,7 +3372,7 @@ body {
     gap: 64px;
 }
 
-.home-page .faq-section > :first-child {
+.home-page .faq-section> :first-child {
     position: sticky;
     top: 110px;
     align-self: start;
@@ -3593,7 +3601,7 @@ body {
         gap: 32px;
     }
 
-    .home-page .faq-section > :first-child {
+    .home-page .faq-section> :first-child {
         position: static;
     }
 
@@ -3815,19 +3823,59 @@ body {
    labels stay Outfit for readability.
    ========================================================= */
 
-.home-page .hx-hero            { --display: 'Archivo', 'Arial Black', sans-serif; }
-.home-page .kinetic-statement  { --display: 'Fraunces', Georgia, serif; --serif: 'Fraunces', Georgia, serif; }
-.home-page .opening-board      { --display: 'Sora', sans-serif; }
-.home-page .values-section     { --display: 'Syne', sans-serif; }
-.home-page .principal-section  { --display: 'Playfair Display', Georgia, serif; --serif: 'Newsreader', Georgia, serif; }
-.home-page .about-section      { --display: 'Space Grotesk', sans-serif; }
-.home-page .mission-section    { --display: 'DM Serif Display', Georgia, serif; }
-.home-page .achievers-section  { --display: 'Lexend', sans-serif; }
-.home-page .campus-section     { --display: 'Urbanist', sans-serif; }
-.home-page .student-life       { --display: 'Baloo 2', sans-serif; }
-.home-page .admit-section      { --display: 'Unbounded', sans-serif; }
-.home-page .faq-section        { --display: 'Manrope', sans-serif; }
-.home-page .visit-section      { --display: 'Red Hat Display', sans-serif; }
+.home-page .hx-hero {
+    --display: 'Archivo', 'Arial Black', sans-serif;
+}
+
+.home-page .kinetic-statement {
+    --display: 'Fraunces', Georgia, serif;
+    --serif: 'Fraunces', Georgia, serif;
+}
+
+.home-page .opening-board {
+    --display: 'Sora', sans-serif;
+}
+
+.home-page .values-section {
+    --display: 'Syne', sans-serif;
+}
+
+.home-page .principal-section {
+    --display: 'Playfair Display', Georgia, serif;
+    --serif: 'Newsreader', Georgia, serif;
+}
+
+.home-page .about-section {
+    --display: 'Space Grotesk', sans-serif;
+}
+
+.home-page .mission-section {
+    --display: 'DM Serif Display', Georgia, serif;
+}
+
+.home-page .achievers-section {
+    --display: 'Lexend', sans-serif;
+}
+
+.home-page .campus-section {
+    --display: 'Urbanist', sans-serif;
+}
+
+.home-page .student-life {
+    --display: 'Baloo 2', sans-serif;
+}
+
+.home-page .admit-section {
+    --display: 'Unbounded', sans-serif;
+}
+
+.home-page .faq-section {
+    --display: 'Manrope', sans-serif;
+}
+
+.home-page .visit-section {
+    --display: 'Red Hat Display', sans-serif;
+}
 
 /* DM Serif Display only ships one weight — avoid faux bold */
 .home-page .mission-section :is(h2, h3, h4, strong),
@@ -3908,12 +3956,12 @@ body {
 
 @media (max-width: 700px) {
     .home-page .hx-hero .hx-title {
-        font-size: clamp(1.1rem, 4.8vw, 1.5rem);
+        font-size: 30px;
         line-height: 1.14;
     }
 
     .home-page .hx-hero .hx-subtitle {
-        font-size: .82rem;
+        font-size: 15px;
         max-width: 320px;
     }
 
@@ -3927,9 +3975,17 @@ body {
    (fonts: Rubik · Libre Franklin · Albert Sans)
    ========================================================= */
 
-.home-page .ls-section { --display: 'Rubik', sans-serif; }
-.home-page .fc-section { --display: 'Libre Franklin', sans-serif; }
-.home-page .ql-section { --display: 'Albert Sans', sans-serif; }
+.home-page .ls-section {
+    --display: 'Rubik', sans-serif;
+}
+
+.home-page .fc-section {
+    --display: 'Libre Franklin', sans-serif;
+}
+
+.home-page .ql-section {
+    --display: 'Albert Sans', sans-serif;
+}
 
 .ls-section,
 .fc-section,
@@ -4053,9 +4109,17 @@ body {
     box-shadow: var(--hc-shadow);
 }
 
-.fc-card.fc-tone-accent { background: linear-gradient(145deg, #4a2fd4, var(--hc-accent) 55%, var(--hc-accent-2)); }
-.fc-card.fc-tone-cyan   { background: linear-gradient(145deg, #0b7f8c, var(--hc-cyan)); }
-.fc-card.fc-tone-violet { background: linear-gradient(145deg, #6d28d9, var(--hc-accent-2) 60%, var(--hc-orange)); }
+.fc-card.fc-tone-accent {
+    background: linear-gradient(145deg, #4a2fd4, var(--hc-accent) 55%, var(--hc-accent-2));
+}
+
+.fc-card.fc-tone-cyan {
+    background: linear-gradient(145deg, #0b7f8c, var(--hc-cyan));
+}
+
+.fc-card.fc-tone-violet {
+    background: linear-gradient(145deg, #6d28d9, var(--hc-accent-2) 60%, var(--hc-orange));
+}
 
 .fc-bg {
     position: absolute;
@@ -4101,7 +4165,7 @@ body {
     letter-spacing: -.01em;
 }
 
-.fc-body > span {
+.fc-body>span {
     display: block;
     margin-top: 8px;
     font: 500 .92rem/1.45 var(--body);
@@ -4181,7 +4245,7 @@ body {
     font: 700 1.05rem var(--display);
 }
 
-.ql-text > span {
+.ql-text>span {
     display: block;
     margin-top: 3px;
     color: var(--hc-muted);
@@ -4220,6 +4284,7 @@ body {
 }
 
 @media (max-width: 700px) {
+
     .ls-section,
     .fc-section,
     .ql-section {

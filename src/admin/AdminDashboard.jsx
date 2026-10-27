@@ -134,6 +134,81 @@ function buildProgressStats(students) {
     };
 }
 
+// ---- Settings persistence helper: one Firestore doc under site_settings + a local cache ----
+const DEFAULT_ACADEMIC_SETTINGS = {
+    currentTerm: 'Term 1',
+    termStart: '',
+    termEnd: '',
+    schoolStart: '09:00',
+    schoolEnd: '16:00',
+    periodMinutes: '45',
+    passMark: '35',
+    workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+};
+
+const DEFAULT_NOTIFICATION_SETTINGS = {
+    emergencyAlerts: true,
+    newAdmissions: true,
+    leaveRequests: true,
+    feeReminders: true,
+    newAnnouncements: true,
+    dailySummary: false,
+};
+
+const useSiteSettingsDoc = (user, docId, defaults) => {
+    const cacheKey = `adminSettings_${docId}`;
+    const [values, setValues] = useState(() => {
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+            if (cached && typeof cached === 'object') return { ...defaults, ...cached };
+        } catch (err) { /* ignore corrupt cache */ }
+        return defaults;
+    });
+    const dirtyRef = useRef(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsub = onSnapshot(
+            doc(db, 'site_settings', docId),
+            snap => {
+                if (!snap.exists() || dirtyRef.current) return;
+                const { updatedAt, ...data } = snap.data();
+                const next = { ...defaults, ...data };
+                setValues(next);
+                try { localStorage.setItem(cacheKey, JSON.stringify(next)); } catch (err) { /* ignore */ }
+            },
+            err => console.error(`Settings "${docId}" load failed:`, err)
+        );
+        return () => unsub();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, docId]);
+
+    const update = (field, value) => {
+        dirtyRef.current = true;
+        setValues(prev => ({ ...prev, [field]: value }));
+    };
+
+    const save = async () => {
+        if (saving) return false;
+        setSaving(true);
+        try { localStorage.setItem(cacheKey, JSON.stringify(values)); } catch (err) { /* ignore */ }
+        try {
+            await setDoc(doc(db, 'site_settings', docId), { ...values, updatedAt: serverTimestamp() }, { merge: true });
+            dirtyRef.current = false;
+            return true;
+        } catch (err) {
+            console.error(`Failed to save settings "${docId}":`, err);
+            alert('Could not save to the server. Please check your connection/permissions and try again.');
+            return false;
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return { values, update, save, saving };
+};
+
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -262,12 +337,115 @@ export default function AdminDashboard() {
 
     // Global Search and System Settings State
     const [globalSearch, setGlobalSearch] = useState('');
-    const [settingsForm, setSettingsForm] = useState({
+    const DEFAULT_INSTITUTION_SETTINGS = {
         schoolName: 'EduPulse Matric Higher Secondary School',
         academicYear: '2026 - 2027',
         contactEmail: 'admin@edupulse.edu',
         helpline: '+91 98765 43210'
+    };
+    const [settingsForm, setSettingsForm] = useState(() => {
+        try {
+            const cached = JSON.parse(localStorage.getItem('adminInstitutionSettings') || 'null');
+            if (cached && typeof cached === 'object') return { ...DEFAULT_INSTITUTION_SETTINGS, ...cached };
+        } catch (err) { /* ignore corrupt cache */ }
+        return DEFAULT_INSTITUTION_SETTINGS;
     });
+    const settingsDirtyRef = useRef(false);
+    const [settingsSaving, setSettingsSaving] = useState(false);
+    const [settingsSection, setSettingsSection] = useState('general');
+    const [sectionSavedMsg, setSectionSavedMsg] = useState('');
+    const academicCfg = useSiteSettingsDoc(user, 'academic', DEFAULT_ACADEMIC_SETTINGS);
+    const notifyCfg = useSiteSettingsDoc(user, 'notifications', DEFAULT_NOTIFICATION_SETTINGS);
+    const [lastBackupAt, setLastBackupAt] = useState(() => {
+        try { return localStorage.getItem('adminLastBackupAt') || ''; } catch (err) { return ''; }
+    });
+
+    const flashSectionSaved = (msg) => {
+        setSectionSavedMsg(msg);
+        setTimeout(() => setSectionSavedMsg(''), 3500);
+    };
+
+    const handleSaveAcademic = async (e) => {
+        e.preventDefault();
+        const { termStart, termEnd, workingDays } = academicCfg.values;
+        if (termStart && termEnd && termEnd < termStart) {
+            alert('Term end date cannot be before the term start date.');
+            return;
+        }
+        if (!workingDays || workingDays.length === 0) {
+            alert('Select at least one working day.');
+            return;
+        }
+        if (await academicCfg.save()) flashSectionSaved('Academic settings saved successfully.');
+    };
+
+    const toggleWorkingDay = (day) => {
+        const current = academicCfg.values.workingDays || [];
+        academicCfg.update('workingDays', current.includes(day) ? current.filter(d => d !== day) : [...current, day]);
+    };
+
+    const handleSaveNotifications = async (e) => {
+        e.preventDefault();
+        if (await notifyCfg.save()) flashSectionSaved('Notification settings saved successfully.');
+    };
+
+    const backupDatasets = () => ({
+        students_records: studentsList,
+        staff_members: staffList,
+        administrators,
+        class_sections: sectionsList,
+        fee_records: feeRecords,
+        id_cards: idCards,
+        announcements,
+        academic_calendar: calendarEvents,
+        upcoming_events: upcomingEvents,
+        holidays,
+        exam_toppers: toppers,
+        staff_timetables: staffTimetables,
+        student_timetables: studentTimetables,
+        gallery: galleryItems,
+        admissions: admissionApplications,
+    });
+
+    const handleDownloadBackup = () => {
+        const now = new Date();
+        const stripSecrets = (rec) => {
+            if (!rec || typeof rec !== 'object') return rec;
+            const { password, ...rest } = rec;   // never write login passwords into a backup file
+            return rest;
+        };
+        const data = {};
+        Object.entries(backupDatasets()).forEach(([name, rows]) => {
+            data[name] = (rows || []).map(stripSecrets);
+        });
+        const payload = {
+            exportedAt: now.toISOString(),
+            institution: settingsForm.schoolName,
+            counts: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v.length])),
+            data,
+        };
+        try {
+            const json = JSON.stringify(payload, (key, val) => (val && typeof val.toDate === 'function' ? val.toDate().toISOString() : val), 2);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `school-backup-${now.toISOString().slice(0, 10)}.json`;
+            link.rel = 'noopener';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            const stamp = now.toISOString();
+            setLastBackupAt(stamp);
+            try { localStorage.setItem('adminLastBackupAt', stamp); } catch (err) { /* ignore */ }
+            flashSectionSaved('Backup downloaded successfully.');
+        } catch (err) {
+            console.error('Backup failed:', err);
+            alert('Could not create the backup file.');
+        }
+    };
     const [emergencyNotice, setEmergencyNotice] = useState('');
     const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
 
@@ -368,6 +546,28 @@ export default function AdminDashboard() {
         );
         return () => unsub();
     }, [user, viewStaffId]);
+
+    // Institution settings: site_settings/institution (saved from Settings tab)
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsub = onSnapshot(
+            doc(db, 'site_settings', 'institution'),
+            snap => {
+                if (!snap.exists() || settingsDirtyRef.current) return;
+                const data = snap.data();
+                const next = {
+                    schoolName: data.schoolName ?? DEFAULT_INSTITUTION_SETTINGS.schoolName,
+                    academicYear: data.academicYear ?? DEFAULT_INSTITUTION_SETTINGS.academicYear,
+                    contactEmail: data.contactEmail ?? DEFAULT_INSTITUTION_SETTINGS.contactEmail,
+                    helpline: data.helpline ?? DEFAULT_INSTITUTION_SETTINGS.helpline,
+                };
+                setSettingsForm(next);
+                try { localStorage.setItem('adminInstitutionSettings', JSON.stringify(next)); } catch (err) { /* ignore */ }
+            },
+            err => console.error('Institution settings load failed:', err)
+        );
+        return () => unsub();
+    }, [user]);
 
     // Live admission access flag: site_settings/admission -> { open: boolean }
     useEffect(() => {
@@ -1366,10 +1566,38 @@ export default function AdminDashboard() {
         });
     };
 
-    const handleSaveSettings = (e) => {
+    const updateSettingsField = (field, value) => {
+        settingsDirtyRef.current = true;
+        setSettingsForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSaveSettings = async (e) => {
         e.preventDefault();
-        setSettingsSavedMsg(true);
-        setTimeout(() => setSettingsSavedMsg(false), 3500);
+        if (settingsSaving) return;
+        const payload = {
+            schoolName: settingsForm.schoolName.trim(),
+            academicYear: settingsForm.academicYear.trim(),
+            contactEmail: settingsForm.contactEmail.trim(),
+            helpline: settingsForm.helpline.trim(),
+        };
+        setSettingsSaving(true);
+        // Keep a local copy so the values survive a reload even if the network is slow.
+        try { localStorage.setItem('adminInstitutionSettings', JSON.stringify(payload)); } catch (err) { /* ignore */ }
+        try {
+            await setDoc(doc(db, 'site_settings', 'institution'), {
+                ...payload,
+                updatedAt: serverTimestamp(),
+            }, { merge: true });
+            settingsDirtyRef.current = false;
+            setSettingsForm(payload);
+            setSettingsSavedMsg(true);
+            setTimeout(() => setSettingsSavedMsg(false), 3500);
+        } catch (err) {
+            console.error('Failed to save institution settings:', err);
+            alert('Could not save institution settings to the server. Please check your connection/permissions and try again.');
+        } finally {
+            setSettingsSaving(false);
+        }
     };
 
     const searchMatchStudents = studentsList.filter(s =>
@@ -2107,13 +2335,125 @@ export default function AdminDashboard() {
                             <h3><Sliders size={18} color="var(--primary)" /> System Configuration & Emergency Dispatch</h3>
 
                             <div className="settings-category-grid">
-                                <div className="settings-category-card"><div className="settings-category-icon blue"><Settings size={18} /></div><span>General Settings</span></div>
-                                <div className="settings-category-card"><div className="settings-category-icon purple"><GraduationCap size={18} /></div><span>Academic Settings</span></div>
-                                <div className="settings-category-card" onClick={() => handleTabClick('fees')}><div className="settings-category-icon orange"><FileText size={18} /></div><span>Fee Settings</span></div>
-                                <div className="settings-category-card"><div className="settings-category-icon green"><Bell size={18} /></div><span>Notification Settings</span></div>
-                                <div className="settings-category-card"><div className="settings-category-icon rose"><Database size={18} /></div><span>Backup Settings</span></div>
+                                <button type="button" className={`settings-category-card ${settingsSection === 'general' ? 'active' : ''}`} onClick={() => setSettingsSection('general')}><div className="settings-category-icon blue"><Settings size={18} /></div><span>General Settings</span></button>
+                                <button type="button" className={`settings-category-card ${settingsSection === 'academic' ? 'active' : ''}`} onClick={() => setSettingsSection('academic')}><div className="settings-category-icon purple"><GraduationCap size={18} /></div><span>Academic Settings</span></button>
+                                <button type="button" className="settings-category-card" onClick={() => handleTabClick('fees')}><div className="settings-category-icon orange"><FileText size={18} /></div><span>Fee Settings</span></button>
+                                <button type="button" className={`settings-category-card ${settingsSection === 'notifications' ? 'active' : ''}`} onClick={() => setSettingsSection('notifications')}><div className="settings-category-icon green"><Bell size={18} /></div><span>Notification Settings</span></button>
+                                <button type="button" className={`settings-category-card ${settingsSection === 'backup' ? 'active' : ''}`} onClick={() => setSettingsSection('backup')}><div className="settings-category-icon rose"><Database size={18} /></div><span>Backup Settings</span></button>
                             </div>
 
+                            {sectionSavedMsg && settingsSection !== 'general' && (
+                                <div className="settings-saved-pill">
+                                    <Check size={14} /> {sectionSavedMsg}
+                                </div>
+                            )}
+
+                            {settingsSection === 'academic' && (
+                                <form onSubmit={handleSaveAcademic} className="set-section">
+                                    <h4>Academic Configuration</h4>
+                                    <p className="set-hint">Active academic year: <b>{settingsForm.academicYear}</b> (change it under General Settings).</p>
+                                    <div className="set-grid">
+                                        <div>
+                                            <label>Current Term / Semester</label>
+                                            <input type="text" value={academicCfg.values.currentTerm} onChange={(e) => academicCfg.update('currentTerm', e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label>Pass Mark (%)</label>
+                                            <input type="number" min="0" max="100" value={academicCfg.values.passMark} onChange={(e) => academicCfg.update('passMark', e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label>Term Start Date</label>
+                                            <input type="date" value={academicCfg.values.termStart} onChange={(e) => academicCfg.update('termStart', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label>Term End Date</label>
+                                            <input type="date" value={academicCfg.values.termEnd} onChange={(e) => academicCfg.update('termEnd', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label>School Starts</label>
+                                            <input type="time" value={academicCfg.values.schoolStart} onChange={(e) => academicCfg.update('schoolStart', e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label>School Ends</label>
+                                            <input type="time" value={academicCfg.values.schoolEnd} onChange={(e) => academicCfg.update('schoolEnd', e.target.value)} required />
+                                        </div>
+                                        <div>
+                                            <label>Period Length (minutes)</label>
+                                            <input type="number" min="10" max="120" value={academicCfg.values.periodMinutes} onChange={(e) => academicCfg.update('periodMinutes', e.target.value)} required />
+                                        </div>
+                                    </div>
+                                    <label>Working Days</label>
+                                    <div className="set-day-chips">
+                                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                                            <button
+                                                key={day}
+                                                type="button"
+                                                className={`set-day-chip ${(academicCfg.values.workingDays || []).includes(day) ? 'on' : ''}`}
+                                                onClick={() => toggleWorkingDay(day)}
+                                            >{day}</button>
+                                        ))}
+                                    </div>
+                                    <button type="submit" className="add-notice-btn" disabled={academicCfg.saving}>
+                                        <Save size={15} /> {academicCfg.saving ? 'Saving...' : 'Save Academic Settings'}
+                                    </button>
+                                </form>
+                            )}
+
+                            {settingsSection === 'notifications' && (
+                                <form onSubmit={handleSaveNotifications} className="set-section">
+                                    <h4>Notification Preferences</h4>
+                                    <p className="set-hint">Choose which events should raise an alert for administrators.</p>
+                                    <div className="set-toggle-list">
+                                        {[
+                                            ['emergencyAlerts', 'Emergency broadcasts', 'Show urgent campus alerts on every dashboard.'],
+                                            ['newAdmissions', 'New admission applications', 'Alert when a new application is submitted.'],
+                                            ['leaveRequests', 'Staff leave requests', 'Alert when a staff member applies for leave.'],
+                                            ['feeReminders', 'Fee due reminders', 'Remind about pending and overdue fee records.'],
+                                            ['newAnnouncements', 'Circular published', 'Alert when a new circular goes live.'],
+                                            ['dailySummary', 'Daily summary', 'A once-a-day digest of campus activity.'],
+                                        ].map(([key, title, desc]) => (
+                                            <label key={key} className="set-toggle-row">
+                                                <div>
+                                                    <b>{title}</b>
+                                                    <small>{desc}</small>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="set-switch"
+                                                    checked={!!notifyCfg.values[key]}
+                                                    onChange={(e) => notifyCfg.update(key, e.target.checked)}
+                                                />
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <button type="submit" className="add-notice-btn" disabled={notifyCfg.saving}>
+                                        <Save size={15} /> {notifyCfg.saving ? 'Saving...' : 'Save Notification Settings'}
+                                    </button>
+                                </form>
+                            )}
+
+                            {settingsSection === 'backup' && (
+                                <div className="set-section">
+                                    <h4>Data Backup</h4>
+                                    <p className="set-hint">
+                                        Download a JSON copy of the records currently loaded in this dashboard. Login passwords are never included.
+                                        {lastBackupAt && <> Last backup: <b>{new Date(lastBackupAt).toLocaleString('en-GB')}</b>.</>}
+                                    </p>
+                                    <div className="set-backup-grid">
+                                        {Object.entries(backupDatasets()).map(([name, rows]) => (
+                                            <div key={name} className="set-backup-item">
+                                                <b>{(rows || []).length}</b>
+                                                <span>{name.replace(/_/g, ' ')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button type="button" className="add-notice-btn" onClick={handleDownloadBackup}>
+                                        <Database size={15} /> Download Full Backup (JSON)
+                                    </button>
+                                </div>
+                            )}
+
+                            {settingsSection === 'general' && (<>
                             <form onSubmit={handleBroadcastEmergency} className="emergency-form">
                                 <div className="emergency-header">
                                     <AlertTriangle size={18} color="var(--accent-danger)" />
@@ -2146,7 +2486,7 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         value={settingsForm.schoolName}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })}
+                                        onChange={(e) => updateSettingsField('schoolName', e.target.value)}
                                         required
                                     />
                                 </div>
@@ -2155,7 +2495,7 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         value={settingsForm.academicYear}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, academicYear: e.target.value })}
+                                        onChange={(e) => updateSettingsField('academicYear', e.target.value)}
                                         required
                                     />
                                 </div>
@@ -2164,7 +2504,7 @@ export default function AdminDashboard() {
                                     <input
                                         type="email"
                                         value={settingsForm.contactEmail}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, contactEmail: e.target.value })}
+                                        onChange={(e) => updateSettingsField('contactEmail', e.target.value)}
                                         required
                                     />
                                 </div>
@@ -2173,14 +2513,15 @@ export default function AdminDashboard() {
                                     <input
                                         type="text"
                                         value={settingsForm.helpline}
-                                        onChange={(e) => setSettingsForm({ ...settingsForm, helpline: e.target.value })}
+                                        onChange={(e) => updateSettingsField('helpline', e.target.value)}
                                         required
                                     />
                                 </div>
-                                <button type="submit" className="add-notice-btn">
-                                    <Save size={15} /> Save Institution Settings
+                                <button type="submit" className="add-notice-btn" disabled={settingsSaving}>
+                                    <Save size={15} /> {settingsSaving ? 'Saving...' : 'Save Institution Settings'}
                                 </button>
                             </form>
+                            </>)}
                         </div>
                     )}
 

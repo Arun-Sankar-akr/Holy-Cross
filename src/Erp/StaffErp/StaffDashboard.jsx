@@ -134,6 +134,7 @@ export default function StaffDashboard() {
 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [attendanceSession, setAttendanceSession] = useState('Forenoon');
+    const [attendanceFilter, setAttendanceFilter] = useState('all');
     const [attendanceSectionId, setAttendanceSectionId] = useState('');
 
     const [subClassFilter, setSubClassFilter] = useState(null);
@@ -732,6 +733,28 @@ tr { height: 54px; }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [myInchargeSectionsKey]);
+
+    // days of the visible month that already have attendance saved for this section
+    const [attMarkedDates, setAttMarkedDates] = useState([]);
+    const attMonthKey = /^\d{4}-\d{2}/.test(attendanceDate) ? attendanceDate.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    const attSectionKey = selectedInchargeSection?.id ?? '';
+    useEffect(() => {
+        if (!attSectionKey) { setAttMarkedDates([]); return; }
+        const q = query(
+            collection(db, 'attendance_records'),
+            where('date', '>=', `${attMonthKey}-01`),
+            where('date', '<=', `${attMonthKey}-31`)
+        );
+        const unsub = onSnapshot(q, (snap) => {
+            const days = new Set();
+            snap.docs.forEach((d) => {
+                const r = d.data();
+                if (String(r.sectionId) === String(attSectionKey) && r.date) days.add(r.date);
+            });
+            setAttMarkedDates([...days]);
+        }, (err) => console.error('Attendance history error:', err));
+        return () => unsub();
+    }, [attMonthKey, attSectionKey]);
 
     useEffect(() => {
         setAttendanceSubmitted(false);
@@ -2039,6 +2062,41 @@ tr { height: 54px; }
         return true;
     });
 
+    const reviewQueueCount = submissionsList.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
+    const workSwitch = (
+        <div className="wk-top">
+            <div>
+                <h3>Tasks and assessments</h3>
+                <p className="subtitle">Assign work to a class, then review and grade what comes back.</p>
+            </div>
+            <div className="wk-switch" role="tablist" aria-label="Tasks and assessments">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'assignments'}
+                    className={activeTab === 'assignments' ? 'is-on' : ''}
+                    onClick={() => setActiveTab('assignments')}
+                >
+                    <ClipboardList size={15} /> Assigned tasks <b>{assignmentsList.length}</b>
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'submissions'}
+                    className={activeTab === 'submissions' ? 'is-on' : ''}
+                    onClick={() => {
+                        setActiveTab('submissions');
+                        setSubClassFilter(null);
+                        setSubSectionFilter(null);
+                        setSubmissionFilterStatus('all');
+                    }}
+                >
+                    <FileCheck size={15} /> Grading <b className={reviewQueueCount > 0 ? 'has-alert' : ''}>{reviewQueueCount}</b>
+                </button>
+            </div>
+        </div>
+    );
+
     const extraDepartments = [...new Set(
         allStaffMembers
             .map(s => (s.department || '').trim())
@@ -2109,6 +2167,18 @@ tr { height: 54px; }
     const attendanceArea = attendanceLine ? `${attendanceLine} L ${CH_W} ${CH_H} L 0 ${CH_H} Z` : '';
     const peakIdx = classProgressData.reduce((best, c, i, arr) => (c.rate > arr[best].rate ? i : best), 0);
 
+    // attendance register helpers
+    const attParsed = new Date(`${attendanceDate}T00:00:00`);
+    const attDate = isNaN(attParsed) ? new Date() : attParsed;
+    const attYear = attDate.getFullYear();
+    const attMonth = attDate.getMonth();
+    const attDaysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
+    const attMonthLabel = attDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const attDayISO = (d) => `${attYear}-${String(attMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const attPresentCount = attendanceStudents.filter(st => (st.status || 'present') !== 'absent').length;
+    const attAbsentCount = attendanceStudents.length - attPresentCount;
+    const attRows = filteredAttendanceStudents.filter(st => attendanceFilter === 'all' || (st.status || 'present') === attendanceFilter);
+
     const activeChatMember = allStaffMembers.find(m => m.staffId === activeChatInfo?.staffId);
     const lastRoomMessage = staffRoomMessages[staffRoomMessages.length - 1];
 
@@ -2177,12 +2247,37 @@ tr { height: 54px; }
         );
     };
 
+    const mobilePageTitles = {
+        overview: 'Home',
+        profile: 'My profile',
+        students: 'Students',
+        attendance: 'Attendance',
+        analytics: 'Analytics',
+        marks: 'Marks entry',
+        assignments: 'Tasks and assessments',
+        submissions: 'Tasks and assessments',
+        syllabus: 'Lessons',
+        schedule: 'Time table',
+        departments: 'Departments',
+        chats: 'Chats',
+        staffroom: 'Staff room',
+        library: 'Library',
+        events: 'Events',
+        'entrance-exams': 'Entrance exams',
+        'exam-halls': 'Exam halls',
+        mytasks: 'My tasks',
+        schoolnews: 'School news',
+        downloads: 'Downloads',
+        leaves: 'Leave requests'
+    };
+    const mobilePageTitle = mobilePageTitles[activeTab] || 'Staff portal';
+
     return (
         <div className="dashboard-containers">
             <header className="mobile-topbar">
                 <div className="mobile-brand">
                     <img src={logo} alt="" id='logog' />
-                    <span>HOLY CROSS MATRIC. HR. SEC. SCHOOL</span>
+                    <span>{mobilePageTitle}</span>
                 </div>
                 <button
                     className="menu-toggle-btn"
@@ -2298,9 +2393,9 @@ tr { height: 54px; }
                                 </button>
 
                                 <button
-                                    className={`nav-links ${activeTab === 'submissions' ? 'active' : ''}`}
+                                    className={`nav-links ${activeTab === 'submissions' || activeTab === 'assignments' ? 'active' : ''}`}
                                     onClick={() => {
-                                        setActiveTab('submissions');
+                                        setActiveTab('assignments');
                                         setSubClassFilter(null);
                                         setSubSectionFilter(null);
                                         setSubmissionFilterStatus('all');
@@ -2308,18 +2403,9 @@ tr { height: 54px; }
                                     }}
                                 >
                                     <div className="nav-links-content">
-                                        <FileCheck size={18} />
-                                        <span>Assessments</span>
-                                    </div>
-                                    <ChevronRight size={15} className="nav-arrow" />
-                                </button>
-                                <button
-                                    className={`nav-links ${activeTab === 'assignments' ? 'active' : ''}`}
-                                    onClick={() => { setActiveTab('assignments'); setIsMobileMenuOpen(false); }}
-                                >
-                                    <div className="nav-links-content">
                                         <ClipboardList size={18} />
-                                        <span>Tasks</span>
+                                        <span>Tasks & Assessments</span>
+                                        {reviewQueueCount > 0 && <span className="task-count-pill">{reviewQueueCount}</span>}
                                     </div>
                                     <ChevronRight size={15} className="nav-arrow" />
                                 </button>
@@ -2582,7 +2668,7 @@ tr { height: 54px; }
                             <Search size={18} className="search-icon" />
                             <input
                                 type="text"
-                                placeholder="Search for student and teacher"
+                                placeholder="Search students or teachers"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -2824,7 +2910,53 @@ tr { height: 54px; }
                                 )}
 
                                 <div className="tt-bottom">
-                                    <section className="tt-card schedule-widget">
+
+                                    <div className="tt-stack">
+                                        <section className="tt-card">
+                                <div className="ov-card-head"><h3>Notice Board</h3><span className="ov-pill soft">{announcements.length + pendingOfficeTasks.length} new</span></div>
+                                <div className="notice-list">
+                                    {pendingOfficeTasks.slice(0, 2).map((t) => (
+                                        <button key={t.id} className="notice-row" onClick={() => setActiveTab('mytasks')}>
+                                            <i className="warm"><ClipboardList size={16} /></i>
+                                            <div><strong>{t.title}</strong><span>{t.priority || 'Normal'}{t.deadline ? ` · Due ${t.deadline}` : ''}</span></div>
+                                        </button>
+                                    ))}
+                                    {announcements.map((a) => (
+                                        <div key={a.id} className="notice-row">
+                                            <i className={a.type === 'urgent' ? 'warm' : ''}><Bell size={16} /></i>
+                                            <div><strong>{a.title}</strong><span>{a.date}</span></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                                        <section className="tt-card">
+                                <div className="ov-card-head">
+                                    <h3>Leave Status</h3>
+                                    <button className="ov-link" onClick={() => setActiveTab('leaves')}>Apply <ChevronRight size={14} /></button>
+                                </div>
+                                {myLeaveRequests.length === 0 ? (
+                                    <div className="overview-empty">No leave requests yet.</div>
+                                ) : (
+                                    <div className="leave-list">
+                                        {myLeaveRequests.slice(0, 4).map((l, i) => (
+                                            <div key={l.id || i} className="leave-row">
+                                                <div>
+                                                    <strong>{l.leaveType}</strong>
+                                                    <span>{l.startDate}{l.endDate && l.endDate !== l.startDate ? ` → ${l.endDate}` : ''}</span>
+                                                </div>
+                                                <em className={`status-${String(l.status || 'Pending').toLowerCase()}`}>{l.status || 'Pending'}</em>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside className="tt-side">
+                                <section className="schedule-widget tt-side-schedule">
                                 <div className="ov-card-head">
                                     <h3>Schedules</h3>
                                     <button className="ov-pill" onClick={() => setShowAddEventForm(true)}>+ Add</button>
@@ -2914,78 +3046,6 @@ tr { height: 54px; }
                                     </div>
                                 )}
                             </section>
-
-                                    <div className="tt-stack">
-                                        <section className="tt-card">
-                                <div className="ov-card-head"><h3>Notice Board</h3><span className="ov-pill soft">{announcements.length + pendingOfficeTasks.length} new</span></div>
-                                <div className="notice-list">
-                                    {pendingOfficeTasks.slice(0, 2).map((t) => (
-                                        <button key={t.id} className="notice-row" onClick={() => setActiveTab('mytasks')}>
-                                            <i className="warm"><ClipboardList size={16} /></i>
-                                            <div><strong>{t.title}</strong><span>{t.priority || 'Normal'}{t.deadline ? ` · Due ${t.deadline}` : ''}</span></div>
-                                        </button>
-                                    ))}
-                                    {announcements.map((a) => (
-                                        <div key={a.id} className="notice-row">
-                                            <i className={a.type === 'urgent' ? 'warm' : ''}><Bell size={16} /></i>
-                                            <div><strong>{a.title}</strong><span>{a.date}</span></div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-
-                                        <section className="tt-card">
-                                <div className="ov-card-head">
-                                    <h3>Leave Status</h3>
-                                    <button className="ov-link" onClick={() => setActiveTab('leaves')}>Apply <ChevronRight size={14} /></button>
-                                </div>
-                                {myLeaveRequests.length === 0 ? (
-                                    <div className="overview-empty">No leave requests yet.</div>
-                                ) : (
-                                    <div className="leave-list">
-                                        {myLeaveRequests.slice(0, 4).map((l, i) => (
-                                            <div key={l.id || i} className="leave-row">
-                                                <div>
-                                                    <strong>{l.leaveType}</strong>
-                                                    <span>{l.startDate}{l.endDate && l.endDate !== l.startDate ? ` → ${l.endDate}` : ''}</span>
-                                                </div>
-                                                <em className={`status-${String(l.status || 'Pending').toLowerCase()}`}>{l.status || 'Pending'}</em>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <aside className="tt-side">
-                                <section>
-                                    <div className="tt-side-head">
-                                        <div>
-                                            <h3>Recent Students</h3>
-                                            <p>You have <b>{allStudents.length}</b> students</p>
-                                        </div>
-                                        <button className="tt-plus" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label="Open student roster"><Plus size={22} /></button>
-                                    </div>
-                                    {allStudents.length === 0 ? (
-                                        <div className="overview-empty">No enrolled students found yet.</div>
-                                    ) : (
-                                        <div className="tt-people">
-                                            {allStudents.slice(0, 5).map((st, i) => (
-                                                <div key={st.id || i} className="tt-person">
-                                                    <div className="sh-avatar" style={{ background: avatarTone(st.name) }}>{initialOf(st.name)}</div>
-                                                    <div className="tt-person-copy">
-                                                        <strong>{st.name || 'Student'}</strong>
-                                                        <span>{[getStudentClassValue(st), getStudentSectionValue(st)].filter(Boolean).join(' ') || 'Class not set'}</span>
-                                                    </div>
-                                                    <button className="tt-mail" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label={`Open ${st.name || 'student'}`}><Mail size={18} /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <button className="tt-more" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}>View More</button>
-                                </section>
 
                                 <section>
                                     <div className="tt-side-head"><h3>Messages</h3></div>
@@ -3094,10 +3154,234 @@ tr { height: 54px; }
 
                         return (
                             <div className="pf-wrap">
-                                <div className="pf-layout">
-                                    <aside className="pf-side">
-                                        <div className="pf-idflip-wrap">
-                                            <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
+                                <div className="pf-layout pfx">
+                                    {/* ---------- Header ---------- */}
+                                    <header className="pfx-hero">
+                                        <div className="pfx-photo">
+                                            {profilePhoto ? (
+                                                <img src={profilePhoto} alt={displayName} />
+                                            ) : (
+                                                <span aria-hidden="true">{displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || <User size={40} />}</span>
+                                            )}
+                                        </div>
+
+                                        <div className="pfx-who">
+                                            <h2>{displayName}</h2>
+                                            <p>{designation}{departmentLabel ? `, ${departmentLabel}` : ''}</p>
+                                            <div className="pfx-chips">
+                                                <span className="pfx-chip is-id"><Sparkles size={11} /> {profileIdLabel}</span>
+                                                {isClassIncharge && (
+                                                    <span className="pfx-chip"><CheckCircle size={11} /> Class incharge</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pfx-actions">
+                                            <button type="button" className="pfx-btn is-solid" onClick={printProfile}>
+                                                <Printer size={14} /> Print profile
+                                            </button>
+                                            {!isEditingProfile && (
+                                                <button type="button" className="pfx-btn" onClick={() => setIsEditingProfile(true)}>
+                                                    <Edit3 size={14} /> Edit profile
+                                                </button>
+                                            )}
+                                            <button type="button" className="pfx-btn" onClick={() => setActiveTab('leaves')}>
+                                                <SendHorizonal size={14} /> My leaves
+                                            </button>
+                                        </div>
+
+                                        <dl className="pfx-stats">
+                                            {quickStats.map((stat) => (
+                                                <div key={stat.label} title={stat.hint}>
+                                                    <dd>{stat.value}</dd>
+                                                    <dt>{stat.label}</dt>
+                                                </div>
+                                            ))}
+                                        </dl>
+                                    </header>
+
+                                    <div className="pfx-body">
+                                        <div className="pfx-main">
+                                            {!myStaffRecord && (
+                                                <div className="profile-sync-note">
+                                                    <AlertTriangle size={15} />
+                                                    <span>
+                                                        Your detailed staff record is still syncing. Fields shown as “Not added” will fill
+                                                        in automatically once the record loads.
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {profileSaveStatus && (
+                                                <div className={`profile-save-note ${profileSaveStatus.includes('success') ? 'is-ok' : 'is-alert'}`}>
+                                                    {profileSaveStatus.includes('success') ? <Check size={16} /> : <AlertCircle size={16} />} {profileSaveStatus}
+                                                </div>
+                                            )}
+
+                                            {isEditingProfile ? (
+                                                <section className="pfx-panel pfx-edit">
+                                                    <h3>Edit your details</h3>
+                                                    <p className="pf-edit-hint">Staff ID and Department are assigned by Admin and cannot be edited here.</p>
+                                                    <form onSubmit={handleSaveProfile} className="assignment-form-grid">
+                                                    <div>
+                                                        <label>Email Address</label>
+                                                        <input
+                                                            type="email"
+                                                            className="table-input full-width-input"
+                                                            placeholder="you@holycross.edu"
+                                                            value={profileForm.email}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Phone Number</label>
+                                                        <input
+                                                            type="tel"
+                                                            className="table-input full-width-input"
+                                                            placeholder="+91 90000 00000"
+                                                            value={profileForm.phone}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Qualification</label>
+                                                        <input
+                                                            type="text"
+                                                            className="table-input full-width-input"
+                                                            placeholder="e.g. M.Sc, B.Ed"
+                                                            value={profileForm.qualification}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, qualification: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label>Department</label>
+                                                        <input
+                                                            type="text"
+                                                            className="table-input full-width-input"
+                                                            value={staffData.department || ''}
+                                                            disabled
+                                                        />
+                                                    </div>
+                                                    <div style={{ gridColumn: '1 / -1' }}>
+                                                        <label>Short Bio</label>
+                                                        <textarea
+                                                            rows="3"
+                                                            className="custom-textarea"
+                                                            placeholder="A short note about your role, experience or interests..."
+                                                            value={profileForm.bio}
+                                                            onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+                                                        <button type="submit" className="btn-primary" disabled={isProfileSaving}>
+                                                            <Save size={15} /> {isProfileSaving ? 'Saving...' : 'Save Changes'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-secondary"
+                                                            onClick={() => {
+                                                                setIsEditingProfile(false);
+                                                                setProfileForm({
+                                                                    email: myStaffRecord?.email || '',
+                                                                    phone: myStaffRecord?.phone || '',
+                                                                    qualification: myStaffRecord?.qualification || '',
+                                                                    bio: myStaffRecord?.bio || ''
+                                                                });
+                                                            }}
+                                                            disabled={isProfileSaving}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                                </section>
+                                            ) : (
+                                                <section className="pfx-panel pfx-details">
+                                                    <div className="pfx-nav" role="tablist" aria-label="Profile sections">
+                                                        <button
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={profileSection === 'all'}
+                                                            className={profileSection === 'all' ? 'is-on' : ''}
+                                                            onClick={() => setProfileSection('all')}
+                                                        >
+                                                            <span>All details</span>
+                                                            <small>{filledProfileFields}/{allProfileFields.length}</small>
+                                                        </button>
+                                                        {fieldGroups.map((g) => {
+                                                            const filled = g.fields.filter(([, v]) => v && v !== '—').length;
+                                                            return (
+                                                                <button
+                                                                    key={g.id}
+                                                                    type="button"
+                                                                    role="tab"
+                                                                    aria-selected={profileSection === g.id}
+                                                                    className={profileSection === g.id ? 'is-on' : ''}
+                                                                    onClick={() => setProfileSection(g.id)}
+                                                                >
+                                                                    <span>{g.short}</span>
+                                                                    <small>{filled}/{g.fields.length}</small>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    <div className="pfx-content">
+                                                        {visibleGroups.map((group) => (
+                                                            <div className="pfx-group" key={group.id}>
+                                                                <h3>{group.title}</h3>
+                                                                <dl className="pfx-fields">
+                                                                    {group.fields.map(([label, value]) => {
+                                                                        const empty = !value || value === '—';
+                                                                        return (
+                                                                            <div className={`pfx-field ${label === 'Address' || label === 'Short Bio' ? 'is-wide' : ''}`} key={label}>
+                                                                                <dt>{label}</dt>
+                                                                                <dd className={empty ? 'is-empty' : ''}>{empty ? 'Not added' : value}</dd>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </dl>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </section>
+                                            )}
+
+                                            {myTaughtClasses.length > 0 && (
+                                                <section className="pfx-panel pfx-classes">
+                                                    <h3>Classes you teach</h3>
+                                                    <ul>
+                                                        {myTaughtClasses.map((cls) => {
+                                                            const subjects = getMyTaughtSubjectsForClass(cls);
+                                                            return (
+                                                                <li key={cls}>
+                                                                    <strong>{cls}</strong>
+                                                                    <span className="pfx-subjects">
+                                                                        {subjects.length === 0
+                                                                            ? <em>No subjects listed</em>
+                                                                            : subjects.map((s) => <span className="topic-badge" key={s}>{s}</span>)}
+                                                                    </span>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                </section>
+                                            )}
+
+                                            <div className="profile-note-footer">
+                                                <FileText size={14} />
+                                                <span>
+                                                    Your Staff ID and Department are assigned by the Admin. If anything else
+                                                    here is incorrect, please contact the school office to have the record updated.
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* ---------- ID card rail ---------- */}
+                                        <aside className="pfx-rail">
+                                            <div className="pfx-idcard">
+                                                <div className="pf-idflip-wrap">
+                                                    <div className={`pf-idflip ${idCardFlipped ? 'is-flipped' : ''}`}>
                                                 <div
                                                     className="pf-idflip-inner"
                                                     role="button"
@@ -3173,240 +3457,22 @@ tr { height: 54px; }
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
-                                                <RotateCw size={13} /> {idCardFlipped ? 'Show Front' : 'Show Back'}
-                                            </button>
-
-                                            <div className="pf-idmeta">
-                                                <span className="pf-id-chip"><Sparkles size={11} /> {profileIdLabel}</span>
-                                                <div className="pf-badges">
-                                                    <span className="profile-status-chip is-info">
-                                                        <BookOpen size={11} /> {departmentLabel || 'Faculty'}
-                                                    </span>
-                                                    {isClassIncharge && (
-                                                        <span className="profile-status-chip is-ok">
-                                                            <CheckCircle size={11} /> Class Incharge
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="pf-complete">
-                                                    <div className="pf-complete-head">
-                                                        <span>Profile completeness</span>
-                                                        <strong>{profileCompleteness}%</strong>
-                                                    </div>
-                                                    <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
-                                                    <small>{filledProfileFields} of {allProfileFields.length} details filled</small>
+                                                    <button type="button" className="pf-flip-btn" onClick={() => setIdCardFlipped((v) => !v)}>
+                                                        <RotateCw size={13} /> {idCardFlipped ? 'Show front' : 'Show back'}
+                                                    </button>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div className="pf-actions">
-                                            <button type="button" className="pf-btn solid" onClick={printProfile}>
-                                                <Printer size={14} /> Print Profile
-                                            </button>
-                                            {!isEditingProfile && (
-                                                <button type="button" className="pf-btn" onClick={() => setIsEditingProfile(true)}>
-                                                    <Edit3 size={14} /> Edit Profile
-                                                </button>
-                                            )}
-                                            <button type="button" className="pf-btn" onClick={() => setActiveTab('leaves')}>
-                                                <SendHorizonal size={14} /> My Leaves
-                                            </button>
-                                        </div>
-                                    </aside>
-
-                                    <section className="pf-main">
-                                        {!myStaffRecord && (
-                                            <div className="profile-sync-note">
-                                                <AlertTriangle size={15} />
-                                                <span>
-                                                    Your detailed staff record is still syncing. Fields shown as “—” will fill
-                                                    in automatically once the record loads.
-                                                </span>
+                                            <div className="pf-complete">
+                                                <div className="pf-complete-head">
+                                                    <span>Profile completeness</span>
+                                                    <strong>{profileCompleteness}%</strong>
+                                                </div>
+                                                <div className="pf-complete-bar"><i style={{ width: `${profileCompleteness}%` }} /></div>
+                                                <small>{filledProfileFields} of {allProfileFields.length} details filled</small>
                                             </div>
-                                        )}
-
-                                        <div className="pf-stats">
-                                            {quickStats.map((stat) => {
-                                                const StatIcon = stat.icon;
-                                                return (
-                                                    <div className={`pf-stat tone-${stat.tone}`} key={stat.label}>
-                                                        <span className="pf-stat-icon"><StatIcon size={16} /></span>
-                                                        <div>
-                                                            <span className="pf-stat-label">{stat.label}</span>
-                                                            <strong className="pf-stat-value">{stat.value}</strong>
-                                                            <span className="pf-stat-hint">{stat.hint}</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {profileSaveStatus && (
-                                            <div className={`profile-save-note ${profileSaveStatus.includes('success') ? 'is-ok' : 'is-alert'}`}>
-                                                {profileSaveStatus.includes('success') ? <Check size={16} /> : <AlertCircle size={16} />} {profileSaveStatus}
-                                            </div>
-                                        )}
-
-                                        {isEditingProfile ? (
-                                            <div className="pf-section tone-primary">
-                                                <div className="pf-section-head">
-                                                    <span className="pf-section-icon"><Edit3 size={15} /></span>
-                                                    <h3>Edit Contact & Personal Details</h3>
-                                                </div>
-                                                <p className="pf-edit-hint">Staff ID and Department are assigned by Admin and cannot be edited here.</p>
-                                                <form onSubmit={handleSaveProfile} className="assignment-form-grid">
-                                                    <div>
-                                                        <label>Email Address</label>
-                                                        <input
-                                                            type="email"
-                                                            className="table-input full-width-input"
-                                                            placeholder="you@holycross.edu"
-                                                            value={profileForm.email}
-                                                            onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label>Phone Number</label>
-                                                        <input
-                                                            type="tel"
-                                                            className="table-input full-width-input"
-                                                            placeholder="+91 90000 00000"
-                                                            value={profileForm.phone}
-                                                            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label>Qualification</label>
-                                                        <input
-                                                            type="text"
-                                                            className="table-input full-width-input"
-                                                            placeholder="e.g. M.Sc, B.Ed"
-                                                            value={profileForm.qualification}
-                                                            onChange={(e) => setProfileForm({ ...profileForm, qualification: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label>Department</label>
-                                                        <input
-                                                            type="text"
-                                                            className="table-input full-width-input"
-                                                            value={staffData.department || ''}
-                                                            disabled
-                                                        />
-                                                    </div>
-                                                    <div style={{ gridColumn: '1 / -1' }}>
-                                                        <label>Short Bio</label>
-                                                        <textarea
-                                                            rows="3"
-                                                            className="custom-textarea"
-                                                            placeholder="A short note about your role, experience or interests..."
-                                                            value={profileForm.bio}
-                                                            onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
-                                                        <button type="submit" className="btn-primary" disabled={isProfileSaving}>
-                                                            <Save size={15} /> {isProfileSaving ? 'Saving...' : 'Save Changes'}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-secondary"
-                                                            onClick={() => {
-                                                                setIsEditingProfile(false);
-                                                                setProfileForm({
-                                                                    email: myStaffRecord?.email || '',
-                                                                    phone: myStaffRecord?.phone || '',
-                                                                    qualification: myStaffRecord?.qualification || '',
-                                                                    bio: myStaffRecord?.bio || ''
-                                                                });
-                                                            }}
-                                                            disabled={isProfileSaving}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="pf-tabs" role="tablist">
-                                                    <button
-                                                        type="button"
-                                                        role="tab"
-                                                        aria-selected={profileSection === 'all'}
-                                                        className={`pf-tab ${profileSection === 'all' ? 'active' : ''}`}
-                                                        onClick={() => setProfileSection('all')}
-                                                    >All Details</button>
-                                                    {fieldGroups.map((g) => (
-                                                        <button
-                                                            type="button"
-                                                            role="tab"
-                                                            aria-selected={profileSection === g.id}
-                                                            key={g.id}
-                                                            className={`pf-tab ${profileSection === g.id ? 'active' : ''}`}
-                                                            onClick={() => setProfileSection(g.id)}
-                                                        >{g.short}</button>
-                                                    ))}
-                                                </div>
-
-                                                <div className="pf-sections">
-                                                    {visibleGroups.map((group) => {
-                                                        const GroupIcon = group.icon;
-                                                        return (
-                                                            <div className={`pf-section tone-${group.tone}`} key={group.id}>
-                                                                <div className="pf-section-head">
-                                                                    <span className="pf-section-icon"><GroupIcon size={15} /></span>
-                                                                    <h3>{group.title}</h3>
-                                                                </div>
-                                                                <dl className="pf-fields">
-                                                                    {group.fields.map(([label, value]) => (
-                                                                        <div className={`pf-field ${label === 'Address' || label === 'Short Bio' ? 'wide' : ''}`} key={label}>
-                                                                            <dt>{label}</dt>
-                                                                            <dd className={value === '—' ? 'is-empty' : ''}>{value}</dd>
-                                                                        </div>
-                                                                    ))}
-                                                                </dl>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {myTaughtClasses.length > 0 && (
-                                            <div className="pf-section tone-cyan">
-                                                <div className="pf-section-head">
-                                                    <span className="pf-section-icon"><BookOpen size={15} /></span>
-                                                    <h3>Classes You Teach</h3>
-                                                </div>
-                                                <div className="class-cards-grid">
-                                                    {myTaughtClasses.map((cls) => (
-                                                        <div key={cls} className="class-card">
-                                                            <div className="class-card-icon">
-                                                                <BookOpen size={24} />
-                                                            </div>
-                                                            <div>
-                                                                <h4 style={{ margin: 0 }}>{cls}</h4>
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                                    {getMyTaughtSubjectsForClass(cls).join(', ') || 'No subjects listed'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="profile-note-footer">
-                                            <FileText size={14} />
-                                            <span>
-                                                Your Staff ID and Department are assigned by the Admin. If anything else
-                                                here is incorrect, please contact the school office to have the record updated.
-                                            </span>
-                                        </div>
-                                    </section>
+                                        </aside>
+                                    </div>
                                 </div>
 
                                 {/* Print-only record sheet (hidden on screen, shown by @media print) */}
@@ -3605,161 +3671,167 @@ tr { height: 54px; }
                     )}
 
                     {activeTab === 'attendance' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header" style={{ flexDirection: 'column', gap: '0.75rem', alignItems: 'stretch' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                    <div>
-                                        <h3>Mark Attendance</h3>
-                                        <p className="subtitle">
-                                            {isClassIncharge && selectedInchargeSection
-                                                ? `${selectedInchargeSection.className || 'Class'} ${selectedInchargeSection.name ? `(${formatSectionTitle(selectedInchargeSection.name)})` : ''} • Class Incharge`
-                                                : 'You are not the Class Incharge for any section'}
-                                        </p>
-                                        <p className="subtitle" style={{ marginTop: '2px', fontSize: '0.72rem' }}>
-                                            {isClassIncharge ? (
-                                                <span style={{ color: 'var(--primary)' }}>
-                                                    <CalendarClock size={12} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                                                    Only the assigned Class Incharge can mark attendance for this section
-                                                </span>
-                                            ) : (
-                                                <span style={{ color: '#b42318', fontWeight: 600 }}>
-                                                    Attendance locked — you have not been assigned as Class Incharge for any section.
-                                                </span>
-                                            )}
-                                        </p>
-                                    </div>
+                        <div className="ta-page">
+                            <h2 className="ta-title">Attendance</h2>
+                            <p className="ta-sub">
+                                {isClassIncharge && selectedInchargeSection
+                                    ? `${selectedInchargeSection.className || 'Class'} ${selectedInchargeSection.name ? `(${formatSectionTitle(selectedInchargeSection.name)})` : ''} • Class Incharge`
+                                    : 'You are not the Class Incharge for any section'}
+                            </p>
 
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        <input
-                                            type="date"
-                                            className="custom-select"
-                                            value={attendanceDate}
-                                            onChange={(e) => setAttendanceDate(e.target.value)}
-                                            title="Attendance Date"
-                                        />
+                            <div className="ta-head">
+                                <h3>Register</h3>
+                                <label className="ta-period">
+                                    <span>Date:</span>
+                                    <input type="date" value={attendanceDate} max={todayISO} onChange={(e) => setAttendanceDate(e.target.value > todayISO ? todayISO : e.target.value)} title="Attendance Date" />
+                                </label>
+                                <div className="ta-links">
+                                    {isClassIncharge && myInchargeSections.length > 1 && (
+                                        <select
+                                            className="ta-select"
+                                            value={attendanceSectionId}
+                                            onChange={(e) => setAttendanceSectionId(e.target.value)}
+                                            title="Select the class section you are Incharge of"
+                                        >
+                                            {myInchargeSections.map(sec => (
+                                                <option key={sec.id} value={String(sec.id)}>{sec.className} — {formatSectionTitle(sec.name)}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {isClassIncharge && (
+                                        <select
+                                            className="ta-select"
+                                            value={attendanceSession}
+                                            onChange={(e) => setAttendanceSession(e.target.value)}
+                                            title="Select Forenoon or Afternoon session"
+                                        >
+                                            <option value="Forenoon">Forenoon</option>
+                                            <option value="Afternoon">Afternoon</option>
+                                        </select>
+                                    )}
+                                </div>
+                            </div>
 
-                                        {isClassIncharge ? (
-                                            <>
-                                                {myInchargeSections.length > 1 && (
-                                                    <select
-                                                        className="custom-select"
-                                                        value={attendanceSectionId}
-                                                        onChange={(e) => setAttendanceSectionId(e.target.value)}
-                                                        title="Select the class section you are Incharge of"
-                                                    >
-                                                        {myInchargeSections.map(sec => (
-                                                            <option key={sec.id} value={String(sec.id)}>
-                                                                {sec.className} — {formatSectionTitle(sec.name)}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                )}
-
-                                                <select
-                                                    className="custom-select"
-                                                    value={attendanceSession}
-                                                    onChange={(e) => setAttendanceSession(e.target.value)}
-                                                    title="Select Forenoon or Afternoon session"
-                                                >
-                                                    <option value="Forenoon">Forenoon</option>
-                                                    <option value="Afternoon">Afternoon</option>
-                                                </select>
-
-                                                <div
-                                                    className="custom-select"
-                                                    style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
-                                                    title="Class is taken from your Class Incharge assignment"
-                                                >
-                                                    {selectedInchargeSection?.className || 'Class'}
-                                                </div>
-
-                                                <div
-                                                    className="custom-select"
-                                                    style={{ display: 'flex', alignItems: 'center', opacity: 0.8, cursor: 'not-allowed' }}
-                                                    title="Section is taken from your Class Incharge assignment"
-                                                >
-                                                    {selectedInchargeSection?.name
-                                                        ? formatSectionTitle(selectedInchargeSection.name)
-                                                        : 'Section'}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div
-                                                className="custom-select"
-                                                style={{ display: 'flex', alignItems: 'center', opacity: 0.65 }}
+                            <div className="ta-strip-card">
+                                <div className="ta-strip-top">
+                                    <span>Start of month: <b>1 {attDate.toLocaleDateString('en-GB', { month: 'short' })}</b></span>
+                                    <span>End of month: <b>{attDaysInMonth} {attDate.toLocaleDateString('en-GB', { month: 'short' })}</b></span>
+                                </div>
+                                <div className="ta-strip" role="group" aria-label={`Days of ${attMonthLabel}`}>
+                                    {Array.from({ length: attDaysInMonth }, (_, i) => i + 1).map((d) => {
+                                        const iso = attDayISO(d);
+                                        const isSunday = new Date(attYear, attMonth, d).getDay() === 0;
+                                        const marked = attMarkedDates.includes(iso);
+                                        const stateClass = marked ? 'done' : isSunday ? 'off' : iso <= todayISO ? 'missed' : '';
+                                        return (
+                                            <button
+                                                key={d}
+                                                type="button"
+                                                className={`ta-day ${stateClass} ${iso === attendanceDate ? 'sel' : ''} ${iso > todayISO ? 'locked' : ''}`}
+                                                onClick={() => setAttendanceDate(iso)}
+                                                disabled={iso > todayISO}
+                                                aria-pressed={iso === attendanceDate}
+                                                title={iso > todayISO ? 'Future dates are locked' : iso}
                                             >
-                                                Attendance unavailable
-                                            </div>
-                                        )}
-                                    </div>
+                                                {d}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="ta-strip-tags">
+                                    <span className="ta-tag">{attMonthLabel}</span>
+                                    <span className="ta-tag">Present: <b>{attPresentCount}</b></span>
+                                    <span className="ta-tag">Absent: <b>{attAbsentCount}</b></span>
+                                    <span className="ta-tag">Total: <b>{attendanceStudents.length}</b></span>
+                                    <span className="ta-legend"><i className="done" />Marked</span>
+                                    <span className="ta-legend"><i className="missed" />Not marked</span>
+                                    <span className="ta-legend"><i className="off" />Sunday</span>
+                                    <span className="ta-legend"><i />Upcoming</span>
                                 </div>
                             </div>
 
                             {attendanceSubmitted && (
-                                <div style={{ color: 'var(--primary)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Check size={18} /> Attendance submitted successfully for {attendanceDate} ({attendanceSession})!
-                                </div>
+                                <div className="ta-success"><Check size={18} /> Attendance submitted successfully for {attendanceDate} ({attendanceSession})!</div>
                             )}
 
                             {isClassIncharge && selectedInchargeSection ? (
                                 <>
-                                    <div className="table-responsive">
-                                        <table className="custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Admission No</th>
-                                                    <th>Student Name</th>
-                                                    <th>Section</th>
-                                                    <th>Status</th>
-                                                    <th style={{ textAlign: 'right' }}>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredAttendanceStudents.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="5" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                            No student records found in this section.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    filteredAttendanceStudents.map((student) => (
-                                                        <tr key={student.id}>
-                                                            <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
-                                                            <td>{student.name}</td>
-                                                            <td><span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span></td>
-                                                            <td>
-                                                                <span className={`status-badge status-${student.status || 'present'}`}>
-                                                                    {(student.status || 'present').toUpperCase()}
-                                                                </span>
-                                                            </td>
-                                                            <td style={{ textAlign: 'right' }}>
-                                                                <button
-                                                                    className={`toggle-btn ${student.status || 'present'}`}
-                                                                    onClick={() => toggleAttendance(student.id, student.status || 'present')}
-                                                                >
-                                                                    Mark {student.status === 'present' ? 'Absent' : 'Present'}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="card-footer">
+                                    <div className="ta-toolbar">
+                                        <label className="ta-search">
+                                            <Search size={16} />
+                                            <input type="text" placeholder="Search student" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                        </label>
+                                        <div className="ta-filter" role="group" aria-label="Filter by status">
+                                            {['all', 'present', 'absent'].map((f) => (
+                                                <button key={f} type="button" className={attendanceFilter === f ? 'on' : ''} onClick={() => setAttendanceFilter(f)}>
+                                                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
                                         <button
-                                            className="btn-primary"
+                                            type="button"
+                                            className="ta-submit"
                                             onClick={handleSubmitAttendance}
-                                            disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedInchargeSection}
+                                            disabled={isSubmitting || filteredAttendanceStudents.length === 0 || !selectedInchargeSection || attendanceDate > todayISO}
                                         >
                                             {isSubmitting ? 'Submitting...' : `Submit ${attendanceSession} Attendance`}
                                         </button>
                                     </div>
+
+                                    <div className="ta-table-wrap">
+                                        <table className="ta-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Section</th>
+                                                    <th>Session</th>
+                                                    <th>Attendance rate</th>
+                                                    <th>Status</th>
+                                                    <th aria-label="Toggle" />
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {attRows.length === 0 ? (
+                                                    <tr><td colSpan="6" className="ta-empty">No student records found in this section.</td></tr>
+                                                ) : attRows.map((student) => {
+                                                    const status = student.status || 'present';
+                                                    return (
+                                                        <tr key={student.id}>
+                                                            <td>
+                                                                <div className="ta-person">
+                                                                    <div className="sh-avatar sm" style={{ background: avatarTone(student.name) }}>{initialOf(student.name)}</div>
+                                                                    <div>
+                                                                        <strong>{student.name}</strong>
+                                                                        <span>#{student.admissionNo || String(student.id).slice(0, 6)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td>{formatSectionTitle(student.sectionName)}<span className="ta-subcell">{student.className || ''}</span></td>
+                                                            <td>{attendanceSession}</td>
+                                                            <td>{student.attendanceRate ? `${student.attendanceRate}%` : '—'}</td>
+                                                            <td><span className={`ta-status ${status}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span></td>
+                                                            <td className="ta-act">
+                                                                <button
+                                                                    type="button"
+                                                                    className={`ta-circle ${status}`}
+                                                                    onClick={() => toggleAttendance(student.id, status)}
+                                                                    title={`Mark ${status === 'present' ? 'Absent' : 'Present'}`}
+                                                                    aria-label={`Mark ${student.name} ${status === 'present' ? 'absent' : 'present'}`}
+                                                                >
+                                                                    {status === 'present' ? <Check size={14} /> : <X size={14} />}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </>
                             ) : (
-                                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    <h4 style={{ marginBottom: '0.5rem' }}>Attendance is locked</h4>
-                                    <p style={{ margin: 0 }}>
+                                <div className="ta-locked">
+                                    <h4>Attendance is locked</h4>
+                                    <p>
                                         Only the teacher assigned as Class Incharge for a section can mark attendance.
                                         Ask an admin to assign you as Class Incharge from the admin dashboard.
                                     </p>
@@ -3891,387 +3963,457 @@ tr { height: 54px; }
                         </div>
                     )}
 
-                    {activeTab === 'marks' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Enter Examination Marks (Draft Mode)</h3>
-                                    <p className="subtitle">
-                                        Managing scores for {selectedClass} {selectedSection ? `(${formatSectionTitle(selectedSection.name)})` : '(All Sections)'} — {selectedSubject} ({examType}). Saved entries are sent to Admin for final review and publishing.
-                                    </p>
-                                </div>
-                            </div>
+                    {activeTab === 'marks' && (() => {
+                        const compositeKey = getExamSubjectKey();
+                        const valueFor = (student) => studentMarks[student.id] ?? (student.marksDraft?.[compositeKey] ?? '');
+                        const hasValue = (v) => v !== '' && v !== null && v !== undefined;
+                        const isOutOfRange = (v) => hasValue(v) && (Number(v) < 0 || Number(v) > 100);
+                        const initialsOf = (name) => (name || 'S').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                        const totalCount = marksFilteredStudents.length;
+                        const enteredCount = marksFilteredStudents.filter(s => hasValue(valueFor(s))).length;
+                        const sectionLabel = selectedSection ? formatSectionTitle(selectedSection.name) : 'All sections';
+                        const statusMessage =
+                            marksActionStatus === 'saved' ? 'Marks saved as draft.' :
+                                marksActionStatus === 'reset' ? 'Class draft scores reset.' :
+                                    marksActionStatus;
 
-                            {marksActionStatus && (
-                                <div style={{
-                                    color: marksActionStatus === 'reset' ? 'var(--accent-rose)' : 'var(--accent-emerald)',
-                                    padding: '8px 0',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}>
-                                    <Check size={18} /> {
-                                        marksActionStatus === 'saved' ? 'Marks saved as Draft in Firestore.' :
-                                            marksActionStatus === 'reset' ? 'Class draft scores reset successfully.' :
-                                                marksActionStatus
-                                    }
+                        return (
+                            <div className="dash-card full-width mk">
+                                <div className="mk-head">
+                                    <h3>Marks entry</h3>
+                                    <p className="subtitle">Scores are saved as drafts and sent to Admin for review and publishing.</p>
                                 </div>
-                            )}
 
-                            {myTaughtClasses.length === 0 ? (
-                                <div className="empty-sub-card">
-                                    <AlertCircle size={28} />
-                                    <p>You have no class/subject assigned in the timetable yet. Please contact the admin to get a timetable assignment before entering marks.</p>
-                                </div>
-                            ) : (
-                                <div className="form-grid marks-four-col-grid">
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Class</label>
-                                        <select
-                                            className="custom-select full-width"
-                                            value={selectedClass || ''}
-                                            onChange={(e) => {
-                                                const cls = e.target.value;
-                                                setSelectedClass(cls);
-                                                setSelectedSection(null);
-                                                const nextSubjects = getMyTaughtSubjectsForClass(cls, null);
-                                                if (!nextSubjects.includes(selectedSubject)) {
-                                                    setSelectedSubject(nextSubjects[0] || '');
-                                                }
-                                                setMarksActionStatus('');
-                                            }}
-                                        >
-                                            {myTaughtClasses.map(cls => (
-                                                <option key={cls} value={cls}>{cls}</option>
-                                            ))}
-                                        </select>
+                                {marksActionStatus && (
+                                    <div className={`mk-note ${marksActionStatus === 'reset' ? 'is-reset' : 'is-ok'}`} role="status">
+                                        <Check size={16} /> {statusMessage}
                                     </div>
+                                )}
 
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Select Section</label>
-                                        <select
-                                            className="custom-select full-width"
-                                            value={selectedSection ? selectedSection.name : ''}
-                                            onChange={(e) => {
-                                                const secName = e.target.value;
-                                                if (!secName) {
-                                                    setSelectedSection(null);
-                                                } else {
-                                                    const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
-                                                    setSelectedSection(match || { name: secName });
-                                                }
-                                                const nextSubjects = getMyTaughtSubjectsForClass(selectedClass, secName || null);
-                                                if (!nextSubjects.includes(selectedSubject)) {
-                                                    setSelectedSubject(nextSubjects[0] || '');
-                                                }
-                                                setMarksActionStatus('');
-                                            }}
-                                            disabled={!selectedClass}
-                                        >
-                                            <option value="">All My Sections</option>
-                                            {sectionsList
-                                                .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
-                                                .map(sec => (
-                                                    <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
-                                                ))}
-                                        </select>
+                                {myTaughtClasses.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <AlertCircle size={28} />
+                                        <h4>No timetable assignment yet</h4>
+                                        <p>Ask the admin to add you to the timetable before entering marks.</p>
                                     </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Exam Type</label>
-                                        <select
-                                            className="custom-select full-width"
-                                            value={examType}
-                                            onChange={(e) => {
-                                                setExamType(e.target.value);
-                                                setMarksActionStatus('');
-                                            }}
-                                        >
-                                            {examList.map(exam => (
-                                                <option key={exam} value={exam}>{exam}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>Subject</label>
-                                        <select
-                                            className="custom-select full-width"
-                                            value={selectedSubject}
-                                            onChange={(e) => {
-                                                setSelectedSubject(e.target.value);
-                                                setMarksActionStatus('');
-                                            }}
-                                        >
-                                            {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
-                                                <option key={subj} value={subj}>{subj}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="table-responsive">
-                                <table className="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Admission No</th>
-                                            <th>Student Name</th>
-                                            <th>Section</th>
-                                            <th>Subject</th>
-                                            <th>Score (0-100)</th>
-                                            <th style={{ textAlign: 'right' }}>Row Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {myTaughtClasses.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No timetable assignment found for your account.
-                                                </td>
-                                            </tr>
-                                        ) : marksFilteredStudents.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                    No students available for this class / section / subject that you teach.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            marksFilteredStudents.map((student) => {
-                                                const compositeKey = getExamSubjectKey();
-                                                const currentVal = studentMarks[student.id] ?? (student.marksDraft?.[compositeKey] ?? '');
-                                                return (
-                                                    <tr key={student.id}>
-                                                        <td>#{student.admissionNo || student.id.slice(0, 6)}</td>
-                                                        <td>{student.name}</td>
-                                                        <td>
-                                                            <span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span>
-                                                        </td>
-                                                        <td>
-                                                            <span className="topic-badge">{selectedSubject}</span>
-                                                        </td>
-                                                        <td>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                max="100"
-                                                                className="table-input"
-                                                                placeholder="0-100"
-                                                                value={currentVal}
-                                                                onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                                                            />
-                                                        </td>
-                                                        <td style={{ textAlign: 'right' }}>
-                                                            <div style={{ display: 'inline-flex', gap: '5px' }}>
-                                                                <button
-                                                                    className="btn-save-grade"
-                                                                    title="Save Draft"
-                                                                    onClick={() => handleSaveSingleMark(student.id)}
-                                                                >
-                                                                    <Save size={12} /> Save Draft
-                                                                </button>
-                                                                <button
-                                                                    className="delete-task-btn"
-                                                                    title="Clear / Reset Mark"
-                                                                    onClick={() => handleResetSingleMark(student.id)}
-                                                                >
-                                                                    <RotateCcw size={12} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="marks-action-footer" style={{ justifyContent: 'space-between' }}>
-                                <button
-                                    type="button"
-                                    className="delete-task-btn"
-                                    style={{ padding: '0.5rem 0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
-                                    onClick={handleResetAllExamMarks}
-                                    disabled={isSubmitting || marksFilteredStudents.length === 0}
-                                >
-                                    <RotateCcw size={14} /> Clear All Drafts
-                                </button>
-                                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                    <button
-                                        type="button"
-                                        className="btn-save-draft"
-                                        onClick={handleSaveMarksDraft}
-                                        disabled={isSubmitting || marksFilteredStudents.length === 0}
-                                    >
-                                        <Save size={15} /> Save All as Draft
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'assignments' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Assign Task / Project / Test</h3>
-                                    <p className="subtitle">Publish coursework specifically targeted to a Class & Section</p>
-                                </div>
-                            </div>
-
-                            <form onSubmit={handleCreateAssignment} className="assignment-form-grid">
-                                <div>
-                                    <label>Task Category</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={assignmentForm.type}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })}
-                                        required
-                                    >
-                                        <option value="Assignment">Assignment / Homework</option>
-                                        <option value="Project">Term Project / Lab Task</option>
-                                        <option value="Class Test">Class Unit Test</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label>Target Class</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={assignmentForm.className}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, className: e.target.value, sectionName: '' })}
-                                        required
-                                    >
-                                        <option value="">Select Class</option>
-                                        {classList.map(cls => (
-                                            <option key={cls} value={cls}>{cls}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label>Target Section</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={assignmentForm.sectionName}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, sectionName: e.target.value })}
-                                        disabled={!assignmentForm.className}
-                                        required
-                                    >
-                                        <option value="">Select Section</option>
-                                        {sectionsList
-                                            .filter(s => s.className === assignmentForm.className)
-                                            .map(sec => (
-                                                <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
-                                            ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label>Subject</label>
-                                    <input
-                                        type="text"
-                                        className="table-input full-width-input"
-                                        placeholder="e.g. Mathematics"
-                                        value={assignmentForm.subject}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label>Task / Test Title</label>
-                                    <input
-                                        type="text"
-                                        className="table-input full-width-input"
-                                        placeholder="e.g. Chapter 4 Trigonometry Worksheet"
-                                        value={assignmentForm.title}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label>Submission / Exam Date</label>
-                                    <input
-                                        type="date"
-                                        className="table-input full-width-input"
-                                        value={assignmentForm.dueDate}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label>Description & Instructions</label>
-                                    <textarea
-                                        rows="3"
-                                        className="custom-textarea"
-                                        placeholder="Add instructions, page numbers, or exam syllabus..."
-                                        value={assignmentForm.description}
-                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
-                                    />
-                                </div>
-
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary">
-                                        <PlusCircle size={15} /> Assign to Class
-                                    </button>
-                                </div>
-                            </form>
-
-                            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
-                                Active Assigned Coursework ({assignmentsList.length})
-                            </h4>
-
-                            {assignmentsList.length === 0 ? (
-                                <div className="empty-sub-card">
-                                    <Layers size={28} />
-                                    <p>No active tasks assigned yet.</p>
-                                </div>
-                            ) : (
-                                <div className="assignments-admin-grid">
-                                    {assignmentsList.map(task => (
-                                        <div key={task.id} className="task-admin-card">
-                                            <div className="task-header-row">
-                                                <span className={`task-badge badge-${task.type.toLowerCase().replace(/\s+/g, '')}`}>
-                                                    {task.type}
-                                                </span>
-                                                <span className="task-target-tag">
-                                                    {task.className} - {formatSectionTitle(task.sectionName)}
-                                                </span>
+                                ) : (
+                                    <>
+                                        <div className="mk-bar">
+                                            <div className="mk-field">
+                                                <label htmlFor="mk-class">Class</label>
+                                                <select
+                                                    id="mk-class"
+                                                    className="custom-select full-width"
+                                                    value={selectedClass || ''}
+                                                    onChange={(e) => {
+                                                        const cls = e.target.value;
+                                                        setSelectedClass(cls);
+                                                        setSelectedSection(null);
+                                                        const nextSubjects = getMyTaughtSubjectsForClass(cls, null);
+                                                        if (!nextSubjects.includes(selectedSubject)) {
+                                                            setSelectedSubject(nextSubjects[0] || '');
+                                                        }
+                                                        setMarksActionStatus('');
+                                                    }}
+                                                >
+                                                    {myTaughtClasses.map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                            <h5>{task.title}</h5>
-                                            <p className="task-meta-line">
-                                                <strong>Subject:</strong> {task.subject} | <strong>Due Date:</strong> {task.dueDate}
-                                            </p>
-                                            {task.description && <p className="task-desc-line">{task.description}</p>}
-                                            <div className="task-footer-row">
-                                                <span>Assigned by {task.staffName || 'Faculty'}</span>
-                                                <div style={{ display: 'flex', gap: '6px' }}>
-                                                    <button
-                                                        onClick={() => setEditingAssignment({ ...task })}
-                                                        className="edit-task-btn"
-                                                        title="Edit Assignment"
-                                                    >
-                                                        <Edit3 size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteAssignment(task.id)}
-                                                        className="delete-task-btn"
-                                                        title="Delete Task"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
+
+                                            <div className="mk-field">
+                                                <label htmlFor="mk-section">Section</label>
+                                                <select
+                                                    id="mk-section"
+                                                    className="custom-select full-width"
+                                                    value={selectedSection ? selectedSection.name : ''}
+                                                    onChange={(e) => {
+                                                        const secName = e.target.value;
+                                                        if (!secName) {
+                                                            setSelectedSection(null);
+                                                        } else {
+                                                            const match = sectionsList.find(s => s.className === selectedClass && s.name === secName);
+                                                            setSelectedSection(match || { name: secName });
+                                                        }
+                                                        const nextSubjects = getMyTaughtSubjectsForClass(selectedClass, secName || null);
+                                                        if (!nextSubjects.includes(selectedSubject)) {
+                                                            setSelectedSubject(nextSubjects[0] || '');
+                                                        }
+                                                        setMarksActionStatus('');
+                                                    }}
+                                                    disabled={!selectedClass}
+                                                >
+                                                    <option value="">All my sections</option>
+                                                    {sectionsList
+                                                        .filter(s => s.className === selectedClass && getMyTaughtSectionsForClass(selectedClass).some(name => cleanString(name) === cleanString(s.name)))
+                                                        .map(sec => (
+                                                            <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                                        ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="mk-field">
+                                                <label htmlFor="mk-exam">Exam</label>
+                                                <select
+                                                    id="mk-exam"
+                                                    className="custom-select full-width"
+                                                    value={examType}
+                                                    onChange={(e) => {
+                                                        setExamType(e.target.value);
+                                                        setMarksActionStatus('');
+                                                    }}
+                                                >
+                                                    {examList.map(exam => (
+                                                        <option key={exam} value={exam}>{exam}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="mk-field">
+                                                <label htmlFor="mk-subject">Subject</label>
+                                                <select
+                                                    id="mk-subject"
+                                                    className="custom-select full-width"
+                                                    value={selectedSubject}
+                                                    onChange={(e) => {
+                                                        setSelectedSubject(e.target.value);
+                                                        setMarksActionStatus('');
+                                                    }}
+                                                >
+                                                    {getMyTaughtSubjectsForClass(selectedClass, selectedSection ? selectedSection.name : null).map(subj => (
+                                                        <option key={subj} value={subj}>{subj}</option>
+                                                    ))}
+                                                </select>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
 
+                                        <div className="mk-split">
+                                            <div className="mk-main">
+                                                {totalCount === 0 ? (
+                                                    <div className="empty-sub-card">
+                                                        <Users size={28} />
+                                                        <h4>No students to mark</h4>
+                                                        <p>No students match this class, section and subject that you teach.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="mk-list">
+                                                        {marksFilteredStudents.map((student) => {
+                                                            const currentVal = valueFor(student);
+                                                            const entered = hasValue(currentVal);
+                                                            const invalid = isOutOfRange(currentVal);
+                                                            return (
+                                                                <article key={student.id} className={`mk-row ${invalid ? 'is-invalid' : entered ? 'is-entered' : ''}`}>
+                                                                    <span className="mk-avatar" aria-hidden="true">{initialsOf(student.name)}</span>
+                                                                    <div className="mk-who">
+                                                                        <strong>{student.name}</strong>
+                                                                        <span>Adm. #{student.admissionNo || student.id.slice(0, 6)}</span>
+                                                                        <span className="task-target-tag">{formatSectionTitle(student.sectionName)}</span>
+                                                                    </div>
+                                                                    <div className="mk-entry">
+                                                                        <label className="mk-score-wrap">
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                max="100"
+                                                                                placeholder="0"
+                                                                                aria-label={`${selectedSubject} score for ${student.name}, out of 100`}
+                                                                                aria-invalid={invalid}
+                                                                                className="mk-score"
+                                                                                value={currentVal}
+                                                                                onChange={(e) => handleMarkChange(student.id, e.target.value)}
+                                                                            />
+                                                                            <span>/ 100</span>
+                                                                        </label>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="mk-icon-btn is-save"
+                                                                            title="Save draft"
+                                                                            aria-label={`Save draft for ${student.name}`}
+                                                                            onClick={() => handleSaveSingleMark(student.id)}
+                                                                        >
+                                                                            <Save size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="mk-icon-btn is-reset"
+                                                                            title="Clear this mark"
+                                                                            aria-label={`Clear mark for ${student.name}`}
+                                                                            onClick={() => handleResetSingleMark(student.id)}
+                                                                        >
+                                                                            <RotateCcw size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </article>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <aside className="mk-rail">
+                                                <h3>{selectedSubject || 'Subject'}</h3>
+                                                <p className="mk-ctx">{examType}</p>
+                                                <p className="mk-ctx">{selectedClass}, {sectionLabel}</p>
+
+                                                <p className="mk-progress">{enteredCount} of {totalCount} scores entered</p>
+                                                <span className="mk-bar-track" aria-hidden="true"><i style={{ width: `${totalCount ? Math.round((enteredCount / totalCount) * 100) : 0}%` }} /></span>
+
+                                                <button
+                                                    type="button"
+                                                    className="mk-btn is-solid"
+                                                    onClick={handleSaveMarksDraft}
+                                                    disabled={isSubmitting || totalCount === 0}
+                                                >
+                                                    <Save size={15} /> Save all as draft
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="mk-btn"
+                                                    onClick={handleResetAllExamMarks}
+                                                    disabled={isSubmitting || totalCount === 0}
+                                                >
+                                                    <RotateCcw size={14} /> Clear all drafts
+                                                </button>
+                                            </aside>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {activeTab === 'assignments' && (() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const dueInfo = (raw) => {
+                            const d = raw ? new Date(`${raw}T00:00:00`) : null;
+                            if (!d || Number.isNaN(d.getTime())) return { day: '--', month: '', state: 'none', note: '' };
+                            const diff = Math.round((d - today) / 86400000);
+                            let state = 'ok';
+                            let note = '';
+                            if (diff < 0) { state = 'past'; note = 'Past due'; }
+                            else if (diff === 0) { state = 'soon'; note = 'Due today'; }
+                            else if (diff <= 3) { state = 'soon'; note = diff === 1 ? 'Due tomorrow' : `Due in ${diff} days`; }
+                            return { day: d.getDate(), month: MONTHS[d.getMonth()], state, note };
+                        };
+                        const typeOptions = [
+                            ['Assignment', 'Homework'],
+                            ['Project', 'Project'],
+                            ['Class Test', 'Class test']
+                        ];
+
+                        return (
+                            <div className="dash-card full-width tsk">
+                                {workSwitch}
+
+                                <div className="tsk-split">
+                                    {/* ---------- Assigned coursework ---------- */}
+                                    <section className="tsk-main" aria-labelledby="tsk-list-title">
+                                        <h4 id="tsk-list-title">Assigned coursework <span className="tsk-count">{assignmentsList.length}</span></h4>
+
+                                        {assignmentsList.length === 0 ? (
+                                            <div className="empty-sub-card">
+                                                <Layers size={28} />
+                                                <h4>Nothing assigned yet</h4>
+                                                <p>Use the form to give a class its first task.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="tsk-list">
+                                                {assignmentsList.map(task => {
+                                                    const due = dueInfo(task.dueDate);
+                                                    const taskSubs = submissionsList.filter(s =>
+                                                        cleanString(s.className) === cleanString(task.className) &&
+                                                        cleanString(s.sectionName) === cleanString(task.sectionName) &&
+                                                        cleanString(s.taskTitle) === cleanString(task.title)
+                                                    );
+                                                    const taskPending = taskSubs.filter(s => s.obtainedMarks === undefined || s.obtainedMarks === null || s.obtainedMarks === '').length;
+                                                    return (
+                                                        <article key={task.id} className={`tsk-item is-${due.state}`}>
+                                                            <div className="tsk-date" aria-hidden={due.state === 'none'}>
+                                                                <b>{due.day}</b>
+                                                                <span>{due.month}</span>
+                                                            </div>
+
+                                                            <div className="tsk-body">
+                                                                <div className="tsk-top">
+                                                                    <span className={`task-badge badge-${(task.type || '').toLowerCase().replace(/\s+/g, '')}`}>
+                                                                        {task.type}
+                                                                    </span>
+                                                                    <span className="tsk-target">
+                                                                        {task.className}, {formatSectionTitle(task.sectionName)}
+                                                                    </span>
+                                                                    {due.note && <span className={`tsk-note is-${due.state}`}>{due.note}</span>}
+                                                                </div>
+                                                                <h5>{task.title}</h5>
+                                                                <p className="tsk-subject">{task.subject}, due {task.dueDate}</p>
+                                                                {task.description && <p className="tsk-desc">{task.description}</p>}
+                                                                <div className="tsk-foot">
+                                                                    <span className="tsk-by">Assigned by {task.staffName || 'Faculty'}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="tsk-review"
+                                                                        onClick={() => {
+                                                                            setSubClassFilter(task.className);
+                                                                            setSubSectionFilter(task.sectionName);
+                                                                            setSubmissionFilterStatus(taskPending > 0 ? 'pending' : 'all');
+                                                                            setActiveTab('submissions');
+                                                                        }}
+                                                                    >
+                                                                        <FileCheck size={13} />
+                                                                        {taskSubs.length === 0
+                                                                            ? 'No submissions yet'
+                                                                            : taskPending > 0
+                                                                                ? `Grade ${taskPending} of ${taskSubs.length} submitted`
+                                                                                : `All ${taskSubs.length} graded`}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="tsk-actions">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setEditingAssignment({ ...task })}
+                                                                    className="edit-task-btn"
+                                                                    title="Edit task"
+                                                                    aria-label={`Edit ${task.title}`}
+                                                                >
+                                                                    <Edit3 size={14} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteAssignment(task.id)}
+                                                                    className="delete-task-btn"
+                                                                    title="Delete task"
+                                                                    aria-label={`Delete ${task.title}`}
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </article>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    {/* ---------- New task form ---------- */}
+                                    <form onSubmit={handleCreateAssignment} className="tsk-form">
+                                        <h4>New task</h4>
+
+                                        <fieldset className="tsk-field tsk-type">
+                                            <legend>Type</legend>
+                                            <div className="tsk-seg">
+                                                {typeOptions.map(([val, label]) => (
+                                                    <label key={val} className={assignmentForm.type === val ? 'is-on' : ''}>
+                                                        <input
+                                                            type="radio"
+                                                            name="tsk-type"
+                                                            value={val}
+                                                            checked={assignmentForm.type === val}
+                                                            onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })}
+                                                        />
+                                                        {label}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </fieldset>
+
+                                        <div className="tsk-pair">
+                                            <div className="tsk-field">
+                                                <label htmlFor="tsk-class">Class</label>
+                                                <select
+                                                    id="tsk-class"
+                                                    className="custom-select full-width"
+                                                    value={assignmentForm.className}
+                                                    onChange={(e) => setAssignmentForm({ ...assignmentForm, className: e.target.value, sectionName: '' })}
+                                                    required
+                                                >
+                                                    <option value="">Select class</option>
+                                                    {classList.map(cls => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="tsk-field">
+                                                <label htmlFor="tsk-section">Section</label>
+                                                <select
+                                                    id="tsk-section"
+                                                    className="custom-select full-width"
+                                                    value={assignmentForm.sectionName}
+                                                    onChange={(e) => setAssignmentForm({ ...assignmentForm, sectionName: e.target.value })}
+                                                    disabled={!assignmentForm.className}
+                                                    required
+                                                >
+                                                    <option value="">Select section</option>
+                                                    {sectionsList
+                                                        .filter(s => s.className === assignmentForm.className)
+                                                        .map(sec => (
+                                                            <option key={sec.id} value={sec.name}>{formatSectionTitle(sec.name)}</option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="tsk-pair">
+                                            <div className="tsk-field">
+                                                <label htmlFor="tsk-subject">Subject</label>
+                                                <input
+                                                    id="tsk-subject"
+                                                    type="text"
+                                                    className="table-input full-width-input"
+                                                    placeholder="e.g. Mathematics"
+                                                    value={assignmentForm.subject}
+                                                    onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div className="tsk-field">
+                                                <label htmlFor="tsk-date">Due or exam date</label>
+                                                <input
+                                                    id="tsk-date"
+                                                    type="date"
+                                                    className="table-input full-width-input"
+                                                    value={assignmentForm.dueDate}
+                                                    onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="tsk-field">
+                                            <label htmlFor="tsk-title">Title</label>
+                                            <input
+                                                id="tsk-title"
+                                                type="text"
+                                                className="table-input full-width-input"
+                                                placeholder="e.g. Chapter 4 trigonometry worksheet"
+                                                value={assignmentForm.title}
+                                                onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="tsk-field">
+                                            <label htmlFor="tsk-desc">Instructions</label>
+                                            <textarea
+                                                id="tsk-desc"
+                                                rows="3"
+                                                className="custom-textarea"
+                                                placeholder="Page numbers, what to submit, or the exam syllabus"
+                                                value={assignmentForm.description}
+                                                onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
+                                            />
+                                        </div>
+
+                                        <button type="submit" className="btn-primary tsk-submit">
+                                            <PlusCircle size={15} /> Assign to class
+                                        </button>
+                                    </form>
+                                </div>
                             {editingAssignment && (
                                 <div className="modal-overlay">
                                     <div className="modal-container">
@@ -4341,8 +4483,9 @@ tr { height: 54px; }
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
+                            </div>
+                        );
+                    })()}
 
                     {activeTab === 'syllabus' && (
                         <div className="dash-card full-width">
@@ -4516,311 +4659,283 @@ tr { height: 54px; }
                         </div>
                     )}
 
-                    {activeTab === 'submissions' && (
-                        <div className="dash-card full-width">
-                            {!subClassFilter && (
-                                <>
-                                    <div className="card-header">
-                                        <div>
-                                            <h3>PDF Submissions Directory — Select Class</h3>
-                                            <p className="subtitle">Evaluate uploaded student PDF assignments</p>
-                                        </div>
-                                    </div>
-                                    <div className="class-cards-grid">
-                                        {classList.map((cls) => {
-                                            const subCount = submissionsList.filter(s => cleanString(s.className) === cleanString(cls)).length;
-                                            const classSections = sectionsList.filter(s => s.className === cls);
-                                            return (
-                                                <div
-                                                    key={cls}
-                                                    className="class-card"
-                                                    onClick={() => {
-                                                        setSubClassFilter(cls);
-                                                        setSubSectionFilter(null);
-                                                        setSubmissionFilterStatus('all');
-                                                    }}
-                                                >
-                                                    <div className="class-card-icon" style={{ background: '#ecfdf5', color: 'var(--accent-emerald)' }}>
-                                                        <FileCheck size={24} />
-                                                    </div>
-                                                    <div>
-                                                        <h4 style={{ margin: 0 }}>{cls}</h4>
-                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                            {classSections.length} Sections • {subCount} Submissions
-                                                        </span>
-                                                    </div>
+                    {activeTab === 'submissions' && (() => {
+                        const isGraded = (s) => s.obtainedMarks !== undefined && s.obtainedMarks !== null && s.obtainedMarks !== '';
+                        const initialsOf = (name) => (name || 'S').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                        const pctOf = (done, total) => (total ? Math.round((done / total) * 100) : 0);
+                        const subsFor = (cls, sec) => submissionsList.filter(s =>
+                            cleanString(s.className) === cleanString(cls) &&
+                            (sec === undefined || cleanString(s.sectionName) === cleanString(sec))
+                        );
+                        const backToClasses = () => {
+                            setSubClassFilter(null);
+                            setSubSectionFilter(null);
+                            setSubmissionFilterStatus('all');
+                        };
+                        const backToSections = () => {
+                            setSubSectionFilter(null);
+                            setSubmissionFilterStatus('all');
+                        };
+                        const allGraded = submissionsList.filter(isGraded).length;
+                        const allPending = submissionsList.length - allGraded;
+                        const rosterFilters = [
+                            ['all', 'All turned in', sectionSubmissions.length],
+                            ['pending', 'Needs review', pendingReviewCount],
+                            ['completed', 'Graded', completedCount],
+                            ['unsubmitted', 'Not turned in', unsubmittedStudentList.length]
+                        ];
+
+                        return (
+                            <div className="dash-card full-width asm">
+
+                                {/* ---------- Screen 1: pick a class ---------- */}
+                                {!subClassFilter && (
+                                    <>
+                                        {workSwitch}
+                                        <div className="asm-head">
+                                            <div>
+                                                <h4>Choose a class to grade</h4>
+                                                <p className="subtitle">Review the PDFs your students have turned in.</p>
+                                            </div>
+                                            <div className="asm-totals">
+                                                <div className={`asm-total ${allPending > 0 ? 'is-alert' : ''}`}>
+                                                    <b>{allPending}</b><span>Waiting for review</span>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </>
-                            )}
+                                                <div className="asm-total">
+                                                    <b>{allGraded}</b><span>Graded</span>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            {subClassFilter && !subSectionFilter && (
-                                <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                                        <button
-                                            className="back-btn"
-                                            onClick={() => {
-                                                setSubClassFilter(null);
-                                                setSubSectionFilter(null);
-                                                setSubmissionFilterStatus('all');
-                                            }}
-                                        >
-                                            <ArrowLeft size={16} /> Back to All Classes
-                                        </button>
-                                        <h3 style={{ margin: 0 }}>{subClassFilter} Sections — Submissions</h3>
-                                    </div>
-
-                                    {sectionsList.filter(s => s.className === subClassFilter).length === 0 ? (
-                                        <div className="empty-sub-card">No sections created for {subClassFilter}.</div>
-                                    ) : (
-                                        <div className="sections-grid">
-                                            {sectionsList.filter(s => s.className === subClassFilter).map(sec => {
-                                                const subCount = submissionsList.filter(
-                                                    s => cleanString(s.className) === cleanString(subClassFilter) &&
-                                                        cleanString(s.sectionName) === cleanString(sec.name)
-                                                ).length;
-
+                                        <div className="asm-tiles">
+                                            {classList.map((cls) => {
+                                                const subs = subsFor(cls);
+                                                const graded = subs.filter(isGraded).length;
+                                                const pending = subs.length - graded;
+                                                const secCount = sectionsList.filter(s => s.className === cls).length;
                                                 return (
-                                                    <div
-                                                        key={sec.id}
-                                                        className="section-card"
+                                                    <button
+                                                        key={cls}
+                                                        type="button"
+                                                        className="asm-tile"
                                                         onClick={() => {
-                                                            setSubSectionFilter(sec.name);
+                                                            setSubClassFilter(cls);
+                                                            setSubSectionFilter(null);
                                                             setSubmissionFilterStatus('all');
                                                         }}
                                                     >
-                                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                                            <Folder size={22} color="var(--primary)" />
-                                                            <div>
-                                                                <h5 style={{ margin: 0 }}>{formatSectionTitle(sec.name)}</h5>
-                                                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                                    {subCount} Submitted PDF Documents
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                        <span className="asm-tile-name">{cls}</span>
+                                                        <span className="asm-tile-meta">
+                                                            <span>{secCount} {secCount === 1 ? 'section' : 'sections'}</span>
+                                                            <span>{subs.length} turned in</span>
+                                                        </span>
+                                                        <span className="asm-bar" aria-hidden="true"><i style={{ width: `${pctOf(graded, subs.length)}%` }} /></span>
+                                                        <span className="asm-tile-foot">
+                                                            {subs.length === 0
+                                                                ? <b className="asm-pill">Nothing yet</b>
+                                                                : pending > 0
+                                                                    ? <b className="asm-pill is-warn">{pending} to review</b>
+                                                                    : <b className="asm-pill is-ok">All graded</b>}
+                                                            <ChevronRight size={16} />
+                                                        </span>
+                                                    </button>
                                                 );
                                             })}
                                         </div>
-                                    )}
-                                </>
-                            )}
+                                    </>
+                                )}
 
-                            {subClassFilter && subSectionFilter && (
-                                <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                        <button
-                                            className="back-btn"
-                                            onClick={() => {
-                                                setSubSectionFilter(null);
-                                                setSubmissionFilterStatus('all');
-                                            }}
-                                        >
-                                            <ArrowLeft size={16} /> Back to Sections
-                                        </button>
-                                        <h3 style={{ margin: 0 }}>
-                                            {subClassFilter} — {formatSectionTitle(subSectionFilter)} Submissions & Roster
-                                        </h3>
-                                    </div>
-
-                                    <div className="sub-status-cards-grid">
-                                        <div
-                                            className={`sub-status-card total ${submissionFilterStatus === 'all' ? 'active' : ''}`}
-                                            onClick={() => setSubmissionFilterStatus('all')}
-                                        >
-                                            <div className="sub-status-icon bg-indigo"><Layers size={20} /></div>
-                                            <div className="sub-status-info">
-                                                <span>Total Turned In</span>
-                                                <h4>{sectionSubmissions.length}</h4>
+                                {/* ---------- Screen 2: pick a section ---------- */}
+                                {subClassFilter && !subSectionFilter && (
+                                    <>
+                                        <nav className="asm-crumbs" aria-label="Breadcrumb">
+                                            <button type="button" onClick={backToClasses}><ArrowLeft size={15} /> All classes</button>
+                                            <ChevronRight size={14} />
+                                            <span aria-current="page">{subClassFilter}</span>
+                                        </nav>
+                                        <div className="asm-head">
+                                            <div>
+                                                <h3>{subClassFilter}</h3>
+                                                <p className="subtitle">Choose a section to see its submissions.</p>
                                             </div>
                                         </div>
 
-                                        <div
-                                            className={`sub-status-card pending ${submissionFilterStatus === 'pending' ? 'active' : ''}`}
-                                            onClick={() => setSubmissionFilterStatus('pending')}
-                                        >
-                                            <div className="sub-status-icon bg-amber"><AlertCircle size={20} /></div>
-                                            <div className="sub-status-info">
-                                                <span>Pending Review</span>
-                                                <h4>{pendingReviewCount}</h4>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            className={`sub-status-card completed ${submissionFilterStatus === 'completed' ? 'active' : ''}`}
-                                            onClick={() => setSubmissionFilterStatus('completed')}
-                                        >
-                                            <div className="sub-status-icon bg-emerald"><CheckCircle size={20} /></div>
-                                            <div className="sub-status-info">
-                                                <span>Completed / Graded</span>
-                                                <h4>{completedCount}</h4>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            className={`sub-status-card unsubmitted ${submissionFilterStatus === 'unsubmitted' ? 'active' : ''}`}
-                                            onClick={() => setSubmissionFilterStatus('unsubmitted')}
-                                        >
-                                            <div className="sub-status-icon bg-rose"><UserX size={20} /></div>
-                                            <div className="sub-status-info">
-                                                <span>Pending Students</span>
-                                                <h4>{unsubmittedStudentList.length}</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {submissionFilterStatus === 'unsubmitted' ? (
-                                        unsubmittedStudentList.length === 0 ? (
-                                            <div className="empty-sub-card">
-                                                <CheckCircle size={32} color="var(--accent-emerald)" />
-                                                <h4>All Students Have Submitted!</h4>
-                                                <p>Every student in this section has turned in their PDF coursework.</p>
-                                            </div>
+                                        {sectionsList.filter(s => s.className === subClassFilter).length === 0 ? (
+                                            <div className="empty-sub-card">No sections created for {subClassFilter}.</div>
                                         ) : (
-                                            <div className="table-responsive">
-                                                <table className="custom-table submissions-grading-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Student Name & Photo</th>
-                                                            <th>Admission No</th>
-                                                            <th>Pending Task / Topic</th>
-                                                            <th>Due Date</th>
-                                                            <th>Parent / Contact</th>
-                                                            <th style={{ textAlign: 'right' }}>Submission Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {unsubmittedStudentList.map((item, idx) => (
-                                                            <tr key={`${item.student.id}_${item.task.id}_${idx}`}>
-                                                                <td>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                        <img
-                                                                            src={item.student.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
-                                                                            alt={item.student.name}
-                                                                            className="student-avatar"
-                                                                            style={{ width: 30, height: 30 }}
-                                                                        />
+                                            <div className="asm-rows">
+                                                {sectionsList.filter(s => s.className === subClassFilter).map(sec => {
+                                                    const subs = subsFor(subClassFilter, sec.name);
+                                                    const graded = subs.filter(isGraded).length;
+                                                    const pending = subs.length - graded;
+                                                    return (
+                                                        <button
+                                                            key={sec.id}
+                                                            type="button"
+                                                            className="asm-sec"
+                                                            onClick={() => {
+                                                                setSubSectionFilter(sec.name);
+                                                                setSubmissionFilterStatus('all');
+                                                            }}
+                                                        >
+                                                            <span className="asm-sec-icon"><Folder size={20} /></span>
+                                                            <span className="asm-sec-body">
+                                                                <strong>{formatSectionTitle(sec.name)}</strong>
+                                                                <span className="asm-bar" aria-hidden="true"><i style={{ width: `${pctOf(graded, subs.length)}%` }} /></span>
+                                                                <small>{subs.length === 0 ? 'No PDFs turned in yet' : `${graded} of ${subs.length} graded`}</small>
+                                                            </span>
+                                                            {pending > 0 && <b className="asm-pill is-warn">{pending} to review</b>}
+                                                            <ChevronRight size={16} className="asm-sec-arrow" />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* ---------- Screen 3: roster + grading ---------- */}
+                                {subClassFilter && subSectionFilter && (
+                                    <>
+                                        <nav className="asm-crumbs" aria-label="Breadcrumb">
+                                            <button type="button" onClick={backToClasses}>All classes</button>
+                                            <ChevronRight size={14} />
+                                            <button type="button" onClick={backToSections}><ArrowLeft size={15} /> {subClassFilter}</button>
+                                            <ChevronRight size={14} />
+                                            <span aria-current="page">{formatSectionTitle(subSectionFilter)}</span>
+                                        </nav>
+
+                                        <div className="asm-split">
+                                            <aside className="asm-side">
+                                                <h3>{subClassFilter}, {formatSectionTitle(subSectionFilter)}</h3>
+                                                <p className="asm-side-progress">
+                                                    {completedCount} of {sectionSubmissions.length} graded
+                                                </p>
+                                                <span className="asm-bar on-dark" aria-hidden="true"><i style={{ width: `${pctOf(completedCount, sectionSubmissions.length)}%` }} /></span>
+
+                                                <div className="asm-filters" role="tablist" aria-label="Filter submissions">
+                                                    {rosterFilters.map(([key, label, count]) => (
+                                                        <button
+                                                            key={key}
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={submissionFilterStatus === key}
+                                                            className={submissionFilterStatus === key ? 'is-active' : ''}
+                                                            onClick={() => setSubmissionFilterStatus(key)}
+                                                        >
+                                                            <span>{label}</span>
+                                                            <b>{count}</b>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </aside>
+
+                                            <div className="asm-main">
+                                                {submissionFilterStatus === 'unsubmitted' ? (
+                                                    unsubmittedStudentList.length === 0 ? (
+                                                        <div className="empty-sub-card">
+                                                            <CheckCircle size={32} color="var(--accent-emerald)" />
+                                                            <h4>Everyone has turned in their work</h4>
+                                                            <p>Every student in this section has submitted their PDF.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="asm-people">
+                                                            {unsubmittedStudentList.map((item, idx) => (
+                                                                <article className="asm-person" key={`${item.student.id}_${item.task.id}_${idx}`}>
+                                                                    <img
+                                                                        src={item.student.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop'}
+                                                                        alt=""
+                                                                        className="asm-photo"
+                                                                    />
+                                                                    <div className="asm-person-body">
                                                                         <strong>{item.student.name}</strong>
+                                                                        <span>Adm. #{item.student.admissionNo || 'N/A'}</span>
+                                                                        <span className="topic-badge">{item.task.title} ({item.task.subject})</span>
+                                                                        <span className="asm-due"><Clock size={12} /> Due {item.task.dueDate}</span>
+                                                                        <span className="asm-contact">{item.student.guardianName || 'Parent'}, {item.student.phone || 'N/A'}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td><code>#{item.student.admissionNo || 'N/A'}</code></td>
-                                                                <td>
-                                                                    <span className="topic-badge">{item.task.title} ({item.task.subject})</span>
-                                                                </td>
-                                                                <td style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>
-                                                                    {item.task.dueDate}
-                                                                </td>
-                                                                <td style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                                                                    {item.student.guardianName || 'Parent'} ({item.student.phone || 'N/A'})
-                                                                </td>
-                                                                <td style={{ textAlign: 'right' }}>
-                                                                    <span className="status-badge status-absent">
-                                                                        <Clock size={11} /> NOT TURNED IN
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )
-                                    ) : (
-                                        displayedSubmissions.length === 0 ? (
-                                            <div className="empty-sub-card">
-                                                <FileText size={32} />
-                                                <h4>No Submissions Found</h4>
-                                            </div>
-                                        ) : (
-                                            <div className="table-responsive">
-                                                <table className="custom-table submissions-grading-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Student Name & ID</th>
-                                                            <th>Assignment</th>
-                                                            <th>PDF File</th>
-                                                            <th>Date</th>
-                                                            <th>Status</th>
-                                                            <th>Score (0-100)</th>
-                                                            <th style={{ textAlign: 'right' }}>Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {displayedSubmissions.map((sub) => {
-                                                            const currentGrade = submissionGrades[sub.id] ?? (sub.obtainedMarks ?? '');
-                                                            const isGraded = sub.obtainedMarks !== undefined && sub.obtainedMarks !== null && sub.obtainedMarks !== '';
-
-                                                            return (
-                                                                <tr key={sub.id}>
-                                                                    <td>
-                                                                        <strong>{sub.studentName || 'Student'}</strong>
-                                                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                                                            Adm No: <code>#{sub.admissionNo || 'N/A'}</code>
+                                                                </article>
+                                                            ))}
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    displayedSubmissions.length === 0 ? (
+                                                        <div className="empty-sub-card">
+                                                            <FileText size={32} />
+                                                            <h4>No submissions found</h4>
+                                                            <p>Nothing matches this filter yet.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="asm-list">
+                                                            {displayedSubmissions.map((sub) => {
+                                                                const currentGrade = submissionGrades[sub.id] ?? (sub.obtainedMarks ?? '');
+                                                                const graded = isGraded(sub);
+                                                                return (
+                                                                    <article key={sub.id} className={`asm-row ${graded ? 'is-graded' : 'is-pending'}`}>
+                                                                        <div className="asm-who">
+                                                                            <span className="asm-avatar" aria-hidden="true">{initialsOf(sub.studentName)}</span>
+                                                                            <div>
+                                                                                <strong>{sub.studentName || 'Student'}</strong>
+                                                                                <span>Adm. #{sub.admissionNo || 'N/A'}</span>
+                                                                            </div>
                                                                         </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <span className="topic-badge">{sub.taskTitle || 'Assignment'}</span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <a
-                                                                            href={sub.pdfData}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="pdf-preview-link"
-                                                                        >
-                                                                            <ExternalLink size={13} /> {sub.fileName || 'Document.pdf'}
-                                                                        </a>
-                                                                    </td>
-                                                                    <td style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                                                                        {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Recent'}
-                                                                    </td>
-                                                                    <td>
-                                                                        {isGraded ? (
-                                                                            <span className="status-badge status-present">
-                                                                                <Check size={11} /> GRADED ({sub.obtainedMarks})
+
+                                                                        <div className="asm-work">
+                                                                            <div className="asm-work-top">
+                                                                                <span className="topic-badge">{sub.taskTitle || 'Assignment'}</span>
+                                                                                {graded ? (
+                                                                                    <span className="asm-chip is-graded"><Check size={11} /> Graded, {sub.obtainedMarks}</span>
+                                                                                ) : (
+                                                                                    <span className="asm-chip is-pending"><Clock size={11} /> Needs review</span>
+                                                                                )}
+                                                                            </div>
+                                                                            <a href={sub.pdfData} target="_blank" rel="noreferrer" className="pdf-preview-link">
+                                                                                <ExternalLink size={13} /> {sub.fileName || 'Document.pdf'}
+                                                                            </a>
+                                                                            <span className="asm-date">
+                                                                                {sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleString() : 'Recently submitted'}
                                                                             </span>
-                                                                        ) : (
-                                                                            <span className="status-badge status-absent">
-                                                                                <Clock size={11} /> PENDING
-                                                                            </span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            max="100"
-                                                                            placeholder="Score"
-                                                                            className="table-input grade-input"
-                                                                            value={currentGrade}
-                                                                            onChange={(e) => setSubmissionGrades({
-                                                                                ...submissionGrades,
-                                                                                [sub.id]: e.target.value
-                                                                            })}
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ textAlign: 'right' }}>
-                                                                        <button
-                                                                            className="btn-save-grade"
-                                                                            onClick={() => handleSaveSubmissionGrade(sub.id, sub.studentId, sub.taskTitle)}
-                                                                            disabled={gradingLoadingId === sub.id}
-                                                                        >
-                                                                            {gradingLoadingId === sub.id ? 'Saving...' : <><Award size={13} /> Save Grade</>}
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
+                                                                        </div>
+
+                                                                        <div className="asm-grade">
+                                                                            <label className="asm-score-wrap">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    max="100"
+                                                                                    placeholder="0"
+                                                                                    aria-label={`Score for ${sub.studentName || 'student'} out of 100`}
+                                                                                    className="asm-score"
+                                                                                    value={currentGrade}
+                                                                                    onChange={(e) => setSubmissionGrades({
+                                                                                        ...submissionGrades,
+                                                                                        [sub.id]: e.target.value
+                                                                                    })}
+                                                                                />
+                                                                                <span>/ 100</span>
+                                                                            </label>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-save-grade"
+                                                                                onClick={() => handleSaveSubmissionGrade(sub.id, sub.studentId, sub.taskTitle)}
+                                                                                disabled={gradingLoadingId === sub.id}
+                                                                            >
+                                                                                {gradingLoadingId === sub.id ? 'Saving...' : <><Award size={13} /> Save grade</>}
+                                                                            </button>
+                                                                        </div>
+                                                                    </article>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
-                                        )
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {activeTab === 'schedule' && (
                         <div className="dash-card full-width stt-card">
@@ -5876,27 +5991,61 @@ tr { height: 54px; }
                         </div>
                     )}
 
-                    {activeTab === 'schoolnews' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>School News</h3>
-                                    <p className="subtitle">All notices and announcements.</p>
+                    {activeTab === 'schoolnews' && (() => {
+                        const typeLabel = (type) => (type === 'urgent' ? 'Urgent' : type === 'info' ? 'Info' : 'General');
+                        const urgent = announcements.filter(a => a.type === 'urgent');
+                        const others = announcements.filter(a => a.type !== 'urgent');
+
+                        return (
+                            <div className="dash-card full-width nw">
+                                <div className="nw-head">
+                                    <h3>School news</h3>
+                                    <p className="subtitle">
+                                        {announcements.length === 0
+                                            ? 'Notices and announcements from the school will show up here.'
+                                            : `${announcements.length} ${announcements.length === 1 ? 'notice' : 'notices'}${urgent.length ? `, ${urgent.length} need${urgent.length === 1 ? 's' : ''} your attention` : ''}`}
+                                    </p>
                                 </div>
-                            </div>
-                            <div className="announcement-list">
-                                {announcements.map((item) => (
-                                    <div key={item.id} className={`announcement-item type-${item.type}`}>
-                                        <div className="announcement-dot" />
-                                        <div>
-                                            <h4>{item.title}</h4>
-                                            <span>{item.date}</span>
-                                        </div>
+
+                                {announcements.length === 0 ? (
+                                    <div className="empty-sub-card">
+                                        <FileText size={28} />
+                                        <h4>No notices yet</h4>
+                                        <p>New announcements will appear here as soon as the office posts them.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    <>
+                                        {urgent.length > 0 && (
+                                            <section className="nw-urgent" aria-label="Needs attention">
+                                                {urgent.map((item) => (
+                                                    <article key={item.id} className="nw-feature">
+                                                        <span className="nw-flag"><AlertTriangle size={20} /></span>
+                                                        <div>
+                                                            <span className="nw-chip is-urgent">Urgent</span>
+                                                            <h4>{item.title}</h4>
+                                                            <p>{item.date}</p>
+                                                        </div>
+                                                    </article>
+                                                ))}
+                                            </section>
+                                        )}
+
+                                        {others.length > 0 && (
+                                            <section className="nw-grid" aria-label="Other notices">
+                                                {others.map((item) => (
+                                                    <article key={item.id} className={`nw-card type-${item.type}`}>
+                                                        <span className={`nw-chip is-${item.type === 'info' ? 'info' : 'general'}`}>{typeLabel(item.type)}</span>
+                                                        <h4>{item.title}</h4>
+                                                        <p>{item.date}</p>
+                                                    </article>
+                                                ))}
+                                            </section>
+                                        )}
+                                    </>
+                                )}
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {activeTab === 'downloads' && (
                         <div className="dash-card full-width">
@@ -5932,121 +6081,167 @@ tr { height: 54px; }
                         </div>
                     )}
 
-                    {activeTab === 'leaves' && (
-                        <div className="dash-card full-width">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Staff Leave Applications</h3>
-                                    <p className="subtitle">Apply for leave and track the approval status from the administration.</p>
+                    {activeTab === 'leaves' && (() => {
+                        const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const toDate = (raw) => {
+                            const d = raw ? new Date(`${raw}T00:00:00`) : null;
+                            return d && !Number.isNaN(d.getTime()) ? d : null;
+                        };
+                        const fmtDate = (raw) => {
+                            const d = toDate(raw);
+                            return d ? `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}` : (raw || '');
+                        };
+                        const dayCount = (from, to) => {
+                            const a = toDate(from);
+                            const b = toDate(to);
+                            if (!a || !b || b < a) return 0;
+                            return Math.round((b - a) / 86400000) + 1;
+                        };
+                        const statusOf = (leave) => leave.status || 'Pending';
+                        const toneOf = (status) => (status === 'Approved' ? 'ok' : status === 'Rejected' ? 'bad' : 'wait');
+                        const leaveTypes = [
+                            ['Casual Leave', 'Casual', 'CL'],
+                            ['Medical Leave', 'Medical', 'ML'],
+                            ['Earned Leave', 'Earned', 'EL'],
+                            ['On Duty', 'On duty', 'OD']
+                        ];
+                        const countBy = (s) => myLeaveRequests.filter(l => (s === 'Pending' ? !['Approved', 'Rejected'].includes(statusOf(l)) : statusOf(l) === s)).length;
+                        const formDays = dayCount(leaveForm.startDate, leaveForm.endDate);
+                        const datesReversed = leaveForm.startDate && leaveForm.endDate && !formDays;
+
+                        return (
+                            <div className="dash-card full-width lv">
+                                <div className="lv-head">
+                                    <h3>Leave requests</h3>
+                                    <p className="subtitle">Apply for leave and follow its approval from the administration.</p>
+                                </div>
+
+                                {leaveActionStatus && (
+                                    <div className="mk-note is-ok" role="status">
+                                        <Check size={16} /> {leaveActionStatus}
+                                    </div>
+                                )}
+
+                                <div className="lv-split">
+                                    {/* ---------- Apply ---------- */}
+                                    <form onSubmit={handleSubmitleaveRequest} className="lv-form">
+                                        <h4>Apply for leave</h4>
+
+                                        <fieldset className="lv-field">
+                                            <legend>Leave type</legend>
+                                            <div className="lv-types">
+                                                {leaveTypes.map(([val, label, code]) => (
+                                                    <label key={val} className={leaveForm.leaveType === val ? 'is-on' : ''}>
+                                                        <input
+                                                            type="radio"
+                                                            name="lv-type"
+                                                            value={val}
+                                                            checked={leaveForm.leaveType === val}
+                                                            onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
+                                                        />
+                                                        <strong>{label}</strong>
+                                                        <small>{code}</small>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </fieldset>
+
+                                        <div className="lv-pair">
+                                            <div className="lv-field">
+                                                <label htmlFor="lv-from">From</label>
+                                                <input
+                                                    id="lv-from"
+                                                    type="date"
+                                                    className="table-input full-width-input"
+                                                    value={leaveForm.startDate}
+                                                    onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="lv-field">
+                                                <label htmlFor="lv-to">To</label>
+                                                <input
+                                                    id="lv-to"
+                                                    type="date"
+                                                    className="table-input full-width-input"
+                                                    min={leaveForm.startDate || undefined}
+                                                    value={leaveForm.endDate}
+                                                    onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {(formDays > 0 || datesReversed) && (
+                                            <p className={`lv-days ${datesReversed ? 'is-warn' : ''}`} role="status">
+                                                {datesReversed
+                                                    ? 'The end date is before the start date.'
+                                                    : `${formDays} ${formDays === 1 ? 'day' : 'days'} of leave`}
+                                            </p>
+                                        )}
+
+                                        <div className="lv-field">
+                                            <label htmlFor="lv-reason">Reason</label>
+                                            <textarea
+                                                id="lv-reason"
+                                                rows="3"
+                                                className="custom-textarea"
+                                                placeholder="Tell the admin why you need leave"
+                                                value={leaveForm.reason}
+                                                onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+
+                                        <button type="submit" className="btn-primary lv-submit" disabled={isLeaveSubmitting}>
+                                            <SendHorizonal size={15} /> {isLeaveSubmitting ? 'Submitting...' : 'Submit request'}
+                                        </button>
+                                    </form>
+
+                                    {/* ---------- History ---------- */}
+                                    <section className="lv-main" aria-labelledby="lv-history-title">
+                                        <h4 id="lv-history-title">My requests <span className="tsk-count">{myLeaveRequests.length}</span></h4>
+
+                                        <div className="lv-summary">
+                                            <span className="lv-stat is-wait"><b>{countBy('Pending')}</b> Pending</span>
+                                            <span className="lv-stat is-ok"><b>{countBy('Approved')}</b> Approved</span>
+                                            <span className="lv-stat is-bad"><b>{countBy('Rejected')}</b> Rejected</span>
+                                        </div>
+
+                                        {myLeaveRequests.length === 0 ? (
+                                            <div className="empty-sub-card">
+                                                <Calendar size={28} />
+                                                <h4>No leave requests yet</h4>
+                                                <p>Requests you submit will be listed here with their status.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="lv-list">
+                                                {myLeaveRequests.map((leave) => {
+                                                    const status = statusOf(leave);
+                                                    const days = dayCount(leave.startDate, leave.endDate);
+                                                    return (
+                                                        <article key={leave.id} className={`lv-item is-${toneOf(status)}`}>
+                                                            <div className="lv-length">
+                                                                <b>{days || '-'}</b>
+                                                                <span>{days === 1 ? 'day' : 'days'}</span>
+                                                            </div>
+                                                            <div className="lv-body">
+                                                                <span className="topic-badge">{leave.leaveType}</span>
+                                                                <h5>{fmtDate(leave.startDate)} to {fmtDate(leave.endDate)}</h5>
+                                                                <p>{leave.reason}</p>
+                                                            </div>
+                                                            <span className={`lv-status is-${toneOf(status)}`}>{status}</span>
+                                                        </article>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </section>
                                 </div>
                             </div>
+                        );
+                    })()}
 
-                            {leaveActionStatus && (
-                                <div style={{ color: 'var(--accent-emerald)', padding: '8px 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Check size={18} /> {leaveActionStatus}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleSubmitleaveRequest} className="assignment-form-grid" style={{ marginBottom: '30px' }}>
-                                <div>
-                                    <label>Leave Type</label>
-                                    <select
-                                        className="custom-select full-width"
-                                        value={leaveForm.leaveType}
-                                        onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
-                                        required
-                                    >
-                                        <option value="Casual Leave">Casual Leave (CL)</option>
-                                        <option value="Medical Leave">Medical Leave (ML)</option>
-                                        <option value="Earned Leave">Earned Leave (EL)</option>
-                                        <option value="On Duty">On Duty (OD)</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label>Start Date</label>
-                                    <input
-                                        type="date"
-                                        className="table-input full-width-input"
-                                        value={leaveForm.startDate}
-                                        onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label>End Date</label>
-                                    <input
-                                        type="date"
-                                        className="table-input full-width-input"
-                                        value={leaveForm.endDate}
-                                        onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label>Reason for Leave</label>
-                                    <textarea
-                                        rows="3"
-                                        className="custom-textarea"
-                                        placeholder="Provide detailed reason for absence..."
-                                        value={leaveForm.reason}
-                                        onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn-primary" disabled={isLeaveSubmitting}>
-                                        <SendHorizonal size={15} /> {isLeaveSubmitting ? 'Submitting Application...' : 'Submit Leave Request'}
-                                    </button>
-                                </div>
-                            </form>
-
-                            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
-                                My Leave Application History ({myLeaveRequests.length})
-                            </h4>
-
-                            {myLeaveRequests.length === 0 ? (
-                                <div className="empty-sub-card">
-                                    <Calendar size={28} />
-                                    <p>No past or active leave requests found.</p>
-                                </div>
-                            ) : (
-                                <div className="table-responsive">
-                                    <table className="custom-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Leave Type</th>
-                                                <th>From</th>
-                                                <th>To</th>
-                                                <th>Reason</th>
-                                                <th style={{ textAlign: 'right' }}>Admin Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {myLeaveRequests.map((leave) => (
-                                                <tr key={leave.id}>
-                                                    <td>
-                                                        <span className="topic-badge">{leave.leaveType}</span>
-                                                    </td>
-                                                    <td>{leave.startDate}</td>
-                                                    <td>{leave.endDate}</td>
-                                                    <td>{leave.reason}</td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <span className={`status-badge status-${leave.status === 'Approved' ? 'present' : leave.status === 'Rejected' ? 'absent' : 'pending'}`}>
-                                                            {(leave.status || 'Pending').toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             </main>
 
