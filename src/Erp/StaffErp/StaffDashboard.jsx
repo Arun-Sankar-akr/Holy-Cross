@@ -18,7 +18,8 @@ import {
     LayoutGrid, ClipboardList, MessageCircle, Building2, Newspaper, Download,
     Library, PartyPopper, Moon, CalendarClock, MoreVertical,
     BookMarked, Upload, Loader2,
-    PersonStanding, Printer, RotateCw
+    PersonStanding, Printer, RotateCw,
+    Plus, Mail, Share2, Sun
 } from 'lucide-react';
 import './StaffDashboard.css';
 
@@ -99,6 +100,7 @@ export default function StaffDashboard() {
     const [chatMessageInput, setChatMessageInput] = useState('');
     const [showNewChatPicker, setShowNewChatPicker] = useState(false);
     const [chatDirectorySearch, setChatDirectorySearch] = useState('');
+    const [chatListSearch, setChatListSearch] = useState('');
 
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestTargetStaff, setRequestTargetStaff] = useState(null);
@@ -2063,6 +2065,118 @@ tr { height: 54px; }
 
     const getChatId = (idA, idB) => [idA, idB].sort().join('_');
 
+
+    /* ---------- design helpers (Tassel Tutor dashboard / SchoolHub chat look) ---------- */
+    const NAME_COLORS = ['#7c6cf0', '#e064c4', '#14a38b', '#2fa8e0', '#f0a030', '#e5603c'];
+    const AVATAR_TONES = ['#d7f5e8', '#e4e0fb', '#ffe6d5', '#d9effb', '#fde0ef', '#fff1c6'];
+    const hashName = (name = '') => [...String(name)].reduce((n, c) => n + c.charCodeAt(0), 0);
+    const nameColor = (name) => NAME_COLORS[hashName(name) % NAME_COLORS.length];
+    const avatarTone = (name) => AVATAR_TONES[hashName(name) % AVATAR_TONES.length];
+    const initialOf = (name) => String(name || '?').trim().charAt(0).toUpperCase();
+    const fmtClock = (ts) => {
+        const d = ts?.toDate ? ts.toDate() : null;
+        return d ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+    };
+    const fileBadge = (d) => {
+        const name = String(d.fileName || '');
+        const ext = name.includes('.') ? name.split('.').pop().toUpperCase().slice(0, 4) : 'DOC';
+        const tones = { PDF: '#ec5b4d', JPG: '#6c6cf0', JPEG: '#6c6cf0', PNG: '#f5c76a', ZIP: '#1f9d8c', DOC: '#27c993', DOCX: '#2f7fe0', XLS: '#27a85c', XLSX: '#27a85c' };
+        return { ext, color: tones[ext] || '#27c993' };
+    };
+
+    // donut: office tasks
+    const taskTotal = myOfficeTasks.length;
+    const taskDonePct = taskTotal ? (completedTaskCount / taskTotal) * 100 : 100;
+    const taskProgPct = taskTotal ? ((pendingOfficeTasks.length - overdueTaskCount) / taskTotal) * 100 : 0;
+    const donutBg = `conic-gradient(var(--tt-green) 0 ${taskDonePct}%, var(--tt-amber) ${taskDonePct}% ${taskDonePct + taskProgPct}%, var(--tt-red) ${taskDonePct + taskProgPct}% 100%)`;
+
+    // smooth attendance curve (per class)
+    const CH_W = 400, CH_H = 120;
+    const smoothPath = (pts) => {
+        if (pts.length < 2) return '';
+        let d = `M ${pts[0][0]} ${pts[0][1]}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+            d += ` C ${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6}, ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6}, ${p2[0]} ${p2[1]}`;
+        }
+        return d;
+    };
+    const attendancePts = classProgressData.map((c, i) => [
+        (i / Math.max(classProgressData.length - 1, 1)) * CH_W,
+        CH_H - 12 - (c.rate / 100) * (CH_H - 34)
+    ]);
+    const attendanceLine = smoothPath(attendancePts);
+    const attendanceArea = attendanceLine ? `${attendanceLine} L ${CH_W} ${CH_H} L 0 ${CH_H} Z` : '';
+    const peakIdx = classProgressData.reduce((best, c, i, arr) => (c.rate > arr[best].rate ? i : best), 0);
+
+    const activeChatMember = allStaffMembers.find(m => m.staffId === activeChatInfo?.staffId);
+    const lastRoomMessage = staffRoomMessages[staffRoomMessages.length - 1];
+
+    // left pane shared by Chats and Staff Room
+    const renderChatListPane = (mode) => {
+        const q = chatListSearch.trim().toLowerCase();
+        const rows = myChats.filter((chat) => {
+            if (!q) return true;
+            const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
+            return String(chat.participantNames?.[otherId] || '').toLowerCase().includes(q);
+        });
+        return (
+            <div className="sh-list">
+                <div className="sh-list-top">
+                    <label className="sh-search">
+                        <Search size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            value={chatListSearch}
+                            onChange={(e) => setChatListSearch(e.target.value)}
+                        />
+                    </label>
+                    <button type="button" className="sh-add" onClick={() => setShowNewChatPicker(true)} aria-label="New chat" title="New chat">
+                        <Plus size={20} />
+                    </button>
+                </div>
+                <div className="sh-list-scroll">
+                    <button
+                        type="button"
+                        className={`sh-list-item ${mode === 'room' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('staffroom')}
+                    >
+                        <div className="sh-avatar room"><Users size={20} /></div>
+                        <div className="sh-list-copy">
+                            <div className="sh-list-line"><strong>Staff Room</strong><span>{fmtClock(lastRoomMessage?.createdAt)}</span></div>
+                            <p>{lastRoomMessage ? `${lastRoomMessage.senderName}: ${lastRoomMessage.text}` : 'A shared space for all faculty.'}</p>
+                        </div>
+                    </button>
+                    {rows.length === 0 ? (
+                        <div className="sh-list-empty">
+                            <MessageCircle size={24} />
+                            <p>No conversations yet. Start one with the + button or from Departments.</p>
+                        </div>
+                    ) : rows.map((chat) => {
+                        const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
+                        const otherName = chat.participantNames?.[otherId] || 'Staff Member';
+                        const otherDept = chat.participantDepartments?.[otherId] || 'General';
+                        return (
+                            <button
+                                key={chat.id}
+                                type="button"
+                                className={`sh-list-item ${mode === 'chats' && activeChatId === chat.id ? 'active' : ''}`}
+                                onClick={() => { handleSelectChat(chat); setActiveTab('chats'); }}
+                            >
+                                <div className="sh-avatar" style={{ background: avatarTone(otherName) }}>{initialOf(otherName)}</div>
+                                <div className="sh-list-copy">
+                                    <div className="sh-list-line"><strong>{otherName}</strong><span>{fmtClock(chat.updatedAt)}</span></div>
+                                    <p>{chat.lastMessage || `${otherDept} Department`}</p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="dashboard-containers">
             <header className="mobile-topbar">
@@ -2084,31 +2198,13 @@ tr { height: 54px; }
             )}
 
             <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                <div className="sidebar-user">
-                    <div className="user-avatar">{staffData.name.charAt(0)}</div>
-                    <div className="user-info">
-                        <span className="user-name">{staffData.name}</span>
-                        <span className="user-role">{staffData.department}</span>
-                        {staffData.staffId && <span className="user-id">ID: #{staffData.staffId}</span>}
+                <div className="sidebar-brand">
+                    <img src={logo} alt="" />
+                    <div>
+                        <strong>Holy Cross</strong>
+                        <span>Staff Portal</span>
                     </div>
                 </div>
-
-                <div className="sidebar-tools">
-                    <button className={isDarkMode ? 'on' : ''} onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode">
-                        {isDarkMode ? <Sparkles size={18} /> : <Moon size={18} />}
-                        <span>{isDarkMode ? 'Light' : 'Dark'}</span>
-                    </button>
-                    <button onClick={() => { setActiveTab('mytasks'); setIsMobileMenuOpen(false); }} aria-label="Notifications">
-                        <Bell size={18} />
-                        <span>Alerts</span>
-                        {(announcements.length + pendingOfficeTasks.length) > 0 && <em>{announcements.length + pendingOfficeTasks.length}</em>}
-                    </button>
-                    <button className={showAiHint ? 'on' : ''} onClick={() => setShowAiHint(!showAiHint)} aria-label="AI assistant">
-                        <Sparkles size={18} />
-                        <span>AI</span>
-                    </button>
-                </div>
-                {showAiHint && <div className="sidebar-hint">Smart suggestions for your day are coming soon.</div>}
 
                 <nav className="sidebar-nav">
                     <div className="sidebar-pinned">
@@ -2459,15 +2555,28 @@ tr { height: 54px; }
                 </nav>
 
                 <div className="sidebar-footer">
-                    <button className="logout-btn" onClick={handleLogout}>
+                    <div
+                        className="sidebar-usercard"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { setActiveTab('profile'); setIsEditingProfile(false); setIsMobileMenuOpen(false); } }}
+                    >
+                        <div className="user-avatar">{staffData.name.charAt(0)}</div>
+                        <div className="user-info">
+                            <span className="user-name">{staffData.name}</span>
+                            <span className="user-role">{staffData.department}</span>
+                        </div>
+                    </div>
+                    <button className="logout-btn" onClick={handleLogout} aria-label="Sign out" title="Sign out">
                         <LogOut size={18} />
-                        <span>Sign Out</span>
                     </button>
                 </div>
             </aside>
 
             <main className="dashboard-main">
                 <header className="dashboard-topbar">
+                    <h1 className="topbar-hello">Hello, <strong>{staffData.name}</strong>!</h1>
                     <div className="topbar-right">
                         <div className="search-bar">
                             <Search size={18} className="search-icon" />
@@ -2490,8 +2599,26 @@ tr { height: 54px; }
                                 onClick={() => setIsDarkMode(!isDarkMode)}
                                 aria-label="Toggle dark mode"
                             >
-                                {isDarkMode ? <Sparkles size={17} /> : <Moon size={17} />}
+                                {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
                             </button>
+
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    className={`icon-btn ${showAiHint ? 'icon-btn-on' : ''}`}
+                                    onClick={() => { setShowAiHint(!showAiHint); setShowNotifications(false); setShowProfileMenu(false); }}
+                                    aria-label="AI assistant"
+                                >
+                                    <Sparkles size={17} />
+                                </button>
+                                {showAiHint && (
+                                    <div className="notification-dropdown">
+                                        <div className="dropdown-header"><h4>AI Assistant</h4></div>
+                                        <p style={{ margin: 0, padding: '2px 16px 14px', fontSize: '.8rem', color: 'var(--muted)' }}>
+                                            Smart suggestions for your day are coming soon.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="notification-wrapper" style={{ position: 'relative' }}>
                                 <button className="icon-btn" onClick={() => { setShowNotifications(!showNotifications); setShowAiHint(false); }}>
@@ -2561,116 +2688,143 @@ tr { height: 54px; }
 
                 <div className="dashboard-content">
                     {activeTab === 'overview' && (
-                        <div className="ov-grid">
-                            {/* greeting + live numbers */}
-                            <section className="ov-hero span-8">
-                                <div className="ov-hero-head">
-                                    <div>
-                                        <span className="ov-eyebrow">{greetingText}, {staffData.name.split(' ')[0]}</span>
-                                        <h2>Your Workspace</h2>
-                                    </div>
-                                    <span className="ov-date"><Calendar size={14} /> {todayRef.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                </div>
-                                {announcements[0] && (
-                                    <p className="ov-notice"><Bell size={14} /> {announcements[0].title} · {announcements[0].date}</p>
-                                )}
-                                <div className="ov-hero-stats">
-                                    <div>
-                                        <span>Total Students</span>
-                                        <strong>{allStudents.length}</strong>
-                                        <em>{mySchedule.length} sessions / week</em>
-                                    </div>
-                                    <div>
-                                        <span>Attendance</span>
-                                        <strong>{classAttendanceRate}%</strong>
-                                        <em>{absentStudentsCount} absent today</em>
-                                    </div>
-                                    <div>
-                                        <span>Pending Tasks</span>
-                                        <strong>{pendingOfficeTasks.length}</strong>
-                                        <em>{ungradedSubmissionsCount} to grade</em>
-                                    </div>
-                                </div>
-                            </section>
+                        <div className="tt-layout">
+                            <div className="tt-main">
+                                <div className="tt-top-row">
+                                    <section className="tt-card tt-activities">
+                                        <div className="tt-donut" style={{ background: donutBg }}>
+                                            <span>{Math.round(taskDonePct)}%</span>
+                                        </div>
+                                        <div className="tt-activities-copy">
+                                            <h3>Task Overview</h3>
+                                            <p>{taskTotal ? `${completedTaskCount} of ${taskTotal} office tasks completed` : 'No office tasks assigned yet'}</p>
+                                            <ul className="tt-legend">
+                                                <li><i style={{ background: 'var(--tt-green)' }} />Done<b>{completedTaskCount}</b></li>
+                                                <li><i style={{ background: 'var(--tt-amber)' }} />In-Progress<b>{pendingOfficeTasks.length - overdueTaskCount}</b></li>
+                                                <li><i style={{ background: 'var(--tt-red)' }} />Overdue<b>{overdueTaskCount}</b></li>
+                                            </ul>
+                                        </div>
+                                    </section>
 
-                            {/* quick actions */}
-                            <section className="ov-card span-4">
-                                <div className="ov-card-head"><h3>Quick Actions</h3></div>
-                                <div className="quick-grid">
-                                    <button onClick={() => setActiveTab('schedule')}><i><Calendar size={20} /></i><span>Time Table</span></button>
-                                    <button onClick={() => setActiveTab('attendance')}><i><CheckCircle size={20} /></i><span>Attendance</span></button>
-                                    <button onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}><i><Award size={20} /></i><span>Marks</span></button>
-                                    <button onClick={() => setActiveTab('assignments')}><i><ClipboardList size={20} /></i><span>Lessons</span></button>
-                                    <button onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}><i><Folder size={20} /></i><span>Roster</span></button>
-                                    <button onClick={() => setActiveTab('leaves')}><i><SendHorizonal size={20} /></i><span>Leaves</span></button>
+                                    <section className="tt-card tt-attendance">
+                                        <div className="tt-att-head">
+                                            <h3>Class Attendance</h3>
+                                            <button className="tt-viewall" onClick={() => setActiveTab('analytics')} aria-label="Open analytics"><i><ChevronRight size={14} /></i></button>
+                                        </div>
+                                        {attendancePts.length < 2 ? (
+                                            <div className="overview-empty">Attendance by class shows up once students are enrolled in two or more classes.</div>
+                                        ) : (
+                                            <>
+                                                <div className="tt-chart">
+                                                    <svg viewBox={`0 0 ${CH_W} ${CH_H}`} preserveAspectRatio="none" aria-hidden="true">
+                                                        <defs>
+                                                            <linearGradient id="ttAtt" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#27c993" stopOpacity=".28" />
+                                                                <stop offset="100%" stopColor="#27c993" stopOpacity="0" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <path d={attendanceArea} fill="url(#ttAtt)" />
+                                                        <path d={attendanceLine} fill="none" stroke="#27c993" strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                                                    </svg>
+                                                    <span
+                                                        className="tt-chart-dot"
+                                                        style={{ left: `${(attendancePts[peakIdx][0] / CH_W) * 100}%`, top: `${(attendancePts[peakIdx][1] / CH_H) * 100}%` }}
+                                                    />
+                                                    <span
+                                                        className="tt-chart-tip"
+                                                        style={{ left: `${(attendancePts[peakIdx][0] / CH_W) * 100}%`, top: `${(attendancePts[peakIdx][1] / CH_H) * 100}%` }}
+                                                    >
+                                                        {classProgressData[peakIdx].rate}%
+                                                    </span>
+                                                </div>
+                                                <div className="tt-chart-x">
+                                                    {classProgressData.map((c) => <span key={c.className}>{c.className}</span>)}
+                                                </div>
+                                            </>
+                                        )}
+                                        <p className="tt-att-foot">{classAttendanceRate}% present today · {absentStudentsCount} absent</p>
+                                    </section>
                                 </div>
-                            </section>
 
-                            {/* today's class strip */}
-                            <section className="ov-card span-12">
-                                <div className="ov-card-head">
-                                    <h3>Today's Class</h3>
-                                    <button className="ov-link" onClick={() => setActiveTab('schedule')}>Full timetable <ChevronRight size={14} /></button>
+                                <div className="tt-quick">
+                                    <button onClick={() => setActiveTab('schedule')}><Calendar size={16} /> Time Table</button>
+                                    <button onClick={() => setActiveTab('attendance')}><CheckCircle size={16} /> Attendance</button>
+                                    <button onClick={() => { setActiveTab('marks'); setSelectedClass('10th Std'); setSelectedSection(null); }}><Award size={16} /> Marks</button>
+                                    <button onClick={() => setActiveTab('assignments')}><ClipboardList size={16} /> Lessons</button>
+                                    <button onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}><Folder size={16} /> Roster</button>
+                                    <button onClick={() => setActiveTab('leaves')}><SendHorizonal size={16} /> Leaves</button>
+                                </div>
+
+                                <div className="tt-section-head">
+                                    <h3>Classrooms</h3>
+                                    <span className="tt-count">{mySchedule.length}</span>
+                                    <button className="tt-viewall" onClick={() => setActiveTab('schedule')}>View All <i><ChevronRight size={14} /></i></button>
                                 </div>
                                 {todaysPlanItems.length === 0 ? (
-                                    <div className="overview-empty">No timetable slots mapped to your staff profile yet.</div>
+                                    <div className="tt-card overview-empty">No timetable slots mapped to your staff profile yet.</div>
                                 ) : (
-                                    <div className="class-strip">
-                                        {todaysPlanItems.map((item, idx) => (
-                                            <button key={item.id || idx} className={`class-chip tone-${idx % 3}`} onClick={() => setActiveTab('students')}>
-                                                <span className="class-chip-time"><Clock size={12} /> {item.timeSlot || 'TBA'}</span>
-                                                <strong>{item.subject || 'Subject'}</strong>
-                                                <span className="class-chip-meta">{item.className || 'General Class'}{item.roomNo ? ` · ${item.roomNo}` : ''}</span>
-                                            </button>
-                                        ))}
+                                    <div className="tt-classes">
+                                        {todaysPlanItems.slice(0, 3).map((item, idx) => {
+                                            const classStudents = allStudents.filter(st => st.className && cleanString(item.className || '').includes(cleanString(st.className)));
+                                            return (
+                                                <button
+                                                    key={item.id || idx}
+                                                    className={`tt-class ${idx === 0 ? 'featured' : ''}`}
+                                                    onClick={() => setActiveTab('students')}
+                                                >
+                                                    <div className="tt-class-top">
+                                                        <span className="tt-class-ico"><Users size={18} /></span>
+                                                        <MoreVertical size={20} />
+                                                    </div>
+                                                    <h4>{item.subject || 'Subject'}</h4>
+                                                    <span className="tt-class-meta">{item.className || 'General Class'}{item.roomNo ? ` · ${item.roomNo}` : ''}</span>
+                                                    <div className="tt-avatars">
+                                                        {classStudents.slice(0, 3).map((st, i) => (
+                                                            <span key={st.id || i} style={{ background: avatarTone(st.name) }}>{initialOf(st.name)}</span>
+                                                        ))}
+                                                        {classStudents.length > 3 && <span className="more">+{classStudents.length - 3}</span>}
+                                                    </div>
+                                                    <div className="tt-class-foot"><Clock size={16} /> {item.timeSlot || 'TBA'}</div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
-                            </section>
 
-                            {/* attendance */}
-                            <section className="ov-card span-4">
-                                <div className="ov-card-head">
-                                    <h3>Attendance</h3>
-                                    <button className="ov-link" onClick={() => setActiveTab('analytics')}>Analytics <ChevronRight size={14} /></button>
+                                <div className="tt-section-head">
+                                    <h3>Recent Documents</h3>
+                                    <span className="tt-count">{submissionsList.length}</span>
+                                    <button className="tt-viewall" onClick={() => setActiveTab('downloads')}>View All <i><ChevronRight size={14} /></i></button>
                                 </div>
-                                <div className="att-ring" style={{ '--p': classAttendanceRate }}>
-                                    <div className="att-ring-inner">
-                                        <strong>{classAttendanceRate}%</strong>
-                                        <span>Attendance</span>
-                                    </div>
-                                </div>
-                                <div className="att-tiles">
-                                    <div><strong>{activeStudents.length}</strong><span>Total</span></div>
-                                    <div><strong>{activeStudents.length - absentStudentsCount}</strong><span>Present</span></div>
-                                    <div><strong>{absentStudentsCount}</strong><span>Absent</span></div>
-                                </div>
-                            </section>
-
-                            {/* class progress */}
-                            <section className="ov-card span-4">
-                                <div className="ov-card-head"><h3>Class Progress</h3></div>
-                                {classProgressData.length === 0 ? (
-                                    <div className="overview-empty">No enrolled students found yet.</div>
+                                {recentDocuments.length === 0 ? (
+                                    <div className="tt-card overview-empty">No documents submitted yet.</div>
                                 ) : (
-                                    <div className="class-progress-list">
-                                        {classProgressData.map((c) => (
-                                            <div key={c.className} className="progress-row">
-                                                <div className="progress-row-info">
-                                                    <strong>{c.className}</strong>
-                                                    <span>{c.count} Students</span>
+                                    <div className="tt-docs">
+                                        {recentDocuments.map((d) => {
+                                            const badge = fileBadge(d);
+                                            return (
+                                                <div key={d.id} className="tt-doc">
+                                                    <div className="tt-doc-badge" style={{ background: badge.color }}>{badge.ext}</div>
+                                                    <div className="tt-doc-copy">
+                                                        <strong>{d.taskTitle || d.fileName || 'Assignment'}</strong>
+                                                        <span>{d.studentName ? `${d.studentName} · ` : ''}{d.submittedAt?.toDate ? d.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
+                                                    </div>
+                                                    <div className="tt-doc-actions">
+                                                        {d.fileUrl ? (
+                                                            <a href={d.fileUrl} target="_blank" rel="noreferrer" aria-label="Open document"><Share2 size={20} /></a>
+                                                        ) : (
+                                                            <button onClick={() => setActiveTab('submissions')} aria-label="Open submissions"><Share2 size={20} /></button>
+                                                        )}
+                                                        <button onClick={() => setActiveTab('submissions')} aria-label="More"><MoreVertical size={20} /></button>
+                                                    </div>
                                                 </div>
-                                                <span className="progress-rate">{c.rate}%</span>
-                                                <div className="progress-bar-track">
-                                                    <div className={`progress-bar-fill ${c.rate < 75 ? 'low' : ''}`} style={{ width: `${c.rate}%` }} />
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
-                            </section>
 
-                            {/* schedules */}
-                            <section className="ov-card span-4 row-2 schedule-widget">
+                                <div className="tt-bottom">
+                                    <section className="tt-card schedule-widget">
                                 <div className="ov-card-head">
                                     <h3>Schedules</h3>
                                     <button className="ov-pill" onClick={() => setShowAddEventForm(true)}>+ Add</button>
@@ -2761,8 +2915,8 @@ tr { height: 54px; }
                                 )}
                             </section>
 
-                            {/* notice board */}
-                            <section className="ov-card span-4">
+                                    <div className="tt-stack">
+                                        <section className="tt-card">
                                 <div className="ov-card-head"><h3>Notice Board</h3><span className="ov-pill soft">{announcements.length + pendingOfficeTasks.length} new</span></div>
                                 <div className="notice-list">
                                     {pendingOfficeTasks.slice(0, 2).map((t) => (
@@ -2780,8 +2934,7 @@ tr { height: 54px; }
                                 </div>
                             </section>
 
-                            {/* leave status */}
-                            <section className="ov-card span-4">
+                                        <section className="tt-card">
                                 <div className="ov-card-head">
                                     <h3>Leave Status</h3>
                                     <button className="ov-link" onClick={() => setActiveTab('leaves')}>Apply <ChevronRight size={14} /></button>
@@ -2802,29 +2955,62 @@ tr { height: 54px; }
                                     </div>
                                 )}
                             </section>
-
-                            {/* documents */}
-                            <section className="ov-card span-8">
-                                <div className="ov-card-head">
-                                    <h3>Recent Documents</h3>
-                                    <button className="ov-link" onClick={() => setActiveTab('downloads')}>See all <ChevronRight size={14} /></button>
-                                </div>
-                                {recentDocuments.length === 0 ? (
-                                    <div className="overview-empty">No documents submitted yet.</div>
-                                ) : (
-                                    <div className="documents-list">
-                                        {recentDocuments.map((doc) => (
-                                            <div key={doc.id} className="document-row">
-                                                <div className="document-icon"><FileText size={16} /></div>
-                                                <div className="document-info">
-                                                    <strong>{doc.taskTitle || 'Assignment'}</strong>
-                                                    <span>{doc.submittedAt?.toDate ? doc.submittedAt.toDate().toLocaleDateString() : 'Recent'}</span>
-                                                </div>
-                                            </div>
-                                        ))}
                                     </div>
-                                )}
-                            </section>
+                                </div>
+                            </div>
+
+                            <aside className="tt-side">
+                                <section>
+                                    <div className="tt-side-head">
+                                        <div>
+                                            <h3>Recent Students</h3>
+                                            <p>You have <b>{allStudents.length}</b> students</p>
+                                        </div>
+                                        <button className="tt-plus" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label="Open student roster"><Plus size={22} /></button>
+                                    </div>
+                                    {allStudents.length === 0 ? (
+                                        <div className="overview-empty">No enrolled students found yet.</div>
+                                    ) : (
+                                        <div className="tt-people">
+                                            {allStudents.slice(0, 5).map((st, i) => (
+                                                <div key={st.id || i} className="tt-person">
+                                                    <div className="sh-avatar" style={{ background: avatarTone(st.name) }}>{initialOf(st.name)}</div>
+                                                    <div className="tt-person-copy">
+                                                        <strong>{st.name || 'Student'}</strong>
+                                                        <span>{[getStudentClassValue(st), getStudentSectionValue(st)].filter(Boolean).join(' ') || 'Class not set'}</span>
+                                                    </div>
+                                                    <button className="tt-mail" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }} aria-label={`Open ${st.name || 'student'}`}><Mail size={18} /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <button className="tt-more" onClick={() => { setActiveTab('students'); setSelectedClass(null); setSelectedSection(null); }}>View More</button>
+                                </section>
+
+                                <section>
+                                    <div className="tt-side-head"><h3>Messages</h3></div>
+                                    {myChats.length === 0 ? (
+                                        <div className="overview-empty">No conversations yet.</div>
+                                    ) : (
+                                        <div className="tt-msglist">
+                                            {myChats.slice(0, 4).map((chat) => {
+                                                const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
+                                                const otherName = chat.participantNames?.[otherId] || 'Staff Member';
+                                                return (
+                                                    <button key={chat.id} className="tt-msgrow" onClick={() => { handleSelectChat(chat); setActiveTab('chats'); }}>
+                                                        <div className="sh-avatar" style={{ background: avatarTone(otherName) }}>{initialOf(otherName)}</div>
+                                                        <div className="tt-person-copy">
+                                                            <div className="tt-msgrow-line"><strong>{otherName}</strong><time>{fmtClock(chat.updatedAt)}</time></div>
+                                                            <span>{chat.lastMessage || 'No messages yet'}</span>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    <button className="tt-more" onClick={() => setActiveTab('chats')}>View More</button>
+                                </section>
+                            </aside>
                         </div>
                     )}
 
@@ -4785,199 +4971,202 @@ tr { height: 54px; }
                     )}
 
                     {activeTab === 'chats' && (
-                        <div className="dash-card full-width chats-workspace">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Chats</h3>
-                                    <p className="subtitle">Direct messages with your colleagues.</p>
-                                </div>
-                                <button type="button" className="btn-primary" onClick={() => setShowNewChatPicker(true)}>
-                                    <PlusCircle size={15} /> New Chat
-                                </button>
+                        <div className={`sh-chat ${activeChatId ? 'has-thread' : ''}`}>
+                            {renderChatListPane('chats')}
+
+                            <div className="sh-thread">
+                                {!activeChatId ? (
+                                    <div className="sh-empty">
+                                        <MessageCircle size={36} />
+                                        <h4>Your messages</h4>
+                                        <p>Select a conversation, or start a new chat with the + button.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="sh-thread-head">
+                                            <button type="button" className="sh-back" onClick={() => { setActiveChatId(null); setActiveChatInfo(null); }} aria-label="Back to chats"><ChevronLeft size={20} /></button>
+                                            <div className="sh-avatar" style={{ background: avatarTone(activeChatInfo?.name) }}>{initialOf(activeChatInfo?.name)}</div>
+                                            <div className="sh-thread-title">
+                                                <strong>{activeChatInfo?.name}</strong>
+                                                <span>{activeChatInfo?.department} Department</span>
+                                            </div>
+                                            <button type="button" className="sh-icon-btn danger" onClick={deleteConversationForMe} title="Delete chat" aria-label="Delete chat">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+
+                                        <div className="sh-thread-body">
+                                            {activeChatMessages.length === 0 ? (
+                                                <div className="sh-empty small">
+                                                    <MessageCircle size={26} />
+                                                    <p>No messages yet. Say hello!</p>
+                                                </div>
+                                            ) : (
+                                                activeChatMessages.map((msg) => {
+                                                    const mine = msg.senderId === staffData.staffId;
+                                                    const sender = mine ? staffData.name : (msg.senderName || activeChatInfo?.name);
+                                                    const role = mine ? staffData.department : activeChatInfo?.department;
+                                                    return (
+                                                        <div key={msg.id} className={`sh-msg ${mine ? 'mine' : ''}`}>
+                                                            <div className="sh-avatar sm" style={{ background: avatarTone(sender) }}>{initialOf(sender)}</div>
+                                                            <div className={`sh-bubble ${msg.type === 'request' ? 'is-request' : ''}`}>
+                                                                <div className="sh-bubble-head">
+                                                                    <strong style={{ color: nameColor(sender) }}>{mine ? 'You' : sender}</strong>
+                                                                    <span>{role}</span>
+                                                                </div>
+                                                                {msg.type === 'request' && <span className="request-tag">Request</span>}
+                                                                <p>{msg.text}</p>
+                                                                <div className="sh-bubble-foot">
+                                                                    {mine && (
+                                                                        <button type="button" className="sh-msg-del" onClick={() => deleteChatMessage(msg.id)} title="Delete message" aria-label="Delete message">
+                                                                            <Trash2 size={13} />
+                                                                        </button>
+                                                                    )}
+                                                                    <time>{fmtClock(msg.createdAt)}</time>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+
+                                        <div className="sh-compose">
+                                            <input
+                                                type="text"
+                                                placeholder="Type your message"
+                                                value={chatMessageInput}
+                                                onChange={(e) => setChatMessageInput(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') sendChatMessage(); }}
+                                            />
+                                            <button type="button" className="sh-send" onClick={sendChatMessage} disabled={!chatMessageInput.trim()} aria-label="Send message">
+                                                <Send size={18} />
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
-                            <div className="chats-layout">
-                                <div className="chats-list-pane">
-                                    {myChats.length === 0 ? (
-                                        <div className="empty-sub-card">
-                                            <MessageCircle size={26} />
-                                            <p>No conversations yet. Start one from Departments or "New Chat".</p>
+                            {activeChatId && (
+                                <aside className="sh-info">
+                                    <div className="sh-info-head"><h4>Contact Info</h4></div>
+                                    <div className="sh-info-hero">
+                                        <div className="sh-avatar xl" style={{ background: avatarTone(activeChatInfo?.name) }}>{initialOf(activeChatInfo?.name)}</div>
+                                        <strong>{activeChatInfo?.name}</strong>
+                                        <span>Staff • {activeChatInfo?.department}</span>
+                                    </div>
+                                    <div className="sh-info-section">
+                                        <h5><FileText size={15} /> Description</h5>
+                                        <p>Direct conversation with {activeChatInfo?.name} from the {activeChatInfo?.department} department.</p>
+                                    </div>
+                                    <div className="sh-info-section">
+                                        <h5><Users size={15} /> Members</h5>
+                                        <div className="sh-member">
+                                            <div className="sh-avatar sm" style={{ background: avatarTone(staffData.name) }}>{initialOf(staffData.name)}</div>
+                                            <div><strong>{staffData.name} (You)</strong><span>{staffData.department}</span></div>
+                                        </div>
+                                        <div className="sh-member">
+                                            <div className="sh-avatar sm" style={{ background: avatarTone(activeChatInfo?.name) }}>{initialOf(activeChatInfo?.name)}</div>
+                                            <div><strong>{activeChatInfo?.name}</strong><span>{activeChatInfo?.department}</span></div>
+                                        </div>
+                                    </div>
+                                    {activeChatMember && (
+                                        <button type="button" className="sh-info-btn" onClick={() => openRequestModal(activeChatMember)}>
+                                            <SendHorizonal size={15} /> Send a request
+                                        </button>
+                                    )}
+                                </aside>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'staffroom' && (
+                        <div className="sh-chat has-thread">
+                            {renderChatListPane('room')}
+
+                            <div className="sh-thread">
+                                <div className="sh-thread-head">
+                                    <div className="sh-avatar room"><Users size={20} /></div>
+                                    <div className="sh-thread-title">
+                                        <strong>Staff Room</strong>
+                                        <span>{allStaffMembers.length} members · a shared space for all faculty</span>
+                                    </div>
+                                    <button type="button" className="sh-icon-btn danger" onClick={clearMyStaffRoomMessages} title="Delete my Staff Room messages" aria-label="Delete my Staff Room messages">
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+
+                                <div className="sh-thread-body">
+                                    {staffRoomMessages.length === 0 ? (
+                                        <div className="sh-empty small">
+                                            <Users size={28} />
+                                            <p>No messages yet. Be the first to say hello!</p>
                                         </div>
                                     ) : (
-                                        myChats.map((chat) => {
-                                            const otherId = (chat.participants || []).find(id => id !== staffData.staffId);
-                                            const otherName = chat.participantNames?.[otherId] || 'Staff Member';
-                                            const otherDept = chat.participantDepartments?.[otherId] || 'General';
+                                        staffRoomMessages.map((msg) => {
+                                            const mine = msg.senderId === staffData.staffId;
                                             return (
-                                                <button
-                                                    key={chat.id}
-                                                    type="button"
-                                                    className={`chat-list-item ${activeChatId === chat.id ? 'active' : ''}`}
-                                                    onClick={() => handleSelectChat(chat)}
-                                                >
-                                                    <div className="student-avatar">{otherName.charAt(0).toUpperCase()}</div>
-                                                    <div className="chat-list-item-info">
-                                                        <strong>{otherName}</strong>
-                                                        <span>{chat.lastMessage || `${otherDept} Department`}</span>
+                                                <div key={msg.id} className={`sh-msg ${mine ? 'mine' : ''}`}>
+                                                    <div className="sh-avatar sm" style={{ background: avatarTone(msg.senderName) }}>{initialOf(msg.senderName)}</div>
+                                                    <div className="sh-bubble">
+                                                        <div className="sh-bubble-head">
+                                                            <strong style={{ color: nameColor(msg.senderName) }}>{mine ? 'You' : msg.senderName}</strong>
+                                                            <span>{msg.department || 'General'}</span>
+                                                        </div>
+                                                        <p>{msg.text}</p>
+                                                        <div className="sh-bubble-foot">
+                                                            {mine && (
+                                                                <button type="button" className="sh-msg-del" onClick={() => deleteStaffRoomMessage(msg.id)} title="Delete message" aria-label="Delete message">
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            )}
+                                                            <time>{fmtClock(msg.createdAt)}</time>
+                                                        </div>
                                                     </div>
-                                                </button>
+                                                </div>
                                             );
                                         })
                                     )}
                                 </div>
 
-                                <div className="chat-thread-pane">
-                                    {!activeChatId ? (
-                                        <div className="empty-sub-card chat-thread-empty">
-                                            <MessageCircle size={28} />
-                                            <p>Select a conversation, or start a new chat.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="chat-thread-header">
-                                                <div className="student-avatar">
-                                                    {(activeChatInfo?.name || '?').charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <strong>{activeChatInfo?.name}</strong>
-                                                    <span className="dept-staff-subtext">{activeChatInfo?.department}</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="communication-delete-btn"
-                                                    onClick={deleteConversationForMe}
-                                                    title="Delete chat"
-                                                >
-                                                    <Trash2 size={16} />
-                                                    <span>Delete Chat</span>
-                                                </button>
-                                            </div>
-
-                                            <div className="chat-thread-messages">
-                                                {activeChatMessages.length === 0 ? (
-                                                    <div className="empty-sub-card">
-                                                        <MessageCircle size={22} />
-                                                        <p>No messages yet. Say hello!</p>
-                                                    </div>
-                                                ) : (
-                                                    activeChatMessages.map((msg) => (
-                                                        <div
-                                                            key={msg.id}
-                                                            className={`chat-bubble-row ${msg.senderId === staffData.staffId ? 'mine' : ''}`}
-                                                        >
-                                                            <div className={`chat-bubble ${msg.type === 'request' ? 'is-request' : ''}`}>
-                                                                {msg.type === 'request' && <span className="request-tag">Request</span>}
-                                                                <p>{msg.text}</p>
-                                                                {msg.senderId === staffData.staffId && (
-                                                                    <button
-                                                                        type="button"
-                                                                        className="message-delete-btn"
-                                                                        onClick={() => deleteChatMessage(msg.id)}
-                                                                        title="Delete message"
-                                                                    >
-                                                                        <Trash2 size={13} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-
-                                            <div className="chat-thread-input-row">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Type a message..."
-                                                    value={chatMessageInput}
-                                                    onChange={(e) => setChatMessageInput(e.target.value)}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter') sendChatMessage(); }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="btn-primary"
-                                                    onClick={sendChatMessage}
-                                                    disabled={!chatMessageInput.trim()}
-                                                >
-                                                    <Send size={15} />
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
+                                <div className="sh-compose">
+                                    <input
+                                        type="text"
+                                        placeholder="Message the staff room"
+                                        value={staffRoomInput}
+                                        onChange={(e) => setStaffRoomInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') sendStaffRoomMessage(); }}
+                                    />
+                                    <button type="button" className="sh-send" onClick={sendStaffRoomMessage} disabled={!staffRoomInput.trim()} aria-label="Send message">
+                                        <Send size={18} />
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {activeTab === 'staffroom' && (
-                        <div className="dash-card full-width staffroom-workspace">
-                            <div className="card-header">
-                                <div>
-                                    <h3>Staff Room</h3>
-                                    <p className="subtitle">A shared space for all faculty to chat together.</p>
+                            <aside className="sh-info">
+                                <div className="sh-info-head"><h4>Group Info</h4></div>
+                                <div className="sh-info-hero">
+                                    <div className="sh-avatar xl room"><Users size={44} /></div>
+                                    <strong>Staff Room</strong>
+                                    <span>Group • {allStaffMembers.length} members</span>
                                 </div>
-                                <button
-                                    type="button"
-                                    className="communication-delete-btn staffroom-clear-btn"
-                                    onClick={clearMyStaffRoomMessages}
-                                    title="Delete my Staff Room messages"
-                                >
-                                    <Trash2 size={16} />
-                                    <span>Clear My Messages</span>
-                                </button>
-                            </div>
-
-                            <div className="staffroom-feed">
-                                {staffRoomMessages.length === 0 ? (
-                                    <div className="empty-sub-card">
-                                        <Users size={28} />
-                                        <p>No messages yet. Be the first to say hello!</p>
+                                <div className="sh-info-section">
+                                    <h5><FileText size={15} /> Description</h5>
+                                    <p>Your go-to hub for seamless communication and coordination among faculty. Share updates, ask for help, or just connect with your colleagues.</p>
+                                </div>
+                                <div className="sh-info-section">
+                                    <div className="sh-info-row">
+                                        <h5><Users size={15} /> Members</h5>
+                                        <button type="button" onClick={() => setActiveTab('departments')}>View All</button>
                                     </div>
-                                ) : (
-                                    staffRoomMessages.map((msg) => (
-                                        <div
-                                            key={msg.id}
-                                            className={`staffroom-message-row ${msg.senderId === staffData.staffId ? 'mine' : ''}`}
-                                        >
-                                            <div className="student-avatar">{(msg.senderName || '?').charAt(0).toUpperCase()}</div>
-                                            <div className="staffroom-message-body">
-                                                <div className="staffroom-message-meta">
-                                                    <strong>{msg.senderName}</strong>
-                                                    <span className="topic-badge">{msg.department || 'General'}</span>
-                                                </div>
-                                                <p>{msg.text}</p>
-                                                {msg.senderId === staffData.staffId && (
-                                                    <button
-                                                        type="button"
-                                                        className="staffroom-message-delete-btn"
-                                                        onClick={() => deleteStaffRoomMessage(msg.id)}
-                                                        title="Delete message"
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                    {allStaffMembers.slice(0, 6).map((m, i) => (
+                                        <div key={m.staffId || m.id || i} className="sh-member">
+                                            <div className="sh-avatar sm" style={{ background: avatarTone(m.name) }}>{initialOf(m.name)}</div>
+                                            <div><strong>{m.name}</strong><span>{m.department || 'General'}</span></div>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <div className="chat-thread-input-row">
-                                <input
-                                    type="text"
-                                    placeholder="Message the staff room..."
-                                    value={staffRoomInput}
-                                    onChange={(e) => setStaffRoomInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') sendStaffRoomMessage(); }}
-                                />
-                                <button
-                                    type="button"
-                                    className="btn-primary"
-                                    onClick={sendStaffRoomMessage}
-                                    disabled={!staffRoomInput.trim()}
-                                >
-                                    <Send size={15} />
-                                </button>
-                            </div>
+                                    ))}
+                                </div>
+                            </aside>
                         </div>
                     )}
 
